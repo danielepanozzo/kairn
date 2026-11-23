@@ -523,8 +523,11 @@ class Statements(unittest.TestCase):
         # on its scalar guarded: bv_scale_step_2 (bridge, statement, leading limb) and bv_scale_2_entry
         # in both orders: 395. Then five with the constructor of a ball vector of two limbs on the limbs
         # of its centers guarded: bv_center_entry_2 (statement of the extended domain, leading limb,
-        # its two executions: it computes guard) and bv_make_2_entry in both orders: 400.
-        self.assertEqual(text.count('Print Assumptions'), 400)
+        # its two executions: it computes guard) and bv_make_2_entry in both orders: 400. Then the
+        # guarded constructors of a ball and of an interval of two limbs, ball_make_2_entry and
+        # interval_make_2_entry (statement of the extended domain, its two executions: each computes
+        # guard): 404.
+        self.assertEqual(text.count('Print Assumptions'), 404)
         self.assertEqual(text.count('Print Assumptions IeeeTwoExecutions.'), len(ieee.with_kernels(self.ks)))
         self.assertIn('Definition ball_from_interval_1_audit : ball_from_interval_1_spec := '
                       'ball_from_interval_1_correct.\nPrint Assumptions ball_from_interval_1_correct.', text)
@@ -692,9 +695,12 @@ class CheckedFiles(unittest.TestCase):
     # statements of the first added, nothing else changed. Then the source fields that cite their
     # publications (JR18, JMP17, Dekker, Knuth and Moller): the comments only. Then bv_center_entry_2
     # (the same rule, the constructor of a ball vector of two limbs): its model and its statement
+    # added, nothing else changed. Then ball_make_2_entry and interval_make_2_entry (rule R3: the
+    # constructors of a ball and of an interval on the limbs of two-limb numbers the program gives,
+    # each guarded; the owner's decision of 2026-11-23 for the ball): their models and statements
     # added, nothing else changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '631829a8281ce0c2c0d1d1ea00047b7875e209d24825718300e7ce70bccacc4c',
-               'proofs/gen/IeeeStatements.v': 'fdead34e21e554a5233b746d67488021b5f9a58dbc59ed81661c7934c0a82eb8'}
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'c98b89e3d6c4e1895ebc7e7f4f393225e89bf369318d5fdb277fc05c54cd905b',
+               'proofs/gen/IeeeStatements.v': 'cc71c4dca419259c698563bebecc8f21fb19f308b63e7fa91387d1b7006137b1'}
 
 
     def test_the_checked_files(self):
@@ -727,7 +733,7 @@ class WithProduct(unittest.TestCase):
     def test_the_kernels(self):
         """The kernels of IeeeWith.v are those whose C++ dispatches on constant evaluation without a
         variant: every kernel constexpr without one that computes an operation whose spelling
-        dispatches (prod, guard, times_inf), the 30 of the rule of the product and 33 without a
+        dispatches (prod, guard, times_inf), the 30 of the rule of the product and 36 without a
         product; every other generated function that dispatches is two_prod's, which has a variant.
         So no kernel computes otherwise in constant evaluation without a listing here."""
         from kairn_gen import build, cpp
@@ -741,12 +747,12 @@ class WithProduct(unittest.TestCase):
         line = next(x for x in build.summary(self.ks) if x.startswith('constexpr by the rule of the product'))
         self.assertEqual(sorted(line.split(': ', 1)[1].split(', ')), sorted(product))
         self.assertEqual(len(product), 30)
-        self.assertEqual(len(rule), 64)
+        self.assertEqual(len(rule), 66)
         self.assertLessEqual(set(product), set(rule))
         self.assertGreaterEqual(set(rule) - set(product), {
             'add_2_1', 'add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full', 'sub_1_2_full', 'sub_2_1_full',
             'sub_2_2_full', 'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2', 'interval_make_1',
-            'two_sum_entry', 'fast_two_sum_entry', 'radd_entry'})
+            'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'ball_make_2_entry', 'interval_make_2_entry'})
         # In the C++: a function that dispatches on constant evaluation is a kernel of IeeeWith.v
         # (its overloads for double and float) or a kernel with a constant-evaluation variant:
         # two_prod and its entry form two_prod_entry (rule R3, the factors of a fused operation),
@@ -810,7 +816,7 @@ class WithProduct(unittest.TestCase):
                          ['axpy_entry_step_1', 'ball_from_interval_1', 'ball_from_interval_2'])
         self.assertEqual([n for n in took['times_inf'] if n in product], ['mul_pow2_2_full'])
         self.assertEqual(took['prod'], product)
-        self.assertEqual(len(took['guard']), 34)
+        self.assertEqual(len(took['guard']), 36)
         self.assertEqual(sorted(took['times_inf']), ['add_2_1_full', 'add_2_2_full', 'add_fast_2_2_full',
                                                      'mul_pow2_2_full', 'sub_1_2_full', 'sub_2_1_full',
                                                      'sub_2_2_full'])

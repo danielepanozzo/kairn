@@ -1,0 +1,46 @@
+# The constructors Interval(Expansion<T, 2>, Expansion<T, 2>), Interval(Expansion<T, 2>) and
+# from_bounds of two numbers of two limbs (milestone2.md, "Interval kernels", "Values of an
+# interval"): the bounds are Expansion<T, 2> objects whose limbs the program may have written, so
+# each limb passes through guard (rule R3), as the center given to a ball of two limbs does
+# (ball_make_2_entry: the owner's decision of 2026-11-23, one rule for every constructor; that this
+# constructor is closed the same way is a choice of the authors); then the listing of
+# interval_make_2 on the guarded limbs, written out, not called, so that the printer puts its
+# selects behind a branch as for interval_make_2 (cpp.branch takes a kernel's own selects). Its
+# claims are those of interval_make_2, whose statement is about values: the guard is the identity
+# on a canonical pair as a value (a zero limb made +0, an infinity or a NaN staying what it is).
+# Four additions more than interval_make_2, which compares and selects only.
+kernel:        interval_make_2_entry
+input:         supplied lo = lo0 lo1
+input:         supplied hi = hi0 hi1
+output:        zl = zl0 zl1
+output:        zu = zu0 zu1
+requires:      canonical lo
+requires:      canonical hi
+ensures:       makes_interval zl zu from=lo,hi
+min_precision: 1
+source:        interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMakeEntry.v interval_make_2_entry_correct
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the bounds; makes_interval states what comes out
+
+gl0 = guard(lo0)
+gl1 = guard(lo1)
+gu0 = guard(hi0)
+gu1 = guard(hi1)
+ok  = le_2_2(gl0, gl1, gu0, gu1)
+nl  = lt(gl0, const inf)
+mi  = neg(const inf)
+nu  = lt(mi, gu0)
+va  = and(ok, nl)
+v   = and(va, nu)
+rv  = lt_2_2(gu0, gu1, gl0, gl1)
+el  = select(rv, const inf, mi)
+eu  = select(rv, mi, const inf)
+zl0 = select(v, gl0, el)
+zl1 = select(v, gl1, 0)
+zu0 = select(v, gu0, eu)
+zu1 = select(v, gu1, 0)

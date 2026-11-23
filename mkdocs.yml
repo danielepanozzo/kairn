@@ -122,7 +122,8 @@ nav:
           - A two-limb number from a value of T: reference/make_2.md
           - A two-limb number from its limbs: reference/make_2_limbs.md
           - A ball from a one-limb center and a radius: reference/ball_make_1.md
-          - A ball from a two-limb center and a radius: reference/ball_make_2.md
+          - A ball from a two-limb center that a kernel wrote, and a radius: reference/ball_make_2.md
+          - A ball from a two-limb center that the program gives, each limb guarded, and a radius: reference/ball_make_2_entry.md
           - Constants from fractions: reference/rational.md
       - Arithmetic:
           - Sum and difference, one limb: reference/add_1_1.md
@@ -226,7 +227,8 @@ nav:
           - Sum of intervals, two-limb bounds: reference/interval_add_2.md
           - The negation of an interval, two-limb bounds: reference/interval_neg_2.md
           - Difference of intervals, two-limb bounds: reference/interval_sub_2.md
-          - An interval from two two-limb numbers: reference/interval_make_2.md
+          - An interval from two two-limb numbers that a kernel wrote: reference/interval_make_2.md
+          - An interval from two two-limb numbers that the program gives, each limb guarded: reference/interval_make_2_entry.md
           - Product of intervals, two-limb bounds: reference/interval_mul_2.md
           - The hull of two intervals, one-limb bounds: reference/interval_hull_1.md
           - The intersection of two intervals, one-limb bounds: reference/interval_intersection_1.md

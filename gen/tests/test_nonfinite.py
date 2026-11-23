@@ -1299,8 +1299,10 @@ class NonFinite(unittest.TestCase):
         # intersection of two limbs (2); and the entry forms of the products of the extended domain,
         # which guard the factors first (rule R3, the factors of a fused operation): mul_down_entry,
         # mul_up_entry, mul_2_1_full_entry and ball_scale_2_full_entry (4); and the step of the
-        # constructor of two limbs that guards each limb, bv_center_entry_2 (1).
-        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 2 + 1 + 26 + 16 + 4 + 5 + 2 + 4 + 1)
+        # constructor of two limbs that guards each limb, bv_center_entry_2 (1); and the constructors of
+        # a ball and of an interval of two limbs that guard each limb of the center or of the bounds,
+        # ball_make_2_entry and interval_make_2_entry (2).
+        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 2 + 1 + 26 + 16 + 4 + 5 + 2 + 4 + 1 + 2)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite

@@ -306,17 +306,17 @@ class Table(unittest.TestCase):
         self.assertIn((("op", "Expansion<T, 1>", ("Expansion<T, 2>",)), ("to_nearest_2",)), keys)
         self.assertIn((("op", "Expansion<T, 2>", ("T",)), ("make_2",)), keys)
         self.assertIn((("op", "operator+", ("Ball<T, K>", "Ball<T, K>")), ("ball_add_1_full", "ball_add_2_full")), keys)
-        self.assertIn((("op", "Ball<T, K>", ("Expansion<T, K>", "T")), ("ball_make_1", "ball_make_2")), keys)
+        self.assertIn((("op", "Ball<T, K>", ("Expansion<T, K>", "T")), ("ball_make_1", "ball_make_2_entry")), keys)
         self.assertIn((("op", "two_sum", ("T", "T")), ("two_sum_entry",)), keys)
         self.assertIn((("op", "certainly_positive", ()), ("ball_positive_1", "ball_positive_2")), keys)
         self.assertIn((("op", "certainly_positive", ()), ("interval_positive_1", "interval_positive_2")), keys)
-        self.assertIn((("op", "Ball<T, K>", ("Constant<Expansion<T, K>>",)), ("ball_make_1", "ball_make_2")), keys)
+        self.assertIn((("op", "Ball<T, K>", ("Constant<Expansion<T, K>>",)), ("ball_make_1", "ball_make_2_entry")), keys)
         self.assertIn((("traits", "traits<Expansion<T, 2>>::sub_limb"), ("sub_2_1", "sub_1_2")), keys)
         # Intervals, and the functions of a Ball of the interface the two share.
         self.assertIn((("op", "operator*", ("Interval<T, K>", "Interval<T, K>")), ("interval_mul_1", "interval_mul_2")),
                       keys)
         self.assertIn((("op", "Interval<T, K>", ("Expansion<T, K>", "Expansion<T, K>")),
-                       ("interval_make_1", "interval_make_2")), keys)
+                       ("interval_make_1", "interval_make_2_entry")), keys)
         self.assertIn((("op", "hull", ("Interval<T, K>",)), ("interval_hull_1", "interval_hull_2")), keys)
         self.assertIn((("op", "split", ()), ("interval_split_1", "interval_split_2")), keys)
         self.assertIn((("op", "lower_as", ()), ("to_down_2",)), keys)

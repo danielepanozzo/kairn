@@ -925,9 +925,10 @@ inline const Operation operations[] = {
              }
          });
      }},
-    // The constructors of an interval: of one limb, and of two from a T, whose only rounded
-    // operations are the guards (the same values, zeros without their sign); of two limbs from
-    // numbers of two limbs, comparisons and selects (the same bits).
+    // The constructors of an interval: of one limb, of two from a T, and of two from numbers of two
+    // limbs, whose only rounded operations are the guards (the same values, zeros without their
+    // sign: interval_make_2_entry guards every limb of the bounds, rule R3), then comparisons and
+    // selects.
     {"interval1.make", Kind::exact, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
@@ -950,8 +951,8 @@ inline const Operation operations[] = {
                  for (auto hi : c.one) put_value(out, X(unverified(lo), hi));
              }
              for (const auto& lo : c.two) {
-                 put(out, X(unverified(lo)));
-                 for (const auto& hi : c.two) put(out, X(unverified(lo), hi));
+                 put_value(out, X(unverified(lo)));
+                 for (const auto& hi : c.two) put_value(out, X(unverified(lo), hi));
              }
          });
      }},
@@ -977,7 +978,7 @@ inline const Operation operations[] = {
          });
      }},
     // from_bounds, the constructors from two bounds under the name an interval shares with a ball:
-    // the same kernels, the same values and bits.
+    // the same kernels, the same values (zeros without their sign, as the constructors).
     {"interval1.from_bounds", Kind::exact, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = std::decay_t<decltype(c.one[0])>;
@@ -996,7 +997,7 @@ inline const Operation operations[] = {
              for (auto lo : c.one)
                  for (auto hi : c.one) put_value(out, X::from_bounds(unverified(lo), hi));
              for (const auto& lo : c.two)
-                 for (const auto& hi : c.two) put(out, X::from_bounds(lo, hi));
+                 for (const auto& hi : c.two) put_value(out, X::from_bounds(lo, hi));
          });
      }},
     // The conversion of a SumAndError to a two-limb number: its guards, a + 0, as from_limbs_unchecked

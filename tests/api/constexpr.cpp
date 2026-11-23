@@ -4,8 +4,8 @@
 // types, the unmarked operations exist exactly when gen/claims.json says the kernel they call is
 // proved, and kairn::traits exports constants exactly for those.
 //
-// What is constexpr: construction (make_2, make_2_limbs, ball_make_1, ball_make_2, a ball from a
-// constant of kairn::rational), the sums and differences of two limbs (the full kernels of the
+// What is constexpr: construction (make_2, make_2_limbs, ball_make_1, ball_make_2,
+// ball_make_2_entry, a ball from a constant of kairn::rational), the sums and differences of two limbs (the full kernels of the
 // additions), ldexp and half of two limbs and kairn::finite::ldexp (mul_pow2_2_full and mul_pow2_2,
 // whose only fused operations are opaque products, in steps beyond the powers of two of T),
 // negation and absolute value, the comparisons and conversions, everything of one
@@ -244,11 +244,15 @@ struct Checks {
     static_assert(can_add<E1, E1> == bounds::add_1_1<T>::proved && can_mul<E1, T> == bounds::mul_1_1<T>::proved);
     static_assert(can_add<B2, B2> == bounds::ball_add_2_full<T>::proved && can_mul<B1, T> == bounds::ball_scale_1_full<T>::proved);
     static_assert(can_add<B2, T> == (bounds::ball_add_2_full<T>::proved && bounds::ball_make_2<T>::proved && bounds::make_2<T>::proved));
-    static_assert(can_mul<B2, E2> == (bounds::ball_mul_2_full<T>::proved && bounds::ball_make_2<T>::proved));
+    // A point of two limbs the program gives is made a ball by ball_make_2_entry, which guards its
+    // limbs; a point of T by make_2 and ball_make_2, on the center make_2 wrote.
+    static_assert(can_add<B2, E2> == (bounds::ball_add_2_full<T>::proved && bounds::ball_make_2_entry<T>::proved));
+    static_assert(can_mul<B2, E2> == (bounds::ball_mul_2_full<T>::proved && bounds::ball_make_2_entry<T>::proved));
     static_assert(can_mul<B1, E1> == bounds::ball_scale_1_full<T>::proved && can_negate<B2> == bounds::ball_neg_2<T>::proved);
     static_assert(std::is_constructible_v<E2, T> == bounds::make_2<T>::proved);
     static_assert(std::is_constructible_v<E1, E2> == bounds::to_nearest_2<T>::proved);
-    static_assert(std::is_constructible_v<B2, E2, T> == bounds::ball_make_2<T>::proved);
+    static_assert(std::is_constructible_v<B2, E2, T> == bounds::ball_make_2_entry<T>::proved);
+    static_assert(std::is_constructible_v<B2, T> == (bounds::ball_make_2<T>::proved && bounds::make_2<T>::proved));
     // Exact operations without a kernel need no marker.
     static_assert(can_negate<E1> && can_less<E1, E1> && can_to_down<E1>);
     // With the marker, everything exists.
@@ -597,6 +601,7 @@ struct Intervals {
     static_assert(can_split<I1> == bounds::interval_split_1<T>::proved && can_midpoint<I2> == bounds::interval_mid_rad_2<T>::proved);
     static_assert(can_split<I2> == bounds::interval_split_2<T>::proved);
     static_assert(std::is_constructible_v<I1, T, T> == bounds::interval_make_1<T>::proved);
+    static_assert(std::is_constructible_v<I2, E2, E2> == bounds::interval_make_2_entry<T>::proved);
     static_assert(!can_add<I1, I2> && !can_add<I1, T> && !can_add<T, I1> && !can_mul<I2, E2> && !can_sub<I1, B1>);
     static_assert(!can_add<I1, kairn::Interval<float, 1>> || std::is_same_v<T, float>);
     static_assert(can_add<kairn::Unverified<I1>, I1> && can_negate<kairn::Unverified<I2>> && !can_add<kairn::Unverified<I1>, I2>);
@@ -959,6 +964,15 @@ struct Enclosure {
     static_assert(I1::from_limbs(std::array<T, 2>{inf, -inf}.data()).is_empty() && I1::from_limbs(std::array<T, 2>{-inf, inf}.data()).is_whole());
     static_assert(B1::from_limbs(std::array<T, 2>{nan, nan}.data()).is_empty() && B1::from_limbs(std::array<T, 2>{0, inf}.data()).is_whole());
     static_assert(B2::from_limbs(std::array<T, 3>{1, u / 2, T(0.25)}.data()).center().limb[1] == u / 2);
+    // The constructors of a ball and of an interval from numbers of two limbs the program gives
+    // guard every limb at run time (ball_make_2_entry, interval_make_2_entry: a limb -0 comes back
+    // +0, enclosure_run_time checks it); in constant evaluation the guard is not applied, and a limb
+    // -0 keeps its sign, every limb back bit for bit.
+    static_assert(bits(B2(m0, T(0.25)).center().limb[0]) == bits(T(1)) && bits(B2(m0, T(0.25)).center().limb[1]) == bits(-T(0)));
+    static_assert(bits(B2(m0).center().limb[0]) == bits(T(1)) && bits(B2(m0).center().limb[1]) == bits(-T(0)));
+    static_assert(bits(B2(kairn::Constant<E2>{m0, T(0.25), false}).center().limb[1]) == bits(-T(0)));
+    static_assert(bits(I2(m0, m0).lower().limb[1]) == bits(-T(0)) && bits(I2(m0).upper().limb[1]) == bits(-T(0)));
+    static_assert(bits(I2::from_bounds(m0, x2).lower().limb[1]) == bits(-T(0)) && I2::from_bounds(m0, x2).upper().limb[1] == u / 2);
 };
 
 template struct Enclosure<double>;
@@ -1478,6 +1492,43 @@ void enclosure_run_time() {
         // The limbs of a product of the program, read back: the guard keeps the value.
         const T l[3] = {three * quarter, zero, half * quarter};
         expect("from_limbs of products", B2::from_limbs(l).center().limb[0] == T(0.75) && B2::from_limbs(l).radius() == T(0.125));
+    }
+    // The constructors of a ball and of an interval from numbers of two limbs whose limbs the program
+    // wrote, at run time: every limb passes through a guard (ball_make_2_entry, interval_make_2_entry;
+    // rule R3), so a limb -0 comes back +0 and every other limb bit for bit, and a NaN pair gives the
+    // whole line; in constant evaluation the guard is not applied (Enclosure, above).
+    {
+        volatile T v_zero = 0;
+        const T zero = v_zero, minus_zero = -zero, beyond[2] = {T(v_omega), T(v_omega) * u / 4};
+        const E2 big2 = E2::from_limbs(beyond);
+        const auto limbs = [](T h, T l) {
+            E2 c;
+            c.limb[0] = h;
+            c.limb[1] = l;
+            return c;
+        };
+        const E2 m0 = limbs(one, minus_zero), mm = limbs(minus_zero, minus_zero), nn = limbs(nan, nan);
+        const auto plus_zero = [](T z) { return z == 0 && !std::signbit(z); };
+        const B2 b(m0, quarter), z(mm, quarter), w(big2, quarter);
+        expect("Ball(c, r) of the center (1, -0): the center (1, +0)",
+               bits(b.center().limb[0]) == bits(one) && plus_zero(b.center().limb[1]) && b.radius() == quarter);
+        expect("Ball(c, r) of the center (-0, -0): the center (+0, +0)",
+               plus_zero(z.center().limb[0]) && plus_zero(z.center().limb[1]) && z.is_finite());
+        expect("Ball(c, r) of a finite center: its limbs bit for bit",
+               bits(w.center().limb[0]) == bits(big2.limb[0]) && bits(w.center().limb[1]) == bits(big2.limb[1]));
+        expect("Ball(c) and Ball(Constant) of the center (1, -0): the center (1, +0)",
+               plus_zero(B2(m0).center().limb[1]) && B2(m0).radius() == 0 &&
+                   plus_zero(B2(kairn::Constant<E2>{m0, quarter, false}).center().limb[1]));
+        expect("Ball(c, r) of a NaN center: the whole line", B2(nn, quarter).is_whole() && B2(nn).is_whole());
+        const I2 i(m0, m0);
+        expect("Interval(lo, hi) of the bounds (1, -0): the bounds (1, +0)",
+               bits(i.lower().limb[0]) == bits(one) && plus_zero(i.lower().limb[1]) && plus_zero(i.upper().limb[1]));
+        expect("Interval(a) and from_bounds of (-0, -0): the bounds (+0, +0)",
+               plus_zero(I2(mm).lower().limb[0]) && plus_zero(I2(mm).upper().limb[1]) &&
+                   plus_zero(I2::from_bounds(mm, m0).lower().limb[0]) && plus_zero(I2::from_bounds(mm, m0).upper().limb[1]));
+        expect("Interval(lo, hi) of a finite bound: its limbs bit for bit",
+               bits(I2(big2, big2).upper().limb[1]) == bits(big2.limb[1]));
+        expect("Interval(lo, hi) of a NaN bound: the whole line", I2(nn, m0).is_whole() && I2(m0, nn).is_whole());
     }
     // The constexpr functions, on operands read at run time.
     const I1 x(one, two), y(three, three);

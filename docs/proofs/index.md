@@ -74,8 +74,8 @@ lists:
   ball by a power of two over the real numbers (`BallPow2.v`) and, with the special states of a
   ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), the comparison of the two ways a product is executed
-  (`IeeeProduct.v`), with what follows for the 63 kernels whose C++ computes an operation
-  otherwise in constant evaluation (the thirty whose only fused operations are products, and 33
+  (`IeeeProduct.v`), with what follows for the 66 kernels whose C++ computes an operation
+  otherwise in constant evaluation (the thirty whose only fused operations are products, and 36
   without a product that guard an operand or fix up with `times_inf`), which are `constexpr`: on
   all operands each listing as constant evaluation runs it
   (the plain product, the guard that returns its operand, `times_inf` from comparisons) returns

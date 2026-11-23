@@ -1922,6 +1922,25 @@ Definition ball_make_2 (c0 c1 r : float) : float * float * float :=
   let rw := if ok then s else cnan in
   (cw0, cw1, rw).
 
+(* ball_make_2_entry: ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23). *)
+Definition ball_make_2_entry (c0 c1 r : float) : float * float * float :=
+  let g0 := guard c0 in
+  let g1 := guard c1 in
+  let g := guard r in
+  let n := lt g pzero in
+  let ok := negb n in
+  let a := abs g0 in
+  let f1 := lt a pinf in
+  let f2 := lt g pinf in
+  let f := andb f1 f2 in
+  let k0 := if f then g0 else pzero in
+  let k1 := if f then g1 else pzero in
+  let s := if f then g else pinf in
+  let cw0 := if ok then k0 else cnan in
+  let cw1 := if ok then k1 else cnan in
+  let rw := if ok then s else cnan in
+  (cw0, cw1, rw).
+
 (* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). *)
 Definition ball_mul_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
   let '(cz0, cz1) := mul_2_2 cx0 cx1 cy0 cy1 in
@@ -2305,6 +2324,27 @@ Definition interval_make_2 (lo0 lo1 hi0 hi1 : float) : float * float * float * f
   let zl1 := if v then lo1 else pzero in
   let zu0 := if v then hi0 else eu in
   let zu1 := if v then hi1 else pzero in
+  (zl0, zl1, zu0, zu1).
+
+(* interval_make_2_entry: interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry). *)
+Definition interval_make_2_entry (lo0 lo1 hi0 hi1 : float) : float * float * float * float :=
+  let gl0 := guard lo0 in
+  let gl1 := guard lo1 in
+  let gu0 := guard hi0 in
+  let gu1 := guard hi1 in
+  let ok := le_2_2 gl0 gl1 gu0 gu1 in
+  let nl := lt gl0 pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu0 in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let rv := lt_2_2 gu0 gu1 gl0 gl1 in
+  let el := if rv then pinf else mi in
+  let eu := if rv then mi else pinf in
+  let zl0 := if v then gl0 else el in
+  let zl1 := if v then gl1 else pzero in
+  let zu0 := if v then gu0 else eu in
+  let zu1 := if v then gu1 else pzero in
   (zl0, zl1, zu0, zu1).
 
 (* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). *)

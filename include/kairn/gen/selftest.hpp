@@ -4957,6 +4957,50 @@ inline const char* ball_make_2_nonfinite_float() noexcept {
     return !same(o0, 0.0f) || !same(o1, 0.0f) || !same(o2, std::numeric_limits<float>::infinity()) ? "ball_make_2 (float, a non-finite operand)" : nullptr;
 }
 
+// ball_make_2_entry (double)
+inline const char* ball_make_2_entry_double() noexcept {
+    volatile double i0 = -0x1.815f70fe6a7b4p+1;
+    volatile double i1 = -0x1.28b67b2a71696p-53;
+    volatile double i2 = 0x1.df8ba4620fd1bp-16;
+    double o0;
+    double o1;
+    double o2;
+    ball_make_2_entry(i0, i1, i2, o0, o1, o2);
+    return !same(o0, -0x1.815f70fe6a7b4p+1) || !same(o1, -0x1.28b67b2a71696p-53) || !same(o2, 0x1.df8ba4620fd1bp-16) ? "ball_make_2_entry (double)" : nullptr;
+}
+inline const char* ball_make_2_entry_nonfinite_double() noexcept {
+    volatile double i0 = std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = 0x1.df8ba4620fd1bp-16;
+    double o0;
+    double o1;
+    double o2;
+    ball_make_2_entry(i0, i1, i2, o0, o1, o2);
+    return !same(o0, 0.0) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) ? "ball_make_2_entry (double, a non-finite operand)" : nullptr;
+}
+
+// ball_make_2_entry (float)
+inline const char* ball_make_2_entry_float() noexcept {
+    volatile float i0 = -0x1.36b07p+1f;
+    volatile float i1 = 0x1.f276dp-25f;
+    volatile float i2 = 0x1.66cec6p-22f;
+    float o0;
+    float o1;
+    float o2;
+    ball_make_2_entry(i0, i1, i2, o0, o1, o2);
+    return !same(o0, -0x1.36b07p+1f) || !same(o1, 0x1.f276dp-25f) || !same(o2, 0x1.66cec6p-22f) ? "ball_make_2_entry (float)" : nullptr;
+}
+inline const char* ball_make_2_entry_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i2 = 0x1.66cec6p-22f;
+    float o0;
+    float o1;
+    float o2;
+    ball_make_2_entry(i0, i1, i2, o0, o1, o2);
+    return !same(o0, 0.0f) || !same(o1, 0.0f) || !same(o2, std::numeric_limits<float>::infinity()) ? "ball_make_2_entry (float, a non-finite operand)" : nullptr;
+}
+
 // ball_mul_2 (double)
 inline const char* ball_mul_2_double() noexcept {
     volatile double i0 = 0x1.dab9a9b2240f1p+2;
@@ -6271,6 +6315,58 @@ inline const char* interval_make_2_nonfinite_float() noexcept {
     float o3;
     interval_make_2(i0, i1, i2, i3, o0, o1, o2, o3);
     return !same(o0, -std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) ? "interval_make_2 (float, a non-finite operand)" : nullptr;
+}
+
+// interval_make_2_entry (double)
+inline const char* interval_make_2_entry_double() noexcept {
+    volatile double i0 = 0x1.56b6d5f9313f5p+2;
+    volatile double i1 = -0x1.3e17d9bdc23e5p-53;
+    volatile double i2 = 0x1.de4a09fd2fdaep+3;
+    volatile double i3 = 0x1.3937794ee022dp-52;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    interval_make_2_entry(i0, i1, i2, i3, o0, o1, o2, o3);
+    return !same(o0, 0x1.56b6d5f9313f5p+2) || !same(o1, -0x1.3e17d9bdc23e5p-53) || !same(o2, 0x1.de4a09fd2fdaep+3) || !same(o3, 0x1.3937794ee022dp-52) ? "interval_make_2_entry (double)" : nullptr;
+}
+inline const char* interval_make_2_entry_nonfinite_double() noexcept {
+    volatile double i0 = std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = 0x1.de4a09fd2fdaep+3;
+    volatile double i3 = 0x1.3937794ee022dp-52;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    interval_make_2_entry(i0, i1, i2, i3, o0, o1, o2, o3);
+    return !same(o0, std::numeric_limits<double>::infinity()) || !same(o1, 0.0) || !same(o2, -std::numeric_limits<double>::infinity()) || !same(o3, 0.0) ? "interval_make_2_entry (double, a non-finite operand)" : nullptr;
+}
+
+// interval_make_2_entry (float)
+inline const char* interval_make_2_entry_float() noexcept {
+    volatile float i0 = -0x1.2a007ep-2f;
+    volatile float i1 = 0x1.b54072p-27f;
+    volatile float i2 = 0x1.8c487ep+3f;
+    volatile float i3 = -0x1.243f06p-24f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    interval_make_2_entry(i0, i1, i2, i3, o0, o1, o2, o3);
+    return !same(o0, -0x1.2a007ep-2f) || !same(o1, 0x1.b54072p-27f) || !same(o2, 0x1.8c487ep+3f) || !same(o3, -0x1.243f06p-24f) ? "interval_make_2_entry (float)" : nullptr;
+}
+inline const char* interval_make_2_entry_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i2 = 0x1.8c487ep+3f;
+    volatile float i3 = -0x1.243f06p-24f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    interval_make_2_entry(i0, i1, i2, i3, o0, o1, o2, o3);
+    return !same(o0, -std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) ? "interval_make_2_entry (float, a non-finite operand)" : nullptr;
 }
 
 // mul_ball_2_2 (double)
@@ -8095,6 +8191,10 @@ inline const char* run() noexcept {
         ball_make_2_nonfinite_double,
         ball_make_2_float,
         ball_make_2_nonfinite_float,
+        ball_make_2_entry_double,
+        ball_make_2_entry_nonfinite_double,
+        ball_make_2_entry_float,
+        ball_make_2_entry_nonfinite_float,
         ball_mul_2_double,
         ball_mul_2_float,
         ball_mul_2_full_double,
@@ -8205,6 +8305,10 @@ inline const char* run() noexcept {
         interval_make_2_nonfinite_double,
         interval_make_2_float,
         interval_make_2_nonfinite_float,
+        interval_make_2_entry_double,
+        interval_make_2_entry_nonfinite_double,
+        interval_make_2_entry_float,
+        interval_make_2_entry_nonfinite_float,
         mul_ball_2_2_double,
         mul_ball_2_2_float,
         mul_dir_2_2_double,

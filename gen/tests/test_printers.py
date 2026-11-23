@@ -143,6 +143,10 @@ BRANCHED.update(ball_hull_1=('qx', 'qy'), ball_intersection_1=('nx', 'ny', 'ob')
 # not selects of their own listings on one mask.
 BRANCHED.update(interval_mid_rad_2=('ne',), ball_to_interval_2=('ne',), ball_hull_2=('qx', 'qy'),
                 ball_intersection_2=('nx', 'ny'), ball_from_interval_1=('v',))
+# The constructors of a ball and of an interval of two limbs on the limbs of the program, each guarded
+# (rule R3): the listings of ball_make_2 and interval_make_2 written out on the guarded limbs, so
+# their fix-ups are behind the same branches (ok, f) and (v).
+BRANCHED.update(ball_make_2_entry=('ok', 'f'), interval_make_2_entry=('v',))
 
 
 class Cpp(unittest.TestCase):
@@ -482,7 +486,10 @@ class FixupBranch(unittest.TestCase):
         # the empty set or, for the constructor, the empty set or the whole line.
         for name, arms in (('interval_add_1', ['l', 'h']), ('interval_mul_1', ['l', 'h']),
                            ('interval_add_2', ['a0', 'a1', 'b0', 'b1']), ('interval_make_1', ['gl', 'gu']),
-                           ('ball_lower_as_2', ['t']), ('ball_from_interval_2', ['c0', 'c1', 'r'])):
+                           ('ball_lower_as_2', ['t']), ('ball_from_interval_2', ['c0', 'c1', 'r']),
+                           # the guarded constructors return the guarded limbs on their first path
+                           ('ball_make_2_entry', ['g0', 'g1', 'g']),
+                           ('interval_make_2_entry', ['gl0', 'gl1', 'gu0', 'gu1'])):
             self.assertEqual([str(a) for a in cpp.branch(self.ks[name], self.ks).arms], arms, name)
         self.assertIsNone(cpp.branch(self.ks['mul_dir_2_2'], self.ks))
         for name in BRANCHED_M1:

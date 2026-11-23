@@ -31,7 +31,13 @@ The value types default-construct to zero: `Expansion()` is 0, `Ball()` the poin
 interval $[0, 0]$, `BallVector()` the point 0 of $N$ entries, `Accumulator()` the empty sum. The
 limbs of a number are public (`x.limb[i]`); a program that writes them must write a canonical pair,
 and `Expansion<T, 2>::from_limbs(p)` builds a number from computed limbs with the guard and, in a
-build with checks, the check ([Numbers of several limbs](expansions.md#normalized-numbers)).
+build with checks, the check ([Numbers of several limbs](expansions.md#normalized-numbers)). A
+number of two limbs given to the constructor of a set passes through the guard there, limb by
+limb: the center of `Ball<T, 2>(c, r)`, `Ball<T, 2>(c)` and of the ball of a constant, the bounds
+of `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)` and `from_bounds`, the centers of a
+`BallVector<T, 2, N>`. Each limb keeps its value, and a limb $-0$ comes back $+0$ (the guard
+computes $-0 + 0$, which is $+0$ when rounding to nearest); in constant evaluation the guard is
+not applied, and every limb comes back bit for bit (`api.constexpr` checks both).
 
 **A set is rebuilt from the limbs read out of it with `from_limbs`**, for a program that keeps the
 limbs in storage of its own:

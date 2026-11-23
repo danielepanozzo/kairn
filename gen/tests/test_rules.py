@@ -1309,8 +1309,13 @@ class R3OfTheKernels(unittest.TestCase):
         # of two limbs), entry kernels too, which the public headers call since the enclosure
         # interface was completed (test_every_kernel_the_public_headers_call_is_an_entry_kernel).
         wave_2 |= TheKernels.WAVE_2_B2
+        # And the constructors of a ball and of an interval of two limbs that guard the limbs of the
+        # numbers the program gives (ball_make_2_entry, interval_make_2_entry); ball_make_2 and
+        # interval_make_2, which the headers call on limbs a kernel wrote, stay entry kernels: they
+        # guard the radius, and take the bounds a kernel wrote as they are.
         self.assertEqual({n for n, k in ks.items() if k.entry},
-                         self.CORES | self.BALL_CORES | self.full_entry() | self.WAVE_1 | self.FOLD_STEPS | wave_2)
+                         self.CORES | self.BALL_CORES | self.full_entry() | self.WAVE_1 | self.FOLD_STEPS | wave_2 |
+                         TheKernels.CONSTRUCTOR_ENTRY)
 
     def test_every_kernel_the_public_headers_call_is_an_entry_kernel(self):
         ks = common.kernels()
@@ -1333,7 +1338,8 @@ class R3OfTheKernels(unittest.TestCase):
                          self.WAVE_2_CALLED)
         exempt = set(self.NOT_ENTRY_BUT_CALLED)
         self.assertEqual(called - exempt, self.CORES | self.full_entry() | self.WAVE_1_CALLED |
-                         self.WAVE_2_CALLED | TheKernels.WAVE_2_B2 | self.ARRAYS_CALLED)
+                         self.WAVE_2_CALLED | TheKernels.WAVE_2_B2 | self.ARRAYS_CALLED |
+                         TheKernels.CONSTRUCTOR_ENTRY)
         self.assertTrue(all(ks[n].entry for n in called - exempt))
         self.assertFalse(any(ks[n].entry for n in exempt))
         # Every exemption is called, from the function it names and no other, and argues each input
@@ -1765,6 +1771,11 @@ class TheKernels(unittest.TestCase):
     # and those with the IEEE-model statement only (full kernels).
     FACTOR_ENTRY_EXTENDED = {'mul_down_entry', 'mul_up_entry', 'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
     FACTOR_ENTRY_IEEE_ONLY = {'mul_2_1_full_entry', 'ball_scale_2_full_entry'}
+    # The constructors of a ball and of an interval of two limbs on the limbs of numbers the program
+    # gives, each limb guarded (rule R3; the owner's decision of 2026-11-23 for the ball): the
+    # listings of ball_make_2 and interval_make_2 on the guarded limbs, proved by reduction to them
+    # (IeeeMakeEntry.v), with the IEEE-model statement only, as their cores.
+    CONSTRUCTOR_ENTRY = {'ball_make_2_entry', 'interval_make_2_entry'}
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
@@ -1836,7 +1847,8 @@ class TheKernels(unittest.TestCase):
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2 | self.FACTOR_ENTRY)
+        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2 | self.FACTOR_ENTRY |
+                         self.CONSTRUCTOR_ENTRY)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -1865,9 +1877,10 @@ class TheKernels(unittest.TestCase):
         # gives the whole line (IeeeMake.v).
         # The kernels of the constructor, the negation, the scaling by a power of two and the product
         # of BallVectors are proved (BV_UNVERIFIED is empty).
+        # The guarded constructors of two limbs, proved by reduction to their cores (IeeeMakeEntry.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV_UNVERIFIED) | self.WAVE_2_PROVED |
-                         self.FACTOR_ENTRY)
+                         self.FACTOR_ENTRY | self.CONSTRUCTOR_ENTRY)
         # No other kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
         # were about the generated text, and so were those of the accumulator and the radius
         # kernels of BallVector (BvRadius.v).
@@ -1879,12 +1892,12 @@ class TheKernels(unittest.TestCase):
         wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS | self.WAVE_2_B1 | {'mul_ext_2_2'} | self.WAVE_2_B2
         self.assertEqual({name for name, k in ks.items() if not k.real_model},
                          self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only |
-                         self.FACTOR_ENTRY_IEEE_ONLY)
+                         self.FACTOR_ENTRY_IEEE_ONLY | self.CONSTRUCTOR_ENTRY)
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
                          self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} |
                          {'bv_center_2', 'bv_center_entry_2'} |
-                         self.FACTOR_ENTRY_EXTENDED)
+                         self.FACTOR_ENTRY_EXTENDED | self.CONSTRUCTOR_ENTRY)
         # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2, and
         # so has bv_center_entry_2, the same copy on the guarded limbs.)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
@@ -1892,7 +1905,7 @@ class TheKernels(unittest.TestCase):
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH
                                             | ((self.NORM_FINISH | {'bv_center_2', 'bv_center_entry_2'}) - self.BV_IEEE_UNVERIFIED)
                                             | (self.WAVE_2_PROVED - self.WAVE_2_CORES)
-                                            | self.FACTOR_ENTRY_EXTENDED, 'proved'),
+                                            | self.FACTOR_ENTRY_EXTENDED | self.CONSTRUCTOR_ENTRY, 'proved'),
                               **dict.fromkeys(((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED)
                                               | self.BV_IEEE_UNVERIFIED,
                                               'unverified')))
@@ -1902,7 +1915,8 @@ class TheKernels(unittest.TestCase):
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
                          | self.WAVE_1_FULL | self.FOLDS_FINISH
                          | ((self.NORM_FINISH | {'bv_center_2', 'bv_center_entry_2'}) - self.BV_IEEE_UNVERIFIED)
-                         | (self.WAVE_2_PROVED - self.WAVE_2_CORES) | self.FACTOR_ENTRY_EXTENDED)
+                         | (self.WAVE_2_PROVED - self.WAVE_2_CORES) | self.FACTOR_ENTRY_EXTENDED
+                         | self.CONSTRUCTOR_ENTRY)
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
         # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A

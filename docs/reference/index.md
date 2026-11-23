@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 237 kernels are proved.
+All 239 kernels are proved.
 
 36 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -23,7 +23,8 @@ Making numbers and balls, and reading their parts.
 | `Expansion<T, 2>(a)`, `from_limbs(p)` | `T` | $x = a$ exactly, canonical | [`make_2`](make_2.md) |
 | `from_limbs(p)`, `from_limbs_unchecked(p)`, `Expansion<T, 2>(r)` | `T*` | $x = y$ exactly, canonical | [`make_2_limbs`](make_2_limbs.md) |
 | `Ball<T, 1>(c, r)`, `Ball<T, 1>(c)`, `Ball<T, 1>(a)`, `Ball<T, 1>(q)` | `Expansion<T, 1>`, `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_1`](ball_make_1.md) |
-| `Ball<T, 2>(c, r)`, `Ball<T, 2>(c)`, `Ball<T, 2>(a)`, `Ball<T, 2>(q)` | `Expansion<T, 2>`, `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_2`](ball_make_2.md) |
+| `Ball<T, 2>(a)` | `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_2`](ball_make_2.md) |
+| `Ball<T, 2>(c, r)`, `Ball<T, 2>(c)`, `Ball<T, 2>(q)` | `Expansion<T, 2>`, `T` | the ball of center $c$ and radius $r$, canonical | [`ball_make_2_entry`](ball_make_2_entry.md) |
 | `Expansion<T, K>()` | none | zero | none |
 | `Expansion<T, 1>(a)` | `T` | the value $a$ | none |
 | `Expansion<T, 1>::from_limbs(p)` | `const T*` | the limb $p_0$: every value of `T` is a one-limb number | none |
@@ -198,7 +199,8 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | `X + Y`, `X += Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) |
 | `-X` | `Interval<T, 2>` | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_2`](interval_neg_2.md) |
 | `X - Y`, `X -= Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) |
-| `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)`, `from_bounds(lo, hi)` | `Expansion<T, 2>`, `Expansion<T, 2>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`interval_make_2`](interval_make_2.md) |
+| `Interval<T, 2>(a)`, `from_bounds(lo, hi)` | `T` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`interval_make_2`](interval_make_2.md) |
+| `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)`, `from_bounds(lo, hi)` | `Expansion<T, 2>`, `Expansion<T, 2>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`interval_make_2_entry`](interval_make_2_entry.md) |
 | `X * Y`, `X *= Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) |
 | `X.hull(Y)` | `Interval<T, 1>`, `Interval<T, 1>` | the hull of the intervals, exactly | [`interval_hull_1`](interval_hull_1.md) |
 | `X.intersection(Y)` | `Interval<T, 1>`, `Interval<T, 1>` | the intersection of the intervals, exactly | [`interval_intersection_1`](interval_intersection_1.md) |

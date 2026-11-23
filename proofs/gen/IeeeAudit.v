@@ -44,6 +44,7 @@ From Kairn Require Import IeeeIntervalMul2.
 From Kairn Require Import IeeeIntervalPredicates.
 From Kairn Require Import IeeeIntervalSub2.
 From Kairn Require Import IeeeMake.
+From Kairn Require Import IeeeMakeEntry.
 From Kairn Require Import IeeeMapSteps.
 From Kairn Require Import IeeeSteps.
 
@@ -335,6 +336,9 @@ Print Assumptions ball_lower_as_2_correct.
 Definition ball_make_2_audit : ball_make_2_spec := ball_make_2_correct.
 Print Assumptions ball_make_2_correct.
 
+Definition ball_make_2_entry_audit : ball_make_2_entry_spec := ball_make_2_entry_correct.
+Print Assumptions ball_make_2_entry_correct.
+
 Definition ball_mul_2_full_audit : ball_mul_2_full_spec := ball_mul_2_full_correct.
 Print Assumptions ball_mul_2_full_correct.
 
@@ -415,6 +419,9 @@ Print Assumptions interval_less_equal_2_correct.
 
 Definition interval_make_2_audit : interval_make_2_spec := interval_make_2_correct.
 Print Assumptions interval_make_2_correct.
+
+Definition interval_make_2_entry_audit : interval_make_2_entry_spec := interval_make_2_entry_correct.
+Print Assumptions interval_make_2_entry_correct.
 
 Definition mul_ext_2_2_audit : mul_ext_2_2_spec := mul_ext_2_2_correct.
 Print Assumptions mul_ext_2_2_correct.
@@ -1208,6 +1215,9 @@ Print Assumptions IeeeTwoExecutions.mul_pow2_2_two_executions.
 Definition ball_make_2_two_executions_audit : ball_make_2_two_executions_spec := IeeeTwoExecutions.ball_make_2_two_executions.
 Print Assumptions IeeeTwoExecutions.ball_make_2_two_executions.
 
+Definition ball_make_2_entry_two_executions_audit : ball_make_2_entry_two_executions_spec := IeeeTwoExecutions.ball_make_2_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.ball_make_2_entry_two_executions.
+
 Definition ball_mul_pow2_2_two_executions_audit : ball_mul_pow2_2_two_executions_spec := IeeeTwoExecutions.ball_mul_pow2_2_two_executions.
 Print Assumptions IeeeTwoExecutions.ball_mul_pow2_2_two_executions.
 
@@ -1219,6 +1229,9 @@ Print Assumptions IeeeTwoExecutions.bv_center_entry_2_two_executions.
 
 Definition bv_mul_pow2_step_2_two_executions_audit : bv_mul_pow2_step_2_two_executions_spec := IeeeTwoExecutions.bv_mul_pow2_step_2_two_executions.
 Print Assumptions IeeeTwoExecutions.bv_mul_pow2_step_2_two_executions.
+
+Definition interval_make_2_entry_two_executions_audit : interval_make_2_entry_two_executions_spec := IeeeTwoExecutions.interval_make_2_entry_two_executions.
+Print Assumptions IeeeTwoExecutions.interval_make_2_entry_two_executions.
 
 Definition interval_split_2_two_executions_audit : interval_split_2_two_executions_spec := IeeeTwoExecutions.interval_split_2_two_executions.
 Print Assumptions IeeeTwoExecutions.interval_split_2_two_executions.

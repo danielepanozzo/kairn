@@ -78,7 +78,7 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | `-x`, `abs(x)` ([`neg_2`](../reference/neg_2.md), [`abs_2`](../reference/abs_2.md)) | exact, normalized | exact: the infinity with its sign changed or removed; NaN stays NaN |
 | `<`, `<=`, `>`, `>=`, `==`, `!=` (the `lt`, `le` and `eq` kernels of [Comparisons](../reference/index.md#comparisons)) | the truth about the exact values | the truth in the extended reals; false with a NaN, as for `T` (`!=` true) |
 | `to_nearest`, `to_down`, `to_up`, `abs_upper` ([`to_nearest_2`](../reference/to_nearest_2.md), [`to_down_2`](../reference/to_down_2.md), [`to_up_2`](../reference/to_up_2.md), [`abs_upper_2`](../reference/abs_upper_2.md)) | the exact rounding to `T` | the rounding with overflow ($\pm\infty$ beyond the largest finite `T`); an infinity or NaN gives itself |
-| constructors ([`make_2`](../reference/make_2.md), [`make_2_limbs`](../reference/make_2_limbs.md), [`ball_make_1`](../reference/ball_make_1.md), [`ball_make_2`](../reference/ball_make_2.md)) | | the value given, canonical; for a ball, below |
+| constructors ([`make_2`](../reference/make_2.md), [`make_2_limbs`](../reference/make_2_limbs.md), [`ball_make_1`](../reference/ball_make_1.md), [`ball_make_2_entry`](../reference/ball_make_2_entry.md), [`ball_make_2`](../reference/ball_make_2.md)) | | the value given, canonical; for a ball, below |
 | one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` ([`add_1_1`](../reference/add_1_1.md), [`mul_1_1`](../reference/mul_1_1.md)) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products (`ldexp`: when $2^n$ is a number of `T`, [below](#overflow-and-non-finite-values) for the other $n$) | the IEEE 754 operation |
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
 | `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (the kernels of [Ball operations](../reference/index.md#ball-operations)) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4 (B1 to B3 for `-X`): containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
@@ -366,9 +366,13 @@ plus $+0$ is at most fused into one FMA that rounds the product, and its result 
 nothing later can fuse; a compiler that honors signed zeros cannot remove the addition. The guard
 is in the kernels that receive such a value: `add_2_1` (and through it `sub_2_1`, `sub_1_2` and
 their full kernels) on its limb operand, the constructors `make_2`, `make_2_limbs`,
-`ball_make_1`, `ball_make_2` and `interval_make_1` and the ball from an interval of two `T`
-(`ball_from_interval_1`, `ball_from_interval_2`, which `from_interval` and `from_bounds` call) on what
-they are given, and the entry forms of the building blocks
+`ball_make_1`, `ball_make_2_entry`, `interval_make_1` and `interval_make_2_entry` and the ball
+from an interval of two `T` (`ball_from_interval_1`, `ball_from_interval_2`, which
+`from_interval` and `from_bounds` call) on what they are given (for a number of two limbs given
+as the center of a ball or a bound of an interval, each limb: a program can write the limbs of
+an `Expansion<T, 2>`; `ball_make_2` and `interval_make_2`, the same listings without the guards
+of those limbs, take only limbs that a kernel wrote, such as `make_2` in `Ball<T, 2>(a)`), and
+the entry forms of the building blocks
 that add their operands (`two_sum_entry`, `fast_two_sum_entry`, `radd_entry` and the four directed
 sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb operand that is a
 factor of a fused operation is guarded too, because a compiler that sees the other factor to be 1
@@ -378,8 +382,11 @@ limbs, `two_prod`, `mul_down` and `mul_up` call entry forms that guard it (`mul_
 `mul_2_1_entry`, `ball_scale_2_full_entry`, `two_prod_entry`, `mul_down_entry`, `mul_up_entry`). A
 limb operand that a kernel only rounds as a product alone, compares or steps needs none
 (comparisons, the scaling of a ball of one limb, `ldexp`, `rmul`, `next_up` and `next_down`). Limbs
-written directly into `limb[]` are not guarded: a limb written that way must not be a product the
-compiler can see being computed; `from_limbs` is the way to build a number from computed values,
+written directly into `limb[]` are not guarded by the operations of numbers: a limb written that way
+must not be a product the compiler can see being computed where it is added as a number (`x + y`),
+and is guarded where it is given to the constructor of a ball, an interval or a ball vector of two
+limbs (`Ball<T, 2>(c, r)`, `Interval<T, 2>(lo, hi)`, the constructors of `BallVector<T, 2, N>`);
+`from_limbs` is the way to build a number from computed values,
 and `Interval<T, k>::from_limbs` and `Ball<T, k>::from_limbs` the way to build a set from limbs
 read out of one, each limb through the guard of `make_2` (a value of `T`, of which they keep the
 leading limb) or `make_2_limbs` (a pair): a composition argued from those claims, not

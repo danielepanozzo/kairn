@@ -1885,6 +1885,15 @@ template <> struct ball_make_2<float> {
     static constexpr bool proved = true;
 };
 
+// ball_make_2_entry: proved. Claims: makes_ball.
+template <class T> struct ball_make_2_entry;
+template <> struct ball_make_2_entry<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_make_2_entry<float> {
+    static constexpr bool proved = true;
+};
+
 // ball_mul_2: proved. Claims: normalized; encloses.
 template <class T> struct ball_mul_2;
 template <> struct ball_mul_2<double> {
@@ -2269,6 +2278,15 @@ template <> struct interval_make_2<double> {
     static constexpr bool proved = true;
 };
 template <> struct interval_make_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_make_2_entry: proved. Claims: makes_interval.
+template <class T> struct interval_make_2_entry;
+template <> struct interval_make_2_entry<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_make_2_entry<float> {
     static constexpr bool proved = true;
 };
 

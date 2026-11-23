@@ -100,8 +100,12 @@ Three things remain the program's:
 - **One-limb numbers behave like `T`**, contraction included: they are not guarded, so `p * q + r` on
   `Expansion<double, 1>` may be one rounding where the compiler contracts, as for `double`
   ([One limb](../getting-started/guarantees.md#one-limb)).
-- **Limbs written directly** into `limb[]` are not guarded: such a limb must not be a product the
-  compiler can see being computed; `from_limbs` guards what it is given.
+- **Limbs written directly** into `limb[]` are not guarded by the operations of numbers: such a
+  limb must not be a product the compiler can see being computed where it is added as a number
+  (`x + y`); `from_limbs` guards what it is given, and so do the constructors of a ball, an
+  interval and a ball vector of two limbs, limb by limb (`Ball<T, 2>(c, r)`,
+  `Interval<T, 2>(lo, hi)`, the constructors of `BallVector<T, 2, N>`), so a number whose limbs
+  the program wrote may be given to them as it is.
 
 **Fast-math** is worse than contraction: `-ffast-math` and its parts let the compiler reassociate
 sums, ignore signed zeros or infinities, and replace quotients, and no way of writing C++ survives

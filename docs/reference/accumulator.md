@@ -30,7 +30,7 @@ Each operation that changes the state is one generated, proved kernel:
 | `merge(other)` | [`acc_merge_1`](acc_merge_1.md), [`acc_merge_2`](acc_merge_2.md) | $s \leftarrow s + s'$, $a \leftarrow \mathrm{RN}(a + a')$, $n \leftarrow n + n'$ |
 | `error_bound()` | [`bound_dot_1`](bound_dot_1.md), [`bound_dot_2`](bound_dot_2.md), then [`acc_radius_1`](acc_radius_1.md), [`acc_radius_2`](acc_radius_2.md) | the radius $r$ from $a$ and the count |
 | `sum()` | [`fold_finish_1`](fold_finish_1.md), [`fold_finish_2`](fold_finish_2.md) | $s$, or the canonical NaN, with whether it is finite |
-| `ball()` | `Ball(s, r)` ([`ball_make_1`](ball_make_1.md), [`ball_make_2`](ball_make_2.md)) | center $s$, radius $r$; the whole line where $r$ is $+\infty$ |
+| `ball()` | `Ball(s, r)` ([`ball_make_1`](ball_make_1.md)); for two limbs [`ball_make_2`](ball_make_2.md), with the checks of `Ball(s, r)`: $s$ is the kernels' output, whose limbs are not guarded again | center $s$, radius $r$; the whole line where $r$ is $+\infty$ |
 
 A value `add` takes passes through the guard first ([rule R3](../developer/architecture.md#the-kernel-ir)),
 so a product the program computes and adds, `acc.add(a * b)`, is the product rounded; the factors

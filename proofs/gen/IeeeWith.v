@@ -106,6 +106,7 @@ Local Notation two_sum := (IeeeModel.two_sum prec emax nan_plus nan_minus).
 Local Notation add_2_2 := (IeeeModel.add_2_2 prec emax nan_plus nan_minus).
 Local Notation add_fast_2_2 := (IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus).
 Local Notation bv_center_2 := (IeeeModel.bv_center_2 prec emax).
+Local Notation le_2_2 := (IeeeModel.le_2_2 prec emax).
 Local Notation lt_2_2 := (IeeeModel.lt_2_2 prec emax).
 Local Notation sub_2_2 := (IeeeModel.sub_2_2 prec emax nan_plus nan_minus nan_opp).
 
@@ -645,6 +646,25 @@ Definition ball_make_2_with (g_ : float -> float) (c0 c1 r : float) : float * fl
   let rw := if ok then s else cnan in
   (cw0, cw1, rw).
 
+(* ball_make_2_entry: ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23). *)
+Definition ball_make_2_entry_with (g_ : float -> float) (c0 c1 r : float) : float * float * float :=
+  let g0 := g_ c0 in
+  let g1 := g_ c1 in
+  let g := g_ r in
+  let n := lt g pzero in
+  let ok := negb n in
+  let a := abs g0 in
+  let f1 := lt a pinf in
+  let f2 := lt g pinf in
+  let f := andb f1 f2 in
+  let k0 := if f then g0 else pzero in
+  let k1 := if f then g1 else pzero in
+  let s := if f then g else pinf in
+  let cw0 := if ok then k0 else cnan in
+  let cw1 := if ok then k1 else cnan in
+  let rw := if ok then s else cnan in
+  (cw0, cw1, rw).
+
 (* ball_mul_pow2_2: midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). *)
 Definition ball_mul_pow2_2_with (p_ : float -> float -> float) (cx0 cx1 rx c : float) : float * float * float :=
   let h := p_ cx0 c in
@@ -701,6 +721,27 @@ Definition bv_mul_pow2_step_2_with (p_ : float -> float -> float) (x0 x1 c : flo
   let zc := eq x0 pzero in
   let e := orb bc zc in
   (z0, z1, e).
+
+(* interval_make_2_entry: interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry). *)
+Definition interval_make_2_entry_with (g_ : float -> float) (lo0 lo1 hi0 hi1 : float) : float * float * float * float :=
+  let gl0 := g_ lo0 in
+  let gl1 := g_ lo1 in
+  let gu0 := g_ hi0 in
+  let gu1 := g_ hi1 in
+  let ok := le_2_2 gl0 gl1 gu0 gu1 in
+  let nl := lt gl0 pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu0 in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let rv := lt_2_2 gu0 gu1 gl0 gl1 in
+  let el := if rv then pinf else mi in
+  let eu := if rv then mi else pinf in
+  let zl0 := if v then gl0 else el in
+  let zl1 := if v then gl1 else pzero in
+  let zu0 := if v then gu0 else eu in
+  let zu1 := if v then gu1 else pzero in
+  (zl0, zl1, zu0, zu1).
 
 (* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). *)
 Definition interval_split_2_with (p_ : float -> float -> float) (xl0 xl1 xu0 xu1 : float) : float * float * float * float * float * float * float * float :=
@@ -1302,6 +1343,16 @@ Definition ball_make_2_two_executions_spec : Prop :=
   let '(cw0', cw1', rw') := IeeeModel.ball_make_2 prec emax nan_plus' nan_abs' nan_const' c0 c1 r in
   xval cw0 = xval cw0' /\ xval cw1 = xval cw1' /\ xval rw = xval rw'.
 
+(* ball_make_2_entry: ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23). The two executions. *)
+Definition ball_make_2_entry_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus' : nan2 prec emax) (nan_abs nan_abs' : nan1 prec emax) (nan_const nan_const' : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall c0 c1 r : binary_float prec emax,
+  let '(cw0, cw1, rw) := ball_make_2_entry_with prec emax nan_abs nan_const (guard_ce prec emax) c0 c1 r in
+  let '(cw0', cw1', rw') := IeeeModel.ball_make_2_entry prec emax nan_plus' nan_abs' nan_const' c0 c1 r in
+  xval cw0 = xval cw0' /\ xval cw1 = xval cw1' /\ xval rw = xval rw'.
+
 (* ball_mul_pow2_2: midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). The two executions. *)
 Definition ball_mul_pow2_2_two_executions_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -1341,6 +1392,16 @@ Definition bv_mul_pow2_step_2_two_executions_spec : Prop :=
   let '(z0, z1, e) := bv_mul_pow2_step_2_with prec emax nan_plus nan_minus nan_abs (prod_ce prec emax nan_mult) x0 x1 c in
   let '(z0', z1', e') := IeeeModel.bv_mul_pow2_step_2 prec emax nan_plus' nan_minus' nan_abs' nan_fma' x0 x1 c in
   xval z0 = xval z0' /\ xval z1 = xval z1' /\ e = e'.
+
+(* interval_make_2_entry: interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry). The two executions. *)
+Definition interval_make_2_entry_two_executions_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus' : nan2 prec emax) (nan_opp nan_opp' : nan1 prec emax),
+  forall lo0 lo1 hi0 hi1 : binary_float prec emax,
+  let '(zl0, zl1, zu0, zu1) := interval_make_2_entry_with prec emax nan_opp (guard_ce prec emax) lo0 lo1 hi0 hi1 in
+  let '(zl0', zl1', zu0', zu1') := IeeeModel.interval_make_2_entry prec emax nan_plus' nan_opp' lo0 lo1 hi0 hi1 in
+  xval zl0 = xval zl0' /\ xval zl1 = xval zl1' /\ xval zu0 = xval zu0' /\ xval zu1 = xval zu1'.
 
 (* interval_split_2: the bounds and the midpoint of interval_mid_rad_2, moved into the interval (Milestone 2 listing). The two executions. *)
 Definition interval_split_2_two_executions_spec : Prop :=

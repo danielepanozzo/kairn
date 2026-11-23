@@ -1010,7 +1010,7 @@ else()
 endif()
 foreach(_case_name IN ITEMS 1:sub_2_2_full 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2_full
                             7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full_entry 10:traits_constant
-                            12:to_nearest_2_narrowing 13:make_2 14:ball_make_2 29:two_sum_entry 30:next_up
+                            12:to_nearest_2_narrowing 13:make_2 14:ball_make_2_entry 29:two_sum_entry 30:next_up
                             31:ball_mul_pow2_2_full 39:interval_add_1 40:interval_make_1 41:interval_to_ball_1)
   string(REPLACE ":" ";" _pair "${_case_name}")
   list(GET _pair 0 _case)
@@ -1023,10 +1023,12 @@ foreach(_case_name IN ITEMS 1:sub_2_2_full 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_
     "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/${_name}")
 endforeach()
 # One kernel unverified, the others proved: the operation must not compile through a conversion to
-# another, proved kernel (x + a as x + Expansion(a), a scaling as a product with a point ball).
+# another, proved kernel (x + a as x + Expansion(a), a scaling as a product with a point ball); and
+# the ball and the interval of numbers of two limbs, whose constructors call the guarded kernels
+# (rule R3), with the unguarded ones proved.
 foreach(_case_name IN ITEMS 20:add_2_1_full:limb 21:add_2_1_full:one_limb 22:sub_1_2_full:limb
                             23:mul_2_1_full_entry:limb 24:ball_scale_2_full_entry:limb 25:ball_make_2:point
-                            26:lt_2_1:limb)
+                            26:lt_2_1:limb 114:ball_make_2_entry:center 115:interval_make_2_entry:bounds)
   string(REPLACE ":" ";" _triple "${_case_name}")
   list(GET _triple 0 _case)
   list(GET _triple 1 _kernel)

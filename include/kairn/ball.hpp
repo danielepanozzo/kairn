@@ -6,8 +6,10 @@
 /// Each operation forwards to one generated kernel: the full Ball kernels, each a finite core
 /// followed by the fix-up of the special states (the empty set, the whole line), the scaling by a
 /// power of two of ldexp and half (two or three calls of it when 2^n is not a number of T), the
-/// constructor kernels ball_make_1 and ball_make_2 (from a center and a radius, or from a constant
-/// of kairn::rational). The functions of the interface that Ball shares with Interval
+/// constructor kernels ball_make_1 and ball_make_2_entry (from a center and a radius, or from a
+/// constant of kairn::rational; ball_make_2_entry guards each limb of a center of two limbs, rule
+/// R3) and ball_make_2 (the point of a T, whose center of two limbs make_2 wrote). The functions of
+/// the interface that Ball shares with Interval
 /// (docs/developer/design/milestone2.md, "One enclosure interface") call the kernels of that
 /// section: the signs (ball_positive_k, ball_negative_k, ball_zero_k), the member and subset tests
 /// (ball_contains_point_k, ball_contains_ball_k), the three-valued comparisons (ball_less_k,
@@ -39,7 +41,9 @@ namespace kairn {
 
 namespace detail {
 
-// The kernels of the Ball operations, by number of limbs of the center.
+// The kernels of the Ball operations, by number of limbs of the center. make is the constructor
+// kernel of a center the program gives; make_kernel that of a center a kernel wrote (the point of
+// a T, made by make_2 first), which for two limbs needs no guard of its limbs (rule R3).
 template <class T, int K>
 struct ball_kernels;
 template <class T>
@@ -51,6 +55,7 @@ struct ball_kernels<T, 1> {
     using scale_pow2 = gen::bounds::ball_mul_pow2_1_full<T>;
     using neg = gen::bounds::ball_neg_1<T>;
     using make = gen::bounds::ball_make_1<T>;
+    using make_kernel = gen::bounds::ball_make_1<T>;
     using lower_as = gen::bounds::ball_lower_as_1<T>;
     using upper_as = gen::bounds::ball_upper_as_1<T>;
     using lower = gen::bounds::ball_lower_as_1<T>;
@@ -77,7 +82,8 @@ struct ball_kernels<T, 2> {
     using scale = gen::bounds::ball_scale_2_full_entry<T>;
     using scale_pow2 = gen::bounds::ball_mul_pow2_2_full<T>;
     using neg = gen::bounds::ball_neg_2<T>;
-    using make = gen::bounds::ball_make_2<T>;
+    using make = gen::bounds::ball_make_2_entry<T>;
+    using make_kernel = gen::bounds::ball_make_2<T>;
     using lower_as = gen::bounds::ball_lower_as_2<T>;
     using upper_as = gen::bounds::ball_upper_as_2<T>;
     using lower = gen::bounds::ball_to_interval_2<T>;
@@ -97,13 +103,18 @@ struct ball_kernels<T, 2> {
     using to_ball = gen::bounds::interval_to_ball_2<T>;
 };
 
-/// Whether the kernel that makes a ball from a center is proved: ball_make_1 or ball_make_2.
+/// Whether the kernel that makes a ball from a center the program gives is proved: ball_make_1 or
+/// ball_make_2_entry.
 template <class T, int K>
 concept make_proved = proof_checked<typename ball_kernels<T, K>::make>;
+/// Whether the kernel that makes a ball from a center a kernel wrote is proved: ball_make_1 or
+/// ball_make_2.
+template <class T, int K>
+concept make_kernel_proved = proof_checked<typename ball_kernels<T, K>::make_kernel>;
 /// Whether the kernels that build the point ball of a T are proved: ball_make_1, or make_2 and
 /// ball_make_2.
 template <class T, int K>
-concept point_proved = make_proved<T, K> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
+concept point_proved = make_kernel_proved<T, K> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
 /// Whether the kernels of the member test of a point of T are proved: ball_contains_point_1, or
 /// make_2 and ball_contains_point_2.
 template <class T, int K>
@@ -137,17 +148,24 @@ KAIRN_FORCEINLINE constexpr bool canonical_ball(const Expansion<T, K>& c, T r) n
     }
 }
 
-// A ball from a canonical center and a radius (kernel ball_make_1 or ball_make_2), without the
+// A ball from a canonical center that the program gives and a radius (kernel ball_make_1 or
+// ball_make_2_entry, which guard every limb of the center and the radius, rule R3), without the
 // constraint, for the constructors and the marked forms. Under KAIRN_CHECKS the environment is
-// checked, then a center of two limbs that is not canonical and a negative radius are reported:
-// the latter as almost surely a bug, though the kernel gives it a meaning (the empty set). With a
-// center of one limb the constructor does not round but in its guards, whose values are the same
-// under every rounding mode, and nothing it checks rounds: the rounding mode is not checked.
+// checked, then a center of two limbs that is not canonical and a negative radius are reported
+// (check_make_ball): the latter as almost surely a bug, though the kernel gives it a meaning (the
+// empty set). With a center of one limb the constructor does not round but in its guards, whose
+// values are the same under every rounding mode, and nothing it checks rounds: the rounding mode
+// is not checked.
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> make_ball(const Expansion<T, 1>& c, std::type_identity_t<T> r) noexcept;
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept;
-// The constructor kernel alone, without the checks.
+// The checks of make_ball for two limbs, alone.
+template <class T>
+KAIRN_FORCEINLINE constexpr void check_make_ball(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept;
+// The constructor kernel of a center that a kernel wrote, ball_make_2, alone, without the checks:
+// its limbs are outputs of a kernel (make_2's, the running sum of an accumulator), which rule R3
+// does not ask to guard again, so they are not (the radius is guarded, as in every constructor).
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball_kernel(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept;
 // The point ball of a T. For two limbs, the center that make_2 returns is canonical, by the
@@ -558,18 +576,25 @@ public:
         : Ball(detail::make_point<T, K>(a)) {}
     /// The same with a marked operand: see kairn::Unverified.
     explicit constexpr Ball(Unverified<T> a) noexcept : Ball(detail::make_point<T, K>(a.value)) {}
-    /// The point c: center c, radius 0 (kernel ball_make_1 or ball_make_2). A c that is not finite
-    /// gives the whole line. Checked as the constructor below, with r = 0.
+    /// The point c: center c, radius 0 (kernel ball_make_1 or ball_make_2_entry, every limb of c
+    /// guarded as in the constructor below). A c that is not finite gives the whole line. Checked
+    /// as the constructor below, with r = 0.
     constexpr Ball(const Expansion<T, K>& c) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::make>
         : Ball(detail::make_ball(c, T(0))) {}
     /// The same with a marked operand.
     explicit constexpr Ball(const Unverified<Expansion<T, K>>& c) noexcept : Ball(detail::make_ball(c.value, T(0))) {}
-    /// The ball of center c and radius r (kernel ball_make_1 or ball_make_2), each guarded. For a
-    /// canonical c: the empty set when r is negative (-inf included); otherwise the whole line
-    /// when c is not finite or r is +inf or a NaN (a NaN says that something failed upstream, and
-    /// the whole line is the answer that is always true); otherwise center c and radius r,
-    /// exactly. So Ball(X.center(), X.radius()) of an empty X is the whole line, not X. When
+    /// The ball of center c and radius r (kernel ball_make_1 or ball_make_2_entry), every limb of c
+    /// and r guarded (rule R3: a product the program computed and wrote into a limb of c, or
+    /// passed as r, is rounded before any operation of the ball adds it, as every value that
+    /// enters a ball, an interval or a ball vector from the program is). Proved, in the IEEE
+    /// model, for a canonical c: the empty set when r is negative (-inf included); otherwise the
+    /// whole line when c is not finite or r is +inf or a NaN (a NaN says that something failed
+    /// upstream, and the whole line is the answer that is always true); otherwise center c and
+    /// radius r, of the values given: a limb of the center or a radius that is -0 comes back +0
+    /// (the guard computes -0 + 0, which is +0 under rounding to nearest; in constant evaluation
+    /// the guard is not applied, and a -0 keeps its sign), every other limb bit for bit. So
+    /// Ball(X.center(), X.radius()) of an empty X is the whole line, not X. When
     /// KAIRN_CHECKS is 1, the environment is checked as for an operation (config.hpp), then c
     /// must be canonical and a negative r is reported (it is almost surely a mistake; write
     /// Ball::empty() for the empty set); the constructors of a point above check the same.
@@ -583,11 +608,12 @@ public:
     /// The same with a marked center.
     constexpr Ball(const Unverified<Expansion<T, K>>& c, T r) noexcept : Ball(detail::make_ball(c.value, r)) {}
     /// The ball of a constant from a fraction, q = kairn::rational<Expansion<T, K>>(num, den) or
-    /// kairn::integer: center q.value and radius q.error (kernel ball_make_1 or ball_make_2, as
-    /// Ball(q.value, q.error), with the same checks), which contains num/den when q is what the
-    /// specification of kairn::rational says. That rests on rational, integer code that is tested
-    /// for equality and, by default, checked against its specification for every constant computed
-    /// at compile time, but not machine-checked (rational.hpp); the constructor kernel is proved.
+    /// kairn::integer: center q.value and radius q.error (kernel ball_make_1 or ball_make_2_entry,
+    /// as Ball(q.value, q.error), with the same guards and checks), which contains num/den when q
+    /// is what the specification of kairn::rational says. That rests on rational, integer code
+    /// that is tested for equality and, by default, checked against its specification for every
+    /// constant computed at compile time, but not machine-checked (rational.hpp); the constructor
+    /// kernel is proved.
     /// Explicit: the error becomes a radius. Until Kairn has a division,
     /// X * Ball(kairn::rational<Expansion<T, K>>(1, s)) is how to multiply a ball by 1/s for an
     /// integer s and keep an enclosure.
@@ -629,7 +655,7 @@ public:
     /// center of one limb and the radius each through make_2, of which this keeps the leading limb,
     /// the value given by make_2's claim (a canonical pair of value a has a as its leading limb, and
     /// a NaN gives two NaN); a center of two limbs through make_2_limbs, whose claim is the same
-    /// limbs for a canonical pair. Not through ball_make_1 or ball_make_2, the kernels of
+    /// limbs for a canonical pair. Not through ball_make_1 or ball_make_2_entry, the kernels of
     /// Ball(c, r), which guard the same limbs but make a NaN radius the whole line, so that the
     /// empty set would not come back. That the result is the ball given is argued from those
     /// claims, not machine-checked as one statement. The round trip, from_limbs of the limbs read,
@@ -994,7 +1020,7 @@ public:
     /// For one limb, the same of two numbers of one limb, which are values of T (kernel
     /// ball_from_interval_1), so that code written for bounds of K limbs reads as for an interval.
     /// A ball of two limbs has no such form: no kernel makes a ball of two bounds of two limbs
-    /// (Ball<T, 2>(Interval<T, 2>(lo, hi)) composes interval_make_2 and interval_to_ball_2).
+    /// (Ball<T, 2>(Interval<T, 2>(lo, hi)) composes interval_make_2_entry and interval_to_ball_2).
     [[nodiscard]] static constexpr Ball from_bounds(const Expansion<T, 1>& lo, const Expansion<T, 1>& hi) noexcept
         requires(K == 1 && detail::proof_checked<typename detail::ball_kernels<T, K>::from_interval>)
     {
@@ -1071,14 +1097,22 @@ KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball_kernel(const Expansion<T, 2>& c
     return Ball<T, 2>(kernel_result, cw, rw);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept {
+KAIRN_FORCEINLINE constexpr void check_make_ball([[maybe_unused]] const Expansion<T, 2>& c,
+                                                 [[maybe_unused]] std::type_identity_t<T> r) noexcept {
 #if KAIRN_CHECKS
     if (check_environment()) {
         if (!canonical(c)) fail("a ball", "has a center that is not canonical");
         if (0 > r) fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
     }
 #endif
-    return make_ball_kernel(c, r);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept {
+    check_make_ball(c, r);
+    Expansion<T, 2> cw;
+    T rw = T(0);
+    gen::ball_make_2_entry(c.limb[0], c.limb[1], r, cw.limb[0], cw.limb[1], rw);
+    return Ball<T, 2>(kernel_result, cw, rw);
 }
 }  // namespace detail
 

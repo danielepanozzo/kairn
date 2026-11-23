@@ -9,7 +9,7 @@
    and a + 0 at run time, and `times_inf t`, which there compares t with zero (times_inf_ce of
    the C++ prelude) and at run time multiplies it by +infinity. This file compares the two
    executions of a whole kernel, with all three, for every kernel that computes one of them:
-   the 64 of proofs/gen/IeeeWith.v.
+   the 66 of proofs/gen/IeeeWith.v.
 
    The thirty that the rule of the product makes constexpr are the products and scalings
    mul_1_1, rmul, mul_pow2_step_1, scale_step_1, mul_pow2_2, mul_pow2_2_full,
@@ -21,13 +21,14 @@
    interval_mid_rad_1, interval_to_ball_1, interval_split_1, interval_split_2,
    ball_from_interval_1, ball_from_interval_2, ball_hull_1 and ball_intersection_1.
 
-   The 34 without a product guard an operand or fix up a non-finite result: the entry
+   The 36 without a product guard an operand or fix up a non-finite result: the entry
    kernels and steps that guard what the program supplies (add_down_entry, add_up_entry,
    sub_down_entry, sub_up_entry, add_entry_step_1, sub_entry_step_1, sum_entry_step_1,
    add_entry_step_2, sub_entry_step_2, sum_entry_step_2, sum_fast_entry_step_2,
    fast_two_sum_entry, two_sum_entry, radd_entry, acc_add_1, acc_add_2, bv_center_entry_1,
    bv_center_entry_2, bv_make_radius, ball_contains_point_1), the constructors (make_2, make_2_limbs,
-   ball_make_1, ball_make_2, interval_make_1), the sums and differences of a number and a
+   ball_make_1, ball_make_2, interval_make_1, and the guarded forms of two limbs ball_make_2_entry
+   and interval_make_2_entry), the sums and differences of a number and a
    pair (add_2_1, sub_1_2, sub_2_1, each with a guard), and the full sums and differences,
    whose fix-ups use times_inf (add_2_1_full, sub_1_2_full, sub_2_1_full with a guard too,
    add_2_2_full, add_fast_2_2_full, sub_2_2_full).
@@ -104,7 +105,7 @@
      of the same value by that kernel's lemma: K_same for a kernel of IeeeWith.v, and for a
      kernel of IeeeModel.v that computes none of the three the lemmas of the first part of
      the last section (two_sum, two_sum_ord, the directed sums and differences of one limb,
-     ball_to_interval_1, interval_hull_1, add_2_2, lt_2_2, abs_2, le_2_1, radd, sub_1_1,
+     ball_to_interval_1, interval_hull_1, add_2_2, lt_2_2, le_2_2, abs_2, le_2_1, radd, sub_1_1,
      sub_2_2, add_fast_2_2). The eight kernels proved first
      (split, two_prod_dekker, mul_pow2_2, mul_pow2_2_full, ball_mul_pow2_k and their full
      forms) keep the statements of their K_same with fst and snd; the others use the
@@ -1174,6 +1175,18 @@ Lemma bv_center_entry_2_with_prod :
   = IeeeModel.bv_center_entry_2 prec emax nan_plus c0 c1.
 Proof. reflexivity. Qed.
 
+Lemma ball_make_2_entry_with_prod :
+  forall c0 c1 r : float,
+  IeeeWith.ball_make_2_entry_with prec emax nan_abs nan_const guard c0 c1 r
+  = IeeeModel.ball_make_2_entry prec emax nan_plus nan_abs nan_const c0 c1 r.
+Proof. reflexivity. Qed.
+
+Lemma interval_make_2_entry_with_prod :
+  forall lo0 lo1 hi0 hi1 : float,
+  IeeeWith.interval_make_2_entry_with prec emax nan_opp guard lo0 lo1 hi0 hi1
+  = IeeeModel.interval_make_2_entry prec emax nan_plus nan_opp lo0 lo1 hi0 hi1.
+Proof. reflexivity. Qed.
+
 Lemma sub_1_2_with_prod :
   forall a y0 y1 : float,
   IeeeWith.sub_1_2_with prec emax nan_plus nan_minus nan_opp guard a y0 y1
@@ -1282,6 +1295,7 @@ Notation m_interval_hull_1 := (IeeeModel.interval_hull_1 prec emax).
 Notation m_add_2_2 := (IeeeModel.add_2_2 prec emax nan_plus nan_minus).
 Notation m_add_2_2' := (IeeeModel.add_2_2 prec emax nan_plus' nan_minus').
 Notation m_lt_2_2 := (IeeeModel.lt_2_2 prec emax).
+Notation m_le_2_2 := (IeeeModel.le_2_2 prec emax).
 Notation m_abs_2 := (IeeeModel.abs_2 prec emax nan_opp).
 Notation m_abs_2' := (IeeeModel.abs_2 prec emax nan_opp').
 Notation m_le_2_1 := (IeeeModel.le_2_1 prec emax).
@@ -1435,6 +1449,10 @@ Notation w_ball_make_2 := (IeeeWith.ball_make_2_with prec emax nan_abs nan_const
 Notation w_ball_make_2' := (IeeeWith.ball_make_2_with prec emax nan_abs' nan_const').
 Notation w_make_2_limbs := (IeeeWith.make_2_limbs_with prec emax).
 Notation w_bv_center_entry_2 := (IeeeWith.bv_center_entry_2_with prec emax).
+Notation w_ball_make_2_entry := (IeeeWith.ball_make_2_entry_with prec emax nan_abs nan_const).
+Notation w_ball_make_2_entry' := (IeeeWith.ball_make_2_entry_with prec emax nan_abs' nan_const').
+Notation w_interval_make_2_entry := (IeeeWith.interval_make_2_entry_with prec emax nan_opp).
+Notation w_interval_make_2_entry' := (IeeeWith.interval_make_2_entry_with prec emax nan_opp').
 Notation w_sub_1_2 := (IeeeWith.sub_1_2_with prec emax nan_plus nan_minus nan_opp).
 Notation w_sub_1_2' := (IeeeWith.sub_1_2_with prec emax nan_plus' nan_minus' nan_opp').
 Notation w_sub_1_2_full := (IeeeWith.sub_1_2_full_with prec emax nan_plus nan_minus nan_opp
@@ -1643,6 +1661,16 @@ Lemma lt_2_2_same :
   m_lt_2_2 x0 x1 y0 y1 = m_lt_2_2 x0' x1' y0' y1'.
 Proof.
 intros x0 x0' x1 x1' y0 y0' y1 y1' H0 H1 K0 K1. cbv beta delta [IeeeModel.lt_2_2].
+lockstep fail.
+Qed.
+
+(* The other comparison of interval_make_2_entry, as lt_2_2. *)
+Lemma le_2_2_same :
+  forall x0 x0' x1 x1' y0 y0' y1 y1' : float,
+  sv x0 x0' -> sv x1 x1' -> sv y0 y0' -> sv y1 y1' ->
+  m_le_2_2 x0 x1 y0 y1 = m_le_2_2 x0' x1' y0' y1'.
+Proof.
+intros x0 x0' x1 x1' y0 y0' y1 y1' H0 H1 K0 K1. cbv beta delta [IeeeModel.le_2_2].
 lockstep fail.
 Qed.
 
@@ -2221,6 +2249,30 @@ Lemma make_2_limbs_same :
 Proof.
 intros g g' Hg h h' l l' Hh Hl. cbv beta delta [IeeeWith.make_2_limbs_with].
 lockstep fail.
+Qed.
+
+(* ball_make_2_entry: the listing of ball_make_2 on the guarded limbs of the center. *)
+Lemma ball_make_2_entry_same :
+  forall g g' : float -> float, same_un g g' ->
+  forall c0 c0' c1 c1' r r' : float, sv c0 c0' -> sv c1 c1' -> sv r r' ->
+  same_triple (w_ball_make_2_entry g c0 c1 r) (w_ball_make_2_entry' g' c0' c1' r').
+Proof.
+intros g g' Hg c0 c0' c1 c1' r r' Hc0 Hc1 Hr. cbv beta delta [IeeeWith.ball_make_2_entry_with].
+lockstep fail.
+Qed.
+
+(* interval_make_2_entry: the listing of interval_make_2 on the guarded limbs of the bounds,
+   with its comparisons of two limbs le_2_2 and lt_2_2. *)
+Lemma interval_make_2_entry_same :
+  forall g g' : float -> float, same_un g g' ->
+  forall lo0 lo0' lo1 lo1' hi0 hi0' hi1 hi1' : float,
+  sv lo0 lo0' -> sv lo1 lo1' -> sv hi0 hi0' -> sv hi1 hi1' ->
+  same_four (w_interval_make_2_entry g lo0 lo1 hi0 hi1)
+    (w_interval_make_2_entry' g' lo0' lo1' hi0' hi1').
+Proof.
+intros g g' Hg lo0 lo0' lo1 lo1' hi0 hi0' hi1 hi1' Hl0 Hl1 Hh0 Hh1.
+cbv beta delta [IeeeWith.interval_make_2_entry_with].
+lockstep ltac:(first [apply le_2_2_same; leaf | apply lt_2_2_same; leaf]).
 Qed.
 
 (* bv_center_entry_2: the guard of each limb, then the copy bv_center_2. *)
@@ -2952,6 +3004,31 @@ Proof.
 intros h l. rewrite <- make_2_limbs_with_prod.
 exact (make_2_limbs_same guard_ce guard' Hgc h h l l (same_refl prec emax h) (same_refl prec emax
        l)).
+Qed.
+
+Theorem ball_make_2_entry_two_executions :
+  forall c0 c1 r : float,
+  let '(cw0, cw1, rw) := w_ball_make_2_entry guard_ce c0 c1 r in
+  let '(cw0', cw1', rw') :=
+    IeeeModel.ball_make_2_entry prec emax nan_plus' nan_abs' nan_const' c0 c1 r in
+  sv cw0 cw0' /\ sv cw1 cw1' /\ sv rw rw'.
+Proof.
+intros c0 c1 r. rewrite <- ball_make_2_entry_with_prod.
+exact (ball_make_2_entry_same guard_ce guard' Hgc c0 c0 c1 c1 r r (same_refl prec emax c0)
+       (same_refl prec emax c1) (same_refl prec emax r)).
+Qed.
+
+Theorem interval_make_2_entry_two_executions :
+  forall lo0 lo1 hi0 hi1 : float,
+  let '(zl0, zl1, zu0, zu1) := w_interval_make_2_entry guard_ce lo0 lo1 hi0 hi1 in
+  let '(zl0', zl1', zu0', zu1') :=
+    IeeeModel.interval_make_2_entry prec emax nan_plus' nan_opp' lo0 lo1 hi0 hi1 in
+  sv zl0 zl0' /\ sv zl1 zl1' /\ sv zu0 zu0' /\ sv zu1 zu1'.
+Proof.
+intros lo0 lo1 hi0 hi1. rewrite <- interval_make_2_entry_with_prod.
+exact (interval_make_2_entry_same guard_ce guard' Hgc lo0 lo0 lo1 lo1 hi0 hi0 hi1 hi1
+       (same_refl prec emax lo0) (same_refl prec emax lo1) (same_refl prec emax hi0)
+       (same_refl prec emax hi1)).
 Qed.
 
 Theorem bv_center_entry_2_two_executions :

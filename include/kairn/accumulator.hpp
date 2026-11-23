@@ -237,16 +237,24 @@ public:
         return ok_r && detail::finite(r) ? r : inf;
     }
 
-    /// The ball of center the running sum and radius error_bound() (kernel ball_make_1 or
-    /// ball_make_2, the constructor Ball(c, r)): it contains the exact sum of what was added. The
-    /// whole line when error_bound() is +infinity or the running sum is not finite: never a finite
-    /// ball that the theorem does not give. Rounds; not constexpr.
+    /// The ball of center the running sum and radius error_bound() (kernel ball_make_1, the
+    /// constructor Ball(c, r), or ball_make_2, with the checks of Ball(c, r)): it contains the exact
+    /// sum of what was added. The whole line when error_bound() is +infinity or the running sum is
+    /// not finite: never a finite ball that the theorem does not give. A running sum of two limbs
+    /// is the output of the accumulator's kernels, which rule R3 does not ask to guard again, so
+    /// its limbs are not (ball_make_2, not ball_make_2_entry, which the constructor calls on a
+    /// center the program gives). Rounds; not constexpr.
     Ball<T, K> ball() const noexcept
-        requires detail::acc_radius_proved<T, K> && detail::make_proved<T, K>
+        requires detail::acc_radius_proved<T, K> && detail::make_kernel_proved<T, K>
     {
         const T r = error_bound();
         if (r == std::numeric_limits<T>::infinity()) return Ball<T, K>::whole();
-        return Ball<T, K>(s_, r);
+        if constexpr (K == 1) {
+            return Ball<T, 1>(s_, r);
+        } else {
+            detail::check_make_ball(s_, r);
+            return detail::make_ball_kernel(s_, r);
+        }
     }
 
     /// The number of terms added: +1 per add and add_product, the sum on a merge; 2^64 - 1 means
