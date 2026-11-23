@@ -382,6 +382,18 @@ void arithmetic(const Corpus<T>& c) {
         std::printf("FAILED one limb against T (%s): the corpus gave no zero of a sum (%ld) or of a product (%ld) "
                     "that T makes -0\n", type_name<T>(), zero_of_sum - sums, zero_of_product - products);
     }
+#if KAIRN_TEST_ZERO_SIGN_FREE
+    // With MSVC, which removes the guard in packed code: the sign that (-0) + (-0) comes out with,
+    // printed (no verdict: the pages say it can stay -0 there).
+    {
+        const P1<T> mz = P1<T>::broadcast(A1(opaque(-T(0))));
+        const P1<T> z = mz + mz;
+        int negative = 0;
+        for (int i = 0; i < P1<T>::lanes; ++i) negative += std::signbit(z.lane(i).limb[0]) ? 1 : 0;
+        std::printf("MSVC (%s): (-0) + (-0) of Packed<T, 1> is -0 in %d of %d lanes (the guard removed where it is)\n",
+                    type_name<T>(), negative, P1<T>::lanes);
+    }
+#endif
 
     // One limb: the operations that do not round.
     unary<T, 1>("-p1", c, [](P1<T> x) { return -x; }, [](A1 x) { return -x; });

@@ -30,6 +30,9 @@
 // a program writes it, and x + a of two limbs), and added by the program itself with the form's
 // own addition, on the registers. Both must agree in the build with the guard (--expect none);
 // against the copy without it they are counted and reported only (the product there is the same).
+// Squares last (run_squares): a square of the program, a * a, whose guard a compiler may drop (a
+// finding: SQUARE below), counted and printed with no verdict; and the square of Packed<T, 1>,
+// P1(a) * P1(a), counted with the two kinds above.
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
@@ -277,6 +280,10 @@ FORM(kp_program_add_rev, return P2<T>(P1<T>::from_limbs(Program<T>::add(x.limb[0
 #define SQUARE P1<T>::from_limbs(M::reg(a, a))
 FORM(sq_p1_plus, return P2<T>(X1 + SQUARE);)
 FORM(sq_plus, return x + SQUARE;)
+// And the square as the product of Packed<T, 1>, P1(a) * P1(a) (KPROD with b = a), passed into
+// x + y and added by the program itself.
+FORM(sq_kp_plus, return P2<T>(X1 + KPROD);)
+FORM(sq_kp_program_add, return P2<T>(P1<T>::from_limbs(Program<T>::add(KPROD.limb[0], x.limb[0])));)
 
 // The other factor a constant the compiler sees (rule R3, the factors of a fused operation:
 // docs/developer/architecture.md): Packed<T, 2> of F in every lane, F = 1, -1 or 2, times the
@@ -530,11 +537,15 @@ void run(const char* type, long registers, Totals& totals) {
 }
 
 // The squares (SQUARE above): a in [1/2, 1), x within a few units of -RN(a a), the square in place
-// against the rounded square. The registers that differ, printed and returned; no verdict.
+// against the rounded square. The registers that differ, printed; those of the program's square
+// returned, with no verdict; those of the square of Packed<T, 1> counted with the other forms of its
+// kind, which must agree in the build with the guard.
 template <class T>
-long run_squares(const char* type, long registers) {
+long run_squares(const char* type, long registers, Totals& totals) {
     constexpr int W = P1<T>::lanes;
-    const Form<T> forms[] = {ROWK(sq_p1_plus, "P1 x + a*a", false, 0), ROWK(sq_plus, "x + a*a", false, 0)};
+    const Form<T> forms[] = {ROWK(sq_p1_plus, "P1 x + a*a", false, 0), ROWK(sq_plus, "x + a*a", false, 0),
+                             ROWK(sq_kp_plus, "P1 x + P1(a) * P1(a)", false, 2),
+                             ROWK(sq_kp_program_add, "add(P1(a) * P1(a), x) by the program", false, 3)};
     const T step = sizeof(T) == 8 ? T(0x1p-30) : T(0x1p-20);
     long total = 0;
     for (const Form<T>& f : forms) {
@@ -556,9 +567,15 @@ long run_squares(const char* type, long registers) {
             }
             differ += differs;
         }
-        std::printf("  %-38s %-6s differs in %6ld of %ld   (a square of the program: reported only)\n", f.name, type,
-                    differ, registers);
-        total += differ;
+        if (f.kind == 0) {
+            std::printf("  %-38s %-6s differs in %6ld of %ld   (a square of the program: reported only)\n", f.name,
+                        type, differ, registers);
+            total += differ;
+        } else {
+            std::printf("  %-38s %-6s differs in %6ld of %ld   (the square of Packed<T, 1>)\n", f.name, type, differ,
+                        registers);
+            (f.kind == 2 ? totals.kairn_product : totals.program_add) += differ;
+        }
     }
     return total;
 }
@@ -584,9 +601,9 @@ int main(int argc, char** argv) {
     std::printf("the other factor a constant F the compiler sees (1, -1, 2), 20000 registers per form, type and F:\n");
     run_known<double>("double", 20000, totals);
     run_known<float>("float", 20000, totals);
-    std::printf("a square of the program, a * a, whose guard a compiler may drop (no verdict), 20000 registers per form "
-                "and type:\n");
-    const long squares = run_squares<double>("double", 20000) + run_squares<float>("float", 20000);
+    std::printf("a square, of the program (whose guard a compiler may drop: no verdict) and of Packed<T, 1>, 20000 "
+                "registers per form and type:\n");
+    const long squares = run_squares<double>("double", 20000, totals) + run_squares<float>("float", 20000, totals);
     std::printf("forms that need the guard: %ld registers differ; forms that need none: %ld; with a known factor: %ld\n",
                 totals.guarded, totals.unguarded, totals.known);
     std::printf("a square of the program: %ld registers differ%s\n", squares,
