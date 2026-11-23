@@ -181,8 +181,9 @@ ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's ch
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
 # The constructors of two limbs from numbers of two limbs the program gives, which guard every limb
 # (ball_make_2_entry, interval_make_2_entry: rule R3, the owner's decision of 2026-11-23 for the ball).
-LIMBS_GUARDED = ("every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): a limb $-0$ "
-                 "comes back $+0$, but in constant evaluation, where the guard is not applied")
+LIMBS_GUARDED = ("every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): of the values "
+                 "given, a limb $-0$ coming back $+0$, but in constant evaluation, where the guard is not "
+                 "applied; since 0.3.1 (0.3.0 kept the limbs as given, bit for bit)")
 CORE = "the finite core: no fix-up of infinities and NaN"
 # The scaling of a two-limb number by a power of two in constant evaluation: its kernels compute only
 # opaque products, which constant evaluation computes as plain products with the same values.

@@ -304,9 +304,11 @@ public:
     ///   finite hi among them. Reversed bounds are not reported by a debug build: they describe no
     ///   value, and the empty set is what they mean. Interval::empty() is the empty set;
     /// - otherwise [lo, hi], the same extended real numbers: lo <= hi, lo < +inf and hi > -inf,
-    ///   [-inf, +inf], [lo, +inf] and [-inf, hi] included. A zero limb of a bound may come back +0
+    ///   [-inf, +inf], [lo, +inf] and [-inf, hi] included. A limb -0 of a bound comes back +0
     ///   (the guard computes -0 + 0, +0 under rounding to nearest; in constant evaluation the
-    ///   guard is not applied): the sign of a zero bound is not specified.
+    ///   guard is not applied, and it keeps its sign): the sign of a zero bound is not specified.
+    ///   For bounds of two limbs the guards are since 0.3.1: 0.3.0 (interval_make_2) kept their
+    ///   limbs as given, bit for bit.
     /// Does not round but in the guards of the limbs of the bounds, whose values are the limbs
     /// under every rounding mode (comparisons and selects): not preceded by the debug build's check
     /// of the rounding mode (config.hpp); two-limb bounds must be canonical, which is checked when

@@ -590,6 +590,7 @@ Print Assumptions ball_make_2_with_prod.
 Print Assumptions ball_make_2_entry_with_prod.
 Print Assumptions interval_make_2_entry_with_prod.
 Print Assumptions make_2_limbs_with_prod.
+Print Assumptions bv_center_entry_2_with_prod.
 Print Assumptions sub_1_2_with_prod.
 Print Assumptions sub_1_2_full_with_prod.
 Print Assumptions sub_2_1_with_prod.
@@ -681,6 +682,7 @@ Print Assumptions ball_make_2_same.
 Print Assumptions ball_make_2_entry_same.
 Print Assumptions interval_make_2_entry_same.
 Print Assumptions make_2_limbs_same.
+Print Assumptions bv_center_entry_2_same.
 Print Assumptions sub_1_2_same.
 Print Assumptions sub_1_2_full_same.
 Print Assumptions sub_2_1_same.

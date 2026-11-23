@@ -593,7 +593,9 @@ public:
     /// upstream, and the whole line is the answer that is always true); otherwise center c and
     /// radius r, of the values given: a limb of the center or a radius that is -0 comes back +0
     /// (the guard computes -0 + 0, which is +0 under rounding to nearest; in constant evaluation
-    /// the guard is not applied, and a -0 keeps its sign), every other limb bit for bit. So
+    /// the guard is not applied, and a -0 keeps its sign), every other limb bit for bit. For a
+    /// center of two limbs this is since 0.3.1: 0.3.0 (ball_make_2) kept its limbs as given, bit
+    /// for bit, a -0 included, and did not guard them. So
     /// Ball(X.center(), X.radius()) of an empty X is the whole line, not X. When
     /// KAIRN_CHECKS is 1, the environment is checked as for an operation (config.hpp), then c
     /// must be canonical and a negative r is reported (it is almost surely a mistake; write

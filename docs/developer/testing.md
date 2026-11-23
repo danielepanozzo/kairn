@@ -1155,7 +1155,8 @@ generated headers, whose claims the oracle judges through them, and add nothing 
   merges, `from_state` and the same edges in C++; the boundary test adds `acc.add(a * b)` (guarded),
   `from_state` with a product as its running sum or its magnitudes followed by `add` (guarded: on the
   headers before the guard, Apple clang 21 with `-ffp-contract=fast` and NDEBUG at `-O2` gave another
-  result in about a quarter of 20 000 rounds) and `acc.add_product(a * b, 1)` (with a 1 read at run
+  result in about a quarter of 20 000 rounds), `from_state` of two limbs with a product written into
+  the leading limb of its running sum (guarded by `make_2_limbs` since 0.3.1) and `acc.add_product(a * b, 1)` (with a 1 read at run
   time, and one the compiler sees); the checks
   have its operations and its operand cases; `api.reject.accumulator.mixed_limb_types`,
   `api.reject.not_constexpr.add_product` and `.error_bound` what must not compile.

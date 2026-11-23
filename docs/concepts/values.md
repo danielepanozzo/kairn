@@ -78,7 +78,9 @@ The constructor is not the way back for a ball: `Ball<T, k>(c, r)` of the NaN ce
 the empty set makes the whole line, as it makes of every center that is not finite and every NaN
 radius ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)), and the
 program above shows it. An accumulator is rebuilt with `Accumulator<T, k>::from_state(s, a, n)`,
-whose bound is that of the history its state was read from.
+whose bound is that of the history its state was read from; it guards every limb it is given, so
+the state comes back with the same values, a $-0$ limb as $+0$ (since 0.3.1 for a running sum of
+two limbs, which 0.3.0 copied as it was).
 
 ## Threads
 

@@ -16,9 +16,9 @@ A number of several limbs stands for their exact sum: $c = c_0 + c_1$, $c_w = c_
 
 | Form | Operands | Result | Note |
 |---|---|---|---|
-| `Ball<T, 2>(c, r)` | `Expansion<T, 2>`, `T` | `Ball<T, 2>` | every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): a limb $-0$ comes back $+0$, but in constant evaluation, where the guard is not applied |
-| `Ball<T, 2>(c, r)` | `T`, `T` | `Ball<T, 2>` | the center converted to `Expansion<T, 2>` first (`make_2`), then every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): a limb $-0$ comes back $+0$, but in constant evaluation, where the guard is not applied |
-| `Ball<T, 2>(c)` | `Expansion<T, 2>` | `Ball<T, 2>` | implicit: the point $c$, radius 0; every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): a limb $-0$ comes back $+0$, but in constant evaluation, where the guard is not applied |
+| `Ball<T, 2>(c, r)` | `Expansion<T, 2>`, `T` | `Ball<T, 2>` | every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): of the values given, a limb $-0$ coming back $+0$, but in constant evaluation, where the guard is not applied; since 0.3.1 (0.3.0 kept the limbs as given, bit for bit) |
+| `Ball<T, 2>(c, r)` | `T`, `T` | `Ball<T, 2>` | the center converted to `Expansion<T, 2>` first (`make_2`), then every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): of the values given, a limb $-0$ coming back $+0$, but in constant evaluation, where the guard is not applied; since 0.3.1 (0.3.0 kept the limbs as given, bit for bit) |
+| `Ball<T, 2>(c)` | `Expansion<T, 2>` | `Ball<T, 2>` | implicit: the point $c$, radius 0; every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): of the values given, a limb $-0$ coming back $+0$, but in constant evaluation, where the guard is not applied; since 0.3.1 (0.3.0 kept the limbs as given, bit for bit) |
 | `Ball<T, 2>(q)` | `Constant<Expansion<T, 2>>` | `Ball<T, 2>` | explicit: center `q.value`, radius `q.error`, for `q` a result of `rational` or `integer`: how to multiply a ball by $1/s$, `X * Ball<T, 2>(rational<Expansion<T, 2>>(1, s))`, until Kairn has a division; `constexpr`; its check of the center rounds |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).

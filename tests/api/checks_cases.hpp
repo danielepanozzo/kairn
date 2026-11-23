@@ -686,16 +686,16 @@ inline const Operation operations[] = {
      }},
     // and those that do not round: from_state, on the corpus (canonical pairs and magnitudes, among
     // them +0, -0, subnormal numbers, the infinities and NaN), whose only rounded operations are the
-    // guards of the values of T it is given (rule R3): the running sum of two limbs, an Expansion, as
-    // it is, bit for bit; the magnitudes, and the running sum of one limb, the same values, zeros
-    // without their sign, as the constructors; the accessors, checked for nothing.
+    // guards of what it is given (rule R3): the running sum, of one or two limbs (make_2_limbs), and
+    // the magnitudes, the same values, zeros without their sign, as the constructors; the accessors,
+    // checked for nothing.
     {"acc.from_state", Kind::exact, [](Bits& b) {
          for_both(b, [](Bits& out, const auto& c) {
              using T = typename std::decay_t<decltype(c.one)>::value_type;
              for (const auto& x : c.two)
                  for (const T& r : c.radii) {
                      const auto a = kairn::Accumulator<T, 2>::from_state(x, r, 5);
-                     put(out, a.running_sum());
+                     put_value(out, a.running_sum());
                      put_value(out, a.magnitudes());
                  }
              for (const T& x : c.one)
@@ -710,8 +710,9 @@ inline const Operation operations[] = {
          for_both(b, [](Bits& out, const auto& c) {
              using T = typename std::decay_t<decltype(c.one)>::value_type;
              for (const auto& x : c.two) {
+                 // from_state guards the limbs (zeros without their sign); sum() copies or selects.
                  const kairn::Accumulator<T, 2> a = kairn::Accumulator<T, 2>::from_state(x, T(1), 2);
-                 put(out, a.sum().value);
+                 put_value(out, a.sum().value);
                  put(out, a.sum().finite);
                  put(out, int(a.count()));
              }
