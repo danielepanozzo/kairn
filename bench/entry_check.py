@@ -2,6 +2,7 @@
 """entry_check.py: copies of the headers for the measurement of the check of the environment at the batch entries.
 
     python3 bench/entry_check.py copy DEST            the headers without the check
+    python3 bench/entry_check.py inline DEST LIMBS    the headers with another bound of forced inlining
     python3 bench/entry_check.py before DEST [--commit C]   the headers of an earlier commit
     python3 bench/entry_check.py check                whether the header has the expected form
 
@@ -18,7 +19,10 @@ Since 2026-11-23 the header has the form that this script's variant `cold` wrote
 2026-11-22 (the third part of the benchmarks of Milestone 2): one read of the control register and
 one test of a mask on the hot path, the message and the call of KAIRN_ENVIRONMENT_FAILURE in a
 function of their own, never inlined and cold (detail::report_environment). The variant is gone; the
-header itself is what `check` verifies. `before DEST` writes DEST/kairn from include/kairn of an
+header itself is what `check` verifies. `inline DEST LIMBS` copies include/kairn with the check kept
+and the bound of the forced inlining of the short constructors of BallVector (ball_vector.hpp,
+detail::bv_inline_limbs) set to LIMBS: 0 forces none, a large number every size; kairn-bench-m2-NAME-LEVEL
+is the harness built against such a copy (-DKAIRN_BENCH_EXTRA_INCLUDES=NAME=DEST). `before DEST` writes DEST/kairn from include/kairn of an
 earlier commit (by default 25ebe3d6, the last with the report inline at every check), read with
 `git archive` from this repository: -DKAIRN_BENCH_BEFORE_INCLUDE=DEST builds kairn-bench-m2-before-LEVEL
 against it, the harness of this tree with the headers as they were. bench/README.md, "Milestone 2",
@@ -26,6 +30,7 @@ third part, says how the programs are compared. Standard library and git only.
 """
 import argparse
 import io
+import re
 import os
 import shutil
 import subprocess
@@ -53,6 +58,9 @@ REPORT = '''KAIRN_DETAIL_COLD inline void report_environment(std::uint64_t b) no
 }'''
 
 BEFORE = '25ebe3d6'
+
+# The bound of forced inlining (ball_vector.hpp), which `inline` replaces in its copy.
+BOUND = re.compile(r'^inline constexpr std::size_t bv_inline_limbs = \d+;$', re.M)
 
 
 def header():
@@ -82,6 +90,22 @@ def copy(dest):
     print('wrote %s (check_batch_environment compiled out in the copy of environment.hpp)' % out)
 
 
+def inline(dest, limbs):
+    if check() != 0:
+        sys.exit(1)
+    src = os.path.join(ROOT, 'include', 'kairn')
+    out = os.path.join(dest, 'kairn')
+    if os.path.exists(out):
+        sys.exit('%s exists: give an empty directory' % out)
+    shutil.copytree(src, out)
+    path = os.path.join(out, 'ball_vector.hpp')
+    text = open(path).read()
+    if len(BOUND.findall(text)) != 1:
+        sys.exit('detail::bv_inline_limbs in include/kairn/ball_vector.hpp is not the expected one: update bench/entry_check.py')
+    open(path, 'w').write(BOUND.sub('inline constexpr std::size_t bv_inline_limbs = %d;' % limbs, text))
+    print('wrote %s (detail::bv_inline_limbs = %d in the copy of ball_vector.hpp)' % (out, limbs))
+
+
 def before(dest, commit):
     out = os.path.join(dest, 'kairn')
     if os.path.exists(out):
@@ -105,6 +129,9 @@ def main():
     sub = ap.add_subparsers(dest='cmd', required=True)
     c = sub.add_parser('copy')
     c.add_argument('dest')
+    i = sub.add_parser('inline')
+    i.add_argument('dest')
+    i.add_argument('limbs', type=int)
     b = sub.add_parser('before')
     b.add_argument('dest')
     b.add_argument('--commit', default=BEFORE)
@@ -112,6 +139,8 @@ def main():
     a = ap.parse_args()
     if a.cmd == 'copy':
         copy(a.dest)
+    elif a.cmd == 'inline':
+        inline(a.dest, a.limbs)
     elif a.cmd == 'before':
         before(a.dest, a.commit)
     else:

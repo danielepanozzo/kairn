@@ -287,6 +287,18 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // in practice, and the mode is checked. Then with KAIRN_CHECKS a negative radius, reported as
 // almost surely a mistake (the constructor makes it the whole space), and for two limbs each center
 // canonical, whose test rounds.
+// How far the constructors of a BallVector from centers and a radius, and the member that makes the
+// ball vector, are forced inline: while the centers have at most bv_inline_limbs limbs in all (K N),
+// they are forced inline (KAIRN_FORCEINLINE); above that they are ordinary inline functions, the
+// compiler's to inline or to call, the code of before 2026-11-23. A choice of the authors, from the
+// measurements of 2026-11-23 (docs/reference/ball_vector.md, "Checks"; the benchmarks of Milestone 2,
+// question 14): forced, a short constructor is inlined where the compilers called it, and a long one
+// can be slower than called (the loop unrolled for every limb spills). The one place that selects is
+// bv_forced_inline; it changes no result, only what the compiler may call.
+inline constexpr std::size_t bv_inline_limbs = 14;
+template <int K, std::size_t N>
+concept bv_forced_inline = std::size_t(K) * N <= bv_inline_limbs;
+
 template <class T, int K>
 KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* z, T* rr) noexcept {
     [[maybe_unused]] bool operands = check_batch_environment();
@@ -487,18 +499,42 @@ public:
     /// are the guards, c + 0 and r + 0, and the loop's m - m, whose values are the same under every
     /// rounding mode, but the sign of whose zeros is not). Then, when KAIRN_CHECKS is 1, a negative
     /// r is reported (it is almost surely a mistake) and, for two limbs, a center that is not
-    /// canonical. Not constexpr. Forced inline, with the private member that makes the ball vector:
-    /// a few copies and one call of the loop, which a compiler otherwise calls rather than inlines
-    /// in a unit of many operations (docs/reference/ball_vector.md, "Checks").
-    KAIRN_FORCEINLINE BallVector(const std::array<center_type, N>& c, T r) noexcept {
+    /// canonical. Not constexpr. Forced inline, with the private member that makes the ball vector,
+    /// while the centers have at most 14 limbs in all (K N <= detail::bv_inline_limbs): a few copies
+    /// and one call of the loop, which a compiler otherwise calls rather than inlines in a unit of
+    /// many operations; above that an ordinary inline function (docs/reference/ball_vector.md,
+    /// "Checks").
+    KAIRN_FORCEINLINE BallVector(const std::array<center_type, N>& c, T r) noexcept
+        requires detail::bv_forced_inline<K, N>
+    {
+        for (int j = 0; j < K; ++j)
+            for (std::size_t i = 0; i < N; ++i) c_[j][i] = c[i].limb[j];
+        make(r);
+    }
+    /// The same constructor, above the bound of forced inlining (detail::bv_inline_limbs): an
+    /// ordinary inline function.
+    BallVector(const std::array<center_type, N>& c, T r) noexcept
+        requires(!detail::bv_forced_inline<K, N>)
+    {
         for (int j = 0; j < K; ++j)
             for (std::size_t i = 0; i < N; ++i) c_[j][i] = c[i].limb[j];
         make(r);
     }
     /// The same from the arrays of a view of N centers, c.size() == N (checked with KAIRN_CHECKS, not
     /// otherwise): the centers are copied in, then made a ball vector of radius r as above. Forced
-    /// inline, as the constructor above.
-    KAIRN_FORCEINLINE BallVector(SoAView<const T, K> c, T r) noexcept {
+    /// inline, as the constructor above, up to the same bound.
+    KAIRN_FORCEINLINE BallVector(SoAView<const T, K> c, T r) noexcept
+        requires detail::bv_forced_inline<K, N>
+    {
+        detail::check_lengths(c.size() == N);
+        for (int j = 0; j < K; ++j)
+            for (std::size_t i = 0; i < N; ++i) c_[j][i] = c.limb(j)[i];
+        make(r);
+    }
+    /// The same constructor, above the bound of forced inlining: an ordinary inline function.
+    BallVector(SoAView<const T, K> c, T r) noexcept
+        requires(!detail::bv_forced_inline<K, N>)
+    {
         detail::check_lengths(c.size() == N);
         for (int j = 0; j < K; ++j)
             for (std::size_t i = 0; i < N; ++i) c_[j][i] = c.limb(j)[i];
@@ -571,10 +607,21 @@ public:
     constexpr operator BallVectorView<const T, K>() const noexcept { return view(); }
 
 private:
-    // The centers in c_ and the radius r made a ball vector, in place. Forced inline, as the
-    // constructors that call it: otherwise Clang 18 and Apple clang call it for a short vector, and
-    // the centers go through memory around the call.
-    KAIRN_FORCEINLINE void make(T r) noexcept {
+    // The centers in c_ and the radius r made a ball vector, in place (make_in_place, forced into
+    // each): forced inline up to the bound, as the constructors that call it (otherwise Clang 18 and
+    // Apple clang call it for a short vector, and the centers go through memory around the call);
+    // above it an ordinary inline function.
+    KAIRN_FORCEINLINE void make(T r) noexcept
+        requires detail::bv_forced_inline<K, N>
+    {
+        make_in_place(r);
+    }
+    void make(T r) noexcept
+        requires(!detail::bv_forced_inline<K, N>)
+    {
+        make_in_place(r);
+    }
+    KAIRN_FORCEINLINE void make_in_place(T r) noexcept {
         const T* in[K];
         T* out[K];
         for (int j = 0; j < K; ++j) {
