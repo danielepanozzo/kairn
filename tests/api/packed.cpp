@@ -1,6 +1,11 @@
 // Every operation of Packed<T, k> (include/kairn/packed.hpp) against the public operation of
 // Expansion<T, k> of the same name, lane by lane and bit for bit, for T = double and float and
-// k = 1 (the operations that do not round, Packed<T, 1> having no arithmetic) and 2, on a corpus of operands that has every kind of value: zeros of both signs,
+// k = 1 and 2; the arithmetic of one limb, whose kernels Expansion<T, 1> does not call (it computes
+// the operations of T), against the scalar kernel that each operator calls in the form of one lane
+// (kairn::gen, add_entry_step_1, sub_entry_step_1, scale_step_1), and against the operators of
+// Expansion<T, 1>, which are T's, with the differences that docs/reference/packed.md states ("One
+// limb"): a sum or difference of two zeros and an exact zero product are +0 where T gives -0, each
+// rule used at least once. On a corpus of operands that has every kind of value: zeros of both signs,
 // subnormal numbers, the smallest normal number, ordinary and random numbers, the largest finite
 // number and pairs near it whose results overflow, the infinities and NaN. Each operation is run
 // on every pair (or every operand) of the corpus, one per lane position in turn, with the other
@@ -300,11 +305,85 @@ void expect_mixed([[maybe_unused]] const char* op, [[maybe_unused]] const Mixed&
     }
 }
 
+// The scalar kernels of the arithmetic of one limb, which Packed<T, 1> calls in the form of one lane.
+template <class T>
+E1<T> kernel_add(E1<T> x, E1<T> y) {
+    T z;
+    kairn::gen::add_entry_step_1(x.limb[0], y.limb[0], z);
+    return E1<T>(z);
+}
+template <class T>
+E1<T> kernel_sub(E1<T> x, E1<T> y) {
+    T z;
+    kairn::gen::sub_entry_step_1(x.limb[0], y.limb[0], z);
+    return E1<T>(z);
+}
+template <class T>
+E1<T> kernel_mul(E1<T> x, E1<T> y) {
+    T z;
+    kairn::gen::scale_step_1(x.limb[0], y.limb[0], z);
+    return E1<T>(z);
+}
+// The operators of Expansion<T, 1>, T's own, with the differences docs/reference/packed.md states
+// for those of Packed<T, 1> ("One limb"): a zero result that T gives as -0 is +0 there when it is
+// the sum or difference of two zeros (the guard: -0 + 0 is +0) or an exact zero product (the opaque
+// product: (-1 0) + 0 is +0); a product that underflows to -0 keeps its sign. Counted per rule, so
+// that the test fails if the corpus never used one. (With MSVC a zero is compared as a zero anyway:
+// it removes the guard in packed code.)
+long zero_of_sum = 0, zero_of_product = 0;
+template <class T>
+E1<T> t_add(E1<T> x, E1<T> y) {
+    const E1<T> z = x + y;
+    if (z.limb[0] == T(0) && std::signbit(z.limb[0])) {
+        ++zero_of_sum;
+        return E1<T>(T(0));
+    }
+    return z;
+}
+template <class T>
+E1<T> t_sub(E1<T> x, E1<T> y) {
+    const E1<T> z = x - y;
+    if (z.limb[0] == T(0) && std::signbit(z.limb[0])) {
+        ++zero_of_sum;
+        return E1<T>(T(0));
+    }
+    return z;
+}
+template <class T>
+E1<T> t_mul(E1<T> x, E1<T> y) {
+    const E1<T> z = x * y;
+    if (z.limb[0] == T(0) && std::signbit(z.limb[0]) && (x.limb[0] == T(0) || y.limb[0] == T(0))) {
+        ++zero_of_product;
+        return E1<T>(T(0));
+    }
+    return z;
+}
+
 template <class T>
 void arithmetic(const Corpus<T>& c) {
     using A1 = E1<T>;
     using A2 = E2<T>;
-    // One limb: the operations that do not round (Packed<T, 1> has no arithmetic).
+    // One limb: the arithmetic, against the scalar kernel each operator calls, then against T.
+    expect_mixed("p1 + p1", binary<T, 1, 1>("p1 + p1", c, [](P1<T> x, P1<T> y) { return x + y; },
+                                            [](A1 x, A1 y) { return kernel_add(x, y); }), true);
+    expect_mixed("p1 - p1", binary<T, 1, 1>("p1 - p1", c, [](P1<T> x, P1<T> y) { return x - y; },
+                                            [](A1 x, A1 y) { return kernel_sub(x, y); }), true);
+    expect_mixed("p1 * p1", binary<T, 1, 1>("p1 * p1", c, [](P1<T> x, P1<T> y) { return x * y; },
+                                            [](A1 x, A1 y) { return kernel_mul(x, y); }), true);
+    binary<T, 1, 1>("p1 += p1", c, [](P1<T> x, P1<T> y) { return x += y; }, [](A1 x, A1 y) { return kernel_add(x, y); });
+    binary<T, 1, 1>("p1 -= p1", c, [](P1<T> x, P1<T> y) { return x -= y; }, [](A1 x, A1 y) { return kernel_sub(x, y); });
+    binary<T, 1, 1>("p1 *= p1", c, [](P1<T> x, P1<T> y) { return x *= y; }, [](A1 x, A1 y) { return kernel_mul(x, y); });
+    const long sums = zero_of_sum, products = zero_of_product;
+    binary<T, 1, 1>("p1 + p1 against T", c, [](P1<T> x, P1<T> y) { return x + y; }, [](A1 x, A1 y) { return t_add(x, y); });
+    binary<T, 1, 1>("p1 - p1 against T", c, [](P1<T> x, P1<T> y) { return x - y; }, [](A1 x, A1 y) { return t_sub(x, y); });
+    binary<T, 1, 1>("p1 * p1 against T", c, [](P1<T> x, P1<T> y) { return x * y; }, [](A1 x, A1 y) { return t_mul(x, y); });
+    if (zero_of_sum == sums || zero_of_product == products) {
+        ++failures;
+        std::printf("FAILED one limb against T (%s): the corpus gave no zero of a sum (%ld) or of a product (%ld) "
+                    "that T makes -0\n", type_name<T>(), zero_of_sum - sums, zero_of_product - products);
+    }
+
+    // One limb: the operations that do not round.
     unary<T, 1>("-p1", c, [](P1<T> x) { return -x; }, [](A1 x) { return -x; });
     unary<T, 1>("abs p1", c, [](P1<T> x) { return kairn::abs(x); }, [](A1 x) { return kairn::abs(x); });
     unary<T, 1>("to_nearest p1", c, [](P1<T> x) { return kairn::to_nearest(x); },

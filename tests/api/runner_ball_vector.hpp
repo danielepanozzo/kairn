@@ -466,7 +466,7 @@ const LoopPart loop_parts[] = {
     {"bv_center_entry_1", "bv_make_1"}, {"bv_center_entry_2", "bv_make_2_entry"}, {"bv_make_radius", "bv_make_1"},
     {"bv_make_finish", "bv_make_1"}, {"neg_1", "bv_neg_1"}, {"bv_neg_radius", "bv_neg_1"},
     {"sub_1_1", "bv_sub_1"}, {"bv_add_radius_1", "bv_add_1"}, {"bv_add_radius_2", "bv_add_2"},
-    {"scale_step_1", "bv_scale_1"}, {"bv_scale_step_2", "bv_scale_2_entry"}, {"bv_scale_radius_1", "bv_scale_1"},
+    {"bv_scale_step_2", "bv_scale_2_entry"}, {"bv_scale_radius_1", "bv_scale_1"},
     {"bv_scale_radius_entry_2", "bv_scale_2_entry"}, {"bv_mul_pow2_step_1", "bv_mul_pow2_1"},
     {"bv_mul_pow2_step_2", "bv_mul_pow2_2"}, {"bv_mul_pow2_radius", "bv_mul_pow2_1"},
     {"conv_radius", "bv_conv_1"}, {"bv_conv_finish", "bv_conv_1"}, {"dot_step_1", "bv_conv_1"},
@@ -475,7 +475,9 @@ const LoopPart loop_parts[] = {
 // The other kernels that these loops name are public on their own with kairn/batch.hpp beside this
 // header: the kernels of the folds of maxima (norm_step_k, norm_combine, norm_finish_k) and the
 // finishes of the folds (fold_finish_k) are building blocks (runner.cpp, internal), and
-// bound_dot_k has a form of its own, kairn::traits<X>::dot(n) (runner.cpp, bound_dot_k_traits_dot).
+// bound_dot_k has a form of its own, kairn::traits<X>::dot(n) (runner.cpp, bound_dot_k_traits_dot);
+// scale_step_1, the step of bv_scale_1, is the product of Packed<T, 1>, which calls it on its own
+// (runner.cpp, packed_only).
 
 // A limb of the line in T: a binary64 literal, which for binary32 must be a binary32 number.
 template <class T>

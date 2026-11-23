@@ -1,5 +1,6 @@
 # The step of the map sub_1 on arrays that the program supplies: both operands pass through guard,
-# rule R3, then sub_1_1. Its claims are those of sub_1_1.
+# rule R3, then sub_1_1. Its claims are those of sub_1_1. Also x - y of Packed<T, 1>
+# (kairn/packed.hpp), which calls it on its own.
 kernel:        sub_entry_step_1
 input:         x
 input:         y

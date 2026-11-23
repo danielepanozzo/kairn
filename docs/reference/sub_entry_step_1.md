@@ -15,6 +15,8 @@ $$z \approx x - y.$$
 | Form | Operands | Result | Note |
 |---|---|---|---|
 | `sub(x, y, z)` | `SoAView<const T, 1>`, `SoAView<const T, 1>`, `SoAView<T, 1>` | `bool` | the step of the loop the function calls, once per element; not `constexpr`; rounds (loop `sub_1_entry`) |
+| `x - y` | `Packed<T, 1>`, `Packed<T, 1>` | `Packed<T, 1>` | `kairn/packed.hpp`, in each lane; both operands guarded, so a product of the program is rounded first, and a sum or difference of two zeros is $+0$ ([Packed](packed.md#one-limb)); not `constexpr`; rounds |
+| `x -= y` | `Packed<T, 1>`, `Packed<T, 1>` | `Packed<T, 1>` | `kairn/packed.hpp`, in each lane; both operands guarded, so a product of the program is rounded first, and a sum or difference of two zeros is $+0$ ([Packed](packed.md#one-limb)); not `constexpr`; rounds |
 
 `T` is `float` or `double`; the functions are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).
 
@@ -80,7 +82,8 @@ It calls [`sub_1_1`](sub_1_1.md).
 
 ```
 # The step of the map sub_1 on arrays that the program supplies: both operands pass through guard,
-# rule R3, then sub_1_1. Its claims are those of sub_1_1.
+# rule R3, then sub_1_1. Its claims are those of sub_1_1. Also x - y of Packed<T, 1>
+# (kairn/packed.hpp), which calls it on its own.
 
 gx = guard(x)
 gy = guard(y)

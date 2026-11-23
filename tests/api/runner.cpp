@@ -8,6 +8,7 @@
 //   runner --internal         the building blocks: kernels that are parts of other kernels
 //   runner --not-public       entry kernels that no public operation calls yet, each with why
 //   runner --packed-list      every kernel that some packed form maps to
+//   runner --packed-only      the kernels that packed forms reach and no scalar form, each with why
 //   runner --fold-list        every fold (gen/claims.json, "folds") that some form of the
 //                             functions on arrays maps to (runner_arrays.hpp)
 //   runner --folds-not-public the folds that no public function calls, each with why
@@ -956,8 +957,9 @@ FORM(ball_contains_point_2_contains_limb, const B2<T> x = ball2(in);
 // line computes a copy of the first line of the batch, and its results are not written. Each
 // operand is loaded from arrays as a program loads it (Packed::load, which is from_limbs in each
 // lane). A form is the packed counterpart of the scalar form of the same name, named
-// packed_NAME; on the lines that a conditional form cannot compute (see the top of the file), it
-// computes, in that lane, the plain operation, packed too.
+// packed_NAME, but those of the arithmetic of one limb, whose kernels no scalar form reaches
+// (packed_only, below); on the lines that a conditional form cannot compute (see the top of the
+// file), it computes, in that lane, the plain operation, packed too.
 template <class T>
 using PK1 = kairn::Packed<T, 1>;
 template <class T>
@@ -1156,6 +1158,15 @@ PFORM(finite_limb_mul, mul_2_1_entry, pput(b, finite::mul(pone(b, 2), ptwo(b, 0)
 PFORM(finite_add_fast, add_fast_2_2, pput(b, finite::add_fast(ptwo(b, 0), ptwo(b, 2))))
 PFORM(finite_ldexp, mul_pow2_2, packed_ldexp_2<T, true>(b))
 PFORM(finite_ldexp_far, mul_pow2_2, packed_ldexp_far_2<T, true>(b))
+
+// One limb: the arithmetic, the entry kernels of one rounding that x + y, x - y and x * y of
+// Packed<T, 1> call (packed only: below, packed_only).
+PFORM(plus, add_entry_step_1, pput(b, pone(b, 0) + pone(b, 1)))
+PFORM(plus_assign, add_entry_step_1, PK1<T> x = pone(b, 0); x += pone(b, 1); pput(b, x))
+PFORM(minus, sub_entry_step_1, pput(b, pone(b, 0) - pone(b, 1)))
+PFORM(minus_assign, sub_entry_step_1, PK1<T> x = pone(b, 0); x -= pone(b, 1); pput(b, x))
+PFORM(times, scale_step_1, pput(b, pone(b, 0) * pone(b, 1)))
+PFORM(times_assign, scale_step_1, PK1<T> x = pone(b, 0); x *= pone(b, 1); pput(b, x))
 
 // Two limbs: negation, absolute value, comparisons (and a select on one), conversions to T.
 PFORM(negate, neg_2, pput(b, -ptwo(b, 0)))
@@ -1628,6 +1639,12 @@ const PackedForm packed_forms[] = {
     PROW(add_fast_2_2, finite_add_fast, "llll", "ll")
     PROW(mul_pow2_2, finite_ldexp, "lll", "ll")
     PSOME(mul_pow2_2, finite_ldexp_far, "lll", "ll")
+    PROW(add_entry_step_1, plus, "ll", "l")
+    PROW(add_entry_step_1, plus_assign, "ll", "l")
+    PROW(sub_entry_step_1, minus, "ll", "l")
+    PROW(sub_entry_step_1, minus_assign, "ll", "l")
+    PROW(scale_step_1, times, "ll", "l")
+    PROW(scale_step_1, times_assign, "ll", "l")
     PROW(neg_2, negate, "ll", "ll")
     PROW(abs_2, abs, "ll", "ll")
     PROW(lt_2_2, less, "llll", "m")
@@ -1713,11 +1730,28 @@ const NotPublic not_public[] = {
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core},
     {"ball_mul_pow2_1", ball_core}, {"ball_mul_pow2_2", ball_core},
     {"sum_entry_step_1", fold_step}, {"sum_entry_step_2", fold_step}, {"sum_fast_entry_step_2", fold_step},
-    {"dot_entry_step_1", fold_step}, {"add_entry_step_1", fold_step}, {"add_entry_step_2", fold_step},
-    {"sub_entry_step_1", fold_step}, {"sub_entry_step_2", fold_step}, {"scale_entry_step_2", fold_step},
+    {"dot_entry_step_1", fold_step}, {"add_entry_step_2", fold_step},
+    {"sub_entry_step_2", fold_step}, {"scale_entry_step_2", fold_step},
     {"mul_pow2_step_1", fold_step},
     {"mul_pow2_step_2", fold_step}, {"axpy_entry_step_1", fold_step}, {"axpy_entry_step_2_1", fold_step},
     {"axpy_entry_step_2", fold_step}, {"dot_entry_step_2", fold_step}, {"bv_scale_radius_2", fold_step},
+};
+// Kernels that packed forms reach and no scalar form, and why: the arithmetic of Packed<T, 1>
+// (kairn/packed.hpp), whose x + y, x - y and x * y call these entry kernels, the steps of the maps
+// add, sub and scale of one limb, on their own. Each is judged through the packed forms above, in
+// the form of each build (the scalar form of one lane where the build's flags give no SIMD), and
+// compared bit for bit with its scalar kernel in every form (packed.cpp). coverage.cmake checks
+// that each is the kernel of a packed form and of no scalar form.
+struct PackedOnly {
+    const char* kernel;
+    const char* why;
+};
+const char* const one_limb_arithmetic =
+    "the arithmetic of Packed<T, 1>: Expansion<T, 1> computes the operations of T itself (decision D6), so no "
+    "scalar public operation calls the kernel, whose scalar form is the form of Packed of one lane";
+const PackedOnly packed_only[] = {
+    {"add_entry_step_1", one_limb_arithmetic}, {"sub_entry_step_1", one_limb_arithmetic},
+    {"scale_step_1", one_limb_arithmetic},
 };
 // The interval kernels of Milestone 2 are reached by the forms of Interval (interval.hpp) and of
 // the functions of a Ball of the enclosure interface (ball.hpp), and so are the 53 kernels of the
@@ -1775,7 +1809,7 @@ void put_limb(double v, std::string& out) {
 int usage() {
     std::fprintf(stderr,
                  "usage: runner [--form NAME] | --forms KERNEL | --list | --packed-list | --internal | --not-public | "
-                 "--fold-list | --folds-not-public | --loops | --loop-parts | --self-test\n");
+                 "--packed-only | --fold-list | --folds-not-public | --loops | --loop-parts | --self-test\n");
     return 2;
 }
 
@@ -2043,6 +2077,10 @@ int main(int argc, char** argv) {
     }
     if (argc == 2 && std::strcmp(argv[1], "--not-public") == 0) {
         for (const NotPublic& k : not_public) std::printf("%s\t%s\n", k.kernel, k.why);
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--packed-only") == 0) {
+        for (const PackedOnly& k : packed_only) std::printf("%s\t%s\n", k.kernel, k.why);
         return 0;
     }
     if (argc == 3 && std::strcmp(argv[1], "--form") == 0) {

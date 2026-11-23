@@ -1219,6 +1219,13 @@ class R3OfTheKernels(unittest.TestCase):
     # acc_mul_entry_1 and acc_mul_entry_2 guard every limb of both factors, rule R3 on the factors of
     # a fused operation).
     ARRAYS_CALLED = {'acc_add_1', 'acc_add_2', 'acc_mul_entry_1', 'acc_mul_entry_2'}
+    # The arithmetic of Packed<T, 1> (kairn/packed.hpp, the owner's decision of 2026-11-23): x + y,
+    # x - y and x * y call the steps of the maps add, sub and scale of one limb on their own, entry
+    # kernels as they are (the sums guard both operands; the factors of the opaque product need
+    # none), each from its operator and from no other function.
+    PACKED_ONE_LIMB_CALLED = {'add_entry_step_1': 'packed.hpp operator+(const Packed<T, 1>& x, const Packed<T, 1>& y)',
+                              'sub_entry_step_1': 'packed.hpp operator-(const Packed<T, 1>& x, const Packed<T, 1>& y)',
+                              'scale_step_1': 'packed.hpp operator*(const Packed<T, 1>& x, const Packed<T, 1>& y)'}
     # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
     # of the blocks that add their operands, and of two_prod and the directed products, whose
     # operands are factors of a fused operation (rule R3, the factors of a fused operation); the
@@ -1327,13 +1334,16 @@ class R3OfTheKernels(unittest.TestCase):
         # every entry kernel (the interval kernels and the functions of a Ball of the enclosure
         # interface: WAVE_2_CALLED, and those of stage B2: WAVE_2_B2); of the folds' stage, the maps
         # and the accumulator, the kernels of the accumulator (ARRAYS_CALLED), the other steps being
-        # called inside the folds, which are not kernels.
+        # called inside the folds, which are not kernels, but three steps of one limb, which the
+        # arithmetic of Packed<T, 1> calls on their own (PACKED_ONE_LIMB_CALLED).
         self.assertEqual(self.WAVE_1, self.WAVE_1_CALLED | self.POW2_CORES)
         self.assertEqual(TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1,
                          self.WAVE_2_CALLED)
         exempt = set(self.NOT_ENTRY_BUT_CALLED)
         self.assertEqual(called - exempt, self.CORES | self.full_entry() | self.WAVE_1_CALLED |
-                         self.WAVE_2_CALLED | TheKernels.WAVE_2_B2 | self.ARRAYS_CALLED)
+                         self.WAVE_2_CALLED | TheKernels.WAVE_2_B2 | self.ARRAYS_CALLED |
+                         set(self.PACKED_ONE_LIMB_CALLED))
+        self.assertTrue(set(self.PACKED_ONE_LIMB_CALLED) <= self.FOLD_STEPS)
         self.assertTrue(all(ks[n].entry for n in called - exempt))
         self.assertFalse(any(ks[n].entry for n in exempt))
         # Every exemption is called, from the function it names and no other, and argues each input
@@ -1344,6 +1354,8 @@ class R3OfTheKernels(unittest.TestCase):
             self.assertEqual(set(calls[name]), {site} | self.ALSO_CALLED_FROM.get(name, set()), name)
             self.assertEqual(set(reasons), {g.name for g in ks[name].inputs}, name)
             self.assertTrue(all(isinstance(r, str) and len(r) > 20 for r in reasons.values()), name)
+        for name, site in self.PACKED_ONE_LIMB_CALLED.items():
+            self.assertEqual(calls[name], [site], name)
         # The cores of the Ball operations and of the scalings by a power of two are reached only
         # through their full forms, and the building blocks of the intervals only through the
         # interval kernels: never called directly.

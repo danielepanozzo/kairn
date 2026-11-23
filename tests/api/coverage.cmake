@@ -12,7 +12,11 @@
 # With -DPACKED_HEADER=include/kairn/packed.hpp, also: the kernels that header calls (gen::NAME(
 # with NAME a kernel of the claims) are exactly those that the runner's packed forms map to
 # (runner --packed-list), and each is reached by a scalar public form too: every operation of
-# Packed is judged, and judged against the claims of a kernel the scalar interface has.
+# Packed is judged, and judged against the claims of a kernel the scalar interface has. But the
+# kernels of the arithmetic of Packed<T, 1> (runner --packed-only, with why, the list PACKED_ONLY),
+# which Expansion<T, 1>, computing the operations of T (decision D6), does not call: each is an
+# entry kernel, the kernel of a packed form and of no scalar form, and counts as reached by a public
+# form among the lists above (a fifth list beside the four).
 #
 # And every fold of gen/claims.json is reached by a form of the public functions on arrays (runner
 # --fold-list, the functions of kairn/batch.hpp, or runner --loops, those of kairn/ball_vector.hpp;
@@ -31,12 +35,12 @@
 # a form, a building block, or a loop part.
 #
 #   cmake -DRUNNER=... -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels "-DINTERNAL=a;b"
-#         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" "-DFOLDS_NOT_PUBLIC=g;h" "-DFOLDS_NOT_CHECKED=i;j"
-#         "-DLOOPS=k;l" "-DLOOP_PARTS=m;n"
+#         "-DNOT_PUBLIC=c;d" "-DPACKED_ONLY=o;p" "-DNOT_CHECKED=e;f" "-DFOLDS_NOT_PUBLIC=g;h"
+#         "-DFOLDS_NOT_CHECKED=i;j" "-DLOOPS=k;l" "-DLOOP_PARTS=m;n"
 #         [-DPACKED_HEADER=...] -P coverage.cmake
 cmake_minimum_required(VERSION 3.21)
 
-set(_whats list internal not-public loops loop-parts)
+set(_whats list internal not-public packed-only loops loop-parts)
 if(PACKED_HEADER)
   list(APPEND _whats packed-list)
 endif()
@@ -50,8 +54,8 @@ foreach(_what IN LISTS _whats)
   set(_names "")
   foreach(_line IN LISTS _lines)
     string(REGEX REPLACE "\t.*" "" _name "${_line}")
-    if(_what STREQUAL "not-public" AND _name STREQUAL _line)
-      message(FATAL_ERROR "runner --not-public: ${_name} has no reason beside it")
+    if((_what STREQUAL "not-public" OR _what STREQUAL "packed-only") AND _name STREQUAL _line)
+      message(FATAL_ERROR "runner --${_what}: ${_name} has no reason beside it")
     endif()
     if(_what STREQUAL "loop-parts")
       if(_name STREQUAL _line)
@@ -99,10 +103,12 @@ endif()
 set(_problems "")
 set(_internal ${INTERNAL})
 set(_not_public ${NOT_PUBLIC})
+set(_packed_only ${PACKED_ONLY})
 set(_loops ${LOOPS})
 set(_loop_parts ${LOOP_PARTS})
 list(SORT _internal)
 list(SORT _not_public)
+list(SORT _packed_only)
 list(SORT _loops)
 list(SORT _loop_parts)
 if(NOT _runner_internal STREQUAL _internal)
@@ -110,6 +116,9 @@ if(NOT _runner_internal STREQUAL _internal)
 endif()
 if(NOT _runner_not_public STREQUAL _not_public)
   list(APPEND _problems "not public in tests/api/CMakeLists.txt: ${_not_public}; in tests/api/runner.cpp: ${_runner_not_public}")
+endif()
+if(NOT _runner_packed_only STREQUAL _packed_only)
+  list(APPEND _problems "packed only in tests/api/CMakeLists.txt: ${_packed_only}; in tests/api/runner.cpp: ${_runner_packed_only}")
 endif()
 if(NOT _runner_loops STREQUAL _loops)
   list(APPEND _problems "loops in tests/api/CMakeLists.txt: ${_loops}; in tests/api/runner.cpp: ${_runner_loops}")
@@ -176,7 +185,7 @@ foreach(_k IN LISTS _not_checked)
 endforeach()
 foreach(_k IN LISTS _claims)
   set(_n 0)
-  foreach(_group list internal not_public loop_parts)
+  foreach(_group list internal not_public loop_parts packed_only)
     if(_k IN_LIST _runner_${_group})
       math(EXPR _n "${_n} + 1")
     endif()
@@ -188,21 +197,23 @@ foreach(_k IN LISTS _claims)
     continue()
   endif()
   if(NOT _n EQUAL 1)
-    list(APPEND _problems "${_k} is in ${_n} of the runner's lists (public forms, internal, not public, loop parts), not in one")
+    list(APPEND _problems "${_k} is in ${_n} of the runner's lists (public forms, internal, not public, loop parts, "
+      "packed only), not in one")
   endif()
 endforeach()
-# Every kernel that a public loop names is public: a form, a building block, or a loop part.
+# Every kernel that a public loop names is public: a form, packed only, a building block, or a loop part.
 foreach(_loop IN LISTS _runner_loops)
   foreach(_k IN LISTS _named_${_loop})
     if(NOT _k IN_LIST _claims)
       continue()        # an operation of the IR (and, select), not a kernel
     endif()
-    if(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_internal AND NOT _k IN_LIST _runner_loop_parts)
+    if(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_packed_only AND NOT _k IN_LIST _runner_internal
+       AND NOT _k IN_LIST _runner_loop_parts)
       list(APPEND _problems "${_k} is named by the public loop ${_loop} but is in none of the runner's lists of public kernels")
     endif()
   endforeach()
 endforeach()
-foreach(_group list internal not_public loop_parts)
+foreach(_group list internal not_public loop_parts packed_only)
   foreach(_k IN LISTS _runner_${_group})
     if(NOT _k IN_LIST _claims)
       list(APPEND _problems "${_k}, in the runner's ${_group}, is not a kernel of ${CLAIMS}")
@@ -215,13 +226,20 @@ foreach(_k IN LISTS _entry)
   endif()
   if(_k IN_LIST _runner_internal)
     list(APPEND _problems "${_k} is an entry kernel, but the runner lists it as a building block")
-  elseif(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_not_public AND NOT _k IN_LIST _runner_loop_parts)
+  elseif(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_not_public AND NOT _k IN_LIST _runner_loop_parts
+         AND NOT _k IN_LIST _runner_packed_only)
     list(APPEND _problems "${_k} is an entry kernel that no public form or loop reaches and that is not listed as not public yet")
   endif()
 endforeach()
 foreach(_k IN LISTS _runner_not_public)
   if(NOT _k IN_LIST _entry)
     list(APPEND _problems "${_k} is listed as not public yet, but it is not an entry kernel")
+  endif()
+endforeach()
+# A kernel that only packed forms reach is called by a public header: an entry kernel.
+foreach(_k IN LISTS _runner_packed_only)
+  if(NOT _k IN_LIST _entry)
+    list(APPEND _problems "${_k} is listed as packed only, but it is not an entry kernel")
   endif()
 endforeach()
 # The folds (gen/claims.json, "folds"): each is reached by a public form (runner --fold-list, the
@@ -305,13 +323,25 @@ if(PACKED_HEADER)
     list(APPEND _problems "the kernels ${PACKED_HEADER} calls: ${_called}; those of the runner's packed forms: ${_runner_packed_list}")
   endif()
   foreach(_k IN LISTS _runner_packed_list)
-    if(NOT _k IN_LIST _runner_list)
-      list(APPEND _problems "${_k} has a packed form but no scalar public form")
+    if(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_packed_only)
+      list(APPEND _problems "${_k} has a packed form but no scalar public form, and is not listed as packed only")
+    endif()
+  endforeach()
+  foreach(_k IN LISTS _runner_packed_only)
+    if(NOT _k IN_LIST _runner_packed_list)
+      list(APPEND _problems "${_k} is listed as packed only, but no packed form reaches it")
     endif()
   endforeach()
   list(LENGTH _called _c)
-  set(_packed_message "; the ${_c} kernels packed.hpp calls are those of the packed forms")
+  list(LENGTH _runner_packed_only _po)
+  set(_packed_message "; the ${_c} kernels packed.hpp calls are those of the packed forms, ${_po} of them packed only")
 endif()
+# A kernel listed as packed only has no scalar form (checked with or without PACKED_HEADER).
+foreach(_k IN LISTS _runner_packed_only)
+  if(_k IN_LIST _runner_list)
+    list(APPEND _problems "${_k} is listed as packed only, but a scalar form reaches it")
+  endif()
+endforeach()
 if(_problems)
   string(JOIN "\n" _problems ${_problems})
   message(FATAL_ERROR "${_problems}")

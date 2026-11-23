@@ -10,8 +10,9 @@
 #   on the first form of each kernel, and full.api.flags.oracle.KERNEL.FORMAT every form through
 #   the runner of every flag set of flags/.
 # - api.oracle.coverage: every kernel of gen/claims.json is reached by a public form of the
-#   runner, or is a building block, or is an entry kernel on the runner's short list of those not
-#   public yet; no entry kernel is a building block; and the lists below agree.
+#   runner (by packed forms only for the arithmetic of Packed<T, 1>), or is a building block, or is
+#   an entry kernel on the runner's short list of those not public yet; no entry kernel is a
+#   building block; and the lists below agree.
 # - api.boundary.*: a product the program computes and passes in gives the result of the same
 #   operation on the rounded product, under each contraction setting; with the generated guard
 #   taken out of a copy of the headers, it must not where the compiler fuses.
@@ -97,10 +98,14 @@ set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord ad
   acc_radius_1 acc_radius_2 two_prod mul_down_1 mul_up_1 mul_2_1 mul_2_1_full ball_scale_2 ball_scale_2_full
   acc_mul_1 acc_mul_2 scale_step_2 bv_center_2)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2
-  ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2 add_entry_step_1
-  add_entry_step_2 sub_entry_step_1 sub_entry_step_2 scale_entry_step_2 mul_pow2_step_1 mul_pow2_step_2
+  ball_mul_pow2_1 ball_mul_pow2_2 sum_entry_step_1 sum_entry_step_2 sum_fast_entry_step_2
+  add_entry_step_2 sub_entry_step_2 scale_entry_step_2 mul_pow2_step_1 mul_pow2_step_2
   axpy_entry_step_1 axpy_entry_step_2_1 axpy_entry_step_2 dot_entry_step_1 dot_entry_step_2
   bv_scale_radius_2)
+# The kernels that packed forms reach and no scalar form (runner.cpp lists the same, with why): the
+# arithmetic of Packed<T, 1>, whose operators call these steps of the maps of one limb on their own,
+# where Expansion<T, 1> computes the operations of T (decision D6).
+set(_api_packed_only add_entry_step_1 sub_entry_step_1 scale_step_1)
 # The folds that no public function calls (runner_arrays.hpp lists the same, with why): the loops
 # on stored arrays, whose callers here call the loops on supplied arrays instead (kairn/batch.hpp),
 # and dot_1, conv_1, scale_2, dot_2 and conv_2, whose callers call dot_1_entry, conv_1_entry,
@@ -117,16 +122,16 @@ set(_api_folds_not_public sum_1 sum_2 sum_fast_2 add_1 add_2 sub_1 sub_2 axpy_1 
 # judged through the loops' forms and, on their own, by the kernels' cross-checks. norm_upper_1 and
 # norm_upper_2, which kairn/batch.hpp calls too, are registered here once, with the forms of both
 # headers. A kernel that the parts of these loops and the lists above both name is in one list: the
-# steps of the scalings and of the dot products (scale_step_1, bv_scale_step_2, dot_step_k) are
-# parts of the loops of ball_vector.hpp; the kernels of the folds of maxima and the finishes of the
-# folds are building blocks (_api_internal), as kairn/batch.hpp has them; bound_dot_k has a public
-# form, traits<X>::dot(n).
+# steps of the scalings and of the dot products (bv_scale_step_2, dot_step_k) are parts of the loops
+# of ball_vector.hpp, but scale_step_1, the product of Packed<T, 1> (_api_packed_only); the kernels
+# of the folds of maxima and the finishes of the folds are building blocks (_api_internal), as
+# kairn/batch.hpp has them; bound_dot_k has a public form, traits<X>::dot(n).
 set(_api_loops bv_make_1 bv_make_2_entry bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2_entry
   bv_mul_pow2_1 bv_mul_pow2_2 bv_conv_1 bv_conv_2 norm_upper_1 norm_upper_2)
 set(_api_loops_fast bv_neg_1 bv_neg_2 bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2_entry bv_mul_pow2_1
   bv_mul_pow2_2 norm_upper_1 norm_upper_2)
 set(_api_loop_parts bv_center_entry_1 bv_center_entry_2 bv_make_radius bv_make_finish neg_1 bv_neg_radius sub_1_1
-  bv_add_radius_1 bv_add_radius_2 scale_step_1 bv_scale_step_2 bv_scale_radius_1 bv_scale_radius_entry_2
+  bv_add_radius_1 bv_add_radius_2 bv_scale_step_2 bv_scale_radius_1 bv_scale_radius_entry_2
   bv_mul_pow2_step_1 bv_mul_pow2_step_2 bv_mul_pow2_radius conv_radius bv_conv_finish dot_step_1 dot_step_2)
 set(KAIRN_API_LOOP_CASES 4000 CACHE STRING
   "Random requests per loop, format and form of the public interface judged by the oracle, in the full tier")
@@ -402,7 +407,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>"
       "-DCLAIMS=${PROJECT_SOURCE_DIR}/gen/claims.json"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
-      "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${_api_unlisted}"
+      "-DNOT_PUBLIC=${_api_not_public}" "-DPACKED_ONLY=${_api_packed_only}" "-DNOT_CHECKED=${_api_unlisted}"
       "-DFOLDS_NOT_PUBLIC=${_api_folds_not_public}"
       "-DFOLDS_NOT_CHECKED=${KAIRN_NOT_YET_CROSS_CHECKED_FOLDS};${KAIRN_NOT_PUBLIC_YET_FOLDS}"
       "-DLOOPS=${_api_loops}" "-DLOOP_PARTS=${_api_loop_parts}"
@@ -1059,7 +1064,9 @@ _kairn_api_reject(not_constexpr.interval_add 38 "constant|constexpr")
 # The containers (soa.hpp): nothing writes through a view of const limbs or a const SoA, and no
 # view of mutable limbs is made of one. Packed (packed.hpp): no packed operation takes a number or
 # a T (no packed kernel does: a program broadcasts it), the narrowing to one limb is explicit, no
-# operation mixes limb types, and Packed<T, 1> has no arithmetic. Each control writes what compiles instead.
+# operation mixes limb types, and the arithmetic of Packed<T, 1> takes two Packed<T, 1> of one limb
+# type only (not a T or an Expansion<T, 1>, and no x += y with a y of two limbs). Each control
+# writes what compiles instead.
 set(_api_no_assignment "no viable overloaded|no match for|binary '='|no operator found|constraints")
 set(_api_no_member "constraints not satisfied|no matching|no overloaded function|associated constraints|satisfied its constraints")
 _kairn_api_reject(soa.assign_const_element 42 "${_api_no_assignment}")
@@ -1072,7 +1079,10 @@ _kairn_api_reject(packed.number_operand 48 "${_api_no_operator}")
 _kairn_api_reject(packed.limb_operand 49 "${_api_no_operator}")
 _kairn_api_reject(packed.implicit_narrowing 50 "${_api_no_conversion}")
 _kairn_api_reject(packed.mixed_limb_types 51 "${_api_no_operator}")
-_kairn_api_reject(packed.one_limb_arithmetic 53 "${_api_no_operator}")
+_kairn_api_reject(packed.one_limb_limb_types 53 "${_api_no_operator}")
+_kairn_api_reject(packed.one_limb_number_operand 114 "${_api_no_operator}")
+_kairn_api_reject(packed.one_limb_expansion_operand 115 "${_api_no_operator}")
+_kairn_api_reject(packed.one_limb_assign_two_limbs 116 "${_api_no_operator}|no viable overloaded")
 # The functions on arrays (batch.hpp): nothing writes through a view of const limbs, every view of
 # one call has one limb type and one number of limbs, and nothing scales by a two-limb number (no
 # loop does). Each control writes what compiles instead.

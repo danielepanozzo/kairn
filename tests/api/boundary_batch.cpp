@@ -32,6 +32,12 @@
 // tests/api/CMakeLists.txt) and reports elsewhere.
 //
 //   boundary_batch --expect E --factor none|some|report
+//
+// A fourth kind: arrays filled with the products of Packed<T, 1> (x * y, the opaque product
+// fma(x, y, +0) of kernel scale_step_1), W at a time, then passed into a map or a sum that adds
+// them. With the guard they must agree (--expect none); against the copy without it they are
+// counted and reported only: the opaque product alone is not a product a compiler can fuse, and
+// none measured did.
 #include <kairn/accumulator.hpp>
 #include <kairn/batch.hpp>
 
@@ -283,6 +289,36 @@ FORM(scale1, MAP(1, kairn::scale(view<1>(s, t, N), T(3), z)))
 FORM(scale2, MAP(2, kairn::scale(view<2>(s, t, N), T(3), z)))
 FORM(mul_pow2_2, MAP(2, kairn::mul_pow2(view<2>(s, t, N), T(0.5), z)))
 FORM(axpy2_x, MAP(2, kairn::axpy(T(3), view<2>(s, t, N), CANCEL(2), z)))
+// The products of Packed<T, 1>, x * y (scale_step_1, the opaque product) of the factors loaded W at a
+// time, stored into the array that a function on arrays then adds (with the rounded products the
+// factors are p and 1, and p 1 is p): the fourth kind, which must agree with the guard and is
+// reported without it.
+#define KPRODUCTS(s, t)                                                                           \
+    T s[N], t[N];                                                                                 \
+    for (int i = 0; i < N; i += kairn::Packed<T, 1>::lanes) {                                     \
+        const int n = N - i < kairn::Packed<T, 1>::lanes ? N - i : kairn::Packed<T, 1>::lanes;    \
+        (kairn::Packed<T, 1>::load_partial(a + i, n) * kairn::Packed<T, 1>::load_partial(b + i, n)) \
+            .store_partial(s + i, n);                                                             \
+    }                                                                                             \
+    for (int i = 0; i < N; ++i) t[i] = T(0);
+#define MAPKP(K, CALL)                                                     \
+    KPRODUCTS(s, t) [[maybe_unused]] const T zero[N] = {};                 \
+    T zh[N], zl[N];                                                        \
+    const auto z = out_view<K>(zh, zl, N);                                 \
+    const bool f = CALL;                                                   \
+    for (int i = 0; i < N; ++i) {                                          \
+        out[i] = zh[i];                                                    \
+        out[N + i] = K == 2 ? zl[i] : T(0);                                \
+    }                                                                      \
+    out[2 * N] = f ? T(1) : T(0);
+FORM(add1_kp, MAPKP(1, kairn::add(view<1>(s, t, N), CANCEL(1), z)))
+FORM(add1_y_kp, MAPKP(1, kairn::add(CANCEL(1), view<1>(s, t, N), z)))
+FORM(sub1_kp, MAPKP(1, kairn::sub(CANCEL(1), view<1>(s, t, N), z)))
+FORM(add2_kp, MAPKP(2, kairn::add(view<2>(s, t, N), CANCEL(2), z)))
+FORM(sum1_kp, KPRODUCTS(kp, t) T s[N]; for (int i = 0; i < N; ++i) s[i] = i % 2 ? c[i / 2] : kp[i / 2];
+     put<T, 1>(out, kairn::sum(view<1>(s, t, N)));)
+FORM(sum2_kp, KPRODUCTS(kp, t) T s[N]; for (int i = 0; i < N; ++i) s[i] = i % 2 ? c[i / 2] : kp[i / 2];
+     put<T, 2>(out, kairn::sum(view<2>(s, t, N)));)
 FORM(norm2, PRODUCTS(s, t) const kairn::Reduction<T> r = kairn::norm_upper(view<2>(s, t, N));
      out[0] = r.value; out[1] = r.finite ? T(1) : T(0);)
 FORM(conv2, PRODUCTS(s, t) const T zero[N] = {}; T ones[2] = {T(1), T(1)}; T z2[2] = {T(0), T(0)};
@@ -297,9 +333,12 @@ template <class T>
 struct Form {
     const char* name;
     Fn<T> in_place, rounded;
-    int kind;  // 0: needs the guard; 1: multiplied or compared; 2: multiplied by a constant the compiler sees
+    // 0: needs the guard; 1: multiplied or compared; 2: multiplied by a constant the compiler sees;
+    // 3: the products of Packed<T, 1>.
+    int kind;
 };
 #define ROW(NAME, TEXT, GUARD) {TEXT, &NAME##_inline<T>, &NAME##_rounded<T>, (GUARD) ? 0 : 1}
+#define ROWKP(NAME, TEXT) {TEXT, &NAME##_inline<T>, &NAME##_rounded<T>, 3}
 #define KNOWN(NAME, TEXT)                                              \
     {TEXT ", F = 1", &NAME##_inline<T, 0>, &NAME##_rounded<T, 0>, 2},  \
     {TEXT ", F = -1", &NAME##_inline<T, 1>, &NAME##_rounded<T, 1>, 2}, \
@@ -333,7 +372,7 @@ T uniform() {  // in [0.5, 1)
 }
 
 struct Totals {
-    long guarded = 0, unguarded = 0, known = 0;
+    long guarded = 0, unguarded = 0, known = 0, kairn_product = 0;
 };
 
 template <class T>
@@ -369,6 +408,12 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(conv2, "conv({a*b}, {1, 1}, z)", false),
         ROW(acc_product1, "acc.add_product(a*b, 1), 1 limb", false),
         ROW(acc_product2, "acc.add_product(a*b, 1), 2 limbs", false),
+        ROWKP(add1_kp, "add({P1(a) * P1(b)}, c, z)"),
+        ROWKP(add1_y_kp, "add(c, {P1(a) * P1(b)}, z)"),
+        ROWKP(sub1_kp, "sub(c, {P1(a) * P1(b)}, z)"),
+        ROWKP(add2_kp, "add({P1(a) * P1(b)}, c, z), 2 limbs"),
+        ROWKP(sum1_kp, "sum({P1(a) * P1(b), c, ...})"),
+        ROWKP(sum2_kp, "sum({P1(a) * P1(b), c, ...}, {0})"),
         KNOWN(dot1_k, "dot({a*b, c, ...}, {F})"),
         KNOWN(dot1_seq_k, "dot(sequential, {a*b, c, ...}, {F})"),
         KNOWN(dot1_rev_k, "dot({F}, {a*b, c, ...})"),
@@ -431,9 +476,11 @@ void run(const char* type, long rounds, Totals& totals) {
                 kairn::Packed<T, 1>::lanes, rounds);
     for (int f = 0; f < n_forms; ++f) {
         static const char* const notes[] = {"", "   (multiplied or compared: no guard needed)",
-                                            "   (multiplied by a constant the compiler sees)"};
+                                            "   (multiplied by a constant the compiler sees)",
+                                            "   (the products of Packed<T, 1>)"};
         std::printf("  %-48s differs in %6ld of %ld%s\n", forms[f].name, differ[f], rounds, notes[forms[f].kind]);
-        (forms[f].kind == 0 ? totals.guarded : forms[f].kind == 1 ? totals.unguarded : totals.known) += differ[f];
+        long* const count[] = {&totals.guarded, &totals.unguarded, &totals.known, &totals.kairn_product};
+        *count[forms[f].kind] += differ[f];
     }
 }
 
@@ -457,11 +504,12 @@ int main(int argc, char** argv) {
     run<float>("float", 20000, totals);
     std::printf("forms that need the guard: %ld rounds differ; forms that need none: %ld; with a known factor: %ld\n",
                 totals.guarded, totals.unguarded, totals.known);
+    std::printf("the products of Packed<T, 1>: %ld rounds differ\n", totals.kairn_product);
     if (std::strcmp(expect, "report") == 0 && totals.guarded == 0)
         std::printf("no form differs: this compiler and setting fused no product into the loops here, so this build "
                     "does not show that the guard is needed\n");
     bool ok = totals.unguarded == 0;
-    if (std::strcmp(expect, "none") == 0) ok = ok && totals.guarded == 0;
+    if (std::strcmp(expect, "none") == 0) ok = ok && totals.guarded == 0 && totals.kairn_product == 0;
     if (std::strcmp(expect, "some") == 0) ok = ok && totals.guarded > 0;
     if (std::strcmp(factor, "none") == 0) ok = ok && totals.known == 0;
     if (std::strcmp(factor, "some") == 0) ok = ok && totals.known > 0;

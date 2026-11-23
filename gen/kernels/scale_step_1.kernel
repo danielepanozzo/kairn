@@ -1,6 +1,7 @@
 # The step of the map scale_1, an array of one limb times a scalar of T (milestone2.md, "sum, dot,
 # axpy, convolution"): the product rounded to nearest, mul_1_1. The program supplies both; a
-# product needs no guard (rule R3). Its claims are those of mul_1_1.
+# product needs no guard (rule R3). Its claims are those of mul_1_1. Also x * y of Packed<T, 1>
+# (kairn/packed.hpp), which calls it on its own.
 kernel:        scale_step_1
 input:         x
 input:         a
