@@ -1922,13 +1922,14 @@ dependent calls and on short ball vectors: on the Zen 2 64 to 82% of a `sum` or 
 elements of one limb, 7 to 29% at 64, under 5% from 1 024
 ([Benchmarks, Milestone 2](results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry)).
 It was kept as the brief asks it, whatever its cost. On 2026-11-23 its report moved out of line
-and the short constructors of `BallVector` were forced inline (the owner's decision of that day),
-and the benchmarks measured it again on short arrays and short ball vectors: on the Zen 2 a short
-array still pays the read, 4.6 to 5.7 ns per call of one limb up to 16 elements, as with the header
-before in the same runs, and the constructors of short ball vectors no longer pay more than the read
-(Clang 18: 3.0 ns for `BallVector<double, 1, 3>`, against 18.2 to 18.8 with the header before);
-on the M3 a short array of up to 16 elements pays at most 0.35 ns, against up to 0.7 with the header before, and chains
-of short operations of one limb still lose 4.5 to 6.6 ns
+and the short constructors of `BallVector` were forced inline (the owner's decision of that day;
+with Clang, up to 14 limbs, a bound the measurements chose), and the benchmarks measured it again on
+short arrays and short ball vectors: on the Zen 2 a short array still pays the read, 4.6 to 5.7 ns
+per call of one limb up to 16 elements, as with the header before in the same runs, and the
+constructors of up to 14 limbs no longer pay more than the read (Clang 18: 3.0 ns for
+`BallVector<double, 1, 3>`, against 18.2 to 18.5 with the header before); on the M3 a short array of
+up to 16 elements pays at most 0.35 ns, against up to 0.7 with the header before, and chains of
+`scale` of one limb still lose up to 6.4 ns
 ([Benchmarks, Milestone 2](results/bench-milestone2.md#the-check-measured-again-on-2026-11-23)).
 
 `tests/api/checks.cpp` runs them, on the cases of `tests/api/checks_cases.hpp`, built as the

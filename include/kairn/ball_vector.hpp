@@ -300,10 +300,11 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // not forcing beyond the noise, and a constructor took 0.37 to 0.79 of its time; from 18 limbs it
 // was slower at -O3 (two limbs and 13 or 18 entries 1.2 to 1.3 times: the loop unrolled for every
 // limb spills) and faster at -O2. GCC 13 and 16 inline these constructors without being forced, to
-// the same code; forcing them changed what GCC inlines of the other loops in the same unit, faster
-// with GCC 13 (the scaling of one limb at -O3) and slower with GCC 16 (chains of the difference of
-// one limb at -O3, up to 1.8 times), so GCC is left to itself; MSVC was not measured. The one place
-// that selects is bv_forced_inline; it changes no result, only what the compiler may call.
+// the same code; forcing them changed only what GCC inlines of the other loops in the same unit,
+// faster with GCC 13 (the scaling of one limb at -O3) and slower with GCC 16 (chains of the
+// difference of one limb at -O3, 1.4 to 1.7 times), so GCC is left to itself; MSVC was not
+// measured. The one place that selects is bv_forced_inline; it changes no result, only what the
+// compiler may call.
 #if defined(__clang__)
 inline constexpr std::size_t bv_inline_limbs = 14;
 #else

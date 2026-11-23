@@ -637,7 +637,8 @@ nanoseconds a call on an AMD Zen 2, where reading MXCSR is slow: most of a call 
 one limb there (62 to 82% of a `sum` or `dot` of up to 8 elements), 7 to 27% at 64 elements, under 5%
 from 1 024 elements of one limb or from 2 to 16 of two; on an Apple M3 at most 0.35 ns a call up to 16 elements of one limb (up to 0.7 with the header before); an operation or a constructor of a
 short ball vector loses about the read (before 2026-11-23, when the report was compiled at the place
-of the check, a constructor could lose 11 to 19 ns more, where the compiler stopped inlining it)
+of the check, a constructor could lose 6 to 18 ns more where Clang stopped inlining it; with Clang
+the constructors of up to 14 limbs are now forced inline, and the larger ones are as they were)
 ([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#the-check-measured-again-on-2026-11-23)).
 The scalar operations, `Packed` and the accumulator, whose operations take one term at a time,
 check the environment in a debug build only, as below. In a build without `NDEBUG`

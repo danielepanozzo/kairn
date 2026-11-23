@@ -251,7 +251,7 @@ entry, and units for the compile time:
 | `m2_bvs.cpp` | short ball vectors of fixed length (`m2x`, kernel `OP_k_N`, N = 3, 7, 13, 18, 80): `add`, `x + y`, `sub`, `scale`, `half` and the constructor from centers and a radius, on many vectors (`tp`) and in a chain of 256 operations each on the result of the one before (`lat`), the time per operation, every size in one unit; compiled again with `KB_BVS_ONE` as 60 units of one operation and one size each (`m2y`, the same kernels; CMake generates them into the build tree), since what a compiler inlines depends on the size of the unit; with `kairn-bench-m2-nocheck-LEVEL` (and `kairn-bench-m2-before-LEVEL`), what the check at entry costs these operations |
 | `m2_exact.hpp` | exact sums of `double` (a fixed-point accumulator of 2240 bits): the reference of the checks of the two files above and of the errors |
 | `m2_accuracy.cpp` | `kairn-bench-m2-accuracy-LEVEL`: the errors of the sums and dot products of one and two limbs, the naive loop, Sum2 and Dot2 of Ogita, Rump and Oishi, and the accumulators, against the exact result, on data of chosen condition (GenDot of the same authors), and the stated bounds over the errors; nothing is timed |
-| `entry_check.py` | `copy DEST`: a copy of `include/kairn` with the check of the environment at the batch entries compiled out (`detail::check_batch_environment` returns `true`), never committed; with `-DKAIRN_BENCH_NOCHECK_INCLUDE=DEST` CMake builds `kairn-bench-m2-nocheck-LEVEL`, the same program against it. `before DEST [--commit C]`: the headers of an earlier commit (by default `25ebe3d6`, the last whose checks compiled the report inline), from git; `-DKAIRN_BENCH_BEFORE_INCLUDE=DEST` builds `kairn-bench-m2-before-LEVEL`. `check`: whether the header has the form the script expects. Until 2026-11-23 a variant `cold` made a third copy with the report out of line and cold, a candidate change of the header, built as `kairn-bench-m2-cold-LEVEL` (the runs `entryx-...-cv-*`); the header now has that form, and the variant is gone |
+| `entry_check.py` | `copy DEST`: a copy of `include/kairn` with the check of the environment at the batch entries compiled out (`detail::check_batch_environment` returns `true`), never committed; with `-DKAIRN_BENCH_NOCHECK_INCLUDE=DEST` CMake builds `kairn-bench-m2-nocheck-LEVEL`, the same program against it. `before DEST [--commit C]`: the headers of an earlier commit (by default `25ebe3d6`, the last whose checks compiled the report inline), from git; `-DKAIRN_BENCH_BEFORE_INCLUDE=DEST` builds `kairn-bench-m2-before-LEVEL`. `inline DEST LIMBS`: a copy with the check kept and the bound of the forced inlining of the short constructors of `BallVector` (`detail::bv_inline_limbs` in `ball_vector.hpp`) set to LIMBS, 0 for no size, 1000000 for every size; `-DKAIRN_BENCH_EXTRA_INCLUDES=NAME=DEST;...` builds `kairn-bench-m2-NAME-LEVEL` against each. `check`: whether the header has the form the script expects. Until 2026-11-23 a variant `cold` made a third copy with the report out of line and cold, a candidate change of the header, built as `kairn-bench-m2-cold-LEVEL` (the runs `entryx-...-cv-*`); the header now has that form, and the variant is gone |
 | `compile_time/batch.cpp` ... | the include units of `compile_time.py` (`batch`, `ball_vector`, `accumulator`, `kairn_batch`, `kairn_ball_vector`, `include_packed`); `enclosure_costs.py --kind arrays` and `ballvectors`, units of N calls |
 
 Their variants, besides `op`, `kairn` (the generated loop the public function calls, on the limbs:
@@ -308,8 +308,8 @@ python3 bench/m2_report.py --part 3 results/milestone2/bench
 ```
 
 **The check at entry measured again (2026-11-23).** When the report of the check moved out of line
-and the short constructors of `BallVector` were forced inline, the same functions were measured
-again, three programs per configuration built from one tree: `kairn-bench-m2-before-LEVEL` (the
+and the constructors of `BallVector` were forced inline (for every size and every compiler in these
+runs; the bound below came after), the same functions were measured again, three programs per configuration built from one tree: `kairn-bench-m2-before-LEVEL` (the
 headers of `25ebe3d6`, `entry_check.py before`), `kairn-bench-m2-LEVEL` (the headers of the tree) and
 `kairn-bench-m2-nocheck-LEVEL` (`entry_check.py copy`), run one after the other in that order, three
 rounds, with the filter `m2k/,m2x/,m2y/` (the short arrays and the short ball vectors), and stored as
@@ -327,6 +327,31 @@ taskset -c 12 build-bench/bench/kairn-bench-m2-before-O2 --cpu 12 --reps 31 --fi
 taskset -c 12 build-bench/bench/kairn-bench-m2-O2 --cpu 12 --reps 31 --filter $F ... recheck-linux-gcc-O2-c1-r1.json
 taskset -c 12 build-bench/bench/kairn-bench-m2-nocheck-O2 --cpu 12 --reps 31 --filter $F ... recheck-linux-gcc-O2-c0-r1.json
 python3 bench/m2_report.py --part 4 results/milestone2/bench
+```
+
+The bound of that forced inlining (`detail::bv_inline_limbs`) was chosen from a second campaign of
+five programs per configuration, run in this order: the headers before, the headers forced for every
+size (`entry_check.py inline DIR 1000000`, the program `forced`), forced for none (`... inline DIR
+0`, `unforced`), the headers of the tree and the tree without the check, with the filter `m2x/,m2y/`
+and five functions of `m2k/`, stored as `inline-MACHINE-COMPILER-LEVEL-cK-rN.json`, K `b`, `f`, `u`,
+`1` and `0` (Clang 18 and Apple clang with the tree of `f59f37c6`, whose bound was 14 limbs for
+every compiler; GCC 13 and 16 with that of `9c5b5bd7`, where GCC forces nothing and the tree is the
+program `unforced`). `--part 4` prints, for the constructor of each size, the three programs over
+the header before, and per size how many of its 24 functions are slower or faster than in another program beyond
+the noise: the lowest of a function's three times above the highest of the other program's by more
+than placement alone moves the controls (their 90th percentile). The short ball vectors of the
+tables of the check come from this campaign. The runs `ctor23-linux-gcc-O3-cK-rN.json` are an
+experiment on the constructor of `BallVector<double, 2, 3>` with GCC 13 at `-O3`, filter
+`make_2_3/,make_1_3/`: K `b`, `1` and `u` as above, `xb` and `x1` the header before and the tree built
+with `-DCMAKE_CXX_FLAGS="-falign-functions=64 -falign-loops=64"`, `ab` and `a1` the same two against
+copies of the headers with `class alignas(32) BallVector` (edited by hand, not committed).
+
+```sh
+python3 bench/entry_check.py inline /tmp/forced 1000000
+python3 bench/entry_check.py inline /tmp/unforced 0
+cmake ... -DKAIRN_BENCH_NOCHECK_INCLUDE=/tmp/nocheck -DKAIRN_BENCH_BEFORE_INCLUDE=/tmp/before \
+      "-DKAIRN_BENCH_EXTRA_INCLUDES=forced=/tmp/forced;unforced=/tmp/unforced"
+taskset -c 12 build-bench/bench/kairn-bench-m2-forced-O2 --cpu 12 --reps 31 --filter $F ... inline-linux-gcc-O2-cf-r1.json
 ```
 
 ## Other costs

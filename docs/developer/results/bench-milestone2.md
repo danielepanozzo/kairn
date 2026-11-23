@@ -117,18 +117,24 @@ harness, `BACKEND/KIND/KERNEL/VARIANT`: `m2` for `double` limbs, `m2f` for `floa
   [question 17](#17-accuracy-for-the-price)).
 
 - **The check at entry, measured again on 2026-11-23, with its report out of line and the short
-  constructors of `BallVector` forced inline: a short array pays the read, a short ball vector no
-  longer more.** On Zen 2 a call of `sum` or `dot` of one limb up to 16 elements loses 4.6 to 5.7 ns
-  to it, as with the header before in the same runs; the constructors of short ball vectors lose 1 to
-  3 ns with Clang 18 (`BallVector<double, 1, 3>`: 9.0 ns a call instead of 24.2 to 24.8, 6.0 without
-  the check) and about the read with GCC 13, and the other operations 2.5 ns at the median; on the M3
-  a short array of up to 16 elements pays at most 0.35 ns, against up to 0.7 with the header before, an operation of a
-  short ball vector 0.1 ns at the median, and the constructors of up to 7 entries at most 3.2 ns
-  (Apple clang: 0.40 to 0.75 of their time before; GCC 16 at `-O3`, which had stopped inlining them
-  in a unit of many operations, 0.36 to 0.50), but chains of short operations of one limb still lose
-  4.5 to 6.6 ns, with either header.
-  Forced inline, the constructors of two limbs and 13 or 18 entries take 1.04 to 1.45 times as long
-  as before with Clang 18 and Apple clang at `-O3`, whose unrolled loop no longer fits the registers
+  constructors of `BallVector` forced inline with Clang up to 14 limbs: a short array pays the read,
+  a short ball vector no longer more.** On Zen 2 a call of `sum` or `dot` of one limb up to 16
+  elements loses 4.6 to 5.7 ns to it, as with the header before in the same runs; the constructors
+  of up to 14 limbs lose 0.3 to 3.8 ns with Clang 18 (`BallVector<double, 1, 3>`: 9.0 ns a call
+  instead of 24.1 to 24.5, 6.0 without the check) and about the read with GCC 13, the other
+  operations 2.4 to 2.5 ns at the median; on the M3 a short array of up to 16 elements pays at most
+  0.35 ns, against up to 0.7 with the header before, an operation of a short ball vector 0.1 ns at
+  the median, and the constructors of up to 14 limbs at most 4.6 ns with Apple clang (0.30 to 0.90
+  of their time before); with GCC 16, which is not forced, at `-O3` in a unit of many operations
+  0.36 to 0.52 of their time before (the report out of line lets GCC inline the loop it called), but
+  chains of `scale` of one limb still lose 4.3 to 6.4 ns, with either header. The bound was measured
+  on its own (the harness forced for every size and for none): forcing helps Clang up to 14 limbs
+  and costs it from 18 at `-O3`; it changes no constructor of GCC, which inlines them anyway, only
+  what GCC inlines elsewhere in a unit, faster with GCC 13 and slower with GCC 16, so GCC is not
+  forced. What is still slower than before is not the forcing: placement, and the code around the
+  check's new form (GCC 13 at `-O3`: the constructor of `BallVector<double, 2, 3>` in a unit of its
+  own 1.21 to 1.35 times; GCC 16: chains of one limb, whose loops it now inlines, 1.08 to 1.41
+  times, most of them without the check too)
   ([question 14](#the-check-measured-again-on-2026-11-23)).
 
 - **Third part (before 2026-11-23): the check at entry costs a call of a short array 5 to 6 ns on Zen 2 and about
@@ -1623,8 +1629,15 @@ tree of commit `b2518226`, on the M3 that of `89848182`, which differs from it i
 form of one test (a declaration in a condition) and comments. The two, and the tree that follows
 them on the branch (comments), compile the units of the short arrays and of the short ball vectors
 to the same machine code (compared with the four compilers at `-O2` and `-O3` for the second,
-Apple clang at `-O2` for the first). The numbers of question 14 and of this page
-that predate that day are marked "before 2026-11-23".
+Apple clang at `-O2` for the first). The short ball vectors and the bound of the forced inlining were
+measured in a second campaign, the runs `inline-*`, five programs per configuration: with Clang 18 and
+Apple clang the tree of `f59f37c6`, whose bound was 14 limbs for every compiler, with GCC 13 and 16
+that of `9c5b5bd7`, where GCC forces nothing; the two trees, and the one that follows them on the
+branch (comments and pages), compile every unit of the harness to the same objects with Clang
+(compared byte for byte with Clang 18), and with GCC the tree of `9c5b5bd7` to the objects of the
+program forced for none of either (compared with GCC 13 and 16). The runs `ctor23-*`, of
+`f59f37c6`, are an experiment on one constructor with GCC 13. The numbers of question 14 and of this
+page that predate that day are marked "before 2026-11-23".
 
 Where the code is the same the two trees agree: the functions measured again beside the changed ones
 whose code did not change (the sums, dot products and `axpy` of one limb, the product of one limb,
@@ -1811,15 +1824,19 @@ again ([the first part below](#the-check-measured-again-on-2026-11-23)); the mea
 
 #### The check measured again on 2026-11-23
 
-On 2026-11-23 the report of the check moved out of line and the short constructors of `BallVector`
-were forced inline (the owner's decision of that day). At the place of the check there is now one
-read of the control register, one test of a mask and a branch; the message and the call of
-`KAIRN_ENVIRONMENT_FAILURE` are in `detail::report_environment`, a function of its own that is never
-inlined (`noinline` and `cold`; GCC reaches it from the `.cold` part of its caller), which the checks
-of a debug build share. `BallVector::make` and the two constructors from centers and a radius are
-forced inline. As the four compilers compile it at `-O2` and `-O3` (read in the machine code of
-`m2_bvs.cpp`, the unit of every size, and of a probe with `sum`, `norm_upper`, the negation of a
-ball vector, and `x + y` and `x < y` with `KAIRN_CHECKS` 1):
+On 2026-11-23 the report of the check moved out of line, and the short constructors of `BallVector`
+were forced inline (the owner's decision of that day). How short, and with which compiler, a
+measurement of its own chose (below; a choice of the authors): the constructors from centers and a
+radius, and the member that makes the ball vector, are forced inline with Clang while the centers
+have at most 14 limbs in all ($kN \le 14$; of the sizes measured 1 × 3, 1 × 7, 1 × 13, 2 × 3 and
+2 × 7), and are otherwise ordinary inline functions, the code of before: above 14 limbs, and with
+every other compiler for every size (`ball_vector.hpp`, `detail::bv_inline_limbs`). At the place of
+the check there is now one read of the control register, one test of a mask and a branch; the
+message and the call of `KAIRN_ENVIRONMENT_FAILURE` are in `detail::report_environment`, a function
+of its own that is never inlined (`noinline` and `cold`; GCC reaches it from the `.cold` part of its
+caller), which the checks of a debug build share. As the four compilers compile it at `-O2` and
+`-O3` (read in the machine code of `m2_bvs.cpp`, the unit of every size, and of a probe with `sum`,
+`norm_upper`, the negation of a ball vector, and `x + y` and `x < y` with `KAIRN_CHECKS` 1):
 
 | | x86-64 (GCC 13, Clang 18) | AArch64 (Apple clang 21, GCC 16) |
 |---|---|---|
@@ -1829,30 +1846,61 @@ ball vector, and `x + y` and `x < y` with `KAIRN_CHECKS` 1):
 | then | `jne` to the report | `b.ne` (Apple clang) or `cbnz` (GCC 16) to the report |
 | before 2026-11-23 | three tests and branches (`test $0x60,%ah`, ...), the two addresses of strings and the call of `detail::fail` laid out at the place of the check (at `-O3` with GCC 13 sometimes `fprintf` too) | `tst x8, #0xc00000` and three more tests and branches, and the same |
 
-The constructors of `BallVector<double, 1, 3>` and `<double, 2, 3>` are inlined in the unit of every
-size with every compiler at both levels; before, Clang 18 and Apple clang called `make` there (Clang
-18 for every N of that unit but 18 and 80 of two limbs, where it called the constructor), and GCC 13
-and 16 at `-O3` the constructor's loop (`bv_make_1_seq`, `bv_make_2_entry_seq`), which they inlined
-at `-O2`. What is called now is the end of the loop, which is never inlined, and the
-report on the path that is not taken. The operations themselves are ordinary inline functions, as
-before: with Apple clang the sum and the scaling of `BallVector<double, 2, 13>` stay calls of
-`packed_detail::add` and `scale` in that unit, before and after. Read from the same objects: a read
-of FPCR alone costs a dependent chain of fused multiply-adds nothing measurable on the M3, nor a chain
-through memory (a probe of 2^20 steps, best of 15: 1.42 ns per step of one FMA with and without an
-`mrs` of FPCR, 5.6 ns with an `mrs` of FPSR, which waits for the operations before it).
+With Clang the constructors of `BallVector<double, 1, 3>` and `<double, 2, 3>` are now inlined in
+the unit of every size at both levels; before, Clang 18 and Apple clang called `make` there (Clang
+18 for every N of that unit but 18 and 80 of two limbs, where it called the constructor). GCC 13
+and 16 inline them without being forced, with the report out of line, as they did at `-O2` before
+(at `-O3` they called the constructor's loop, `bv_make_1_seq` or `bv_make_2_entry_seq`). What is
+called now is the end of the loop, which is never inlined, and the report on the path that is not
+taken. Above the bound the compilers do what they did: with Apple clang the unit of every size calls
+`make` for 1 × 18 and 2 × 13, and the constructor for 2 × 18 and 2 × 80. The operations themselves
+are ordinary inline functions, as before: with Apple clang the sum and the scaling of
+`BallVector<double, 2, 13>` stay calls of `packed_detail::add` and `scale` in that unit, before and
+after. Read from the same objects: a read of FPCR alone costs a dependent chain of fused
+multiply-adds nothing measurable on the M3, nor a chain through memory (a probe of 2^20 steps, best
+of 15: 1.42 ns per step of one FMA with and without an `mrs` of FPCR, 5.6 ns with an `mrs` of FPSR,
+which waits for the operations before it).
 
-The method: three programs per configuration built from one tree, the harness with the headers
-before (`25ebe3d6`, `kairn-bench-m2-before-LEVEL`), with the headers of the tree, and with them
-without the check (`kairn-bench-m2-nocheck-LEVEL`), run one after the other in that order, three
-rounds, with the filter `m2k/,m2x/,m2y/` (the short arrays and the short ball vectors of this
-question); "the check" is a function's time in a program with the check minus its time without it in
-the same round, a cell the lowest and highest value over the three rounds
-([How the third part was measured](#how-the-third-part-was-measured) has the conditions). On Zen 2
-each configuration ran on a core of its own of the first socket, the four at once, on different dies,
-with the SMT sibling idle; the two rounds of one configuration whose sibling another user's job
-took were set aside and made again on another core. On the M3, one program at a time, both levels
-of a compiler in turn in each round, each triplet started when the 1-minute load average was under
-8 (or after 10 minutes): it was 1.9 to 12.1, another author's builds and tests running.
+The method: programs built from one tree and run one after the other in a fixed order, three rounds;
+"the check" is a function's time in a program with the check minus its time without it in the same
+round, and a cell is the lowest and highest value over the three rounds
+([How the third part was measured](#how-the-third-part-was-measured) has the conditions).
+
+- `recheck-*`, the short arrays (the filter `m2k/,m2x/,m2y/`): three programs, the headers before
+  (`25ebe3d6`, `kairn-bench-m2-before-LEVEL`), the headers with the constructors forced inline for
+  every size and every compiler (`b2518226` on Zen 2, `89848182` on the M3) and the same without the
+  check (`kairn-bench-m2-nocheck-LEVEL`). Its tables of the short arrays are the ones below (the
+  bound changes no unit of the short arrays, which make no ball vector); its short ball vectors,
+  forced for every size, were measured again in the second campaign. On Zen 2 each configuration ran
+  on a core of its own of the first socket, the four at once, on different dies, with the SMT
+  sibling idle; the two rounds of one configuration whose sibling another user's job took were set
+  aside and made again on another core. On the M3, one program at a time, both levels of a compiler
+  in turn in each round, each triplet started when the 1-minute load average was under 8 (or after
+  10 minutes): it was 1.9 to 12.1, another author's builds and tests running.
+- `inline-*`, the short ball vectors and the bound (the filter `m2x/,m2y/` and five functions of
+  `m2k/`): five programs, the headers before, forced for every size (`bench/entry_check.py inline
+  DIR 1000000`, `kairn-bench-m2-forced-LEVEL`), forced for none (`... inline DIR 0`,
+  `kairn-bench-m2-unforced-LEVEL`), the tree, and the tree without the check. Clang 18 and Apple
+  clang ran the tree of `f59f37c6`, whose bound was 14 limbs for every compiler; GCC 13 and 16 ran
+  again the tree of `9c5b5bd7`, where they force nothing. With Clang the two trees compile every
+  unit of the harness to the same objects byte for byte (compared with Clang 18; with Apple clang
+  the preprocessed source is the same), and with GCC the tree of `9c5b5bd7` compiles them to the
+  objects of the program forced for none (compared with GCC 13 and 16). On Zen 2 the same four cores
+  as above, the siblings idle in every sample (`mpstat`, at most 3% busy); on the M3 as above, the
+  load 1.6 to 10.1 for Apple clang, 2.2 to 64 for GCC 16 (another author's builds: above 20 in its
+  first round at `-O3` and its second at `-O2`, whose runs were kept). Its tables are those of the
+  short ball vectors below, and those of the bound.
+- `ctor23-*`: the constructor of `BallVector<double, 2, 3>` with GCC 13 at `-O3` (finding (1)
+  below), seven programs on one core of Zen 2.
+
+The forcing was judged by the program forced for every size against the one forced for none, the
+same headers otherwise: a function is slower when the lowest of its three times is above the highest
+of the other program's by more than what placement alone does to the same code in that configuration
+(the 90th percentile of the difference of the controls, the generated loops called directly, which
+are the same code in every program: 0.9 to 2.4% on Zen 2, 3.3 to 4.3% on the M3), and faster the
+other way round; 24 functions per size (the constructor and the five operations `add`, `x + y`,
+`sub`, `scale` and `half`, on many vectors and in a chain, in a unit of their own and in the unit of
+every size).
 
 | The check at entry, 2026-11-23, independent calls: ns per call (with the check minus without) (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -1894,68 +1942,165 @@ of a compiler in turn in each round, each triplet started when the 1-minute load
 | `sum`, two limbs, n = 1 | 0.01 to 0.04 (-O2), 0.04 to 0.10 (-O3) | -0.01 to 0.03 | 0.05 (-O2), 0.37 (-O3) | 0.05 to 0.06 |
 | `dot`, two limbs, n = 1 | 0.03 to 0.07 | -0.03 to 0.01 | 0.08 to 0.09 (-O2), 0.03 to 0.04 (-O3) | 0.06 |
 
+| The bound: what placement alone does, |X / before - 1| of the controls at the 90th percentile (the floor of the noise) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the generated loops of the short ball vectors, called directly | 3.3% (-O2), 4.1% (-O3) | 4.3% (-O2), 4.0% (-O3) | 2.4% (-O2), 1.3% (-O3) | 1.0% (-O2), 0.9% (-O3) |
+
+| The bound, M3, Apple clang: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 (forced in the tree) | 4.42 to 4.47 | 5.2 to 8.69 | 8.77 to 13.5 | 0; 4 (make tp m2y 0.50) | 4.42 to 4.43 | 9.2 to 12.2 | 5 to 12.9 | 0; 4 (make tp m2x 0.48) |
+| 1 limb, N = 7 (forced in the tree) | 8.69 to 8.85 | 18.7 to 21.5 | 18.1 to 19 | 0; 4 (make tp m2x 0.47) | 8.62 to 8.69 | 18.8 to 20.2 | 18.7 to 20.5 | 0; 4 (make tp m2x 0.46) |
+| 1 limb, N = 13 (forced in the tree) | 14.4 to 14.5 | 22.8 to 23.9 | 22.8 to 23.6 | 0; 5 (make lat m2y 0.57) | 14.7 to 14.8 | 23.4 to 24.1 | 22.4 to 24.4 | 0; 4 (make lat m2x 0.59) |
+| 1 limb, N = 18 | 19.7 to 20.1 | 18.9 to 19.7 | 18.2 to 18.6 | 0; 0 | 19.2 | 23.3 to 24.7 | 23.8 to 24.3 | 0; 4 (make lat m2y 0.69) |
+| 1 limb, N = 80 | 70.7 to 71.1 | 70.8 to 71.2 | 68.3 to 69.7 | 0; 0 | 70.1 to 70.2 | 73 to 73.1 | 72.2 to 72.5 | 1 (make lat m2y 1.50); 1 (make lat m2x 0.94) |
+| 2 limbs, N = 3 (forced in the tree) | 6.53 to 6.68 | 13.9 to 14.2 | 14.9 to 15.2 | 0; 4 (make tp m2x 0.48) | 6.69 to 6.71 | 14.1 to 14.6 | 13.3 to 14.1 | 0; 4 (make tp m2y 0.47) |
+| 2 limbs, N = 7 (forced in the tree) | 13.2 | 17.2 to 21.6 | 18.4 to 19.3 | 0; 4 (make tp m2y 0.69) | 13.1 | 18.7 to 19.9 | 18.2 to 18.9 | 0; 4 (make tp m2y 0.65) |
+| 2 limbs, N = 13 | 19.5 to 19.9 | 19.9 to 20 | 19.9 to 20.4 | 0; 0 | 26.5 to 26.9 | 19.3 to 20.1 | 19.3 to 19.4 | 3 (make tp m2x 1.32); 0 |
+| 2 limbs, N = 18 | 31.8 to 32.1 | 33 | 32.9 to 33 | 0; 0 | 33.9 | 26.2 to 26.3 | 26.3 | 4 (make tp m2x 1.29); 0 |
+| 2 limbs, N = 80 | 92 to 93.8 | 92.5 to 94.3 | 93.1 to 93.5 | 0; 0 | 91.8 | 92.2 to 92.3 | 92 | 0; 0 |
+
+| The bound, M3, GCC 16: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 | 3.36 to 3.49 | 3.31 to 3.4 | 4.25 to 4.34 | 0; 0 | 2.4 to 2.57 | 2.39 to 2.45 | 4.74 to 4.84 | 1 (sub lat m2x 1.56); 1 (sub tp m2x 0.59) |
+| 1 limb, N = 7 | 8.05 to 8.53 | 8.04 to 8.24 | 11.3 to 11.5 | 0; 1 (sub lat m2y 0.94) | 3.5 to 3.65 | 3.52 to 3.58 | 9.09 to 9.28 | 2 (sub lat m2x 1.63); 1 (sub tp m2x 0.61) |
+| 1 limb, N = 13 | 17.4 to 17.5 | 17.4 to 17.5 | 17.4 to 17.8 | 0; 0 | 6.59 to 6.81 | 6.59 to 6.72 | 17.9 to 18.2 | 1 (sub lat m2x 1.38); 1 (sub tp m2x 0.68) |
+| 1 limb, N = 18 | 24.2 to 25.2 | 24.3 | 24.4 to 24.8 | 0; 0 | 23.7 to 24.8 | 24.2 to 24.8 | 26.1 to 26.7 | 0; 2 (sub tp m2x 0.72) |
+| 1 limb, N = 80 | 207 to 216 | 207 to 211 | 208 to 212 | 0; 0 | 197 to 218 | 197 to 213 | 195 to 212 | 0; 1 (sub tp m2x 0.96) |
+| 2 limbs, N = 3 | 4.64 to 4.84 | 4.65 to 4.74 | 4.63 to 4.72 | 0; 0 | 2.97 to 3.22 | 2.95 to 3.03 | 6.15 to 6.28 | 0; 0 |
+| 2 limbs, N = 7 | 17.6 to 17.8 | 17.6 | 17.6 to 18 | 0; 0 | 5.23 to 5.5 | 4.97 to 5.07 | 11.9 to 12.3 | 1 (add lat m2x 1.08); 0 |
+| 2 limbs, N = 13 | 29.2 to 30.4 | 29.1 to 29.7 | 29.2 to 29.3 | 0; 0 | 10 to 10.5 | 10 to 10.2 | 25.6 to 26.1 | 0; 0 |
+| 2 limbs, N = 18 | 66 to 67.2 | 57.8 to 59 | 65.9 to 66.1 | 4 (make lat m2y 1.12); 0 | 37.5 to 39.1 | 37.3 to 38.2 | 36.6 to 38.4 | 0; 0 |
+| 2 limbs, N = 80 | 289 to 292 | 289 to 295 | 290 to 296 | 0; 0 | 254 to 282 | 260 to 283 | 253 to 275 | 0; 0 |
+
+| The bound, Zen 2, GCC 13: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 | 16.5 to 16.6 | 16.5 to 17.4 | 16.8 | 0; 1 (scale lat m2y 0.97) | 16.5 | 17.7 | 17.1 to 17.8 | 3 (addop tp m2y 1.05); 5 (scale tp m2x 0.64) |
+| 1 limb, N = 7 | 19.2 to 19.3 | 19.1 to 19.3 | 19 to 19.1 | 0; 0 | 18.1 | 18.9 | 20.9 to 21.1 | 2 (addop tp m2y 1.05); 6 (scale tp m2x 0.72) |
+| 1 limb, N = 13 | 24 to 24.1 | 24 to 24.1 | 23.9 | 0; 0 | 22.8 to 22.9 | 22.7 to 22.8 | 25.6 to 25.7 | 0; 3 (scale tp m2x 0.70) |
+| 1 limb, N = 18 | 29 to 29.1 | 29 to 29.3 | 29.1 to 29.3 | 0; 1 (sub lat m2x 0.82) | 28.9 to 29.1 | 29.2 to 29.3 | 32.9 to 33.4 | 1 (addop tp m2y 1.02); 3 (scale lat m2x 0.71) |
+| 1 limb, N = 80 | 152 | 148 to 149 | 150 to 151 | 0; 1 (sub lat m2x 0.87) | 150 | 149 | 141 to 143 | 4 (addop lat m2x 1.03); 1 (scale lat m2x 0.84) |
+| 2 limbs, N = 3 | 18.9 to 19 | 18.4 to 18.9 | 19.4 to 19.5 | 0; 0 | 22.2 | 20.7 to 20.8 | 19.3 to 20.5 | 3 (make tp m2y 1.07); 0 |
+| 2 limbs, N = 7 | 22.5 to 22.6 | 22.5 to 23.4 | 22.8 to 22.9 | 0; 0 | 20.5 | 21 to 21.1 | 23.3 to 23.6 | 0; 2 (make tp m2x 0.98) |
+| 2 limbs, N = 13 | 46.4 to 46.5 | 46.3 to 46.8 | 45.7 to 45.8 | 0; 0 | 29 | 28.9 to 29.1 | 32.6 to 32.8 | 1 (scale lat m2x 1.02); 0 |
+| 2 limbs, N = 18 | 63.8 to 64.3 | 58.7 to 59.3 | 58.8 to 58.9 | 3 (make tp m2y 1.08); 0 | 35.5 | 35.5 | 37.4 to 37.8 | 0; 0 |
+| 2 limbs, N = 80 | 248 to 254 | 226 to 230 | 227 to 228 | 2 (make tp m2x 1.08); 1 (make tp m2y 0.91) | 195 to 200 | 197 to 199 | 195 to 196 | 0; 0 |
+
+| The bound, Zen 2, Clang 18: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 (forced in the tree) | 8.98 to 8.99 | 24.2 to 24.4 | 24.3 to 24.5 | 0; 4 (make tp m2y 0.37) | 8.99 to 9.01 | 15.6 to 18.9 | 24.1 to 24.4 | 0; 4 (make lat m2x 0.57) |
+| 1 limb, N = 7 (forced in the tree) | 12.1 to 12.2 | 26.8 to 28.1 | 26.8 to 28.3 | 0; 4 (make lat m2y 0.44) | 12.1 to 12.2 | 26.8 to 28.2 | 26.7 to 28.1 | 0; 4 (make lat m2y 0.44) |
+| 1 limb, N = 13 (forced in the tree) | 21.1 | 32.8 to 33 | 32.6 to 33.2 | 1 (scale lat m2x 1.06); 4 (make tp m2y 0.64) | 21 to 21.1 | 32.8 to 32.9 | 33 to 39 | 0; 4 (make tp m2y 0.64) |
+| 1 limb, N = 18 | 23.9 to 24.1 | 24.2 to 24.9 | 24.4 to 26.2 | 0; 4 (make lat m2y 0.91) | 29.2 to 29.3 | 33.9 to 35.7 | 33.9 to 36 | 2 (add lat m2x 1.01); 4 (make tp m2x 0.86) |
+| 1 limb, N = 80 | 69.1 to 69.7 | 65.9 to 78.2 | 71.2 to 82 | 0; 1 (add tp m2x 0.99) | 68.8 to 79.3 | 71.5 to 78.7 | 71.2 to 89.7 | 0; 0 |
+| 2 limbs, N = 3 (forced in the tree) | 10.8 | 21.9 to 25.4 | 21.9 to 26.2 | 0; 4 (make lat m2x 0.49) | 10.8 | 21.9 to 25.5 | 21.9 to 25.8 | 0; 4 (make lat m2y 0.49) |
+| 2 limbs, N = 7 (forced in the tree) | 22.1 | 27.9 to 30.4 | 27.8 to 31.7 | 0; 4 (make tp m2x 0.79) | 22 to 22.1 | 28 to 30.5 | 28 to 30.9 | 0; 4 (make tp m2x 0.79) |
+| 2 limbs, N = 13 | 33.6 to 33.8 | 32.8 to 33.6 | 32.7 to 34.7 | 0; 2 (make lat m2y 0.91) | 39.7 | 34.9 to 35.5 | 35.4 to 36.2 | 4 (make lat m2y 1.22); 0 |
+| 2 limbs, N = 18 | 46.1 to 46.4 | 47.4 to 47.9 | 46.6 to 51.8 | 1 (addop lat m2y 1.01); 4 (make lat m2y 0.90) | 50.5 to 50.6 | 37.7 to 42.3 | 37.4 to 49.3 | 4 (make lat m2y 1.34); 0 |
+| 2 limbs, N = 80 | 147 to 148 | 148 to 150 | 143 to 149 | 0; 0 | 146 to 148 | 147 to 150 | 148 to 152 | 0; 0 |
+
+| The bound, forced for every size, over forced for none: functions slower; faster (of 24 per size), and the largest of each | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1 limb, N = 3 | 0; 4 (make tp m2y 0.50) (-O2), 0; 4 (make tp m2x 0.48) (-O3) | 0; 0 (-O2), 1 (sub lat m2x 1.56); 1 (sub tp m2x 0.59) (-O3) | 0; 1 (scale lat m2y 0.97) (-O2), 3 (addop tp m2y 1.05); 5 (scale tp m2x 0.64) (-O3) | 0; 4 (make tp m2y 0.37) (-O2), 0; 4 (make lat m2x 0.57) (-O3) |
+| 1 limb, N = 7 | 0; 4 (make tp m2x 0.47) (-O2), 0; 4 (make tp m2x 0.46) (-O3) | 0; 1 (sub lat m2y 0.94) (-O2), 2 (sub lat m2x 1.63); 1 (sub tp m2x 0.61) (-O3) | 0; 0 (-O2), 2 (addop tp m2y 1.05); 6 (scale tp m2x 0.72) (-O3) | 0; 4 (make lat m2y 0.44) (-O2), 0; 4 (make lat m2y 0.44) (-O3) |
+| 1 limb, N = 13 | 0; 5 (make lat m2y 0.57) (-O2), 0; 4 (make lat m2x 0.59) (-O3) | 0; 0 (-O2), 1 (sub lat m2x 1.38); 1 (sub tp m2x 0.68) (-O3) | 0; 0 (-O2), 0; 3 (scale tp m2x 0.70) (-O3) | 1 (scale lat m2x 1.06); 4 (make tp m2y 0.64) (-O2), 0; 4 (make tp m2y 0.64) (-O3) |
+| 1 limb, N = 18 | 0; 0 (-O2), 0; 4 (make lat m2y 0.69) (-O3) | 0; 0 (-O2), 0; 2 (sub tp m2x 0.72) (-O3) | 0; 1 (sub lat m2x 0.82) (-O2), 1 (addop tp m2y 1.02); 3 (scale lat m2x 0.71) (-O3) | 0; 4 (make lat m2y 0.91) (-O2), 2 (add lat m2x 1.01); 4 (make tp m2x 0.86) (-O3) |
+| 1 limb, N = 80 | 0; 0 (-O2), 1 (make lat m2y 1.50); 1 (make lat m2x 0.94) (-O3) | 0; 0 (-O2), 0; 1 (sub tp m2x 0.96) (-O3) | 0; 1 (sub lat m2x 0.87) (-O2), 4 (addop lat m2x 1.03); 1 (scale lat m2x 0.84) (-O3) | 0; 1 (add tp m2x 0.99) (-O2), 0; 0 (-O3) |
+| 2 limbs, N = 3 | 0; 4 (make tp m2x 0.48) (-O2), 0; 4 (make tp m2y 0.47) (-O3) | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 3 (make tp m2y 1.07); 0 (-O3) | 0; 4 (make lat m2x 0.49) (-O2), 0; 4 (make lat m2y 0.49) (-O3) |
+| 2 limbs, N = 7 | 0; 4 (make tp m2y 0.69) (-O2), 0; 4 (make tp m2y 0.65) (-O3) | 0; 0 (-O2), 1 (add lat m2x 1.08); 0 (-O3) | 0; 0 (-O2), 0; 2 (make tp m2x 0.98) (-O3) | 0; 4 (make tp m2x 0.79) (-O2), 0; 4 (make tp m2x 0.79) (-O3) |
+| 2 limbs, N = 13 | 0; 0 (-O2), 3 (make tp m2x 1.32); 0 (-O3) | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 1 (scale lat m2x 1.02); 0 (-O3) | 0; 2 (make lat m2y 0.91) (-O2), 4 (make lat m2y 1.22); 0 (-O3) |
+| 2 limbs, N = 18 | 0; 0 (-O2), 4 (make tp m2x 1.29); 0 (-O3) | 4 (make lat m2y 1.12); 0 (-O2), 0; 0 (-O3) | 3 (make tp m2y 1.08); 0 (-O2), 0; 0 (-O3) | 1 (addop lat m2y 1.01); 4 (make lat m2y 0.90) (-O2), 4 (make lat m2y 1.34); 0 (-O3) |
+| 2 limbs, N = 80 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 0 (-O3) | 2 (make tp m2x 1.08); 1 (make tp m2y 0.91) (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 0 (-O3) |
+
+| The bound, with the bound of the tree, over the header before: functions slower; faster (of 24 per size), and the largest of each | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1 limb, N = 3 | 0; 14 (make tp m2x 0.51) (-O2), 0; 13 (make tp m2y 0.62) (-O3) | 3 (sub lat m2x 1.25); 7 (add tp m2y 0.81) (-O2), 4 (make lat m2x 1.41); 10 (make tp m2x 0.52) (-O3) | 0; 2 (add lat m2y 0.96) (-O2), 0; 12 (half lat m2x 0.91) (-O3) | 0; 8 (make tp m2y 0.37) (-O2), 1 (sub lat m2x 1.02); 8 (make tp m2y 0.37) (-O3) |
+| 1 limb, N = 7 | 0; 6 (make lat m2x 0.47) (-O2), 0; 6 (make tp m2y 0.45) (-O3) | 2 (make lat m2y 1.15); 7 (make tp m2x 0.76) (-O2), 3 (scale lat m2x 1.15); 9 (make tp m2x 0.39) (-O3) | 0; 2 (scale lat m2y 0.97) (-O2), 1 (make tp m2y 1.03); 11 (make tp m2x 0.91) (-O3) | 0; 5 (make tp m2y 0.44) (-O2), 0; 4 (make lat m2y 0.44) (-O3) |
+| 1 limb, N = 13 | 7 (add lat m2x 1.60); 9 (make lat m2y 0.59) (-O2), 4 (add lat m2x 1.61); 10 (make lat m2x 0.58) (-O3) | 0; 2 (scale lat m2x 0.86) (-O2), 0; 7 (make tp m2x 0.37) (-O3) | 0; 0 (-O2), 2 (make tp m2y 1.04); 10 (make lat m2x 0.83) (-O3) | 1 (scale lat m2x 1.04); 4 (make lat m2x 0.64) (-O2), 0; 6 (make tp m2y 0.64) (-O3) |
+| 1 limb, N = 18 | 3 (half lat m2x 1.08); 2 (half tp m2y 0.94) (-O2), 0; 1 (half tp m2x 0.95) (-O3) | 0; 4 (scale lat m2x 0.82) (-O2), 0; 6 (addop tp m2y 0.92) (-O3) | 1 (sub lat m2x 1.21); 0 (-O2), 0; 8 (make tp m2x 0.89) (-O3) | 0; 4 (make lat m2x 0.97) (-O2), 0; 5 (addop tp m2y 0.98) (-O3) |
+| 1 limb, N = 80 | 2 (make lat m2y 1.62); 0 (-O2), 0; 0 (-O3) | 0; 1 (scale tp m2x 0.95) (-O2), 0; 0 (-O3) | 2 (sub lat m2x 1.16); 1 (scale tp m2x 0.97) (-O2), 4 (scale tp m2y 1.10); 2 (half lat m2x 0.97) (-O3) | 0; 0 (-O2), 4 (add lat m2x 1.03); 1 (scale tp m2y 0.99) (-O3) |
+| 2 limbs, N = 3 | 0; 6 (make tp m2x 0.44) (-O2), 0; 4 (make tp m2y 0.46) (-O3) | 2 (make lat m2x 1.08); 0 (-O2), 0; 9 (make tp m2x 0.49) (-O3) | 0; 2 (make tp m2y 0.97) (-O2), 2 (make tp m2y 1.21); 9 (scale tp m2y 0.91) (-O3) | 4 (add lat m2x 1.01); 5 (make lat m2y 0.42) (-O2), 5 (add lat m2y 1.02); 5 (make lat m2y 0.41) (-O3) |
+| 2 limbs, N = 7 | 2 (scale lat m2x 1.70); 6 (make lat m2y 0.61) (-O2), 2 (scale lat m2x 1.59); 6 (make lat m2y 0.64) (-O3) | 0; 1 (half lat m2x 0.93) (-O2), 0; 6 (make tp m2x 0.42) (-O3) | 0; 0 (-O2), 1 (addop lat m2y 1.02); 7 (make tp m2x 0.90) (-O3) | 4 (sub lat m2x 1.02); 7 (make lat m2y 0.74) (-O2), 3 (add lat m2x 1.02); 8 (make lat m2y 0.74) (-O3) |
+| 2 limbs, N = 13 | 5 (make lat m2y 1.11); 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 6 (make tp m2x 0.40) (-O3) | 0; 2 (half tp m2x 0.97) (-O2), 0; 13 (make tp m2x 0.89) (-O3) | 8 (sub lat m2x 1.03); 0 (-O2), 7 (sub lat m2y 1.03); 1 (add tp m2y 0.99) (-O3) |
+| 2 limbs, N = 18 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 2 (half lat m2x 0.92) (-O3) | 0; 0 (-O2), 0; 4 (make tp m2x 0.95) (-O3) | 0; 0 (-O2), 5 (sub tp m2y 1.02); 0 (-O3) |
+| 2 limbs, N = 80 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 1 (half tp m2x 0.91) (-O3) | 1 (make tp m2y 1.08); 2 (make lat m2x 0.92) (-O2), 0; 2 (add tp m2x 0.98) (-O3) | 0; 0 (-O2), 0; 0 (-O3) |
+
 | Short ball vectors, 2026-11-23, one operation per unit, many vectors: the check, ns per operation (with minus without) (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.075 to -0.001 (-O2), 0.016 to 0.075 (-O3) | -0.104 to -0.048 (-O2), 0.08 to 0.088 (-O3) | 1.81 to 1.86 (-O2), 3.84 to 3.88 (-O3) | 3.71 to 3.74 |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.35 to -0.15 (-O2), 0.4 to 0.56 (-O3) | -0.3 to 0.19 (-O2), 0.04 to 0.09 (-O3) | 2.7 to 2.91 (-O2), 1.99 to 2.04 (-O3) | 2.45 to 2.48 (-O2), 2.37 to 2.49 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -0.01 to 0.32 (-O2), -0.09 to 0.2 (-O3) | 0.23 to 0.66 (-O2), 0.38 to 0.44 (-O3) | 2.81 to 3.01 (-O2), 2.7 to 2.85 (-O3) | 1.07 to 2.84 (-O2), 1.01 to 4.09 (-O3) |
-| `scale`, 2 limbs, N = 13 | -0.187 to 0.464 (-O2), 0.307 to 0.544 (-O3) | 0.101 to 0.258 (-O2), 0.013 to 0.022 (-O3) | 2.74 to 2.89 (-O2), 1.92 to 2.02 (-O3) | 2.91 to 3.01 |
-| `half`, 2 limbs, N = 13 | -0.05 to 0.35 (-O2), 0.14 to 0.42 (-O3) | 0.24 to 0.41 (-O2), 0.246 to 0.251 (-O3) | 1.66 to 1.96 (-O2), 3.12 to 3.19 (-O3) | 2.98 to 3.01 (-O2), 2.86 to 2.91 (-O3) |
-| the constructor, 1 limb, N = 3 | 1.29 to 1.36 (-O2), 1.25 to 1.31 (-O3) | 0.153 to 0.208 (-O2), 0.18 to 0.225 (-O3) | 6.18 to 6.36 (-O2), 5.7 to 6.94 (-O3) | 2.96 to 3.01 |
-| the constructor, 1 limb, N = 7 | 2.23 to 2.53 (-O2), 2.56 to 2.69 (-O3) | -5.69 to -4.8 (-O2), 0.119 to 0.133 (-O3) | 4.67 to 5.2 (-O2), 5.33 to 6.44 (-O3) | 1.07 to 1.24 (-O2), 1.06 to 1.17 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.07 to 1.21 (-O2), 1.08 to 1.11 (-O3) | 0.13 to 0.214 (-O2), 0.253 to 0.303 (-O3) | 5.94 to 6.04 (-O2), 7.82 to 9.84 (-O3) | 0.919 to 1.3 (-O2), 0.912 to 0.923 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.37 to -0.05 (-O2), 0.48 to 1.25 (-O3) | 0.11 to 0.81 (-O2), -0.21 to -0.17 (-O3) | 0.79 to 0.97 (-O2), 4.81 to 5.05 (-O3) | -2.36 to 2.37 (-O2), 1.57 to 1.67 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.05 to 0.16 (-O2), 0.25 to 1.09 (-O3) | -8.16 to -4.83 (-O2), 0.01 to 0.07 (-O3) | 1.55 to 2.63 (-O2), -14.7 (-O3) | -4.04 to 4.57 (-O2), 1.34 to 1.53 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.018 to 0.044 (-O2), 0.039 to 0.062 (-O3) | 0.081 to 0.093 (-O2), 0.039 to 0.088 (-O3) | 2.01 to 2.22 (-O2), 3.86 to 3.88 (-O3) | 3.71 to 3.73 |
+| `add(x, y, z)`, 2 limbs, N = 13 | -0.05 to 0.19 (-O2), 0.38 to 0.49 (-O3) | -0.21 to -0.1 (-O2), -0.57 to 0.05 (-O3) | 2.78 to 2.86 (-O2), 1.93 to 2.05 (-O3) | 2.45 to 2.51 (-O2), 2.25 to 2.52 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.35 to 0.55 (-O2), -1.51 to 0.32 (-O3) | -0.11 to 0.86 (-O2), 0.15 to 0.48 (-O3) | 2.84 to 3.51 (-O2), 2.47 to 2.83 (-O3) | 2.9 to 2.97 (-O2), 0.57 to 4.13 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.207 to 0.453 (-O2), -0.068 to 0.471 (-O3) | 0.099 to 0.103 (-O2), -0.139 to 0.019 (-O3) | 2.77 to 2.81 (-O2), 1.92 to 2.06 (-O3) | 2.9 to 2.98 (-O2), 2.74 to 3.04 (-O3) |
+| `half`, 2 limbs, N = 13 | 0 to 0.27 (-O2), 0.13 to 0.697 (-O3) | 0.01 to 0.02 (-O2), 0.011 to 0.217 (-O3) | 1.17 to 1.4 (-O2), 3.05 to 3.1 (-O3) | 2.84 to 2.94 |
+| the constructor, 1 limb, N = 3 | 1.33 to 1.41 (-O2), 1.25 to 1.29 (-O3) | 0.153 to 0.167 (-O2), 0.13 to 0.224 (-O3) | 6.21 to 7.22 (-O2), 5.68 to 7.77 (-O3) | 2.95 to 3.03 |
+| the constructor, 1 limb, N = 7 | 2.54 to 2.8 (-O2), 2.56 to 2.57 (-O3) | -0.428 to 0.314 (-O2), -0.021 to 0.11 (-O3) | 4.65 to 5.05 (-O2), 5.85 to 6.53 (-O3) | 1.09 to 1.13 |
+| the constructor, 2 limbs, N = 3 | 1.06 to 1.1 (-O2), 1.11 to 1.13 (-O3) | 0.11 to 0.139 (-O2), 0.146 to 0.191 (-O3) | 5.37 to 5.98 (-O2), 7.36 to 8.87 (-O3) | 0.907 to 0.952 (-O2), 0.813 to 0.943 (-O3) |
+| the constructor, 2 limbs, N = 13 | 2.66 to 3.23 (-O2), -1.33 to 0.18 (-O3) | 0.03 to 0.27 (-O2), -0.23 to 0 (-O3) | 1.09 to 1.35 (-O2), 4.77 to 5.05 (-O3) | -0.3 to -0.25 (-O2), 0.49 to 2.46 (-O3) |
+| the constructor, 2 limbs, N = 18 | -0.5 to 0.15 (-O2), -0.54 to 0.32 (-O3) | -0.12 to -0.07 (-O2), 0.14 to 3.85 (-O3) | 1.36 to 1.73 (-O2), -15 to -14.8 (-O3) | 1.57 to 5.92 (-O2), -1.02 to 1.73 (-O3) |
+| the constructor, 1 limb, N = 13 | 4.31 to 4.49 | 0.42 to 0.77 (-O2), 0.251 to 0.417 (-O3) | 2.52 to 2.66 (-O2), 4.12 to 4.15 (-O3) | 1.77 to 1.86 (-O2), 1.85 to 1.86 (-O3) |
+| the constructor, 2 limbs, N = 7 | 2.97 to 2.98 (-O2), 2.47 to 2.91 (-O3) | -0.02 to 0.12 (-O2), 0.155 to 0.261 (-O3) | 0.99 to 1.83 (-O2), 4.56 to 5.57 (-O3) | 0.98 to 1.05 (-O2), 0.43 to 1.03 (-O3) |
 
 | Short ball vectors before 2026-11-23, measured again, one operation per unit, many vectors: the check, ns per operation (the header before minus without) (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 0.119 to 0.238 (-O2), 0.219 to 0.388 (-O3) | 0.526 to 0.543 (-O2), 0.645 to 0.733 (-O3) | 1.94 to 2.1 (-O2), 4.31 to 4.32 (-O3) | 3.71 to 3.73 |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.27 to 0.05 (-O2), 0.06 to 0.41 (-O3) | 0.13 to 0.36 (-O2), 0.18 to 0.5 (-O3) | 2.71 to 2.9 (-O2), 3.22 to 3.28 (-O3) | 2.68 to 2.75 |
-| `z = x + y`, 2 limbs, N = 13 | -0.03 to 0.28 (-O2), -0.36 to 0.26 (-O3) | 0.23 to 0.39 (-O2), 1.5 to 1.83 (-O3) | 2.65 to 3.49 (-O2), 2.8 to 3.04 (-O3) | 0.49 to 2.49 (-O2), 2.25 to 3.61 (-O3) |
-| `scale`, 2 limbs, N = 13 | -0.081 to 0.291 (-O2), 0.064 to 0.33 (-O3) | 0.072 to 0.087 (-O2), 0.249 to 0.401 (-O3) | 2.85 to 3.25 (-O2), 2.49 to 2.51 (-O3) | 2.87 to 2.92 |
-| `half`, 2 limbs, N = 13 | 0.19 to 0.56 (-O2), 0.18 to 0.78 (-O3) | 0.07 to 0.28 (-O2), 0.507 to 0.694 (-O3) | 2.19 to 2.28 (-O2), 3.54 to 3.59 (-O3) | 2.69 to 2.8 |
-| the constructor, 1 limb, N = 3 | 2.13 to 3.09 (-O2), 1.86 to 13 (-O3) | 1.04 to 1.07 (-O2), 0.66 to 0.705 (-O3) | 5.49 to 7.3 (-O2), 6.6 to 6.88 (-O3) | 18.5 to 18.8 |
-| the constructor, 1 limb, N = 7 | 14.1 to 15.2 (-O2), 14.8 to 15.5 (-O3) | -3.16 to -2.3 (-O2), 1.11 to 1.22 (-O3) | 4.73 to 5 (-O2), 5.05 to 5.26 (-O3) | 16.5 to 17.4 (-O2), 16.6 to 18.2 (-O3) |
-| the constructor, 2 limbs, N = 3 | 10.1 to 10.8 (-O2), 9.06 to 11 (-O3) | 0.087 to 0.149 (-O2), 1.41 to 1.49 (-O3) | 6.11 to 7.05 (-O2), 4.07 to 4.21 (-O3) | 12.1 to 15.9 (-O2), 15.9 to 16.4 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.54 to 0.9 (-O2), -7.29 to -6.83 (-O3) | 0.06 to 0.6 (-O2), 3.78 to 4.1 (-O3) | 0.18 to 0.71 (-O2), 7.22 to 7.72 (-O3) | -0.85 to 3.3 (-O2), -2.02 to -0.09 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.74 to 1.32 (-O2), -7.43 to -6.08 (-O3) | 0.07 to 0.73 (-O2), 0.09 to 0.85 (-O3) | -3.44 to -2.13 (-O2), -15 to -14.9 (-O3) | 0.76 to 5.65 (-O2), -8.89 to -5.95 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.215 to 0.235 (-O2), 0.227 to 0.267 (-O3) | 0.633 to 0.785 (-O2), 0.604 to 0.639 (-O3) | 2.16 to 2.25 (-O2), 4.29 to 4.36 (-O3) | 3.68 to 3.74 |
+| `add(x, y, z)`, 2 limbs, N = 13 | -0.07 to 0.17 (-O2), 0.26 to 0.33 (-O3) | -0.34 to 0.24 (-O2), -0.17 to 0.25 (-O3) | 2.68 to 2.86 (-O2), 3.26 to 3.28 (-O3) | 2.7 to 2.74 (-O2), 2.57 to 2.77 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.02 to 0.38 (-O2), -1.9 to 0.2 (-O3) | -0.03 to 0.54 (-O2), 1.26 to 1.58 (-O3) | 2.63 to 3.32 (-O2), 2.66 to 3.1 (-O3) | 2.33 to 2.52 (-O2), 0.08 to 14.3 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.046 to 0.083 (-O2), -0.201 to 0.325 (-O3) | -0.311 to 0.246 (-O2), -0.047 to 0.259 (-O3) | 2.87 to 2.95 (-O2), 2.48 to 2.62 (-O3) | 2.87 to 2.96 (-O2), 2.67 to 2.91 (-O3) |
+| `half`, 2 limbs, N = 13 | 0.1 to 0.2 (-O2), 0.17 to 0.597 (-O3) | -0.43 to 0.08 (-O2), 0.305 to 0.506 (-O3) | 1.99 to 2.05 (-O2), 3.58 to 3.64 (-O3) | 2.66 to 2.77 |
+| the constructor, 1 limb, N = 3 | 1.85 to 10.9 (-O2), 4.02 to 11.6 (-O3) | 0.903 to 1.13 (-O2), 0.651 to 0.703 (-O3) | 5.5 to 6.49 (-O2), 5.97 to 7.52 (-O3) | 18.5 to 18.8 |
+| the constructor, 1 limb, N = 7 | 13.1 to 14.2 (-O2), 13.2 to 14.7 (-O3) | 1.4 to 3.14 (-O2), 1.03 to 1.15 (-O3) | 4.72 to 4.75 (-O2), 5.09 to 5.34 (-O3) | 16.6 to 18.2 (-O2), 16.6 to 17.4 (-O3) |
+| the constructor, 2 limbs, N = 3 | 8.59 to 9.92 (-O2), 8.88 to 9.51 (-O3) | -0.068 to 0.237 (-O2), 1.28 to 1.31 (-O3) | 6.46 to 7.06 (-O2), 3.05 to 4.75 (-O3) | 12 to 16.4 (-O2), 12.1 to 15.9 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.31 to 0.58 (-O2), -3.13 to -0.91 (-O3) | -1.15 to 0.84 (-O2), 3.62 to 3.84 (-O3) | -0.09 to 0.29 (-O2), 7.4 to 7.45 (-O3) | -1.52 to 0.48 (-O2), -0.07 to 0.6 (-O3) |
+| the constructor, 2 limbs, N = 18 | -0.43 to 0.17 (-O2), -0.34 to 0.53 (-O3) | -2.84 to 1.25 (-O2), -0.3 to 0.28 (-O3) | 1.21 to 1.43 (-O2), -15.2 to -15 (-O3) | 0.92 to 6.1 (-O2), -4.08 to 7.9 (-O3) |
+| the constructor, 1 limb, N = 13 | 12.9 to 13.9 (-O2), 12.8 to 15.6 (-O3) | -0.06 to 1.07 (-O2), 0.987 to 1.18 (-O3) | 2.65 to 2.76 (-O2), 3.22 to 3.32 (-O3) | 13.4 to 14 (-O2), 13.8 to 19.8 (-O3) |
+| the constructor, 2 limbs, N = 7 | 7.42 to 7.72 (-O2), 8.37 to 8.89 (-O3) | -0.73 to 0.35 (-O2), 2.12 to 2.22 (-O3) | 1.07 to 1.29 (-O2), 5.97 to 6.28 (-O3) | 6.67 to 10.5 (-O2), 6.8 to 9.7 (-O3) |
 
 | Short ball vectors, 2026-11-23, every size in one unit, many vectors: the header of 2026-11-23 over the header before (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `scale`, 1 limb, N = 3 | 0.90 to 0.94 | 0.91 to 0.95 | 0.99 (-O2), 0.61 to 0.62 (-O3) | 1.00 |
-| `z = x + y`, 2 limbs, N = 13 | 1.00 to 1.03 | 0.99 to 1.02 (-O2), 0.96 to 1.00 (-O3) | 0.99 to 1.00 (-O2), 0.94 to 0.96 (-O3) | 0.95 to 1.08 (-O2), 0.96 to 1.01 (-O3) |
-| the constructor, 1 limb, N = 3 | 0.32 to 0.89 (-O2), 0.74 to 0.90 (-O3) | 0.79 to 0.82 (-O2), 0.50 to 0.51 (-O3) | 0.94 to 1.04 (-O2), 0.93 to 1.00 (-O3) | 0.37 |
-| the constructor, 1 limb, N = 7 | 0.43 to 0.49 (-O2), 0.41 to 0.45 (-O3) | 0.74 (-O2), 0.38 (-O3) | 1.00 to 1.02 (-O2), 0.86 to 0.90 (-O3) | 0.43 to 0.46 |
-| the constructor, 1 limb, N = 13 | 0.60 to 0.63 | 1.00 to 1.01 (-O2), 0.36 to 0.37 (-O3) | 1.00 to 1.01 (-O2), 0.89 (-O3) | 0.63 to 0.65 |
-| the constructor, 1 limb, N = 18 | 1.09 to 1.11 (-O2), 0.74 to 0.82 (-O3) | 0.98 to 1.02 (-O2), 0.91 to 0.93 (-O3) | 0.98 to 1.00 (-O2), 0.87 to 0.88 (-O3) | 0.95 to 1.05 (-O2), 0.79 to 0.81 (-O3) |
-| the constructor, 2 limbs, N = 3 | 0.43 to 0.47 | 0.97 to 1.01 (-O2), 0.47 to 0.48 (-O3) | 0.95 to 1.00 (-O2), 1.01 to 1.15 (-O3) | 0.42 to 0.51 (-O2), 0.41 to 0.42 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.68 to 0.74 (-O2), 0.66 to 0.70 (-O3) | 0.99 to 1.02 (-O2), 0.43 (-O3) | 0.96 to 1.02 (-O2), 0.87 to 0.89 (-O3) | 0.72 to 0.80 (-O2), 0.70 to 0.71 (-O3) |
-| the constructor, 2 limbs, N = 13 | 1.08 to 1.11 (-O2), 1.40 to 1.41 (-O3) | 0.99 to 1.02 (-O2), 0.38 to 0.39 (-O3) | 1.01 to 1.02 (-O2), 0.89 to 0.90 (-O3) | 0.91 to 1.04 (-O2), 1.04 to 1.10 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.97 to 0.98 (-O2), 1.29 to 1.36 (-O3) | 0.84 to 0.89 (-O2), 0.98 to 1.00 (-O3) | 1.08 to 1.09 (-O2), 0.95 (-O3) | 0.91 to 0.98 (-O2), 1.17 to 1.26 (-O3) |
+| `scale`, 1 limb, N = 3 | 0.92 to 0.94 | 0.92 to 0.98 (-O2), 0.95 (-O3) | 0.96 to 0.99 | 1.00 |
+| `z = x + y`, 2 limbs, N = 13 | 0.99 to 1.01 | 0.97 to 1.04 (-O2), 0.98 to 0.99 (-O3) | 1.00 (-O2), 0.95 (-O3) | 1.01 to 1.02 (-O2), 0.74 to 1.01 (-O3) |
+| the constructor, 1 limb, N = 3 | 0.33 to 0.51 (-O2), 0.35 to 0.89 (-O3) | 0.78 to 0.83 (-O2), 0.50 to 0.51 (-O3) | 0.98 to 1.04 (-O2), 0.96 to 1.04 (-O3) | 0.37 |
+| the constructor, 1 limb, N = 7 | 0.46 to 0.50 (-O2), 0.43 to 0.47 (-O3) | 0.72 to 0.76 (-O2), 0.38 to 0.39 (-O3) | 1.01 (-O2), 0.86 to 0.90 (-O3) | 0.43 to 0.46 |
+| the constructor, 1 limb, N = 13 | 0.63 to 0.65 (-O2), 0.60 to 0.65 (-O3) | 0.98 to 1.02 (-O2), 0.37 (-O3) | 1.00 to 1.01 (-O2), 0.89 (-O3) | 0.64 to 0.65 (-O2), 0.54 to 0.64 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.02 to 1.04 (-O2), 0.95 to 1.02 (-O3) | 0.98 to 1.04 (-O2), 0.93 (-O3) | 0.99 to 1.00 (-O2), 0.88 to 0.89 (-O3) | 0.93 to 1.01 (-O2), 1.00 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.43 to 0.44 (-O2), 0.47 to 0.49 (-O3) | 0.99 to 1.05 (-O2), 0.48 (-O3) | 0.94 to 0.97 (-O2), 1.01 to 1.15 (-O3) | 0.41 to 0.49 (-O2), 0.42 to 0.49 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.68 to 0.72 | 0.98 to 1.05 (-O2), 0.40 to 0.42 (-O3) | 0.99 to 1.02 (-O2), 0.88 to 0.90 (-O3) | 0.70 to 0.79 (-O2), 0.72 to 0.79 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.10 to 1.12 (-O2), 1.04 to 1.09 (-O3) | 1.00 to 1.04 (-O2), 0.39 (-O3) | 1.01 to 1.02 (-O2), 0.88 to 0.89 (-O3) | 0.98 to 1.04 (-O2), 0.99 to 1.07 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 to 1.02 | 1.00 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.01 (-O2), 0.94 to 0.95 (-O3) | 1.00 to 1.02 (-O2), 0.87 to 1.08 (-O3) |
 
 | Short ball vectors, 2026-11-23, one operation per unit, a dependent chain: the check, ns per operation (with minus without) (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.29 to 0.16 (-O2), -0.61 to 0.36 (-O3) | 5.4 to 6.26 (-O2), 5.09 to 5.95 (-O3) | 1.77 to 1.78 (-O2), 2.62 to 2.64 (-O3) | -0.123 to -0.107 (-O2), -0.1 to -0.053 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | -0.01 to 0.56 (-O2), -0.8 to -0.49 (-O3) | 0.122 to 0.262 (-O2), 5.05 to 5.9 (-O3) | 1.5 to 1.6 (-O2), 1.33 to 1.48 (-O3) | 1.29 to 1.45 (-O2), 1.21 to 1.32 (-O3) |
-| `sub`, 1 limb, N = 13 | -0.01 to 0.28 (-O2), -0.16 to 0.38 (-O3) | 0.083 to 0.218 (-O2), 4.72 to 5.72 (-O3) | 1.48 to 1.71 (-O2), 1.39 to 1.44 (-O3) | 1.26 to 1.39 (-O2), 1.18 to 1.28 (-O3) |
-| `scale`, 1 limb, N = 3 | 5.18 to 6 (-O2), 5.67 to 6.64 (-O3) | 4.47 to 6.61 (-O2), 4.9 to 5.99 (-O3) | 2.54 to 2.64 | 2.44 to 2.48 |
-| the constructor, 1 limb, N = 3 | -1.56 to -1.02 (-O2), -0.813 to -0.14 (-O3) | -0.169 to 0.05 (-O2), -0.034 to 0.047 (-O3) | 3.01 to 3.68 (-O2), 2.69 to 3.67 (-O3) | 3.64 to 3.71 |
+| `add(x, y, z)`, 1 limb, N = 3 | -0.29 to -0.02 (-O2), 0.02 to 0.89 (-O3) | 4.44 to 5.26 (-O2), 5.24 to 5.51 (-O3) | 1.61 to 1.67 (-O2), 2.61 to 2.63 (-O3) | -0.154 to -0.101 (-O2), -0.166 to -0.09 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 13 | -0.12 to 0.74 (-O2), -0.88 to -0.45 (-O3) | -0.023 to 0.112 (-O2), 4.77 to 5.86 (-O3) | 1.51 to 2.72 (-O2), 1.44 to 1.46 (-O3) | 1.31 to 1.42 (-O2), 1.31 to 1.34 (-O3) |
+| `sub`, 1 limb, N = 13 | -0.35 to 0.1 (-O2), -0.68 to 0.61 (-O3) | -0.024 to 0.172 (-O2), 5.22 to 5.68 (-O3) | 1.47 to 1.55 (-O2), 1.36 to 1.43 (-O3) | 1.32 (-O2), 1.16 to 1.32 (-O3) |
+| `scale`, 1 limb, N = 3 | 5.02 to 6.04 (-O2), 4.25 to 5.44 (-O3) | 5.02 to 6.18 (-O2), 4.74 to 4.76 (-O3) | 3.02 to 3.05 (-O2), 2.59 to 2.63 (-O3) | 2.45 to 2.49 |
+| the constructor, 1 limb, N = 3 | -0.841 to -0.13 (-O2), -0.996 to 0.32 (-O3) | -0.848 to -0.267 (-O2), -0.405 to -0.029 (-O3) | 3 to 3.9 (-O2), 2.67 to 4.45 (-O3) | 3.66 to 3.75 |
 
 | Short ball vectors before 2026-11-23, measured again, one operation per unit, a dependent chain: the check, ns per operation (the header before minus without) (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.3 to 0 (-O2), -0.65 to 0.43 (-O3) | 5.38 to 6.29 (-O2), 4.65 to 5.16 (-O3) | 2.12 to 2.21 (-O2), 3.23 to 3.24 (-O3) | -0.223 to -0.198 (-O2), -0.237 to -0.187 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | -4.51 to -3.71 (-O2), -6.01 to -5.21 (-O3) | 0.22 to 0.281 (-O2), 4.65 to 6.63 (-O3) | 1.82 to 1.86 (-O2), 1.3 to 1.42 (-O3) | 1.39 to 1.49 (-O2), 1.41 to 1.52 (-O3) |
-| `sub`, 1 limb, N = 13 | -5.45 to -4.73 (-O2), -5.21 to -4.62 (-O3) | 0.192 to 0.32 (-O2), 4.19 to 4.85 (-O3) | 1.67 to 1.74 (-O2), 1.42 to 4.17 (-O3) | 1.38 to 1.49 (-O2), 1.37 to 1.46 (-O3) |
-| `scale`, 1 limb, N = 3 | 4.68 to 6.22 (-O2), 5.63 to 6.52 (-O3) | 4.68 to 5.93 (-O2), 4.55 to 6.58 (-O3) | 2.83 to 3.24 (-O2), 2.62 (-O3) | 2.47 to 2.54 |
-| the constructor, 1 limb, N = 3 | 3.39 to 4.74 (-O2), 3.33 to 6.29 (-O3) | -1.21 to -0.27 (-O2), 0.005 to 0.237 (-O3) | 2.73 to 3.96 (-O2), 2.69 to 3 (-O3) | 19.6 |
+| `add(x, y, z)`, 1 limb, N = 3 | -0.98 to -0.39 (-O2), -0.56 to 0.9 (-O3) | 5.12 to 5.51 (-O2), 4.67 to 5.55 (-O3) | 2.1 to 2.15 (-O2), 3.19 to 3.23 (-O3) | -0.2 to -0.166 (-O2), -0.198 to -0.191 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 13 | -5.2 to -4.61 (-O2), -6.27 to -4.33 (-O3) | -0.058 to 0.324 (-O2), 4.97 to 6.38 (-O3) | 1.72 to 1.79 (-O2), 1.39 to 1.49 (-O3) | 1.4 to 1.44 |
+| `sub`, 1 limb, N = 13 | -4.79 to -4.21 (-O2), -3.97 to -3.45 (-O3) | -0.007 to 0.364 (-O2), 4.17 to 5.19 (-O3) | 1.74 to 3.62 (-O2), 1.33 to 1.79 (-O3) | 1.42 to 1.44 (-O2), 1.34 to 1.42 (-O3) |
+| `scale`, 1 limb, N = 3 | 5.19 to 5.82 (-O2), 4.6 to 5.18 (-O3) | 5.1 to 6.82 (-O2), 4.64 to 5.03 (-O3) | 2.89 to 2.91 (-O2), 2.62 to 2.65 (-O3) | 2.49 to 2.55 |
+| the constructor, 1 limb, N = 3 | 3.42 to 5.82 (-O2), 3.93 to 5.49 (-O3) | -0.849 to -0.454 (-O2), -0.477 to 0.029 (-O3) | 2.69 to 3.01 (-O2), 2.69 to 3.05 (-O3) | 19.6 to 19.9 |
 
 | Short ball vectors, 2026-11-23, one operation per unit, a dependent chain: the header of 2026-11-23 over the header before (selection) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 1.00 to 1.03 | 0.94 to 1.07 (-O2), 1.02 to 1.08 (-O3) | 0.94 to 0.97 | 1.01 to 1.02 |
-| `add(x, y, z)`, 1 limb, N = 13 | 1.41 to 1.49 (-O2), 1.46 to 1.59 (-O3) | 0.98 to 1.00 (-O2), 0.93 to 1.06 (-O3) | 0.97 to 1.01 | 0.98 to 1.00 |
-| `sub`, 1 limb, N = 13 | 1.54 to 1.63 (-O2), 1.56 to 1.60 (-O3) | 0.97 to 0.98 (-O2), 1.06 to 1.09 (-O3) | 0.98 to 1.00 (-O2), 0.81 to 1.00 (-O3) | 0.98 to 1.00 |
-| `scale`, 1 limb, N = 3 | 0.98 to 1.04 (-O2), 0.95 to 1.03 (-O3) | 0.96 to 1.07 (-O2), 0.92 to 1.04 (-O3) | 0.95 to 1.00 | 0.99 to 1.00 |
-| the constructor, 1 limb, N = 3 | 0.59 to 0.67 (-O2), 0.60 to 0.76 (-O3) | 1.04 to 1.16 (-O2), 0.97 to 0.99 (-O3) | 0.95 to 1.05 (-O2), 1.00 to 1.05 (-O3) | 0.38 |
+| `add(x, y, z)`, 1 limb, N = 3 | 1.01 to 1.07 (-O2), 0.97 to 1.11 (-O3) | 0.90 to 1.01 (-O2), 0.97 to 1.06 (-O3) | 0.94 to 0.96 | 1.00 to 1.01 |
+| `add(x, y, z)`, 1 limb, N = 13 | 1.47 to 1.71 (-O2), 1.40 to 1.63 (-O3) | 0.95 to 1.03 (-O2), 0.91 to 1.03 (-O3) | 0.98 to 1.07 (-O2), 1.00 (-O3) | 0.99 to 1.00 |
+| `sub`, 1 limb, N = 13 | 1.42 to 1.54 (-O2), 1.34 to 1.43 (-O3) | 0.94 to 1.03 (-O2), 1.00 to 1.11 (-O3) | 0.86 to 0.98 (-O2), 0.97 to 1.00 (-O3) | 0.98 to 0.99 |
+| `scale`, 1 limb, N = 3 | 0.97 to 1.02 (-O2), 0.93 to 1.05 (-O3) | 0.93 to 0.99 (-O2), 0.97 to 1.01 (-O3) | 1.00 to 1.01 | 0.99 to 1.00 |
+| the constructor, 1 limb, N = 3 | 0.60 to 0.75 (-O2), 0.65 to 0.67 (-O3) | 1.00 to 1.04 (-O2), 0.94 to 1.04 (-O3) | 1.00 to 1.05 (-O2), 1.00 to 1.09 (-O3) | 0.38 |
+
+
+| The constructor of `BallVector<double, 2, 3>`, GCC 13 at -O3, Zen 2: ns per operation | 2 limbs, N = 3, one operation per unit | its control | 2 limbs, N = 3, every size in one unit | the same in a chain | 1 limb, N = 3, one operation per unit | 1 limb, N = 3, every size in one unit |
+|---|---|---|---|---|---|---|
+| the header before | 16.4 to 17.1 | 6.19 to 6.21 | 19.3 to 20.5 | 24 | 16.8 to 17.4 | 17.1 to 17.8 |
+| the header of the tree | 20.7 to 22.1 | 6.14 to 6.15 | 20.7 to 22.2 | 21.9 to 23.6 | 16.5 to 17.7 | 16.6 to 17.8 |
+| the tree, forced for no size | 20.7 to 22.1 | 6.14 to 6.17 | 20.7 to 22.1 | 21.9 to 23.4 | 16.6 to 17.7 | 16.6 to 17.8 |
+| the header before, code aligned (-falign-functions=64 -falign-loops=64) | 16.5 to 17.1 | 6.14 | 19.3 to 20.4 | 24 | 16.8 to 17.4 | 17.2 to 17.8 |
+| the tree, code aligned | 20.7 to 20.8 | 6.14 to 6.15 | 20.7 to 20.8 | 21.9 | 17.7 | 17.7 to 17.8 |
+| the header before, BallVector aligned to 32 bytes | 16.4 to 16.9 | 6.14 to 6.16 | 19.5 to 20.4 | 23.4 to 23.7 | 16.8 | 17.1 |
+| the tree, BallVector aligned to 32 bytes | 19.9 to 20.2 | 6.18 to 6.2 | 19.8 to 20.1 | 21.6 to 23.1 | 16.5 | 16.5 |
 
 - **On Zen 2 the check costs a short array what it cost: the read.** 4.6 to 5.7 ns per call of
   `sum` or `dot` of one limb up to 16 elements, 62 to 82% of the call up to 8, 7 to 27% at 64, under
@@ -1966,71 +2111,107 @@ of a compiler in turn in each round, each triplet started when the 1-minute load
 - **On the M3 the check costs a short array almost nothing now.** With Apple clang, at most 0.35 ns
   per call of one limb up to 16 elements, against up to 0.7 ns with the header before in the same
   rounds: a `sum` of one element 0.00 to 0.03 ns (0.27 to 0.57 before), a `dot` of one element 0.07
-  to 0.11 (0.48 to 0.63), at most 22% of a call; with GCC 16 at most 0.32 ns (and for a `sum` of 4 to 64 elements up to
-  0.3 ns less than without the check), against up to 0.6 with the header before: a `sum` of one
-  element 0.22 to 0.29 ns (0.53 to 0.56 before).
-- **The constructors of short ball vectors lost their excess where the compiler had stopped
-  inlining them.** With Clang 18 the constructor of `BallVector<double, 1, 3>` costs 3.0 ns more
-  with the check than without it, against 18.2 to 18.8 with the header before (the call 9.0 ns
-  instead of 24.2 to 24.8; 6.0 without the check), of `<double, 2, 3>` 0.9 to 1.3 ns against 12.1 to
-  16.4, of `<double, 1, 7>` 1.0 to 1.3 against 15.7 to 17.4: 0.36 to 0.51 of the time before for N =
-  3, 0.42 to 0.80 for N = 7, in both units and in chains. With Apple clang the constructors of N = 3
-  and 7 cost the check 1.1 to 3.2 ns, against 7.5 to 16 with the header before, and take 0.40 to
-  0.75 of their time before (`BallVector<double, 2, 3>`: 6.6 to 7.0 ns, against 13.9 to 16.5, and
-  5.5 without the check); for `<double, 1, 3>`, whose time with the header before varied between
-  rounds, 1.2 to 1.5 ns against 1.9 to 13, 0.28 to 0.90 of the time before. With GCC 16 at `-O3`,
-  which in the unit of every size had stopped inlining the constructors with the header before (the
-  check there 2.1 to 15.9 ns), they cost the check -0.2 to 0.7 ns and take 0.36 to 0.50 of their time
-  before (`BallVector<double, 2, 13>`: 10.0 ns against 25.6 to 26.1, 10.2 without the check); in a
-  unit of one operation 0.70 to 0.89 for N = 3 to 13 at `-O3`, and 0.76 to 0.81 for one limb and N =
-  3 and 7 at `-O2`.
-  With GCC 13 at `-O3`, in the unit of every size, the constructors of N = 7 and 13 cost the check 4.1
-  to 6.6 ns, against 6.9 to 8.6 with the header before; the other constructors of GCC 13 lose about
-  the read, 5 to 10 ns, before and after alike: GCC had inlined their loops but at `-O3` in that unit.
-- **The other operations lose what they lost.** `add`, `x + y`, `sub`, `scale` and `half`, N = 3 to
-  18, on many vectors: on Zen 2 2.5 to 2.6 ns at the median of each configuration, up to 7.1 to 7.4
-  ns, taking 0.91 to 1.11 times their time with the header before (0.61 to 0.72 for `scale` of one
-  limb with GCC 13 at `-O3` in the unit of every size, whose generated loop GCC called before and
-  now inlines; 0.35 for `half` of `BallVector<double, 1, 18>` with Clang 18 at `-O3`, whose time with
-  the header before varied from 17 to 49 ns over the rounds); on the M3 with Apple clang 0.02 to
-  0.08 ns at the median, -0.7 to 1.1 ns, 0.71 to 1.20 times the time before; with GCC 16 0.09 to 0.12 ns at the median, -1.7 to 1.0 ns,
-  0.54 to 1.05 times the time before. Over all the
-  functions of these runs, 352 per configuration, a function takes at the median 0.996 to 1.000 times
-  its time with the header before on Zen 2, 0.983 to 0.996 on the M3.
-- **Where the forced inlining costs.** With Clang 18 at `-O3` the constructors of two limbs and N =
-  13 and 18 take 1.04 to 1.23 and 1.17 to 1.45 times as long as before, with the check or without
-  it (N = 18: 49 to 51 ns, against 39 to 43 before): inlined, the loop is unrolled for 26 or 36
-  limbs, more than the registers hold, and the code goes through the stack (230 accesses in the
-  function against 52 when `make` was called, counted in the machine code); Apple clang at `-O3`
-  likewise, 1.39 to 1.41 and 1.29 to 1.36 times (311 instructions and 104 accesses to the stack in the
-  inlined constructor of `<double, 2, 13>`), and at `-O2` the constructor of `<double, 1, 18>` 1.09 to
-  1.43 times. GCC 16 shows no such cost: its constructors of two limbs and N = 13 and 18 take 0.70
-  to 1.01 times their time before. With GCC 13 at `-O2` the constructors of two limbs and N = 18 and 80
-  take 1.08 to 1.12 times as long; at `-O3` the constructor of `BallVector<double, 2, 3>` in a unit
-  of its own 1.21 to 1.35 times: GCC inlined it there before too, and the two codes differ by the
-  check and by the frame of the function (a 32-byte load of the object, aligned before and not
-  after: inferred, not measured).
-- **On the M3, chains of short operations still pay several nanoseconds, and not only for the
-  check.** The chain of `scale` of `BallVector<double, 1, 3>`, each on the result of the one
-  before, takes 13.8 to 14.8 ns with the check against 7.7 to 9.4 without it, as with the header
-  before (14.0 to 15.2), with Apple clang at both levels and in both units; of `add` 13.9 to 14.5
-  with or without. But chains of `add` and `sub` of `BallVector<double, 1, 13>` take 13.3 to 14.5 ns
-  in both programs of the new header, with the check and without it, against 8.4 to 9.0 with the
-  header before; and a chain of `sum` of one element whose length the compiler knows takes 3.9 to 5.9
-  ns with the check against 0.9 to 2.1 without it and 0.92 to 0.94 with the header before. So the
-  three programs' chains differ by more than the check, in either direction. The loops of the chain
-  of `scale` with and without the check differ beyond the read: Apple clang allocates the registers
-  otherwise and merges two loads of 8 bytes, of a center and of the radius that two stores wrote,
-  into one load pair; a probe of that alone costs a chain 0.2 to 1.3 ns, not 6, and a read of FPCR
-  alone costs a chain nothing (above). Why the M3 makes these chains wait was not established.
-  With GCC 16 the chains of `add` and of `scale` of `BallVector<double, 1, 3>` lose 4.5 to 6.6 ns
-  to the check, with either header (4.6 to 6.6 with the header before).
+  to 0.11 (0.48 to 0.63), at most 22% of a call; with GCC 16 at most 0.32 ns (and for a `sum` of 4
+  to 64 elements up to 0.3 ns less than without the check), against up to 0.6 with the header
+  before: a `sum` of one element 0.22 to 0.29 ns (0.53 to 0.56 before).
+- **The bound: forced with Clang up to 14 limbs, with GCC never.** With Clang 18 and Apple clang, up
+  to 14 limbs no function of a size is slower forced than not forced beyond the noise, at either
+  level (one exception, the chain of `scale` of `BallVector<double, 1, 13>` in the unit of every
+  size with Clang 18 at `-O2`, 1.06 times, whose code is the same instruction for instruction:
+  placement), and the constructor of each size takes at best 0.37 to 0.79 of its time not forced
+  with Clang 18, 0.46 to 0.69 with Apple clang. From 18 limbs forcing is slower at `-O3`: the
+  constructors of two limbs and 13 or 18 entries 1.22 and 1.34 times in chains with Clang 18
+  (unrolled for 26 or 36 limbs, the loop spills: 230 accesses to the stack in the function against
+  52 when `make` is called) and 1.32 and 1.29 times with Apple clang, and a chain of the constructor
+  of `<double, 1, 80>` 1.50 times; and faster at `-O2` (Clang 18, 2 × 13 and 2 × 18: 0.90 to 0.91)
+  or for one limb (1 × 18 at `-O3`: 0.86 with Clang 18, 0.69 with Apple clang). The bound leaves
+  every size of 18 limbs and more to the compiler, and gives up those gains, 1 × 18 among them:
+  between 14 and 18 limbs are the sizes of two limbs 2 × 8 and 2 × 9, not measured, and the first
+  measured above them, 2 × 13, is slower forced. With GCC 13 and 16 forcing changes no constructor:
+  GCC inlines them forced or not, to the same code (GCC 13 the same instructions, GCC 16 the same
+  but for two `nop` of alignment), in a unit of their own as in the unit of every size. But in the
+  unit of every size it changes what GCC inlines of the other loops: with GCC 13 at `-O3` the loop
+  of `scale` of one limb, inlined when the constructors are forced and called when not, then 0.64 to
+  0.74 of its time; with GCC 16 at `-O3` the loop of `sub` of one limb, inlined when the
+  constructors are forced and called when not: its independent calls then take 0.59 to 0.68 of their
+  time and its chains 1.38 to 1.63 times as long (1.38 to 1.73 in the first campaign of GCC 16, with
+  the bound of 14 limbs), the cost of the check in a chain on the M3 (below). So with GCC the bound
+  is 0: the code of before for every size. Given up: the faster `scale` of GCC 13 and the faster
+  independent `sub` of GCC 16 in a unit of many operations.
+- **The final header against the header before.** With Clang 18 the constructor of
+  `BallVector<double, 1, 3>` takes 9.0 ns instead of 24.1 to 24.5 (6.0 without the check), of
+  `<double, 2, 3>` 10.8 instead of 21.9 to 26.2, of `<double, 1, 7>` 12.1 to 12.3 instead of 26.7 to
+  28.3, of `<double, 1, 13>` 21.0 to 21.1 instead of 32.6 to 39: the constructors of up to 14 limbs
+  0.36 to 0.79 of their time before, the check 0.3 to 3.8 ns of it against 6.7 to 20 with the header
+  before; with Apple clang 0.30 to 0.90 of their time before, the check at most 4.6 ns against 1.9
+  to 16. With GCC 13 the constructors are compiled as GCC chose before, with the check's new form:
+  they lose 0.9 to 9.2 ns to the check, about the read, as before (1.1 to 9.6), and in the unit of
+  every size at `-O3` those of 7 and 13 entries take 0.88 to 0.91 of their time before (the cold
+  report lets GCC inline there the loop it called before); with GCC 16 they are not forced either:
+  GCC inlines them, at `-O3` in the unit of every size in 0.36 to 0.52 of their time before (the
+  report out of line lets it inline the loop it called before), and the check costs them at most 0.8
+  ns. The other operations of short ball vectors lose to the check 2.4 to 2.5 ns at the median on
+  Zen 2, and 0.1 ns on the M3. Over the 240 functions of the short ball vectors of each
+  configuration, the tree takes at the median 0.991 to 1.001 times its time with the header before
+  on Zen 2, 0.978 to 0.998 on the M3.
+- **What is still slower than before, and is not the forcing.** (1) With GCC 13 at `-O3` the
+  constructor of `BallVector<double, 2, 3>` in a unit of its own takes 1.21 to 1.35 times as long as
+  before (20.7 to 22.1 ns, against 16.4 to 17.1), and in the unit of every size 1.01 to 1.08. Not
+  the forcing: the program forced for none compiles that unit to the same instructions and takes the
+  same time, and it is now the tree with GCC (the last table). Not where the code falls: with the
+  code aligned by `-falign-functions=64 -falign-loops=64` in both programs the difference stays
+  (20.7 to 20.8 against 16.5 to 17.1). Not the alignment of the object that the code stores and
+  reloads (aligned before to 32 bytes, `vmovdqa`; not after, `vmovdqu`), which was the first guess:
+  with `alignas(32)` on `BallVector` in copies of both headers it stays too (19.9 to 20.2 against
+  16.4 to 16.9). What differs is the code GCC makes around the check's new form: the object is
+  written to the frame with 13 scalar stores and read back with 4 loads of 32 bytes (before: 8 and
+  2), and a load that spans several smaller stores cannot be served from the store buffer; that is
+  inferred, not measured. A chain of the same constructor is faster than before (21.9 to 23.6
+  against 24.0), and its control does not move (6.14 to 6.21 ns in every program). (2) Identical
+  code where it falls: with Apple clang at `-O2` the constructor of 2 × 13, not forced, takes 1.09
+  to 1.15 times its time before in the tree and 0.98 to 1.02 in the program forced for none, whose
+  code of its own unit is the same instruction for instruction (compared); at `-O2` the chain of the
+  constructor of 1 × 80 in its own unit 1.62 times (113 to 115 ns, against 70 to 73 in the four
+  other programs of the new headers), at `-O3` the same in the program forced for every size only.
+  (3) On the M3 the chains of `add` and `sub` of `BallVector<double, 1, 13>` take 12.1 to 14.8 ns in
+  all four programs of the new headers, forced or not, with the check or without it, against 8.3 to
+  9.6 with the header before: neither the forcing nor the check (with the header before, the old
+  inline check made that chain faster than no check at all); and with Apple clang the chain of
+  `scale` of `<double, 2, 7>` 14.0 to 15.7 ns with the check of the new headers, forced or not,
+  against 8.8 to 10.0 with the header before and 7.9 to 9.6 without the check: the old check did not
+  cost that chain, the new one costs it what it costs the other chains of `scale` (below). (4) With
+  Clang 18 chains of `add` and `sub` of two limbs and 7 or 13 entries take 1.01 to 1.03 times their
+  time before, in the program forced for none as well. (5) With GCC 13 at `-O2` the chains of `sub`
+  of `<double, 1, 18>` and `<double, 1, 80>` in the unit of every size take 1.16 to 1.21 times as
+  long as before (22.1 against 18.1 ns for 1 × 18), with the same code as in the program forced for
+  every size, which is not slower (the function at another address): placement; at `-O3` the
+  independent `scale` of 1 × 80 in a unit of its own 1.10 times, in every program of the new headers
+  with the check. (6) With GCC 16 chains of one limb, whose loops GCC now inlines with the report
+  out of line: the chain of the constructor of `<double, 1, 3>` in the unit of every size at `-O3`
+  takes 6.2 to 6.6 ns against 4.3 to 4.4 (1.41 times; 1.44 without the check), the chains of `add`
+  and `sub` of 1 × 3 at `-O2` 1.20 and 1.25 times, of the constructor of 1 × 7 and of `x + y` of 1 ×
+  7 1.11 to 1.15, of `scale` of 1 × 3 and 1 × 7 at `-O3` 1.13 to 1.15; all of them in the program
+  forced for every size as well, most of them without the check too. And identical code where it
+  falls: GCC 16's constructor of 2 × 18 at `-O2` takes 58 to 59 ns or 66 to 67, in one program or
+  another from one campaign to the next.
+- **On the M3, chains of short operations still pay several nanoseconds to the check.** The chain of
+  `scale` of `BallVector<double, 1, 3>` or `<double, 1, 7>`, each on the result of the one before,
+  loses 4.3 to 6.4 ns to the check with Apple clang, as with the header before (4.6 to 7.2); with
+  GCC 16 the chains of `add`, `sub` and `scale` of one limb in a unit of their own lose up to 6.2
+  ns, as with the header before (up to 6.8). The loops of the chain of `scale` with and without the
+  check differ beyond the read: Apple clang allocates the registers otherwise and merges two loads
+  of 8 bytes, of a center and of the radius that two stores wrote, into one load pair; a probe of
+  that alone costs a chain 0.2 to 1.3 ns, not 6, and a read of FPCR alone costs a chain of fused
+  multiply-adds, or a chain through memory, nothing measurable (above). Why the M3 makes these
+  chains wait was not established.
 - **What the first client's code can expect** (GCC 13 on x86-64 in its large units, a release
   build): its short sums with the header of 2026-11-23 about what its own measurement with the
-  report cold gave, a few ns above no check, since GCC 13 lost no inlining there beyond what the cold
-  report recovers; its splits and searches, which make several calls per step, the reads
-  themselves, 6 to 8% as before. Not measured here: its programs.
-
+  report cold gave, a few ns above no check, since GCC 13 lost no inlining there beyond what the
+  cold report recovers; the bound forces nothing with GCC, so its constructors are compiled as GCC
+  chose before, with the check's new form; independent constructions of `BallVector<double, 2, 3>`
+  in a unit with little else about 4 ns more than before (item (1) above); its splits and searches,
+  which make several calls per step, the reads themselves, 6 to 8% as before. Not measured here: its
+  programs.
 
 #### Before 2026-11-23
 
@@ -6849,10 +7030,12 @@ results/milestone2/bench` from the stored files, and those of the answers are ro
 
 #### The check at entry, measured again (2026-11-23)
 
-The runs `recheck-*` ([question 14](#the-check-measured-again-on-2026-11-23)), printed by
-`python3 bench/m2_report.py --part 4 results/milestone2/bench`: each program's time minus the time
-of the program without the check in the same round, the header of 2026-11-23 over the header
-before, the share of the check, and the runs.
+The runs `recheck-*`, `inline-*` and `ctor23-*` ([question 14](#the-check-measured-again-on-2026-11-23)),
+printed by `python3 bench/m2_report.py --part 4 results/milestone2/bench`: the runs, then each
+program's time minus the time of the program without the check in the same round, the header of
+2026-11-23 over the header before, the share of the check (the short arrays from `recheck-*`, the
+short ball vectors from `inline-*`), then the measurements of the bound and of the constructor of
+`BallVector<double, 2, 3>` with GCC 13.
 
 | Run (the check at entry, 2026-11-23) | Functions checked, failed | Over the fastest run of the program: median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at start, end |
 |---|---|---|---|---|
@@ -6966,6 +7149,184 @@ before, the share of the check, and the runs.
 | mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-O3 -DNDEBUG -O3 -ffp-contract=off` | 3 | 2026-11-23, `89848182` |
 | mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-O3 -DNDEBUG -O2 -ffp-contract=off` | 3 | 2026-11-23, `89848182` |
 | mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-O3 -DNDEBUG -O3 -ffp-contract=off` | 3 | 2026-11-23, `89848182` |
+
+
+| Run (the check at entry, 2026-11-23) | Functions checked, failed | Over the fastest run of the program: median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at start, end |
+|---|---|---|---|---|
+| `inline-linux-clang-O2-cb-r1.json` | 470, 0 | 1.003, 1.019 | 1.005 | 32.2, 23.4 |
+| `inline-linux-clang-O2-cb-r2.json` | 470, 0 | 1.001, 1.008 | 1.005 | 20.9, 12.0 |
+| `inline-linux-clang-O2-cb-r3.json` | 470, 0 | 1.000, 1.008 | 1.003 | 6.0, 5.6 |
+| `inline-linux-clang-O2-cf-r1.json` | 470, 0 | 1.001, 1.006 | 1.004 | 23.8, 23.9 |
+| `inline-linux-clang-O2-cf-r2.json` | 470, 0 | 1.002, 1.007 | 1.005 | 11.7, 13.7 |
+| `inline-linux-clang-O2-cf-r3.json` | 470, 0 | 1.000, 1.003 | 1.004 | 5.6, 4.7 |
+| `inline-linux-clang-O2-c1-r1.json` | 470, 0 | 1.002, 1.017 | 1.004 | 19.5, 20.6 |
+| `inline-linux-clang-O2-c1-r2.json` | 470, 0 | 1.000, 1.004 | 1.004 | 11.3, 7.8 |
+| `inline-linux-clang-O2-c1-r3.json` | 470, 0 | 1.001, 1.005 | 1.004 | 5.1, 4.9 |
+| `inline-linux-clang-O2-c0-r1.json` | 470, 0 | 1.002, 1.005 | 1.005 | 20.6, 21.9 |
+| `inline-linux-clang-O2-c0-r2.json` | 470, 0 | 1.000, 1.004 | 1.003 | 7.7, 6.1 |
+| `inline-linux-clang-O2-c0-r3.json` | 470, 0 | 1.000, 1.004 | 1.004 | 5.0, 5.4 |
+| `inline-linux-clang-O2-cu-r1.json` | 470, 0 | 1.001, 1.015 | 1.004 | 22.4, 19.5 |
+| `inline-linux-clang-O2-cu-r2.json` | 470, 0 | 1.001, 1.008 | 1.005 | 13.7, 11.3 |
+| `inline-linux-clang-O2-cu-r3.json` | 470, 0 | 1.001, 1.013 | 1.004 | 4.7, 5.1 |
+| `inline-linux-clang-O3-cb-r1.json` | 470, 0 | 1.002, 1.020 | 1.004 | 32.2, 23.4 |
+| `inline-linux-clang-O3-cb-r2.json` | 470, 0 | 1.001, 1.010 | 1.005 | 20.9, 12.0 |
+| `inline-linux-clang-O3-cb-r3.json` | 470, 0 | 1.000, 1.058 | 1.004 | 6.0, 5.6 |
+| `inline-linux-clang-O3-cf-r1.json` | 470, 0 | 1.002, 1.008 | 1.004 | 23.8, 23.9 |
+| `inline-linux-clang-O3-cf-r2.json` | 470, 0 | 1.001, 1.007 | 1.004 | 11.7, 13.7 |
+| `inline-linux-clang-O3-cf-r3.json` | 470, 0 | 1.000, 1.010 | 1.003 | 5.4, 4.7 |
+| `inline-linux-clang-O3-c1-r1.json` | 470, 0 | 1.004, 1.011 | 1.006 | 19.5, 20.6 |
+| `inline-linux-clang-O3-c1-r2.json` | 470, 0 | 1.001, 1.010 | 1.004 | 11.3, 7.7 |
+| `inline-linux-clang-O3-c1-r3.json` | 470, 0 | 1.000, 1.009 | 1.004 | 5.1, 5.0 |
+| `inline-linux-clang-O3-c0-r1.json` | 470, 0 | 1.002, 1.016 | 1.004 | 20.6, 20.9 |
+| `inline-linux-clang-O3-c0-r2.json` | 470, 0 | 1.000, 1.005 | 1.004 | 7.7, 6.0 |
+| `inline-linux-clang-O3-c0-r3.json` | 470, 0 | 1.000, 1.005 | 1.004 | 5.0, 5.4 |
+| `inline-linux-clang-O3-cu-r1.json` | 470, 0 | 1.002, 1.009 | 1.005 | 22.4, 19.5 |
+| `inline-linux-clang-O3-cu-r2.json` | 470, 0 | 1.001, 1.017 | 1.004 | 14.4, 11.3 |
+| `inline-linux-clang-O3-cu-r3.json` | 470, 0 | 1.000, 1.014 | 1.003 | 4.9, 5.1 |
+| `inline-linux-gcc-O2-cb-r1.json` | 470, 0 | 1.000, 1.006 | 1.004 | 23.4, 18.3 |
+| `inline-linux-gcc-O2-cb-r2.json` | 470, 0 | 1.003, 1.007 | 1.006 | 13.8, 14.4 |
+| `inline-linux-gcc-O2-cb-r3.json` | 470, 0 | 1.001, 1.006 | 1.006 | 14.2, 15.5 |
+| `inline-linux-gcc-O2-cf-r1.json` | 470, 0 | 1.000, 1.004 | 1.005 | 18.3, 20.1 |
+| `inline-linux-gcc-O2-cf-r2.json` | 470, 0 | 1.004, 1.010 | 1.007 | 14.7, 19.0 |
+| `inline-linux-gcc-O2-cf-r3.json` | 470, 0 | 1.001, 1.006 | 1.007 | 15.8, 15.4 |
+| `inline-linux-gcc-O2-c1-r1.json` | 470, 0 | 1.002, 1.011 | 1.007 | 19.6, 15.8 |
+| `inline-linux-gcc-O2-c1-r2.json` | 470, 0 | 1.001, 1.007 | 1.007 | 13.1, 11.3 |
+| `inline-linux-gcc-O2-c1-r3.json` | 470, 0 | 1.000, 1.009 | 1.004 | 9.0, 15.2 |
+| `inline-linux-gcc-O2-c0-r1.json` | 470, 0 | 1.000, 1.007 | 1.006 | 14.1, 13.8 |
+| `inline-linux-gcc-O2-c0-r2.json` | 470, 0 | 1.004, 1.019 | 1.005 | 11.3, 14.6 |
+| `inline-linux-gcc-O2-c0-r3.json` | 470, 0 | 1.000, 1.007 | 1.006 | 15.2, 16.1 |
+| `inline-linux-gcc-O2-cu-r1.json` | 470, 0 | 1.003, 1.013 | 1.007 | 20.1, 19.6 |
+| `inline-linux-gcc-O2-cu-r2.json` | 470, 0 | 1.002, 1.011 | 1.008 | 19.0, 13.1 |
+| `inline-linux-gcc-O2-cu-r3.json` | 470, 0 | 1.000, 1.004 | 1.007 | 15.4, 9.0 |
+| `inline-linux-gcc-O3-cb-r1.json` | 470, 0 | 1.003, 1.009 | 1.004 | 23.4, 18.3 |
+| `inline-linux-gcc-O3-cb-r2.json` | 470, 0 | 1.000, 1.006 | 1.004 | 13.8, 14.4 |
+| `inline-linux-gcc-O3-cb-r3.json` | 470, 0 | 1.001, 1.008 | 1.007 | 14.2, 15.5 |
+| `inline-linux-gcc-O3-cf-r1.json` | 470, 0 | 1.002, 1.007 | 1.006 | 18.3, 20.1 |
+| `inline-linux-gcc-O3-cf-r2.json` | 470, 0 | 1.000, 1.004 | 1.005 | 14.7, 19.0 |
+| `inline-linux-gcc-O3-cf-r3.json` | 470, 0 | 1.001, 1.005 | 1.006 | 15.8, 15.4 |
+| `inline-linux-gcc-O3-c1-r1.json` | 470, 0 | 1.001, 1.009 | 1.004 | 19.6, 15.8 |
+| `inline-linux-gcc-O3-c1-r2.json` | 470, 0 | 1.000, 1.005 | 1.005 | 13.1, 11.3 |
+| `inline-linux-gcc-O3-c1-r3.json` | 470, 0 | 1.004, 1.013 | 1.004 | 9.0, 15.3 |
+| `inline-linux-gcc-O3-c0-r1.json` | 470, 0 | 1.002, 1.008 | 1.006 | 14.1, 13.8 |
+| `inline-linux-gcc-O3-c0-r2.json` | 470, 0 | 1.000, 1.007 | 1.004 | 11.3, 14.6 |
+| `inline-linux-gcc-O3-c0-r3.json` | 470, 0 | 1.002, 1.008 | 1.006 | 15.2, 16.1 |
+| `inline-linux-gcc-O3-cu-r1.json` | 470, 0 | 1.001, 1.004 | 1.004 | 20.1, 19.6 |
+| `inline-linux-gcc-O3-cu-r2.json` | 470, 0 | 1.000, 1.005 | 1.004 | 18.2, 13.1 |
+| `inline-linux-gcc-O3-cu-r3.json` | 470, 0 | 1.002, 1.007 | 1.004 | 15.4, 9.0 |
+| `inline-mac-appleclang-O2-cb-r1.json` | 470, 0 | 1.000, 1.036 | 1.006 | 5.8, 3.0 |
+| `inline-mac-appleclang-O2-cb-r2.json` | 470, 0 | 1.000, 1.043 | 1.004 | 2.0, 1.7 |
+| `inline-mac-appleclang-O2-cb-r3.json` | 470, 0 | 1.006, 1.047 | 1.057 | 7.3, 6.6 |
+| `inline-mac-appleclang-O2-cf-r1.json` | 470, 0 | 1.000, 1.018 | 1.005 | 3.0, 2.8 |
+| `inline-mac-appleclang-O2-cf-r2.json` | 470, 0 | 1.000, 1.032 | 1.003 | 1.7, 6.7 |
+| `inline-mac-appleclang-O2-cf-r3.json` | 470, 0 | 1.010, 1.044 | 1.045 | 6.6, 10.1 |
+| `inline-mac-appleclang-O2-c1-r1.json` | 470, 0 | 1.000, 1.017 | 1.006 | 2.4, 2.2 |
+| `inline-mac-appleclang-O2-c1-r2.json` | 470, 0 | 1.002, 1.048 | 1.021 | 4.6, 3.6 |
+| `inline-mac-appleclang-O2-c1-r3.json` | 470, 0 | 1.008, 1.039 | 1.057 | 9.3, 7.5 |
+| `inline-mac-appleclang-O2-c0-r1.json` | 470, 0 | 1.000, 1.026 | 1.005 | 2.2, 1.6 |
+| `inline-mac-appleclang-O2-c0-r2.json` | 470, 0 | 1.001, 1.057 | 1.004 | 3.6, 2.1 |
+| `inline-mac-appleclang-O2-c0-r3.json` | 470, 0 | 1.005, 1.043 | 1.058 | 7.4, 7.5 |
+| `inline-mac-appleclang-O2-cu-r1.json` | 470, 0 | 1.000, 1.034 | 1.005 | 2.6, 2.4 |
+| `inline-mac-appleclang-O2-cu-r2.json` | 470, 0 | 1.000, 1.036 | 1.021 | 6.7, 4.6 |
+| `inline-mac-appleclang-O2-cu-r3.json` | 470, 0 | 1.020, 1.061 | 1.166 | 10.1, 9.3 |
+| `inline-mac-appleclang-O3-cb-r1.json` | 470, 0 | 1.001, 1.034 | 1.008 | 1.6, 2.1 |
+| `inline-mac-appleclang-O3-cb-r2.json` | 470, 0 | 1.000, 1.049 | 1.005 | 2.1, 1.6 |
+| `inline-mac-appleclang-O3-cb-r3.json` | 470, 0 | 1.001, 1.046 | 1.008 | 7.5, 4.2 |
+| `inline-mac-appleclang-O3-cf-r1.json` | 470, 0 | 1.001, 1.060 | 1.008 | 2.1, 2.9 |
+| `inline-mac-appleclang-O3-cf-r2.json` | 470, 0 | 1.002, 1.065 | 1.005 | 1.6, 1.9 |
+| `inline-mac-appleclang-O3-cf-r3.json` | 470, 0 | 1.000, 1.015 | 1.007 | 4.2, 2.7 |
+| `inline-mac-appleclang-O3-c1-r1.json` | 470, 0 | 1.002, 1.073 | 1.005 | 3.2, 1.9 |
+| `inline-mac-appleclang-O3-c1-r2.json` | 470, 0 | 1.003, 1.071 | 1.032 | 3.3, 4.5 |
+| `inline-mac-appleclang-O3-c1-r3.json` | 470, 0 | 1.000, 1.020 | 1.004 | 1.6, 1.8 |
+| `inline-mac-appleclang-O3-c0-r1.json` | 470, 0 | 1.002, 1.073 | 1.003 | 1.9, 2.0 |
+| `inline-mac-appleclang-O3-c0-r2.json` | 470, 0 | 1.021, 1.076 | 1.143 | 4.5, 8.2 |
+| `inline-mac-appleclang-O3-c0-r3.json` | 470, 0 | 1.000, 1.014 | 1.004 | 1.8, 1.7 |
+| `inline-mac-appleclang-O3-cu-r1.json` | 470, 0 | 1.003, 1.074 | 1.022 | 2.9, 3.2 |
+| `inline-mac-appleclang-O3-cu-r2.json` | 470, 0 | 1.004, 1.073 | 1.025 | 1.9, 3.3 |
+| `inline-mac-appleclang-O3-cu-r3.json` | 470, 0 | 1.000, 1.021 | 1.004 | 2.7, 1.6 |
+| `inline-mac-gcc16-O2-cb-r1.json` | 470, 0 | 1.000, 1.008 | 1.007 | 5.5, 3.9 |
+| `inline-mac-gcc16-O2-cb-r2.json` | 470, 0 | 1.020, 1.028 | 1.037 | 7.5, 48.5 |
+| `inline-mac-gcc16-O2-cb-r3.json` | 470, 0 | 1.000, 1.005 | 1.004 | 2.4, 3.1 |
+| `inline-mac-gcc16-O2-cf-r1.json` | 470, 0 | 1.030, 1.043 | 1.020 | 4.1, 4.4 |
+| `inline-mac-gcc16-O2-cf-r2.json` | 470, 0 | 1.001, 1.020 | 1.414 | 49.5, 64.1 |
+| `inline-mac-gcc16-O2-cf-r3.json` | 470, 0 | 1.000, 1.002 | 1.005 | 3.1, 2.9 |
+| `inline-mac-gcc16-O2-c1-r1.json` | 470, 0 | 1.044, 1.056 | 1.116 | 8.7, 14.9 |
+| `inline-mac-gcc16-O2-c1-r2.json` | 470, 0 | 1.000, 1.003 | 1.008 | 18.6, 7.0 |
+| `inline-mac-gcc16-O2-c1-r3.json` | 470, 0 | 1.000, 1.011 | 1.007 | 3.0, 2.4 |
+| `inline-mac-gcc16-O2-c0-r1.json` | 470, 0 | 1.044, 1.069 | 1.160 | 14.6, 10.9 |
+| `inline-mac-gcc16-O2-c0-r2.json` | 470, 0 | 1.000, 1.004 | 1.006 | 7.0, 3.7 |
+| `inline-mac-gcc16-O2-c0-r3.json` | 470, 0 | 1.000, 1.020 | 1.004 | 2.4, 3.6 |
+| `inline-mac-gcc16-O2-cu-r1.json` | 470, 0 | 1.020, 1.027 | 1.025 | 4.4, 8.7 |
+| `inline-mac-gcc16-O2-cu-r2.json` | 470, 0 | 1.000, 1.006 | 1.007 | 59.1, 18.6 |
+| `inline-mac-gcc16-O2-cu-r3.json` | 470, 0 | 1.000, 1.008 | 1.006 | 2.9, 3.0 |
+| `inline-mac-gcc16-O3-cb-r1.json` | 470, 0 | 1.020, 1.058 | 1.025 | 7.7, 8.5 |
+| `inline-mac-gcc16-O3-cb-r2.json` | 470, 0 | 1.000, 1.005 | 1.006 | 3.7, 2.4 |
+| `inline-mac-gcc16-O3-cb-r3.json` | 470, 0 | 1.001, 1.053 | 1.004 | 3.6, 3.0 |
+| `inline-mac-gcc16-O3-cf-r1.json` | 470, 0 | 1.048, 1.105 | 1.389 | 8.5, 42.4 |
+| `inline-mac-gcc16-O3-cf-r2.json` | 470, 0 | 1.000, 1.001 | 1.007 | 2.4, 3.1 |
+| `inline-mac-gcc16-O3-cf-r3.json` | 470, 0 | 1.002, 1.048 | 1.020 | 3.0, 3.8 |
+| `inline-mac-gcc16-O3-c1-r1.json` | 470, 0 | 1.020, 1.050 | 1.052 | 27.1, 35.6 |
+| `inline-mac-gcc16-O3-c1-r2.json` | 470, 0 | 1.000, 1.005 | 1.004 | 2.8, 2.6 |
+| `inline-mac-gcc16-O3-c1-r3.json` | 470, 0 | 1.000, 1.026 | 1.005 | 2.7, 2.2 |
+| `inline-mac-gcc16-O3-c0-r1.json` | 470, 0 | 1.041, 1.065 | 1.219 | 35.2, 31.1 |
+| `inline-mac-gcc16-O3-c0-r2.json` | 470, 0 | 1.000, 1.007 | 1.004 | 2.9, 2.4 |
+| `inline-mac-gcc16-O3-c0-r3.json` | 470, 0 | 1.000, 1.014 | 1.009 | 2.2, 2.5 |
+| `inline-mac-gcc16-O3-cu-r1.json` | 470, 0 | 1.020, 1.066 | 1.023 | 42.4, 27.1 |
+| `inline-mac-gcc16-O3-cu-r2.json` | 470, 0 | 1.000, 1.005 | 1.005 | 3.1, 2.8 |
+| `inline-mac-gcc16-O3-cu-r3.json` | 470, 0 | 1.001, 1.034 | 1.007 | 3.8, 2.7 |
+
+| Spread of (the check at entry, 2026-11-23) | Runs | Spread of a function over the runs: median, 90th percentile, worst | Worst function |
+|---|---:|---|---|
+| linux-clang-O2, the header before | 3 | 0.5%, 4.2%, 36.7% | `m2x/lat/scale_1_18/op` |
+| linux-clang-O2, forced | 3 | 0.3%, 1.0%, 38.4% | `m2x/lat/scale_2_7/kairn` |
+| linux-clang-O2, the header of the tree | 3 | 0.3%, 2.1%, 97.7% | `m2y/lat/sub_1_80/kairn` |
+| linux-clang-O2, no check | 3 | 0.2%, 0.8%, 16.1% | `m2y/lat/scale_2_18/op` |
+| linux-clang-O2, unforced | 3 | 0.3%, 3.9%, 82.8% | `m2y/lat/half_2_18/op` |
+| linux-clang-O3, the header before | 3 | 0.4%, 10.4%, 58.7% | `m2x/lat/scale_1_80/op` |
+| linux-clang-O3, forced | 3 | 0.3%, 1.9%, 57.2% | `m2x/lat/scale_1_18/kairn` |
+| linux-clang-O3, the header of the tree | 3 | 0.5%, 2.2%, 84.6% | `m2x/lat/scale_1_80/op` |
+| linux-clang-O3, no check | 3 | 0.3%, 2.5%, 54.2% | `m2x/tp/scale_1_80/op` |
+| linux-clang-O3, unforced | 3 | 0.4%, 6.1%, 62.0% | `m2x/lat/scale_1_18/kairn` |
+| linux-gcc-O2, the header before | 3 | 0.4%, 1.5%, 24.8% | `m2y/lat/sub_1_3/op` |
+| linux-gcc-O2, forced | 3 | 0.5%, 1.3%, 21.5% | `m2y/lat/add_1_3/op` |
+| linux-gcc-O2, the header of the tree | 3 | 0.4%, 1.9%, 18.2% | `m2x/lat/addop_1_18/op` |
+| linux-gcc-O2, no check | 3 | 0.5%, 3.5%, 93.7% | `m2x/tp/addop_1_3/op` |
+| linux-gcc-O2, unforced | 3 | 0.5%, 2.7%, 32.4% | `m2x/lat/addop_1_13/op` |
+| linux-gcc-O3, the header before | 3 | 0.4%, 1.6%, 28.2% | `m2y/lat/half_2_13/kairn` |
+| linux-gcc-O3, forced | 3 | 0.3%, 1.1%, 51.3% | `m2x/lat/sub_1_3/op` |
+| linux-gcc-O3, the header of the tree | 3 | 0.4%, 1.8%, 163.4% | `m2x/lat/sub_1_13/kairn` |
+| linux-gcc-O3, no check | 3 | 0.3%, 1.5%, 44.7% | `m2y/lat/scale_1_13/kairn` |
+| linux-gcc-O3, unforced | 3 | 0.3%, 1.3%, 40.0% | `m2x/lat/scale_2_3/op` |
+| mac-appleclang-O2, the header before | 3 | 1.0%, 7.1%, 233.4% | `m2y/lat/scale_2_13/op` |
+| mac-appleclang-O2, forced | 3 | 1.7%, 6.7%, 132.9% | `m2y/lat/sub_1_80/kairn` |
+| mac-appleclang-O2, the header of the tree | 3 | 1.6%, 6.6%, 18.0% | `m2y/lat/sub_1_18/op` |
+| mac-appleclang-O2, no check | 3 | 1.2%, 6.9%, 113.3% | `m2k/lat/ssum1_k1/op` |
+| mac-appleclang-O2, unforced | 3 | 2.2%, 7.3%, 265.8% | `m2x/lat/sub_1_18/kairn` |
+| mac-appleclang-O3, the header before | 3 | 0.5%, 7.1%, 158.8% | `m2x/tp/make_1_3/op` |
+| mac-appleclang-O3, forced | 3 | 0.8%, 7.3%, 25.3% | `m2y/lat/add_1_18/kairn` |
+| mac-appleclang-O3, the header of the tree | 3 | 0.9%, 7.4%, 44.1% | `m2y/lat/add_1_80/kairn` |
+| mac-appleclang-O3, no check | 3 | 2.8%, 9.1%, 205.4% | `m2x/lat/scale_2_18/kairn` |
+| mac-appleclang-O3, unforced | 3 | 1.1%, 7.7%, 123.1% | `m2y/tp/make_1_3/op` |
+| mac-gcc16-O2, the header before | 3 | 2.0%, 3.8%, 59.5% | `m2x/lat/half_1_3/kairn` |
+| mac-gcc16-O2, forced | 3 | 3.3%, 4.9%, 46.8% | `m2x/lat/half_1_3/kairn` |
+| mac-gcc16-O2, the header of the tree | 3 | 4.4%, 6.1%, 35.9% | `m2y/lat/scale_1_3/kairn` |
+| mac-gcc16-O2, no check | 3 | 4.4%, 7.2%, 40.1% | `m2y/lat/scale_1_3/op` |
+| mac-gcc16-O2, unforced | 3 | 2.0%, 3.4%, 40.9% | `m2y/lat/half_1_3/kairn` |
+| mac-gcc16-O3, the header before | 3 | 2.1%, 7.3%, 105.5% | `m2k/lat/ssum1_k1/kairn` |
+| mac-gcc16-O3, forced | 3 | 4.8%, 10.7%, 45.6% | `m2x/lat/make_2_3/kairn` |
+| mac-gcc16-O3, the header of the tree | 3 | 2.0%, 6.7%, 83.6% | `m2y/lat/make_1_3/kairn` |
+| mac-gcc16-O3, no check | 3 | 4.2%, 8.4%, 157.6% | `m2x/tp/sub_1_3/kairn` |
+| mac-gcc16-O3, unforced | 3 | 2.1%, 8.2%, 94.9% | `m2x/lat/make_1_3/kairn` |
+
+| Configuration (the check at entry, 2026-11-23) | CPU | Compiler | Flags (this commit's program) | Rounds | Dates, commits |
+|---|---|---|---|---|---|
+| linux-clang-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3 | 2026-11-23, `f59f37c6` |
+| linux-clang-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | Clang 18.1.3 (1ubuntu1) | `-O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3 | 2026-11-23, `f59f37c6` |
+| linux-gcc-inline-O2 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-O3 -DNDEBUG -O2 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3 | 2026-11-23, `9c5b5bd7` |
+| linux-gcc-inline-O3 | AMD EPYC 7452 32-Core Processor; pinned to one logical CPU | GCC 13.3.0 | `-O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)` | 3 | 2026-11-23, `9c5b5bd7` |
+| mac-appleclang-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-O3 -DNDEBUG -O2 -ffp-contract=off` | 3 | 2026-11-23, `f59f37c6` |
+| mac-appleclang-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | Apple clang 21.0.0 (clang-2100.4.1.1) | `-O3 -DNDEBUG -O3 -ffp-contract=off` | 3 | 2026-11-23, `f59f37c6` |
+| mac-gcc16-inline-O2 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-O3 -DNDEBUG -O2 -ffp-contract=off` | 3 | 2026-11-23, `9c5b5bd7` |
+| mac-gcc16-inline-O3 | Apple M3 Max; not pinned (no affinity on macOS); QoS user-interactive | GCC 16.2.0 | `-O3 -DNDEBUG -O3 -ffp-contract=off` | 3 | 2026-11-23, `9c5b5bd7` |
 
 
 | Short arrays, 2026-11-23, independent calls: ns per call, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
@@ -7298,1011 +7659,1011 @@ before, the share of the check, and the runs.
 
 | Short ball vectors, 2026-11-23, one operation per unit, many vectors: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 2.28 to 2.38 | 2.26 to 2.36 | 10.9 (-O2), 9.48 to 9.52 (-O3) | 8.41 to 8.44 |
-| `add(x, y, z)`, 1 limb, N = 7 | 3.04 to 3.1 (-O2), 3.09 to 3.24 (-O3) | 4 to 4.11 (-O2), 2.84 (-O3) | 12.5 to 12.6 (-O2), 11.2 to 11.3 (-O3) | 9.35 to 9.41 |
-| `add(x, y, z)`, 1 limb, N = 13 | 4.56 to 4.63 | 5.05 to 5.16 (-O2), 4.08 to 4.1 (-O3) | 12.4 to 12.6 (-O2), 10.6 to 10.7 (-O3) | 9.45 to 9.54 |
-| `add(x, y, z)`, 1 limb, N = 18 | 6.05 to 6.29 | 6.25 to 6.48 (-O2), 5.12 to 5.15 (-O3) | 14.3 to 14.4 (-O2), 12.6 to 12.9 (-O3) | 10.4 to 10.6 |
-| `add(x, y, z)`, 1 limb, N = 80 | 29.8 to 31.1 | 31.6 to 33.9 (-O2), 27.4 to 27.5 (-O3) | 27.6 to 29 | 21.9 to 22.9 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 4.91 to 5.01 | 6.15 to 6.34 (-O2), 4.63 (-O3) | 26.8 to 26.9 (-O2), 19.2 to 19.3 (-O3) | 17.9 to 18 |
-| `add(x, y, z)`, 2 limbs, N = 7 | 9.05 to 9.34 | 9.56 to 9.89 (-O2), 8.41 to 8.43 (-O3) | 31.8 (-O2), 25.1 (-O3) | 23.2 to 23.3 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 14.8 to 15 (-O2), 15.3 to 15.8 (-O3) | 15.2 to 15.8 (-O2), 14 (-O3) | 30.7 to 31 (-O2), 25.5 (-O3) | 23.9 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 19.5 to 20 | 19.9 to 20.4 (-O2), 18.4 (-O3) | 40.7 to 41.1 (-O2), 37.3 to 37.4 (-O3) | 34.7 to 34.9 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 76.2 to 77.9 | 75.5 to 76.7 (-O2), 72.4 to 72.7 (-O3) | 102 to 103 (-O2), 96.4 to 97.7 (-O3) | 96.1 to 96.3 |
-| `z = x + y`, 1 limb, N = 3 | 2.4 to 2.48 | 2.34 to 2.45 | 16.9 to 17.9 (-O2), 16 to 16.9 (-O3) | 8.42 to 8.46 |
-| `z = x + y`, 1 limb, N = 7 | 3.52 to 3.58 | 4.29 to 4.37 (-O2), 3.5 to 3.51 (-O3) | 17.6 to 18.1 (-O2), 17.3 to 18.1 (-O3) | 9.82 to 9.89 |
-| `z = x + y`, 1 limb, N = 13 | 5.21 to 5.3 (-O2), 5.31 to 5.96 (-O3) | 6.68 to 6.83 (-O2), 4.98 (-O3) | 17.3 to 17.4 (-O2), 16.3 to 16.4 (-O3) | 10.1 to 10.3 |
-| `z = x + y`, 1 limb, N = 18 | 9.51 to 10 (-O2), 9.63 to 9.98 (-O3) | 8.75 to 9.09 (-O2), 6.24 to 6.26 (-O3) | 18.1 to 18.4 (-O2), 17.5 to 17.8 (-O3) | 11.3 to 11.6 |
-| `z = x + y`, 1 limb, N = 80 | 41.5 to 42.8 | 45.7 to 46.7 (-O2), 38.8 to 38.9 (-O3) | 83.9 to 86.9 | 36.1 to 41.9 (-O2), 40.7 to 43 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 5.49 to 5.62 | 7.7 to 8.11 (-O2), 5.2 (-O3) | 30.3 to 30.8 (-O2), 22.4 to 22.5 (-O3) | 18.9 to 20.8 (-O2), 18.9 to 20.9 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 10.4 to 10.6 | 11.6 to 11.9 (-O2), 8.96 to 8.98 (-O3) | 35.6 to 35.9 (-O2), 29.1 (-O3) | 25.4 to 27.1 (-O2), 25.3 to 27.1 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 17.1 to 17.7 | 18.2 to 18.7 (-O2), 15.3 to 15.4 (-O3) | 50.5 to 51 (-O2), 30 to 30.1 (-O3) | 27.6 to 29.1 (-O2), 27.6 to 29.2 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 22.4 to 22.9 (-O2), 23.1 to 23.8 (-O3) | 24.6 to 25.1 (-O2), 23 (-O3) | 62.9 to 63.3 (-O2), 55.7 (-O3) | 40.8 to 42.9 (-O2), 40.5 to 43.1 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 104 to 106 | 107 to 109 (-O2), 99.4 (-O3) | 167 to 168 (-O2), 160 to 164 (-O3) | 130 to 137 (-O2), 130 to 134 (-O3) |
-| `sub`, 1 limb, N = 3 | 2.26 to 2.32 | 2.25 to 2.34 | 10.9 (-O2), 9.43 to 9.46 (-O3) | 8.43 to 8.46 |
-| `sub`, 1 limb, N = 7 | 3.09 to 3.2 | 4 to 4.08 (-O2), 2.86 to 2.88 (-O3) | 12.4 to 12.5 (-O2), 11.1 (-O3) | 9.4 to 9.42 |
-| `sub`, 1 limb, N = 13 | 4.56 to 4.62 | 5.04 to 5.16 (-O2), 4.09 to 4.1 (-O3) | 12.6 to 12.7 (-O2), 10.7 to 10.8 (-O3) | 9.55 to 9.6 |
-| `sub`, 1 limb, N = 18 | 6.08 to 6.45 (-O2), 6.57 to 6.75 (-O3) | 6.25 to 6.38 (-O2), 5.14 to 5.21 (-O3) | 14.1 to 14.7 (-O2), 12.4 (-O3) | 10.2 to 10.4 |
-| `sub`, 1 limb, N = 80 | 30 to 31.2 | 33 to 33.6 (-O2), 27.4 (-O3) | 27.7 to 28.9 | 22 to 22.6 |
-| `sub`, 2 limbs, N = 3 | 5.19 to 5.29 (-O2), 5.41 to 5.62 (-O3) | 6.39 to 6.58 (-O2), 4.87 to 4.88 (-O3) | 27.1 to 27.2 (-O2), 19.9 to 20 (-O3) | 18.7 to 18.8 |
-| `sub`, 2 limbs, N = 7 | 9.96 to 10.1 (-O2), 9.87 to 10.4 (-O3) | 10.2 to 10.4 (-O2), 8.95 to 8.97 (-O3) | 31.7 to 31.8 (-O2), 27.5 (-O3) | 26.2 |
-| `sub`, 2 limbs, N = 13 | 16 to 16.3 (-O2), 16.6 to 17.2 (-O3) | 16.3 to 16.7 (-O2), 15 (-O3) | 30.9 to 31 (-O2), 26.7 to 26.8 (-O3) | 26.7 to 26.8 |
-| `sub`, 2 limbs, N = 18 | 20.3 to 20.9 (-O2), 20.8 to 21.4 (-O3) | 21.3 to 21.8 (-O2), 19.2 to 19.3 (-O3) | 41.2 to 41.3 (-O2), 37.7 to 37.8 (-O3) | 36.1 to 36.8 |
-| `sub`, 2 limbs, N = 80 | 80.8 to 82.5 | 83.5 to 85.5 (-O2), 77.1 to 77.2 (-O3) | 104 to 105 (-O2), 98.6 to 99.6 (-O3) | 98.3 to 98.6 |
-| `scale`, 1 limb, N = 3 | 2.29 to 2.33 (-O2), 2.33 to 2.45 (-O3) | 2.31 to 2.41 | 11.3 (-O2), 9.35 to 9.37 (-O3) | 8.41 to 8.43 |
-| `scale`, 1 limb, N = 7 | 2.93 to 3.06 | 4 to 4.08 (-O2), 2.89 (-O3) | 12.4 to 12.6 (-O2), 11.2 (-O3) | 9.34 to 9.39 |
-| `scale`, 1 limb, N = 13 | 4.17 to 4.25 (-O2), 4.24 to 4.39 (-O3) | 4.91 to 5.13 (-O2), 4.03 (-O3) | 12.3 to 12.5 (-O2), 11.3 (-O3) | 9.47 to 9.64 |
-| `scale`, 1 limb, N = 18 | 5.76 to 5.86 (-O2), 5.92 to 6.09 (-O3) | 6.23 to 6.38 (-O2), 5.13 to 5.14 (-O3) | 14 to 14.1 (-O2), 12.9 (-O3) | 10.6 |
-| `scale`, 1 limb, N = 80 | 28.2 to 29.4 (-O2), 27.7 to 28.4 (-O3) | 30 to 30.4 (-O2), 25.2 (-O3) | 28.4 to 28.6 | 20.1 to 20.3 (-O2), 25.5 to 26.5 (-O3) |
-| `scale`, 2 limbs, N = 3 | 3.08 to 3.2 | 4.79 to 4.9 (-O2), 2.85 (-O3) | 19.6 to 19.7 (-O2), 11.1 to 11.2 (-O3) | 9.93 to 10 |
-| `scale`, 2 limbs, N = 7 | 4.64 to 4.82 | 6.42 to 6.58 (-O2), 4.47 to 4.48 (-O3) | 22.7 to 22.8 (-O2), 15.7 to 15.8 (-O3) | 12.9 to 13 |
-| `scale`, 2 limbs, N = 13 | 7.59 to 8 (-O2), 7.83 to 8.09 (-O3) | 8.83 to 9.03 (-O2), 6.99 (-O3) | 22.7 to 22.8 (-O2), 15.4 (-O3) | 13.9 to 14 |
-| `scale`, 2 limbs, N = 18 | 10.2 to 10.4 | 10.9 to 11.2 (-O2), 9.1 to 9.11 (-O3) | 25.5 to 25.6 (-O2), 18.7 to 18.8 (-O3) | 16.4 to 16.6 |
-| `scale`, 2 limbs, N = 80 | 39.5 to 40.1 (-O2), 41.2 to 41.6 (-O3) | 40.2 to 41.2 (-O2), 38.1 to 38.2 (-O3) | 53.7 to 54.4 (-O2), 47.9 to 48.1 (-O3) | 44.5 to 44.9 |
-| `half`, 1 limb, N = 3 | 3.3 to 3.4 | 4.52 to 4.61 (-O2), 2.67 (-O3) | 19.4 to 19.6 (-O2), 11.4 to 11.5 (-O3) | 11.2 |
-| `half`, 1 limb, N = 7 | 4.6 to 4.7 (-O2), 4.7 to 4.86 (-O3) | 5.34 to 5.47 (-O2), 4.01 (-O3) | 20.9 to 21 (-O2), 15.3 to 15.8 (-O3) | 13.9 |
-| `half`, 1 limb, N = 13 | 7.12 to 7.23 | 7.4 to 7.55 (-O2), 5.97 to 5.98 (-O3) | 20 to 20.1 (-O2), 13.7 to 13.9 (-O3) | 14.1 to 14.2 |
-| `half`, 1 limb, N = 18 | 8.33 to 8.46 (-O2), 8.29 to 8.74 (-O3) | 8.83 to 9.17 (-O2), 7.49 to 7.5 (-O3) | 22.2 to 22.6 (-O2), 16.6 to 16.7 (-O3) | 17.2 to 17.3 |
-| `half`, 1 limb, N = 80 | 33.9 to 34.8 (-O2), 35 to 35.8 (-O3) | 35.1 to 36 (-O2), 33.2 (-O3) | 40.2 to 40.4 (-O2), 36.1 to 36.4 (-O3) | 37.1 to 37.3 |
-| `half`, 2 limbs, N = 3 | 4.11 to 4.2 | 5.17 to 5.3 (-O2), 3.41 (-O3) | 22.3 to 22.4 (-O2), 16.6 to 16.7 (-O3) | 14.5 to 14.6 |
-| `half`, 2 limbs, N = 7 | 7.07 to 7.18 | 7.54 to 7.71 (-O2), 5.88 (-O3) | 26.2 to 26.4 (-O2), 22.7 (-O3) | 18.7 |
-| `half`, 2 limbs, N = 13 | 10.5 to 10.7 | 10.9 to 11.2 (-O2), 9.22 to 9.23 (-O3) | 24.8 to 25.1 (-O2), 19.5 to 19.6 (-O3) | 19.1 to 19.2 |
-| `half`, 2 limbs, N = 18 | 13.2 to 13.7 | 13.5 to 13.9 (-O2), 11.8 (-O3) | 29.8 to 30 (-O2), 24.7 to 24.8 (-O3) | 22.9 to 23.2 |
-| `half`, 2 limbs, N = 80 | 48.6 to 50.8 | 47.2 to 49 | 61.4 to 61.9 (-O2), 56.2 to 56.8 (-O3) | 56.1 to 56.8 |
-| the constructor, 1 limb, N = 3 | 4.52 to 4.59 | 3.36 to 3.44 (-O2), 2.42 to 2.43 (-O3) | 16.6 to 17.5 (-O2), 16.6 to 17.8 (-O3) | 8.97 to 9.02 |
-| the constructor, 1 limb, N = 7 | 8.67 to 9.05 | 8.68 to 9.06 (-O2), 3.52 (-O3) | 19.2 to 19.6 (-O2), 18.1 to 19 (-O3) | 12.2 to 12.3 |
-| the constructor, 1 limb, N = 13 | 15.1 to 15.5 | 17.6 to 17.9 (-O2), 6.58 (-O3) | 24.1 (-O2), 22.9 to 23 (-O3) | 21.1 to 21.2 |
-| the constructor, 1 limb, N = 18 | 25.6 to 26.3 (-O2), 19.5 to 19.9 (-O3) | 22.7 to 24.8 (-O2), 24.3 (-O3) | 28.9 to 29.6 (-O2), 29 to 30.6 (-O3) | 23.6 to 25.6 (-O2), 28.9 to 29 (-O3) |
-| the constructor, 1 limb, N = 80 | 70.8 to 73.5 | 195 to 213 (-O2), 209 (-O3) | 148 to 150 | 66.6 to 69.3 (-O2), 65.8 to 68.9 (-O3) |
-| the constructor, 2 limbs, N = 3 | 6.59 to 6.78 | 4.66 to 4.79 (-O2), 2.99 to 3.02 (-O3) | 18.5 to 19 (-O2), 20.8 to 22.2 (-O3) | 10.8 to 11.2 |
-| the constructor, 2 limbs, N = 7 | 13.2 to 13.6 (-O2), 13.5 to 14 (-O3) | 17.6 to 18.2 (-O2), 4.98 (-O3) | 22.5 to 23.4 (-O2), 20.5 to 21.1 (-O3) | 22.1 |
-| the constructor, 2 limbs, N = 13 | 19.1 to 19.5 (-O2), 27.5 to 28.2 (-O3) | 29.3 to 29.9 (-O2), 10 to 10.1 (-O3) | 46 to 46.4 (-O2), 28.9 to 29.2 (-O3) | 31 to 34 (-O2), 39.7 to 39.8 (-O3) |
-| the constructor, 2 limbs, N = 18 | 32.2 to 32.9 (-O2), 34.6 to 34.7 (-O3) | 57.9 to 59.2 (-O2), 37.5 (-O3) | 64.2 to 64.3 (-O2), 35.7 to 35.8 (-O3) | 41.8 to 45.5 (-O2), 50.6 to 50.7 (-O3) |
-| the constructor, 2 limbs, N = 80 | 92.2 to 94.1 (-O2), 93.7 to 97.1 (-O3) | 278 to 296 (-O2), 269 (-O3) | 222 to 227 (-O2), 195 to 196 (-O3) | 143 to 147 |
+| `add(x, y, z)`, 1 limb, N = 3 | 2.28 to 2.29 | 2.3 to 2.38 (-O2), 2.26 to 2.3 (-O3) | 11 to 11.2 (-O2), 9.49 to 9.52 (-O3) | 8.4 to 8.44 |
+| `add(x, y, z)`, 1 limb, N = 7 | 3 to 3.04 | 4.27 to 4.46 (-O2), 2.86 to 2.93 (-O3) | 12.3 to 12.4 (-O2), 11 (-O3) | 9.32 to 9.36 |
+| `add(x, y, z)`, 1 limb, N = 13 | 4.44 to 4.61 | 5.05 to 5.13 (-O2), 4.04 to 4.09 (-O3) | 12.4 to 12.7 (-O2), 10.7 to 10.8 (-O3) | 9.52 to 9.7 |
+| `add(x, y, z)`, 1 limb, N = 18 | 6.06 to 6.51 (-O2), 5.83 to 6.16 (-O3) | 6.25 to 6.39 (-O2), 5.14 to 5.25 (-O3) | 14.2 (-O2), 12.5 to 12.7 (-O3) | 10.3 to 10.4 |
+| `add(x, y, z)`, 1 limb, N = 80 | 30.4 to 31.2 (-O2), 29.6 to 29.7 (-O3) | 33 to 34.4 (-O2), 27.4 to 27.9 (-O3) | 27.7 to 28.9 | 22.4 to 22.9 (-O2), 21.7 to 22 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | 4.9 to 5 | 6.16 to 6.81 (-O2), 4.63 to 4.72 (-O3) | 26.7 to 26.8 (-O2), 19.2 to 19.3 (-O3) | 17.9 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 9.01 to 9.21 | 9.63 to 10.1 (-O2), 8.42 to 8.62 (-O3) | 31.4 to 31.5 (-O2), 25 to 25.1 (-O3) | 23.1 to 23.2 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 14.7 to 15 | 15.4 to 15.9 (-O2), 13.8 to 14 (-O3) | 30.7 to 30.8 (-O2), 25.4 (-O3) | 23.8 to 23.9 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 19.3 to 19.5 | 19.9 to 20.9 (-O2), 18.4 to 18.7 (-O3) | 40.6 to 40.9 (-O2), 37.2 to 37.4 (-O3) | 34.7 to 34.9 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 75.7 to 77 | 75.6 to 78.7 (-O2), 72.7 to 74.1 (-O3) | 102 (-O2), 96.3 to 98 (-O3) | 95.9 to 96.3 |
+| `z = x + y`, 1 limb, N = 3 | 2.38 to 2.45 | 2.38 to 2.52 (-O2), 2.34 to 2.39 (-O3) | 16.9 to 17.8 (-O2), 16 to 16.9 (-O3) | 8.39 to 8.45 |
+| `z = x + y`, 1 limb, N = 7 | 3.46 to 3.53 | 4.3 to 4.49 (-O2), 3.48 to 3.62 (-O3) | 17.5 to 18.6 (-O2), 17.2 to 18.1 (-O3) | 9.72 to 9.77 |
+| `z = x + y`, 1 limb, N = 13 | 5.2 to 5.32 | 6.71 to 7.08 (-O2), 4.95 to 5.05 (-O3) | 17.3 (-O2), 16.3 to 16.4 (-O3) | 9.97 to 10.1 |
+| `z = x + y`, 1 limb, N = 18 | 9.52 to 10.3 (-O2), 9.48 to 9.54 (-O3) | 8.85 to 9.28 (-O2), 6.3 to 6.46 (-O3) | 17.5 to 18.3 | 11.4 to 11.7 |
+| `z = x + y`, 1 limb, N = 80 | 40.9 to 42.1 | 45.7 to 47.7 (-O2), 39.1 to 40 (-O3) | 84.6 to 88 (-O2), 83.8 to 84.2 (-O3) | 40.3 to 46.9 (-O2), 41.3 to 41.5 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 5.4 to 5.51 | 7.71 to 7.89 (-O2), 5.19 to 5.3 (-O3) | 30.5 to 30.7 (-O2), 22.4 to 22.6 (-O3) | 20.7 to 20.8 |
+| `z = x + y`, 2 limbs, N = 7 | 10.1 to 10.3 | 11.6 to 11.9 (-O2), 8.98 to 9.16 (-O3) | 35.5 to 35.8 (-O2), 29 to 29.1 (-O3) | 26.9 to 27 |
+| `z = x + y`, 2 limbs, N = 13 | 17.1 to 17.3 | 18.2 to 19 (-O2), 15.3 to 15.7 (-O3) | 50.7 to 50.8 (-O2), 29.9 to 30.1 (-O3) | 29.6 to 29.9 |
+| `z = x + y`, 2 limbs, N = 18 | 22.4 to 22.8 | 25.1 to 26.2 (-O2), 22.9 to 23.4 (-O3) | 62.7 to 62.9 (-O2), 55.6 to 55.8 (-O3) | 42 to 42.4 |
+| `z = x + y`, 2 limbs, N = 80 | 104 | 106 to 110 (-O2), 98.8 to 101 (-O3) | 168 to 170 (-O2), 160 to 162 (-O3) | 131 to 136 |
+| `sub`, 1 limb, N = 3 | 2.24 to 2.26 | 2.3 to 2.4 (-O2), 2.26 to 2.3 (-O3) | 11 to 11.2 (-O2), 9.48 to 9.52 (-O3) | 8.4 to 8.44 |
+| `sub`, 1 limb, N = 7 | 3.01 to 3.04 | 4.01 to 4.18 (-O2), 2.86 to 2.92 (-O3) | 12.5 (-O2), 11.2 (-O3) | 9.33 to 9.36 |
+| `sub`, 1 limb, N = 13 | 4.52 to 4.71 | 5.14 to 5.39 (-O2), 4.04 to 4.12 (-O3) | 12.5 (-O2), 10.7 to 10.8 (-O3) | 9.54 to 9.74 |
+| `sub`, 1 limb, N = 18 | 6.36 to 6.43 (-O2), 6.16 to 6.83 (-O3) | 6.26 to 6.54 (-O2), 5.12 to 5.22 (-O3) | 14.2 to 14.4 (-O2), 12.6 (-O3) | 10.4 to 10.6 |
+| `sub`, 1 limb, N = 80 | 29.3 to 30.6 | 32.9 to 34.3 (-O2), 27.5 to 28 (-O3) | 28.8 to 29 (-O2), 27.6 to 27.8 (-O3) | 22 to 22.8 |
+| `sub`, 2 limbs, N = 3 | 5.2 to 5.38 | 6.39 to 6.67 (-O2), 4.88 to 4.95 (-O3) | 27.1 to 27.2 (-O2), 20 (-O3) | 18.7 to 18.8 |
+| `sub`, 2 limbs, N = 7 | 9.85 to 9.93 | 10.2 to 10.6 (-O2), 8.95 to 9.15 (-O3) | 31.9 to 32 (-O2), 27.4 to 27.5 (-O3) | 26.1 to 26.2 |
+| `sub`, 2 limbs, N = 13 | 16 to 16.1 | 16.3 to 17 (-O2), 15 to 15.3 (-O3) | 30.9 to 31 (-O2), 26.7 to 26.8 (-O3) | 26.7 to 26.8 |
+| `sub`, 2 limbs, N = 18 | 20.3 to 20.5 | 21.3 to 22.2 (-O2), 19.3 to 19.7 (-O3) | 40.9 to 41 (-O2), 37.7 to 37.9 (-O3) | 36 to 36.6 |
+| `sub`, 2 limbs, N = 80 | 80.5 to 80.9 | 83 to 87.1 (-O2), 75.4 to 77.1 (-O3) | 104 (-O2), 98.5 to 100 (-O3) | 97.9 to 99 |
+| `scale`, 1 limb, N = 3 | 2.24 to 2.32 | 2.35 to 2.45 (-O2), 2.31 to 2.36 (-O3) | 11.3 (-O2), 9.33 to 9.36 (-O3) | 8.39 to 8.43 |
+| `scale`, 1 limb, N = 7 | 2.92 to 2.98 | 4 to 4.17 (-O2), 2.89 to 2.94 (-O3) | 12.7 (-O2), 11.3 to 11.4 (-O3) | 9.36 to 9.39 |
+| `scale`, 1 limb, N = 13 | 4.29 to 4.42 (-O2), 4.17 (-O3) | 4.92 to 5.15 (-O2), 4.09 to 4.18 (-O3) | 12.2 to 12.3 (-O2), 11.2 to 11.3 (-O3) | 9.47 to 9.61 |
+| `scale`, 1 limb, N = 18 | 5.73 to 6.05 (-O2), 5.7 to 5.72 (-O3) | 6.23 to 6.51 (-O2), 5.14 to 5.23 (-O3) | 13.8 to 13.9 (-O2), 12.8 (-O3) | 10.4 |
+| `scale`, 1 limb, N = 80 | 27 to 28.2 | 30 to 30.8 (-O2), 25.2 to 25.5 (-O3) | 28.6 to 28.9 | 20.6 to 20.7 (-O2), 25.8 to 26.9 (-O3) |
+| `scale`, 2 limbs, N = 3 | 3.07 to 3.17 | 4.79 (-O2), 2.85 to 2.91 (-O3) | 19.6 (-O2), 11.1 to 11.2 (-O3) | 9.96 to 10 |
+| `scale`, 2 limbs, N = 7 | 4.54 to 4.71 | 6.43 to 6.73 (-O2), 4.46 to 4.55 (-O3) | 22.3 to 22.4 (-O2), 15.7 (-O3) | 12.9 to 13 |
+| `scale`, 2 limbs, N = 13 | 7.55 to 7.84 | 8.83 to 9.21 (-O2), 6.99 to 7.13 (-O3) | 22.7 to 22.8 (-O2), 15.4 to 15.5 (-O3) | 13.9 to 14 |
+| `scale`, 2 limbs, N = 18 | 10 to 10.2 | 10.9 to 11.4 (-O2), 9.11 to 9.28 (-O3) | 25.5 to 25.7 (-O2), 18.7 to 18.8 (-O3) | 16.3 to 16.4 |
+| `scale`, 2 limbs, N = 80 | 39.7 to 40.6 | 40.2 to 41.8 (-O2), 38.1 to 38.9 (-O3) | 53.7 to 54.2 (-O2), 47.9 to 48.2 (-O3) | 44.6 to 45.1 |
+| `half`, 1 limb, N = 3 | 3.3 to 3.33 | 4.52 to 4.61 (-O2), 2.67 to 2.72 (-O3) | 19.4 to 19.5 (-O2), 11.4 to 11.5 (-O3) | 11.2 |
+| `half`, 1 limb, N = 7 | 4.6 to 4.62 | 5.36 to 5.6 (-O2), 4.01 to 4.08 (-O3) | 20.7 (-O2), 15.2 to 15.3 (-O3) | 13.9 to 14.1 |
+| `half`, 1 limb, N = 13 | 7.03 to 7.11 | 7.4 to 7.72 (-O2), 5.97 to 6.1 (-O3) | 20.1 to 20.2 (-O2), 13.7 (-O3) | 14.1 to 14.2 |
+| `half`, 1 limb, N = 18 | 8.11 to 8.29 | 8.84 to 9.22 (-O2), 7.5 to 7.64 (-O3) | 22.6 to 22.8 (-O2), 16.7 (-O3) | 17.1 to 17.2 |
+| `half`, 1 limb, N = 80 | 33.8 to 35.3 | 35.2 to 36.7 (-O2), 33.4 to 34.1 (-O3) | 39.7 to 40.2 (-O2), 36.2 to 36.3 (-O3) | 37 to 37.2 |
+| `half`, 2 limbs, N = 3 | 4.14 to 4.23 | 5.32 to 5.55 (-O2), 3.41 to 3.48 (-O3) | 22.7 to 22.8 (-O2), 16.6 to 16.7 (-O3) | 14.5 to 14.7 |
+| `half`, 2 limbs, N = 7 | 7.04 to 7.14 | 7.8 to 8.11 (-O2), 5.89 to 6.01 (-O3) | 26.5 (-O2), 22.6 to 22.7 (-O3) | 18.7 |
+| `half`, 2 limbs, N = 13 | 10.4 to 10.6 | 10.9 to 11.4 (-O2), 9.2 to 9.38 (-O3) | 24.4 to 24.5 (-O2), 19.4 (-O3) | 19.1 to 19.2 |
+| `half`, 2 limbs, N = 18 | 13.1 to 13.4 | 13.5 to 14.1 (-O2), 11.8 to 12.1 (-O3) | 29.8 to 30.1 (-O2), 24.6 (-O3) | 22.9 to 23 |
+| `half`, 2 limbs, N = 80 | 48.1 to 48.3 | 47.2 to 49.4 | 60.9 to 61 (-O2), 55.6 to 56.3 (-O3) | 56.1 to 56.4 |
+| the constructor, 1 limb, N = 3 | 4.47 to 4.66 | 3.36 to 3.52 (-O2), 2.43 (-O3) | 16.5 to 17.4 (-O2), 16.5 to 17.8 (-O3) | 8.95 to 9.03 |
+| the constructor, 1 limb, N = 7 | 8.79 to 9.06 | 8.63 to 9.33 (-O2), 3.5 to 3.51 (-O3) | 19.1 to 19.5 (-O2), 18.3 to 19 (-O3) | 12.2 |
+| the constructor, 1 limb, N = 13 | 15.1 to 15.2 | 17.4 to 18.2 (-O2), 6.43 to 6.72 (-O3) | 24 to 24.1 (-O2), 22.9 (-O3) | 21 to 21.1 |
+| the constructor, 1 limb, N = 18 | 18.9 to 19.1 (-O2), 24 to 26.3 (-O3) | 24.2 to 25.1 | 29 to 29.4 (-O2), 28.9 to 30.4 (-O3) | 24.5 (-O2), 35.9 to 36.7 (-O3) |
+| the constructor, 1 limb, N = 80 | 70.8 to 73 | 209 to 218 (-O2), 196 to 213 (-O3) | 148 to 150 | 68.8 to 81.4 (-O2), 71.3 to 71.7 (-O3) |
+| the constructor, 2 limbs, N = 3 | 6.57 to 6.59 | 4.63 to 4.87 (-O2), 3.01 to 3.09 (-O3) | 18.3 to 18.9 (-O2), 20.7 to 22.1 (-O3) | 10.8 |
+| the constructor, 2 limbs, N = 7 | 13.2 | 17.6 to 18.4 (-O2), 4.98 to 5.08 (-O3) | 22.6 to 23.4 (-O2), 20.5 to 21.1 (-O3) | 21.5 to 22.1 |
+| the constructor, 2 limbs, N = 13 | 22.2 to 22.9 (-O2), 19.3 to 21.1 (-O3) | 29 to 30.5 (-O2), 10 to 10.4 (-O3) | 46.3 to 46.6 (-O2), 28.8 to 29.1 (-O3) | 33.9 (-O2), 35.9 to 37.9 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.8 to 32.9 (-O2), 26.1 (-O3) | 65.9 to 68.7 (-O2), 37.5 to 41.3 (-O3) | 58.9 to 59.2 (-O2), 35.2 to 35.4 (-O3) | 47.3 to 51.7 (-O2), 40.3 to 43.1 (-O3) |
+| the constructor, 2 limbs, N = 80 | 89.4 to 93 | 289 to 301 (-O2), 252 to 274 (-O3) | 243 to 248 (-O2), 195 (-O3) | 147 to 149 |
 
 | Short ball vectors, 2026-11-23, one operation per unit, many vectors: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.075 to -0.001 (-O2), 0.016 to 0.075 (-O3) | -0.104 to -0.048 (-O2), 0.08 to 0.088 (-O3) | 1.81 to 1.86 (-O2), 3.84 to 3.88 (-O3) | 3.71 to 3.74 |
-| `add(x, y, z)`, 1 limb, N = 7 | 0.062 to 0.102 (-O2), 0.072 to 0.242 (-O3) | -0.058 to 0.018 (-O2), 0.058 to 0.063 (-O3) | 1.89 to 1.96 (-O2), 2.04 to 2.14 (-O3) | 2.55 to 2.67 |
-| `add(x, y, z)`, 1 limb, N = 13 | -0.025 to 0.025 (-O2), 0.019 to 0.049 (-O3) | 0.143 to 0.214 (-O2), -0.032 to -0.03 (-O3) | 2.24 to 2.35 (-O2), 1.77 to 1.81 (-O3) | 2.42 to 2.53 |
-| `add(x, y, z)`, 1 limb, N = 18 | -0.454 to 0.123 (-O2), -0.236 to 0.121 (-O3) | 0.313 to 0.387 (-O2), -0.048 to 0.021 (-O3) | 2 to 2.25 (-O2), 2.02 to 2.37 (-O3) | 2.27 to 2.34 |
-| `add(x, y, z)`, 1 limb, N = 80 | 0.27 to 0.89 (-O2), -1.09 to -0.33 (-O3) | -1.15 to 1.13 (-O2), 0 to 0.08 (-O3) | 2.91 to 3.43 (-O2), 5.37 to 5.71 (-O3) | 3.78 to 4.06 (-O2), 3.06 to 3.24 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.024 to 0.122 (-O2), -0.073 to 0.028 (-O3) | 0.051 to 0.117 (-O2), 0.023 to 0.031 (-O3) | 2.64 to 2.83 (-O2), 2.54 to 2.62 (-O3) | 2.31 to 2.36 (-O2), 2.08 to 2.15 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.05 to -0.019 (-O2), -0.426 to 0.053 (-O3) | -0.045 to 0.047 (-O2), -0.043 to -0.022 (-O3) | 1.62 to 2.05 (-O2), 2.07 to 2.13 (-O3) | 2.6 to 2.7 |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.35 to -0.15 (-O2), 0.4 to 0.56 (-O3) | -0.3 to 0.19 (-O2), 0.04 to 0.09 (-O3) | 2.7 to 2.91 (-O2), 1.99 to 2.04 (-O3) | 2.45 to 2.48 (-O2), 2.37 to 2.49 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 18 | -0.42 to 0.01 (-O2), 0 to 0.4 (-O3) | -0.13 to -0.06 (-O2), 0.39 to 0.42 (-O3) | 5 to 5.41 (-O2), 4.6 to 4.72 (-O3) | 4.21 to 4.5 (-O2), 4.26 to 4.45 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.62 to 0.94 (-O2), -0.36 to -0.27 (-O3) | -2.54 to -1.96 (-O2), -0.04 to 0.36 (-O3) | 3.63 to 5.35 (-O2), 3.12 to 4.86 (-O3) | 4.32 to 4.38 (-O2), 4.52 to 4.73 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | 0.019 to 0.063 (-O2), 0.043 to 0.117 (-O3) | 0.215 to 0.234 (-O2), 0.14 (-O3) | 5.37 to 6.05 (-O2), 5.94 to 6.89 (-O3) | 2.58 to 2.84 (-O2), 2.79 to 2.82 (-O3) |
-| `z = x + y`, 1 limb, N = 7 | -0.03 to 0.023 (-O2), 0.009 to 0.027 (-O3) | 0.405 to 0.488 (-O2), 0.402 to 0.436 (-O3) | 5.05 to 5.61 (-O2), 6.43 to 7.38 (-O3) | 2.42 to 2.54 |
-| `z = x + y`, 1 limb, N = 13 | -0.09 to -0.011 (-O2), -0.44 to 0.689 (-O3) | 0.408 to 0.429 (-O2), 0.079 to 0.107 (-O3) | 4.42 to 4.63 (-O2), 5.07 to 5.12 (-O3) | 2.07 to 2.35 (-O2), 2 to 2.14 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | -0.248 to 0.788 (-O2), 0.124 to 0.658 (-O3) | 0.072 to 0.413 (-O2), -0.077 to -0.041 (-O3) | 3.53 to 3.71 (-O2), 4.79 to 5.07 (-O3) | 1.68 to 1.98 (-O2), 1.79 to 1.91 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | -0.65 to -0.44 (-O2), -0.07 to 0.94 (-O3) | 0.14 to 0.15 (-O2), 0.04 to 0.15 (-O3) | -0.63 to 0.35 (-O2), 4.62 to 7.35 (-O3) | -3.24 to 7.29 (-O2), 0.49 to 3.27 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -0.018 to 0.082 (-O2), -0.073 to 0.018 (-O3) | 0.166 to 0.37 (-O2), 0.163 to 0.17 (-O3) | 3.09 to 3.49 (-O2), 3.25 to 3.35 (-O3) | 0.71 to 2.84 (-O2), 0.94 to 4.22 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 0.01 to 0.34 (-O2), 0.03 to 0.22 (-O3) | 0.02 to 0.18 (-O2), 0.122 to 0.153 (-O3) | 2.64 to 2.88 (-O2), 2.45 to 2.53 (-O3) | 0.7 to 2.53 (-O2), 0.91 to 3.99 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -0.01 to 0.32 (-O2), -0.09 to 0.2 (-O3) | 0.23 to 0.66 (-O2), 0.38 to 0.44 (-O3) | 2.81 to 3.01 (-O2), 2.7 to 2.85 (-O3) | 1.07 to 2.84 (-O2), 1.01 to 4.09 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | -0.19 to 0.24 (-O2), 0.11 to 1.08 (-O3) | -0.53 to -0.06 (-O2), 0.9 to 0.95 (-O3) | 0.37 to 0.76 (-O2), 2.82 to 3.04 (-O3) | 1.6 to 4.17 (-O2), 1.44 to 5.64 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | -1.6 to -0.2 (-O2), 0.1 to 0.7 (-O3) | -1 to 3.5 (-O2), -0.05 to 2.59 (-O3) | -8 to 2.1 (-O2), -0.8 to 4.3 (-O3) | -2.7 to 6 (-O2), -1.9 to 2.1 (-O3) |
-| `sub`, 1 limb, N = 3 | -0.019 to 0.056 (-O2), -0.022 to -0.01 (-O3) | 0.073 to 0.11 (-O2), 0.081 to 0.085 (-O3) | 1.66 to 1.74 (-O2), 3.79 to 3.82 (-O3) | 3.69 to 3.73 |
-| `sub`, 1 limb, N = 7 | -0.004 to 0.116 (-O2), 0.08 to 0.195 (-O3) | -0.002 to 0.004 (-O2), 0.086 to 0.109 (-O3) | 1.86 to 1.89 (-O2), 1.95 to 2.05 (-O3) | 2.6 to 2.67 |
-| `sub`, 1 limb, N = 13 | -0.12 to 0.026 (-O2), 0.009 to 0.11 (-O3) | -0.005 to 0.145 (-O2), 0.053 to 0.081 (-O3) | 2.27 to 2.42 (-O2), 1.84 to 1.91 (-O3) | 2.36 to 2.44 |
-| `sub`, 1 limb, N = 18 | -0.333 to 0.023 (-O2), 0.54 to 0.609 (-O3) | 0.273 to 0.39 (-O2), 0.009 to 0.075 (-O3) | 2.25 to 2.79 (-O2), 1.87 to 1.97 (-O3) | 2.15 to 2.22 (-O2), 2.16 to 2.27 (-O3) |
-| `sub`, 1 limb, N = 80 | 0.38 to 0.67 (-O2), -0.19 to 0.76 (-O3) | -0.03 to 0.18 (-O2), -0.05 to -0.02 (-O3) | 2.78 to 2.98 (-O2), 5.3 to 5.52 (-O3) | 3.45 to 3.76 (-O2), 3.31 to 3.47 (-O3) |
-| `sub`, 2 limbs, N = 3 | -0.152 to 0.131 (-O2), 0.007 to 0.361 (-O3) | 0.122 to 0.245 (-O2), 0.086 to 0.092 (-O3) | 2.59 to 2.77 (-O2), 2.65 to 2.71 (-O3) | 2.47 to 2.56 |
-| `sub`, 2 limbs, N = 7 | -0.115 to 0.112 (-O2), -0.124 to 0.43 (-O3) | 0.02 to 0.26 (-O2), 0.031 to 0.051 (-O3) | 1.92 to 2.03 (-O2), 2.76 to 2.78 (-O3) | 3.15 to 3.3 |
-| `sub`, 2 limbs, N = 13 | -0.24 to 0.24 (-O2), 0.12 to 0.71 (-O3) | -0.04 to 0.39 (-O2), 0.12 to 0.17 (-O3) | 2.39 to 2.59 (-O2), 3.08 to 3.11 (-O3) | 3.52 to 3.62 |
-| `sub`, 2 limbs, N = 18 | -0.31 to -0.03 (-O2), -0.19 to 0.79 (-O3) | 0.25 to 0.85 (-O2), 0.02 to 0.13 (-O3) | 4.69 to 4.76 (-O2), 4.23 to 4.52 (-O3) | 4.66 to 4.93 (-O2), 4.76 to 4.83 (-O3) |
-| `sub`, 2 limbs, N = 80 | -0.05 to 1.15 (-O2), -1.54 to 0.25 (-O3) | 1.34 to 3.64 (-O2), 0.7 to 0.88 (-O3) | 4.12 to 5.48 (-O2), 3.39 to 4.38 (-O3) | 4.69 to 5.04 (-O2), 4.5 to 4.89 (-O3) |
-| `scale`, 1 limb, N = 3 | 0.082 to 0.155 (-O2), 0.123 to 0.275 (-O3) | 0.081 to 0.137 (-O2), 0.084 to 0.088 (-O3) | 2.37 to 2.42 (-O2), 3.4 to 3.42 (-O3) | 3.87 to 3.9 |
-| `scale`, 1 limb, N = 7 | 0.115 to 0.138 (-O2), 0.083 to 0.186 (-O3) | 0.003 to 0.054 (-O2), 0.115 to 0.117 (-O3) | 1.95 to 2.08 (-O2), 2.25 to 2.29 (-O3) | 2.6 to 2.66 |
-| `scale`, 1 limb, N = 13 | 0.186 to 0.324 (-O2), -0.013 to 0.261 (-O3) | 0.075 to 0.296 (-O2), 0.156 to 0.159 (-O3) | 2.09 to 2.26 (-O2), 2.17 to 2.35 (-O3) | 2.47 to 2.55 |
-| `scale`, 1 limb, N = 18 | 0.138 to 0.286 (-O2), 0.299 to 0.471 (-O3) | 0.315 to 0.368 (-O2), 0.099 to 0.107 (-O3) | 1.94 to 2.06 (-O2), 1.97 to 2.08 (-O3) | 2.5 to 2.58 (-O2), 2.46 to 2.6 (-O3) |
-| `scale`, 1 limb, N = 80 | -0.44 to 1.25 (-O2), 0.49 to 1.02 (-O3) | 0.39 to 0.55 (-O2), 0.46 to 0.5 (-O3) | 2.12 to 2.2 (-O2), 6.19 to 6.4 (-O3) | 3.01 to 3.27 (-O2), 2.52 to 4.13 (-O3) |
-| `scale`, 2 limbs, N = 3 | 0.022 to 0.054 (-O2), -0.107 to -0.056 (-O3) | 0.109 to 0.296 (-O2), 0.11 to 0.113 (-O3) | 2.43 to 2.63 (-O2), 1.64 to 1.69 (-O3) | 2.37 to 2.48 |
-| `scale`, 2 limbs, N = 7 | -0.008 to 0.145 (-O2), -0.109 to -0.077 (-O3) | -0.087 to 0.207 (-O2), 0.038 to 0.048 (-O3) | 2.85 to 3.01 (-O2), 2.07 to 2.12 (-O3) | 1.83 to 1.93 (-O2), 1.78 to 1.85 (-O3) |
-| `scale`, 2 limbs, N = 13 | -0.187 to 0.464 (-O2), 0.307 to 0.544 (-O3) | 0.101 to 0.258 (-O2), 0.013 to 0.022 (-O3) | 2.74 to 2.89 (-O2), 1.92 to 2.02 (-O3) | 2.91 to 3.01 |
-| `scale`, 2 limbs, N = 18 | 0.294 to 0.458 (-O2), 0.471 to 0.665 (-O3) | 0.1 to 0.13 (-O2), -0.012 to -0.008 (-O3) | 2.68 to 2.74 (-O2), 1.74 to 1.77 (-O3) | 1.65 to 1.91 (-O2), 1.67 to 1.87 (-O3) |
-| `scale`, 2 limbs, N = 80 | -0.9 to 0.1 (-O2), 0.12 to 0.3 (-O3) | 0.02 to 0.2 (-O2), 0.2 to 0.29 (-O3) | 2.27 to 3.36 (-O2), 0.89 to 1.3 (-O3) | 1.28 to 2.16 (-O2), 1.36 to 2.51 (-O3) |
-| `half`, 1 limb, N = 3 | -0.001 to 0.085 (-O2), 0.083 to 0.189 (-O3) | -0.275 to -0.264 (-O2), 0.117 to 0.119 (-O3) | 2.38 to 2.4 (-O2), 2.89 to 2.93 (-O3) | 2.38 to 2.46 |
-| `half`, 1 limb, N = 7 | -0.026 to 0.091 (-O2), 0.093 to 0.324 (-O3) | -0.388 to -0.248 (-O2), 0 to 0.003 (-O3) | 2.03 to 2.1 (-O2), 2.56 to 3.04 (-O3) | 2.04 to 2.06 (-O2), 1.95 to 1.99 (-O3) |
-| `half`, 1 limb, N = 13 | -0.017 to 0.142 (-O2), 0.064 to 0.104 (-O3) | -0.085 to -0.082 (-O2), 0.085 to 0.087 (-O3) | 2.25 to 2.61 (-O2), 1.85 to 2.01 (-O3) | 2.09 to 2.15 (-O2), 2.07 to 2.19 (-O3) |
-| `half`, 1 limb, N = 18 | -0.079 to 0.208 (-O2), -0.131 to 0.254 (-O3) | -0.376 to 0.068 (-O2), 0.248 to 0.249 (-O3) | 2.16 to 2.44 (-O2), 1.92 to 2.02 (-O3) | 3.62 to 3.72 |
-| `half`, 1 limb, N = 80 | -0.73 to -0.11 (-O2), -0.07 to 1.26 (-O3) | -0.29 to 0.14 (-O2), 0.67 to 0.77 (-O3) | 3.99 to 4.2 (-O2), 4.34 to 4.59 (-O3) | 5.46 to 5.58 (-O2), 5.78 to 5.97 (-O3) |
-| `half`, 2 limbs, N = 3 | -0.046 to 0.149 (-O2), 0.062 to 0.14 (-O3) | 0.12 to 0.15 (-O2), 0.154 to 0.155 (-O3) | 1.28 to 1.4 (-O2), 2.82 to 2.89 (-O3) | 2.04 to 2.07 (-O2), 1.97 to 2 (-O3) |
-| `half`, 2 limbs, N = 7 | 0.017 to 0.162 (-O2), -0.012 to 0.083 (-O3) | -0.173 to 0.154 (-O2), 0.148 to 0.15 (-O3) | 1.03 to 1.2 (-O2), 2.95 to 3 (-O3) | 2.75 to 2.83 |
-| `half`, 2 limbs, N = 13 | -0.05 to 0.35 (-O2), 0.14 to 0.42 (-O3) | 0.24 to 0.41 (-O2), 0.246 to 0.251 (-O3) | 1.66 to 1.96 (-O2), 3.12 to 3.19 (-O3) | 2.98 to 3.01 (-O2), 2.86 to 2.91 (-O3) |
-| `half`, 2 limbs, N = 18 | -0.1 to 0.31 (-O2), 0.11 to 0.65 (-O3) | -0.02 to 0.29 (-O2), 0.17 to 0.18 (-O3) | 0.93 to 1.16 (-O2), 2.77 to 2.83 (-O3) | 2.77 to 2.9 (-O2), 2.82 to 3.01 (-O3) |
-| `half`, 2 limbs, N = 80 | 0.19 to 0.55 (-O2), -0.12 to 0.78 (-O3) | -0.16 to 0.12 (-O2), 0.12 to 0.14 (-O3) | 3.56 to 4.1 (-O2), 4.24 to 5.11 (-O3) | 5.43 to 5.89 (-O2), 5.32 to 5.77 (-O3) |
-| the constructor, 1 limb, N = 3 | 1.29 to 1.36 (-O2), 1.25 to 1.31 (-O3) | 0.153 to 0.208 (-O2), 0.18 to 0.225 (-O3) | 6.18 to 6.36 (-O2), 5.7 to 6.94 (-O3) | 2.96 to 3.01 |
-| the constructor, 1 limb, N = 7 | 2.23 to 2.53 (-O2), 2.56 to 2.69 (-O3) | -5.69 to -4.8 (-O2), 0.119 to 0.133 (-O3) | 4.67 to 5.2 (-O2), 5.33 to 6.44 (-O3) | 1.07 to 1.24 (-O2), 1.06 to 1.17 (-O3) |
-| the constructor, 1 limb, N = 13 | 4.08 to 4.26 (-O2), 3.91 to 4.19 (-O3) | 0.41 to 0.71 (-O2), 0.398 to 0.4 (-O3) | 2.67 to 2.78 (-O2), 4.09 to 4.2 (-O3) | 1.79 to 1.9 (-O2), 1.74 to 1.83 (-O3) |
-| the constructor, 1 limb, N = 18 | 4.54 to 5.37 (-O2), 0.86 to 1.27 (-O3) | -1.73 to -0.14 (-O2), 0.19 to 0.2 (-O3) | 2.45 to 3.02 (-O2), 2.57 to 3.97 (-O3) | 0.15 to 1.14 (-O2), 0.28 to 0.45 (-O3) |
-| the constructor, 1 limb, N = 80 | -0.16 to 1.22 (-O2), -2.6 to 1.04 (-O3) | -3.2 to 1.1 (-O2), 0.8 to 14.9 (-O3) | 3.2 to 5.8 (-O2), 2.6 to 3.5 (-O3) | -2.72 to 3.6 (-O2), -3.96 to 2.13 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.07 to 1.21 (-O2), 1.08 to 1.11 (-O3) | 0.13 to 0.214 (-O2), 0.253 to 0.303 (-O3) | 5.94 to 6.04 (-O2), 7.82 to 9.84 (-O3) | 0.919 to 1.3 (-O2), 0.912 to 0.923 (-O3) |
-| the constructor, 2 limbs, N = 7 | 2.66 to 3.12 (-O2), 2.9 to 3.17 (-O3) | -0.02 to 0.57 (-O2), 0.46 to 0.466 (-O3) | 0.99 to 1.7 (-O2), 4.59 to 5.24 (-O3) | 1 to 1.06 (-O2), 0.96 to 0.98 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.37 to -0.05 (-O2), 0.48 to 1.25 (-O3) | 0.11 to 0.81 (-O2), -0.21 to -0.17 (-O3) | 0.79 to 0.97 (-O2), 4.81 to 5.05 (-O3) | -2.36 to 2.37 (-O2), 1.57 to 1.67 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.05 to 0.16 (-O2), 0.25 to 1.09 (-O3) | -8.16 to -4.83 (-O2), 0.01 to 0.07 (-O3) | 1.55 to 2.63 (-O2), -14.7 (-O3) | -4.04 to 4.57 (-O2), 1.34 to 1.53 (-O3) |
-| the constructor, 2 limbs, N = 80 | -2.62 to 0.39 (-O2), -0.17 to 3.46 (-O3) | -3.8 to 7.1 (-O2), -0.5 to 13.8 (-O3) | -0.5 to 5.9 (-O2), -0.3 to 0.4 (-O3) | -3.5 to 3.9 (-O2), -2.2 to 1.5 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.018 to 0.044 (-O2), 0.039 to 0.062 (-O3) | 0.081 to 0.093 (-O2), 0.039 to 0.088 (-O3) | 2.01 to 2.22 (-O2), 3.86 to 3.88 (-O3) | 3.71 to 3.73 |
+| `add(x, y, z)`, 1 limb, N = 7 | 0.05 to 0.071 (-O2), 0.031 to 0.086 (-O3) | 0.264 to 0.278 (-O2), 0.096 to 0.131 (-O3) | 1.87 to 1.9 (-O2), 2.02 to 2.04 (-O3) | 2.61 to 2.67 |
+| `add(x, y, z)`, 1 limb, N = 13 | 0.027 to 0.063 (-O2), -0.096 to 0.012 (-O3) | 0.11 to 0.145 (-O2), -0.144 to 0.05 (-O3) | 2.09 to 2.35 (-O2), 1.84 to 1.95 (-O3) | 2.33 to 2.62 (-O2), 2.22 to 2.51 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 18 | -0.209 to 0.465 (-O2), -0.315 to -0.113 (-O3) | 0.221 to 0.319 (-O2), -0.113 to 0.009 (-O3) | 2.08 to 2.2 (-O2), 1.95 to 2.11 (-O3) | 2.26 to 2.29 (-O2), 2.21 to 2.35 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 80 | -0.04 to 0.32 (-O2), -1.48 to 0.46 (-O3) | 0.04 to 0.16 (-O2), 0.37 to 0.95 (-O3) | 3.22 to 3.42 (-O2), 5.44 to 5.47 (-O3) | 3.59 to 4.02 (-O2), 3.17 to 3.42 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | 0.024 to 0.125 (-O2), 0 to 0.027 (-O3) | -0.023 to 0.258 (-O2), -0.09 to 0.016 (-O3) | 2.62 to 2.69 (-O2), 2.47 to 2.58 (-O3) | 2.3 to 2.35 (-O2), 2.11 to 2.24 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 7 | -0.09 to 0.101 (-O2), 0.051 to 0.242 (-O3) | -0.17 to -0.098 (-O2), -0.193 to -0.022 (-O3) | 1.52 to 1.67 (-O2), 2.22 to 2.27 (-O3) | 2.61 to 2.69 |
+| `add(x, y, z)`, 2 limbs, N = 13 | -0.05 to 0.19 (-O2), 0.38 to 0.49 (-O3) | -0.21 to -0.1 (-O2), -0.57 to 0.05 (-O3) | 2.78 to 2.86 (-O2), 1.93 to 2.05 (-O3) | 2.45 to 2.51 (-O2), 2.25 to 2.52 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | -0.1 to 0.14 (-O2), -0.07 to 0.36 (-O3) | -0.16 to 0.18 (-O2), 0.03 to 0.4 (-O3) | 5.02 to 5.23 (-O2), 4.92 to 5.01 (-O3) | 4.39 to 4.55 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 0.02 to 1.3 (-O2), -2.44 to 0.48 (-O3) | -2.05 to -0.21 (-O2), -1.13 to 0.49 (-O3) | 3.45 to 4.72 (-O2), 3.59 to 5.56 (-O3) | 4.45 to 5.15 (-O2), 4.65 to 4.83 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | 0.052 to 0.061 (-O2), 0.095 to 0.114 (-O3) | 0.206 to 0.29 (-O2), 0.14 to 0.141 (-O3) | 5.4 to 6.26 (-O2), 5.02 to 6.87 (-O3) | 2.78 to 2.88 |
+| `z = x + y`, 1 limb, N = 7 | -0.027 to 0.012 (-O2), -0.011 to 0.019 (-O3) | 0.415 to 0.448 (-O2), 0.389 to 0.419 (-O3) | 4.84 to 5.83 (-O2), 5.65 to 7.16 (-O3) | 2.26 to 2.37 |
+| `z = x + y`, 1 limb, N = 13 | -0.01 to 0.122 (-O2), -0.197 to -0.084 (-O3) | 0.43 to 0.536 (-O2), 0.008 to 0.104 (-O3) | 4.52 to 4.75 (-O2), 5.12 to 5.2 (-O3) | 1.98 to 2.28 (-O2), 1.97 to 2.15 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -0.166 to 1.09 (-O2), -0.4 to 0.312 (-O3) | -0.16 to 0.223 (-O2), -0.022 to 0.011 (-O3) | 3.14 to 3.58 (-O2), 4.51 to 5.19 (-O3) | 1.83 to 2.03 (-O2), 1.74 to 1.89 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | -0.17 to 0.21 (-O2), -0.25 to 0.05 (-O3) | 0.08 to 1.13 (-O2), -0.49 to 0.45 (-O3) | -1.02 to 2.17 (-O2), 2.75 to 5.4 (-O3) | 3.34 to 10.4 (-O2), 0.58 to 2.52 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | -0.049 to 0.03 (-O2), -0.034 to 0.076 (-O3) | -0.149 to 0.093 (-O2), 0.172 to 0.224 (-O3) | 3.09 to 3.4 (-O2), 3.11 to 3.42 (-O3) | 2.4 to 2.45 (-O2), 1.21 to 3.99 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | -0.04 to 0.12 (-O2), -0.03 to 0.24 (-O3) | -0.29 to -0.05 (-O2), -0.053 to 0.166 (-O3) | 2.71 to 3.11 (-O2), 2.31 to 2.53 (-O3) | 2.41 to 2.51 (-O2), 0.5 to 4.05 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.35 to 0.55 (-O2), -1.51 to 0.32 (-O3) | -0.11 to 0.86 (-O2), 0.15 to 0.48 (-O3) | 2.84 to 3.51 (-O2), 2.47 to 2.83 (-O3) | 2.9 to 2.97 (-O2), 0.57 to 4.13 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | -0.47 to 0.11 (-O2), 0.14 to 0.32 (-O3) | 0 to 0.04 (-O2), 0.4 to 0.94 (-O3) | 0.33 to 0.46 (-O2), 2.87 to 3.02 (-O3) | 3.44 to 3.67 (-O2), 5.01 to 5.32 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | -0.2 to -0.1 (-O2), 0.6 to 0.7 (-O3) | -0.4 to 0.7 (-O2), -2.3 to -0.02 (-O3) | -1.2 to 3.5 (-O2), 0 to 2.8 (-O3) | 3.9 to 6.3 (-O2), -1.7 to 0.7 (-O3) |
+| `sub`, 1 limb, N = 3 | -0.018 to -0.006 (-O2), -0.01 to 0.049 (-O3) | 0.091 to 0.191 (-O2), 0.082 to 0.117 (-O3) | 1.9 to 2.14 (-O2), 3.84 to 3.87 (-O3) | 3.71 to 3.75 |
+| `sub`, 1 limb, N = 7 | 0.049 to 0.087 (-O2), 0.039 to 0.089 (-O3) | 0.005 to 0.174 (-O2), 0.078 to 0.122 (-O3) | 1.93 to 2.01 (-O2), 2.09 to 2.12 (-O3) | 2.56 to 2.63 |
+| `sub`, 1 limb, N = 13 | -0.012 to 0.19 (-O2), 0.015 to 0.042 (-O3) | 0.232 to 0.245 (-O2), -0.087 to -0.005 (-O3) | 2.16 to 2.27 (-O2), 1.96 (-O3) | 2.43 to 2.63 (-O2), 2.43 to 2.49 (-O3) |
+| `sub`, 1 limb, N = 18 | -0.041 to 0.066 (-O2), -0.119 to 0.803 (-O3) | 0.271 to 0.321 (-O2), -0.026 to 0.07 (-O3) | 2.12 to 2.36 (-O2), 2.05 to 2.07 (-O3) | 2.27 to 2.54 (-O2), 2.1 to 2.31 (-O3) |
+| `sub`, 1 limb, N = 80 | 0.22 to 0.53 (-O2), -0.18 to 0.23 (-O3) | 0.05 to 0.41 (-O2), -0.56 to 0.05 (-O3) | 3.16 to 3.3 (-O2), 5.12 to 5.51 (-O3) | 3.65 to 3.95 (-O2), 3.46 to 3.48 (-O3) |
+| `sub`, 2 limbs, N = 3 | -0.148 to 0.217 (-O2), -0.073 to 0.037 (-O3) | 0.085 to 0.121 (-O2), 0.08 to 0.102 (-O3) | 2.66 to 2.75 | 2.54 to 2.65 |
+| `sub`, 2 limbs, N = 7 | -0.008 to 0.065 (-O2), -0.32 to 0.071 (-O3) | 0.01 to 0.29 (-O2), -0.016 to 0.032 (-O3) | 2.3 to 2.4 (-O2), 2.74 to 2.78 (-O3) | 3.18 to 3.25 (-O2), 3.08 to 3.26 (-O3) |
+| `sub`, 2 limbs, N = 13 | -0.12 to 0.04 (-O2), 0.08 to 0.2 (-O3) | -0.03 to 0.01 (-O2), 0.05 to 0.14 (-O3) | 2.42 to 2.51 (-O2), 3.05 to 3.06 (-O3) | 3.54 to 3.57 (-O2), 3.36 to 3.56 (-O3) |
+| `sub`, 2 limbs, N = 18 | -0.28 to -0.17 (-O2), -0.37 to -0.12 (-O3) | 0.26 to 0.3 (-O2), 0.07 to 0.48 (-O3) | 4.43 to 4.73 (-O2), 4.61 to 4.67 (-O3) | 4.95 to 4.99 (-O2), 4.29 to 4.97 (-O3) |
+| `sub`, 2 limbs, N = 80 | -0.04 to 0.1 (-O2), -2.24 to 0.25 (-O3) | 0.77 to 3.63 (-O2), -3.62 to -0.36 (-O3) | 4.14 to 4.36 (-O2), 3.5 to 5.25 (-O3) | 4.19 to 4.73 (-O2), 3.83 to 5.83 (-O3) |
+| `scale`, 1 limb, N = 3 | 0.076 to 0.129 (-O2), 0.089 to 0.14 (-O3) | 0.081 to 0.125 (-O2), 0.088 to 0.091 (-O3) | 2.36 to 2.4 (-O2), 3.39 to 3.43 (-O3) | 3.88 to 3.9 |
+| `scale`, 1 limb, N = 7 | 0.119 to 0.14 (-O2), 0.094 to 0.123 (-O3) | -0.004 to 0.003 (-O2), 0.116 to 0.173 (-O3) | 2 to 2.04 (-O2), 2.28 to 2.33 (-O3) | 2.59 to 2.63 |
+| `scale`, 1 limb, N = 13 | 0.429 to 0.458 (-O2), -0.103 to 0.065 (-O3) | 0.038 to 0.094 (-O2), 0.178 to 0.221 (-O3) | 1.87 to 1.94 (-O2), 2.11 to 2.24 (-O3) | 2.28 to 2.51 (-O2), 2.49 to 2.54 (-O3) |
+| `scale`, 1 limb, N = 18 | -0.068 to 0.541 (-O2), -0.106 to 0.204 (-O3) | 0.331 to 0.36 (-O2), 0.102 to 0.218 (-O3) | 1.89 to 1.97 (-O2), 1.85 to 1.91 (-O3) | 2.46 to 2.51 (-O2), 2.34 to 2.5 (-O3) |
+| `scale`, 1 limb, N = 80 | 0.1 to 0.16 (-O2), -0.93 to 0.4 (-O3) | 0.02 to 0.54 (-O2), 0.54 to 0.82 (-O3) | 2.54 to 2.71 (-O2), 4.28 to 4.41 (-O3) | 2.96 to 3.12 (-O2), -10.1 to 2.3 (-O3) |
+| `scale`, 2 limbs, N = 3 | 0.024 to 0.116 (-O2), 0.03 to 0.042 (-O3) | -0.021 to 0.198 (-O2), 0.042 to 0.113 (-O3) | 2.5 to 2.52 (-O2), 1.61 to 1.65 (-O3) | 2.41 to 2.49 |
+| `scale`, 2 limbs, N = 7 | -0.007 to 0.032 (-O2), -0.117 to 0.176 (-O3) | 0.047 to 0.078 (-O2), -0.075 to 0.029 (-O3) | 2.52 to 2.77 (-O2), 2.05 to 2.08 (-O3) | 1.92 to 1.96 (-O2), 1.84 to 1.86 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.207 to 0.453 (-O2), -0.068 to 0.471 (-O3) | 0.099 to 0.103 (-O2), -0.139 to 0.019 (-O3) | 2.77 to 2.81 (-O2), 1.92 to 2.06 (-O3) | 2.9 to 2.98 (-O2), 2.74 to 3.04 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.342 to 0.527 (-O2), 0.256 to 0.332 (-O3) | 0.11 to 0.23 (-O2), -0.247 to -0.012 (-O3) | 2.7 to 2.85 (-O2), 1.61 to 1.78 (-O3) | 1.63 to 1.71 (-O2), 1.53 to 1.6 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.09 to 0.41 (-O2), -0.44 to 0.17 (-O3) | -0.22 to -0.01 (-O2), 0.18 to 0.29 (-O3) | 2.11 to 3.7 (-O2), 0.76 to 1.1 (-O3) | 2.27 to 2.65 (-O2), 2.28 to 2.82 (-O3) |
+| `half`, 1 limb, N = 3 | 0.091 to 0.115 (-O2), 0.084 to 0.097 (-O3) | -0.106 to 0.002 (-O2), -0.059 to 0 (-O3) | 2.29 to 2.41 (-O2), 2.87 to 2.91 (-O3) | 2.41 to 2.46 |
+| `half`, 1 limb, N = 7 | 0.089 to 0.113 (-O2), -0.004 to 0.091 (-O3) | 0.007 to 0.015 (-O2), -0.093 to 0.005 (-O3) | 1.93 to 1.96 (-O2), 2.64 to 2.72 (-O3) | 2.12 to 2.13 (-O2), 2.18 to 2.31 (-O3) |
+| `half`, 1 limb, N = 13 | 0.132 to 0.164 (-O2), -0.071 to 0.091 (-O3) | 0.123 to 0.137 (-O2), -0.042 to 0.086 (-O3) | 2.5 to 2.68 (-O2), 1.55 to 1.67 (-O3) | 2.16 to 2.19 (-O2), 2.09 to 2.2 (-O3) |
+| `half`, 1 limb, N = 18 | -0.208 to 0.056 (-O2), -0.105 to 0.233 (-O3) | 0.002 to 0.007 (-O2), 0.184 to 0.248 (-O3) | 2.48 to 2.67 (-O2), 1.93 to 2 (-O3) | 3.28 to 3.37 (-O2), 3.52 to 3.61 (-O3) |
+| `half`, 1 limb, N = 80 | -0.34 to 1.11 (-O2), -0.19 to 0.18 (-O3) | 0.05 to 0.12 (-O2), 0.22 to 0.93 (-O3) | 3.83 to 4.3 (-O2), 4.66 to 4.83 (-O3) | 5.5 to 5.54 (-O2), 3.03 to 3.75 (-O3) |
+| `half`, 2 limbs, N = 3 | 0.029 to 0.105 (-O2), 0.091 to 0.188 (-O3) | -0.001 to 0.005 (-O2), 0.08 to 0.155 (-O3) | 1.73 to 1.75 (-O2), 2.83 to 2.89 (-O3) | 2.2 to 2.25 (-O2), 2.07 to 2.11 (-O3) |
+| `half`, 2 limbs, N = 7 | 0.12 to 0.229 (-O2), 0.089 to 0.224 (-O3) | -0.021 to 0.004 (-O2), 0.027 to 0.156 (-O3) | 1.17 to 1.28 (-O2), 2.89 to 2.94 (-O3) | 2.68 to 2.81 |
+| `half`, 2 limbs, N = 13 | 0 to 0.27 (-O2), 0.13 to 0.697 (-O3) | 0.01 to 0.02 (-O2), 0.011 to 0.217 (-O3) | 1.17 to 1.4 (-O2), 3.05 to 3.1 (-O3) | 2.84 to 2.94 |
+| `half`, 2 limbs, N = 18 | 0.11 to 0.18 (-O2), -0.07 to 0.12 (-O3) | 0.22 to 0.25 (-O2), -0.07 to 0.19 (-O3) | 1.02 to 1.29 (-O2), 2.73 to 2.78 (-O3) | 2.69 to 2.9 (-O2), 2.85 to 2.93 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.08 to 0.12 (-O2), -0.06 to 0.12 (-O3) | 0.04 to 0.1 (-O2), -0.98 to 0.71 (-O3) | 3.04 to 3.72 (-O2), 4.89 to 5.13 (-O3) | 5 to 6.01 (-O2), 5.47 to 5.7 (-O3) |
+| the constructor, 1 limb, N = 3 | 1.33 to 1.41 (-O2), 1.25 to 1.29 (-O3) | 0.153 to 0.167 (-O2), 0.13 to 0.224 (-O3) | 6.21 to 7.22 (-O2), 5.68 to 7.77 (-O3) | 2.95 to 3.03 |
+| the constructor, 1 limb, N = 7 | 2.54 to 2.8 (-O2), 2.56 to 2.57 (-O3) | -0.428 to 0.314 (-O2), -0.021 to 0.11 (-O3) | 4.65 to 5.05 (-O2), 5.85 to 6.53 (-O3) | 1.09 to 1.13 |
+| the constructor, 1 limb, N = 13 | 4.31 to 4.49 | 0.42 to 0.77 (-O2), 0.251 to 0.417 (-O3) | 2.52 to 2.66 (-O2), 4.12 to 4.15 (-O3) | 1.77 to 1.86 (-O2), 1.85 to 1.86 (-O3) |
+| the constructor, 1 limb, N = 18 | -0.23 to 0.1 (-O2), -0.73 to 0.08 (-O3) | -0.35 to -0.19 (-O2), -0.32 to 0.18 (-O3) | 2.37 to 2.85 (-O2), 2.37 to 3.92 (-O3) | -0.87 to -0.81 (-O2), 0.16 to 0.97 (-O3) |
+| the constructor, 1 limb, N = 80 | 0 to 0.07 (-O2), -2.84 to 0.06 (-O3) | 0.7 to 14.6 (-O2), -12.1 to 0.8 (-O3) | 1 to 1.2 (-O2), 1.2 to 3.7 (-O3) | 0.9 to 13.5 (-O2), -13.9 to 2.51 (-O3) |
+| the constructor, 2 limbs, N = 3 | 1.06 to 1.1 (-O2), 1.11 to 1.13 (-O3) | 0.11 to 0.139 (-O2), 0.146 to 0.191 (-O3) | 5.37 to 5.98 (-O2), 7.36 to 8.87 (-O3) | 0.907 to 0.952 (-O2), 0.813 to 0.943 (-O3) |
+| the constructor, 2 limbs, N = 7 | 2.97 to 2.98 (-O2), 2.47 to 2.91 (-O3) | -0.02 to 0.12 (-O2), 0.155 to 0.261 (-O3) | 0.99 to 1.83 (-O2), 4.56 to 5.57 (-O3) | 0.98 to 1.05 (-O2), 0.43 to 1.03 (-O3) |
+| the constructor, 2 limbs, N = 13 | 2.66 to 3.23 (-O2), -1.33 to 0.18 (-O3) | 0.03 to 0.27 (-O2), -0.23 to 0 (-O3) | 1.09 to 1.35 (-O2), 4.77 to 5.05 (-O3) | -0.3 to -0.25 (-O2), 0.49 to 2.46 (-O3) |
+| the constructor, 2 limbs, N = 18 | -0.5 to 0.15 (-O2), -0.54 to 0.32 (-O3) | -0.12 to -0.07 (-O2), 0.14 to 3.85 (-O3) | 1.36 to 1.73 (-O2), -15 to -14.8 (-O3) | 1.57 to 5.92 (-O2), -1.02 to 1.73 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.07 to 1.23 (-O2), -5.44 to -2.62 (-O3) | -0.4 to 0.3 (-O2), -6.3 to -0.5 (-O3) | -1 to 5.3 (-O2), -4.4 to -3.2 (-O3) | 1.8 to 2.9 (-O2), 1.7 to 2.5 (-O3) |
 
 | Short ball vectors before 2026-11-23, measured again, one operation per unit, many vectors: the check, ns per operation (the header before minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 0.119 to 0.238 (-O2), 0.219 to 0.388 (-O3) | 0.526 to 0.543 (-O2), 0.645 to 0.733 (-O3) | 1.94 to 2.1 (-O2), 4.31 to 4.32 (-O3) | 3.71 to 3.73 |
-| `add(x, y, z)`, 1 limb, N = 7 | 0.131 to 0.233 (-O2), 0.149 to 0.296 (-O3) | 0.111 to 0.286 (-O2), 0.658 to 0.731 (-O3) | 1.92 to 1.95 (-O2), 2.36 to 2.39 (-O3) | 2.54 to 2.62 (-O2), 2.57 to 2.74 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | 0.246 to 0.42 (-O2), 0.283 to 0.399 (-O3) | 0.167 to 0.216 (-O2), 0.304 to 0.407 (-O3) | 2.2 to 2.33 (-O2), 2.34 to 2.52 (-O3) | 2.47 to 2.55 |
-| `add(x, y, z)`, 1 limb, N = 18 | -0.292 to 0.457 (-O2), -0.345 to 0.332 (-O3) | 0.203 to 0.37 (-O2), 0.22 to 0.357 (-O3) | 2.03 to 2.2 (-O2), 2.16 to 2.38 (-O3) | 2.36 to 2.43 |
-| `add(x, y, z)`, 1 limb, N = 80 | 0.17 to 0.88 (-O2), -0.54 to 0.23 (-O3) | -0.38 to -0.28 (-O2), -0.08 to 0.52 (-O3) | 3.05 to 3.86 (-O2), 4.99 to 5.42 (-O3) | 3.42 to 3.52 (-O2), 3.12 to 3.39 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.142 to 0.22 (-O2), 0.105 to 0.301 (-O3) | -0.157 to 0.018 (-O2), 0.23 to 0.348 (-O3) | 2.74 to 2.93 (-O2), 2.82 to 2.85 (-O3) | 2.03 to 2.08 (-O2), 1.86 to 1.92 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.147 to 0.275 (-O2), 0.034 to 0.08 (-O3) | -0.155 to 0.059 (-O2), 0.121 to 0.306 (-O3) | 1.53 to 2.16 (-O2), 2.78 to 2.85 (-O3) | 2.37 to 2.48 |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.27 to 0.05 (-O2), 0.06 to 0.41 (-O3) | 0.13 to 0.36 (-O2), 0.18 to 0.5 (-O3) | 2.71 to 2.9 (-O2), 3.22 to 3.28 (-O3) | 2.68 to 2.75 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 0.13 to 0.95 (-O2), 0.23 to 0.8 (-O3) | 0.09 to 0.2 (-O2), 0.18 to 0.6 (-O3) | 5.03 to 5.26 | 4.34 to 4.47 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.6 to 3.31 (-O2), -0.17 to 3.01 (-O3) | 0.23 to 1.59 (-O2), -0.39 to 0.92 (-O3) | 3.25 to 4.65 (-O2), 4.26 to 4.65 (-O3) | 3.93 to 4.48 (-O2), 4.38 to 4.68 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | 0.136 to 0.181 (-O2), 0.127 to 0.258 (-O3) | 0.485 to 0.516 (-O2), 0.725 to 0.898 (-O3) | 5.13 to 6.32 (-O2), 5.97 to 6.01 (-O3) | 2.65 to 2.87 (-O2), 2.86 to 2.9 (-O3) |
-| `z = x + y`, 1 limb, N = 7 | 0.012 to 0.106 (-O2), -0.001 to 0.147 (-O3) | 0.437 to 0.539 (-O2), 0.771 to 0.939 (-O3) | 5.03 to 5.87 (-O2), 6.13 to 6.21 (-O3) | 2.39 to 2.41 (-O2), 2.38 to 2.52 (-O3) |
-| `z = x + y`, 1 limb, N = 13 | 1.91 to 2.02 (-O2), 1.52 to 2.2 (-O3) | 0.55 to 0.583 (-O2), 0.592 to 0.7 (-O3) | 4.4 to 4.7 (-O2), 5.67 to 5.76 (-O3) | 2.23 to 2.31 (-O2), 2.06 to 2.52 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | -0.308 to 0.263 (-O2), -0.083 to 0.454 (-O3) | 2.6 to 2.65 (-O2), 0.667 to 0.827 (-O3) | 3.33 to 3.99 (-O2), 4.88 to 4.93 (-O3) | 1.99 to 2.13 (-O2), 1.82 to 2.29 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | -2.51 to -0.89 (-O2), -0.55 to 2.2 (-O3) | -0.54 to -0.09 (-O2), 0.06 to 0.72 (-O3) | -0.33 to 4.7 (-O2), 5.49 to 8.18 (-O3) | -0.26 to 5.18 (-O2), -0.57 to 5.51 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -0.017 to 0.136 (-O2), 0.031 to 0.275 (-O3) | 0.058 to 0.141 (-O2), 0.343 to 0.451 (-O3) | 3.09 to 3.49 (-O2), 3.49 to 3.57 (-O3) | 1 to 3.13 (-O2), 2.73 to 4.21 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | -0.25 to 0.33 (-O2), 0.03 to 0.48 (-O3) | 0.27 to 0.28 (-O2), 0.366 to 0.486 (-O3) | 2.74 to 3.12 (-O2), 2.52 to 2.59 (-O3) | 0.46 to 2.53 (-O2), 2.64 to 4.12 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -0.03 to 0.28 (-O2), -0.36 to 0.26 (-O3) | 0.23 to 0.39 (-O2), 1.5 to 1.83 (-O3) | 2.65 to 3.49 (-O2), 2.8 to 3.04 (-O3) | 0.49 to 2.49 (-O2), 2.25 to 3.61 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 0.9 to 1.37 (-O2), 0.15 to 1.09 (-O3) | 0.07 to 0.16 (-O2), 0.35 to 0.83 (-O3) | 0.57 to 1.11 (-O2), 2.63 to 3.04 (-O3) | 2.18 to 4.27 (-O2), 3.44 to 5.29 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | -0.5 to 1.8 (-O2), 0.6 to 2.8 (-O3) | 0.7 (-O2), -0.32 to 2.29 (-O3) | -3.9 to 3.8 (-O2), -0.9 to 1.7 (-O3) | 0.9 to 1.9 (-O2), -1.1 to 5.7 (-O3) |
-| `sub`, 1 limb, N = 3 | 0.239 to 0.283 (-O2), 0.198 to 0.243 (-O3) | 0.728 to 0.8 (-O2), 0.628 to 0.646 (-O3) | 1.73 to 1.81 (-O2), 4.3 to 4.32 (-O3) | 3.7 to 3.72 |
-| `sub`, 1 limb, N = 7 | 0.061 to 0.194 (-O2), 0.155 to 0.268 (-O3) | 0.27 to 0.377 (-O2), 0.659 to 0.727 (-O3) | 1.9 to 1.99 (-O2), 2.35 to 2.38 (-O3) | 2.66 to 2.75 (-O2), 2.64 to 2.77 (-O3) |
-| `sub`, 1 limb, N = 13 | 0.228 to 0.313 (-O2), 0.275 to 0.554 (-O3) | 0.049 to 0.299 (-O2), 0.376 to 0.487 (-O3) | 2.42 to 2.53 | 2.36 to 2.45 |
-| `sub`, 1 limb, N = 18 | -0.339 to 0.172 (-O2), 0.343 to 0.6 (-O3) | 0.217 to 0.286 (-O2), 0.251 to 0.359 (-O3) | 2.17 to 2.33 (-O2), 2.18 to 2.34 (-O3) | 2.25 to 2.39 (-O2), 2.28 to 2.38 (-O3) |
-| `sub`, 1 limb, N = 80 | 0.39 to 0.92 (-O2), -0.32 to 0.53 (-O3) | -1.15 to 0.1 (-O2), -0.14 to 0.45 (-O3) | 2.89 to 3.21 (-O2), 4.61 to 4.78 (-O3) | 3.36 to 3.47 (-O2), 3.11 to 3.57 (-O3) |
-| `sub`, 2 limbs, N = 3 | 0.04 to 0.213 (-O2), -0.014 to 0.308 (-O3) | 0.127 to 0.333 (-O2), 0.268 to 0.376 (-O3) | 2.66 to 2.78 (-O2), 2.57 to 2.62 (-O3) | 2.38 to 2.42 (-O2), 2.33 to 2.45 (-O3) |
-| `sub`, 2 limbs, N = 7 | -0.168 to 0.082 (-O2), 0.1 to 0.35 (-O3) | 0.06 to 0.09 (-O2), 0.241 to 0.439 (-O3) | 2.37 to 2.63 (-O2), 2.86 to 2.89 (-O3) | 2.86 to 3 |
-| `sub`, 2 limbs, N = 13 | -0.12 to 0.48 (-O2), -0.04 to 0 (-O3) | 0.14 to 0.21 (-O2), 0.1 to 0.51 (-O3) | 2.44 to 2.6 (-O2), 3.24 to 3.27 (-O3) | 3.14 to 3.18 |
-| `sub`, 2 limbs, N = 18 | 0.16 to 0.77 (-O2), -0.11 to 0.78 (-O3) | 0.07 to 0.62 (-O2), 0.11 to 0.67 (-O3) | 4.73 to 4.88 (-O2), 4.1 to 4.41 (-O3) | 4.44 to 4.6 (-O2), 4.11 to 4.14 (-O3) |
-| `sub`, 2 limbs, N = 80 | 0.03 to 1.94 (-O2), -0.11 to 3.28 (-O3) | 0.08 to 2.06 (-O2), 0.99 to 2.65 (-O3) | 4.19 to 4.88 (-O2), 3.56 to 5.08 (-O3) | 4.3 to 4.77 (-O2), 4.94 to 5.14 (-O3) |
-| `scale`, 1 limb, N = 3 | 0.258 to 0.287 (-O2), 0.275 to 0.416 (-O3) | 0.658 to 0.681 (-O2), 0.533 to 0.59 (-O3) | 2.45 to 2.52 (-O2), 4.12 to 4.15 (-O3) | 3.87 to 3.89 |
-| `scale`, 1 limb, N = 7 | 0.187 to 0.195 (-O2), 0.154 to 0.273 (-O3) | 0.531 to 0.584 (-O2), 0.465 to 0.529 (-O3) | 1.83 to 1.93 (-O2), 2.56 to 2.59 (-O3) | 2.6 to 2.69 |
-| `scale`, 1 limb, N = 13 | 0.25 to 0.385 (-O2), 0.052 to 0.174 (-O3) | 0.261 to 0.278 (-O2), 0.436 to 0.532 (-O3) | 2.33 to 2.57 (-O2), 2.41 to 2.54 (-O3) | 2.4 to 2.5 (-O2), 2.5 to 2.63 (-O3) |
-| `scale`, 1 limb, N = 18 | -0.016 to 0.131 (-O2), 0.577 to 0.782 (-O3) | 0.285 to 0.303 (-O2), 0.606 to 0.724 (-O3) | 1.93 to 2.03 (-O2), 2.08 to 2.14 (-O3) | 2.55 to 2.65 |
-| `scale`, 1 limb, N = 80 | 0.05 to 0.15 (-O2), 0.26 to 0.32 (-O3) | -0.12 to 0.38 (-O2), 0.21 to 0.73 (-O3) | 2.16 to 2.4 (-O2), 3.65 to 3.83 (-O3) | 2.91 to 2.98 (-O2), 3.14 to 4.6 (-O3) |
-| `scale`, 2 limbs, N = 3 | 0.108 to 0.159 (-O2), -0.009 to 0.103 (-O3) | 0.161 to 0.21 (-O2), 0.457 to 0.521 (-O3) | 2.46 to 2.64 (-O2), 2.72 to 2.76 (-O3) | 2.41 to 2.42 (-O2), 2.45 to 2.53 (-O3) |
-| `scale`, 2 limbs, N = 7 | 0.45 to 0.558 (-O2), 0.386 to 0.566 (-O3) | 0.121 to 0.167 (-O2), 0.332 to 0.45 (-O3) | 3.02 to 3.16 (-O2), 2.24 to 2.3 (-O3) | 2.63 to 2.75 (-O2), 2.61 to 2.69 (-O3) |
-| `scale`, 2 limbs, N = 13 | -0.081 to 0.291 (-O2), 0.064 to 0.33 (-O3) | 0.072 to 0.087 (-O2), 0.249 to 0.401 (-O3) | 2.85 to 3.25 (-O2), 2.49 to 2.51 (-O3) | 2.87 to 2.92 |
-| `scale`, 2 limbs, N = 18 | 0.046 to 0.071 (-O2), 0.081 to 0.44 (-O3) | 0.05 to 0.13 (-O2), 0.309 to 0.498 (-O3) | 2.72 to 2.81 (-O2), 2.42 to 2.45 (-O3) | 1.57 to 1.75 (-O2), 1.63 to 1.69 (-O3) |
-| `scale`, 2 limbs, N = 80 | -0.09 to 0.16 (-O2), -0.04 to 1.05 (-O3) | -0.2 to 1.35 (-O2), 0.05 to 0.94 (-O3) | 2.32 to 3.91 (-O2), 0.61 to 1.54 (-O3) | 1.42 to 2.18 (-O2), 1.12 to 2.33 (-O3) |
-| `half`, 1 limb, N = 3 | 0.193 to 0.366 (-O2), 0.29 to 0.484 (-O3) | -0.006 to 0.037 (-O2), 0.389 (-O3) | 2.66 to 2.77 (-O2), 3.9 to 3.95 (-O3) | 3.24 to 3.38 |
-| `half`, 1 limb, N = 7 | 0.217 to 0.41 (-O2), 0.308 to 0.523 (-O3) | -0.238 to 0.002 (-O2), 0.267 to 0.35 (-O3) | 2.24 to 2.49 (-O2), 2.81 to 2.83 (-O3) | 2.13 to 2.23 |
-| `half`, 1 limb, N = 13 | 0.13 to 0.335 (-O2), 0.135 to 0.15 (-O3) | -0.135 to 0.008 (-O2), 0.274 to 0.286 (-O3) | 2.41 to 2.53 (-O2), 2.2 to 2.35 (-O3) | 2.11 to 2.19 |
-| `half`, 1 limb, N = 18 | 0.299 to 0.583 (-O2), 0.348 to 0.727 (-O3) | -0.01 to 0.094 (-O2), 0.529 to 0.684 (-O3) | 2.58 to 2.74 (-O2), 3.08 to 3.13 (-O3) | 3.48 to 3.51 (-O2), 3.46 to 35.9 (-O3) |
-| `half`, 1 limb, N = 80 | 0.08 to 1.1 (-O2), 0.07 to 1.36 (-O3) | -0.56 to 0.17 (-O2), 0.89 to 1.64 (-O3) | 4.19 to 4.52 (-O2), 4.53 to 4.55 (-O3) | 5.5 to 5.62 (-O2), 5.97 to 6.22 (-O3) |
-| `half`, 2 limbs, N = 3 | 0.234 to 0.372 (-O2), 0.223 to 0.397 (-O3) | 0.264 to 0.271 (-O2), 0.444 to 0.516 (-O3) | 1.61 to 1.7 (-O2), 3.74 to 3.76 (-O3) | 2.13 to 2.19 |
-| `half`, 2 limbs, N = 7 | 0.118 to 0.336 (-O2), 0.027 to 0.41 (-O3) | 0.08 to 0.4 (-O2), 0.362 to 0.483 (-O3) | 1.14 to 1.31 (-O2), 3.01 to 3.03 (-O3) | 2.59 to 2.68 |
-| `half`, 2 limbs, N = 13 | 0.19 to 0.56 (-O2), 0.18 to 0.78 (-O3) | 0.07 to 0.28 (-O2), 0.507 to 0.694 (-O3) | 2.19 to 2.28 (-O2), 3.54 to 3.59 (-O3) | 2.69 to 2.8 |
-| `half`, 2 limbs, N = 18 | -0.09 to 0.52 (-O2), 0.13 to 0.81 (-O3) | -0.12 to 0.15 (-O2), 0.14 to 0.36 (-O3) | 0.98 to 1.11 (-O2), 3.02 to 3.05 (-O3) | 2.74 to 2.89 (-O2), 2.69 to 2.88 (-O3) |
-| `half`, 2 limbs, N = 80 | 0.29 to 1.31 (-O2), -0.03 to 0.39 (-O3) | 0.25 to 1.32 (-O2), 0.35 to 1.28 (-O3) | 3.54 to 4.34 (-O2), 4.31 to 5.05 (-O3) | 5.81 to 6.21 (-O2), 5.1 to 5.73 (-O3) |
-| the constructor, 1 limb, N = 3 | 2.13 to 3.09 (-O2), 1.86 to 13 (-O3) | 1.04 to 1.07 (-O2), 0.66 to 0.705 (-O3) | 5.49 to 7.3 (-O2), 6.6 to 6.88 (-O3) | 18.5 to 18.8 |
-| the constructor, 1 limb, N = 7 | 14.1 to 15.2 (-O2), 14.8 to 15.5 (-O3) | -3.16 to -2.3 (-O2), 1.11 to 1.22 (-O3) | 4.73 to 5 (-O2), 5.05 to 5.26 (-O3) | 16.5 to 17.4 (-O2), 16.6 to 18.2 (-O3) |
-| the constructor, 1 limb, N = 13 | 14 to 14.2 (-O2), 14.6 to 15.9 (-O3) | 0.32 to 0.4 (-O2), 1.18 to 1.32 (-O3) | 2.71 to 2.86 (-O2), 3.14 to 3.31 (-O3) | 13.5 to 13.9 (-O2), 13.3 to 14 (-O3) |
-| the constructor, 1 limb, N = 18 | -2.52 to -1.99 (-O2), 7.92 to 8.81 (-O3) | -0.11 to 0.13 (-O2), 0.43 to 0.97 (-O3) | 2.52 to 3.3 (-O2), 2.35 to 2.65 (-O3) | -0.96 to 1.42 (-O2), 7.47 to 8.29 (-O3) |
-| the constructor, 1 limb, N = 80 | -2.65 to -1 (-O2), 0.49 to 3.7 (-O3) | -3.4 to 1 (-O2), -6.2 to 14.9 (-O3) | -0.1 to 0.6 (-O2), 0.2 to 1.9 (-O3) | 2.5 to 6.82 (-O2), 1.99 to 10.1 (-O3) |
-| the constructor, 2 limbs, N = 3 | 10.1 to 10.8 (-O2), 9.06 to 11 (-O3) | 0.087 to 0.149 (-O2), 1.41 to 1.49 (-O3) | 6.11 to 7.05 (-O2), 4.07 to 4.21 (-O3) | 12.1 to 15.9 (-O2), 15.9 to 16.4 (-O3) |
-| the constructor, 2 limbs, N = 7 | 7.49 to 11.5 (-O2), 8.54 to 9.46 (-O3) | -0.04 to 0.21 (-O2), 2.39 to 2.54 (-O3) | 1.29 to 1.99 (-O2), 5.83 to 6.49 (-O3) | 6.65 to 9.7 (-O2), 9.78 to 10.6 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.54 to 0.9 (-O2), -7.29 to -6.83 (-O3) | 0.06 to 0.6 (-O2), 3.78 to 4.1 (-O3) | 0.18 to 0.71 (-O2), 7.22 to 7.72 (-O3) | -0.85 to 3.3 (-O2), -2.02 to -0.09 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.74 to 1.32 (-O2), -7.43 to -6.08 (-O3) | 0.07 to 0.73 (-O2), 0.09 to 0.85 (-O3) | -3.44 to -2.13 (-O2), -15 to -14.9 (-O3) | 0.76 to 5.65 (-O2), -8.89 to -5.95 (-O3) |
-| the constructor, 2 limbs, N = 80 | -2.85 to 0.02 (-O2), 0.14 to 3.32 (-O3) | 0.1 to 3.5 (-O2), 0 to 14.3 (-O3) | 2.1 to 4.1 (-O2), -0.1 to 0.8 (-O3) | -2.3 to 4.1 (-O2), 1.1 to 5.3 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.215 to 0.235 (-O2), 0.227 to 0.267 (-O3) | 0.633 to 0.785 (-O2), 0.604 to 0.639 (-O3) | 2.16 to 2.25 (-O2), 4.29 to 4.36 (-O3) | 3.68 to 3.74 |
+| `add(x, y, z)`, 1 limb, N = 7 | 0.161 to 0.195 (-O2), 0.15 to 0.191 (-O3) | 0.093 to 0.351 (-O2), 0.677 to 0.693 (-O3) | 1.92 to 1.96 (-O2), 2.41 to 2.43 (-O3) | 2.61 to 2.78 (-O2), 2.63 to 2.72 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 13 | 0.27 to 0.298 (-O2), 0.143 to 0.283 (-O3) | 0.091 to 0.301 (-O2), 0.343 to 0.481 (-O3) | 2.18 to 2.23 (-O2), 2.48 to 2.67 (-O3) | 2.36 to 2.67 (-O2), 2.34 to 2.5 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 18 | -0.207 to 0.194 (-O2), -0.231 to 0.007 (-O3) | 0.12 to 0.475 (-O2), 0.123 to 0.25 (-O3) | 2.02 to 2.16 (-O2), 2.29 to 2.36 (-O3) | 2.39 to 2.48 |
+| `add(x, y, z)`, 1 limb, N = 80 | -0.44 to -0.09 (-O2), -1.73 to 0.49 (-O3) | -1.79 to 0.13 (-O2), -0.41 to 0.93 (-O3) | 3.83 to 3.94 (-O2), 5.04 to 5.21 (-O3) | 3.29 to 3.44 |
+| `add(x, y, z)`, 2 limbs, N = 3 | 0.105 to 0.155 (-O2), 0.079 to 0.103 (-O3) | -0.434 to 0.065 (-O2), 0.038 to 0.227 (-O3) | 2.72 to 2.85 | 2.07 to 2.15 (-O2), 1.89 to 1.96 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.017 to 0.112 (-O2), -0.179 to 0.051 (-O3) | -0.569 to 0.148 (-O2), -0.24 to 0.156 (-O3) | 1.59 to 1.69 (-O2), 2.83 to 2.91 (-O3) | 2.42 to 2.51 |
+| `add(x, y, z)`, 2 limbs, N = 13 | -0.07 to 0.17 (-O2), 0.26 to 0.33 (-O3) | -0.34 to 0.24 (-O2), -0.17 to 0.25 (-O3) | 2.68 to 2.86 (-O2), 3.26 to 3.28 (-O3) | 2.7 to 2.74 (-O2), 2.57 to 2.77 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.6 to 0.69 (-O2), 0.04 to 0.34 (-O3) | -0.5 to 0.51 (-O2), -0.16 to 0.16 (-O3) | 5.08 to 5.22 (-O2), 5.33 to 5.41 (-O3) | 4.46 to 4.5 (-O2), 4.27 to 4.43 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 80 | 1.19 to 1.23 (-O2), -2.24 to 0.4 (-O3) | -0.97 to 1.74 (-O2), -2.11 to -0.22 (-O3) | 2.78 to 4.15 (-O2), 4 to 4.76 (-O3) | 3.91 to 4.6 (-O2), 3.85 to 4.34 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | 0.14 to 0.192 (-O2), 0.128 to 0.143 (-O3) | 0.442 to 0.545 (-O2), 0.717 to 0.854 (-O3) | 5.16 to 5.42 (-O2), 5.03 to 6.87 (-O3) | 2.86 to 2.94 |
+| `z = x + y`, 1 limb, N = 7 | -0.039 to 0.008 (-O2), -0.004 to 0.019 (-O3) | 0.299 to 0.559 (-O2), 0.776 to 0.827 (-O3) | 5.59 to 5.68 (-O2), 5.66 to 6.91 (-O3) | 2.26 to 2.28 (-O2), 2.29 to 2.39 (-O3) |
+| `z = x + y`, 1 limb, N = 13 | 1.82 to 1.99 (-O2), 1.68 to 1.84 (-O3) | 0.111 to 0.734 (-O2), 0.57 to 0.66 (-O3) | 4.48 to 4.72 (-O2), 5.53 to 5.77 (-O3) | 2.13 to 2.26 (-O2), 2.16 to 2.32 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -0.401 to 0.08 (-O2), -0.742 to 0.231 (-O3) | 2.23 to 2.55 (-O2), 0.682 to 0.702 (-O3) | 3.48 to 4.02 (-O2), 4.76 to 5.28 (-O3) | 2.08 to 2.34 (-O2), 2.12 to 2.3 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | -0.63 to -0.58 (-O2), -0.81 to -0.32 (-O3) | -1.03 to 0.79 (-O2), -0.9 to 0.1 (-O3) | -0.67 to 1.55 (-O2), 4.46 to 8.44 (-O3) | 0.25 to 8.2 (-O2), 1.66 to 7.16 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | -0.076 to -0.042 (-O2), -0.01 to 0.125 (-O3) | -0.379 to 0.153 (-O2), 0.346 to 0.347 (-O3) | 2.92 to 3.05 (-O2), 3.4 to 3.74 (-O3) | 2.67 to 2.93 (-O2), 1.52 to 4.62 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | -0.01 to 0.28 (-O2), 0.05 to 0.17 (-O3) | -0.36 to 0.33 (-O2), 0.203 to 0.446 (-O3) | 2.72 to 3.01 (-O2), 2.38 to 2.6 (-O3) | 2.49 to 2.56 (-O2), 0.64 to 13.7 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.02 to 0.38 (-O2), -1.9 to 0.2 (-O3) | -0.03 to 0.54 (-O2), 1.26 to 1.58 (-O3) | 2.63 to 3.32 (-O2), 2.66 to 3.1 (-O3) | 2.33 to 2.52 (-O2), 0.08 to 14.3 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 0.54 to 0.85 (-O2), 0.13 to 0.27 (-O3) | -0.94 to 0.64 (-O2), -0.17 to 0.44 (-O3) | 0.4 to 0.82 (-O2), 2.29 to 3 (-O3) | 3.43 to 3.85 (-O2), 4.82 to 5.81 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | -0.2 to -0.1 (-O2), 0.5 to 0.7 (-O3) | -4.1 to 0.8 (-O2), -2.1 to -0.03 (-O3) | 2.5 to 5.4 (-O2), 1.1 to 2.3 (-O3) | 1.8 to 2.8 (-O2), -1 to 5.7 (-O3) |
+| `sub`, 1 limb, N = 3 | 0.199 to 0.237 (-O2), 0.208 to 0.266 (-O3) | 0.72 to 0.782 (-O2), 0.599 to 0.687 (-O3) | 1.84 to 1.91 (-O2), 4.3 to 4.31 (-O3) | 3.72 to 3.75 |
+| `sub`, 1 limb, N = 7 | 0.128 to 0.166 (-O2), 0.133 to 0.167 (-O3) | 0.262 to 0.355 (-O2), 0.659 to 0.722 (-O3) | 1.89 to 1.93 (-O2), 2.42 to 2.44 (-O3) | 2.58 to 2.7 (-O2), 2.6 to 2.75 (-O3) |
+| `sub`, 1 limb, N = 13 | 0.286 to 0.306 (-O2), 0.265 to 0.277 (-O3) | -0.038 to 0.298 (-O2), 0.26 to 0.346 (-O3) | 2.1 to 2.31 (-O2), 2.44 to 2.59 (-O3) | 2.42 to 2.48 |
+| `sub`, 1 limb, N = 18 | -0.335 to -0.254 (-O2), 0.055 to 0.297 (-O3) | -0.072 to 0.375 (-O2), 0.258 to 0.287 (-O3) | 2.03 to 2.21 (-O2), 2.3 to 2.34 (-O3) | 2.38 to 2.67 (-O2), 2.31 to 2.45 (-O3) |
+| `sub`, 1 limb, N = 80 | -0.01 to 0.38 (-O2), -0.36 to 0.24 (-O3) | -1.73 to -0.07 (-O2), -0.67 to -0.09 (-O3) | 3.34 to 3.51 (-O2), 4.29 to 4.77 (-O3) | 3.61 to 3.7 (-O2), 3.32 to 3.4 (-O3) |
+| `sub`, 2 limbs, N = 3 | 0.012 to 0.124 (-O2), 0.004 to 0.133 (-O3) | -0.194 to 0.274 (-O2), 0.255 to 0.301 (-O3) | 2.65 to 2.71 (-O2), 2.56 to 2.63 (-O3) | 2.4 to 2.47 |
+| `sub`, 2 limbs, N = 7 | 0.009 to 0.038 (-O2), -0.277 to 0.147 (-O3) | -0.13 to 0.27 (-O2), 0.175 to 0.248 (-O3) | 2.54 to 2.97 (-O2), 2.85 to 2.9 (-O3) | 2.93 to 3.02 (-O2), 2.82 to 2.97 (-O3) |
+| `sub`, 2 limbs, N = 13 | -0.14 to -0.1 (-O2), 0.08 to 0.2 (-O3) | -0.56 to 0.48 (-O2), -0.25 to 0.09 (-O3) | 2.48 to 2.62 (-O2), 3.18 to 3.26 (-O3) | 3.17 to 3.22 (-O2), 2.93 to 3.19 (-O3) |
+| `sub`, 2 limbs, N = 18 | 0.24 to 0.54 (-O2), -0.44 to -0.11 (-O3) | -0.76 to 0.51 (-O2), 0.1 to 0.22 (-O3) | 4.64 to 5.24 (-O2), 4.46 to 4.72 (-O3) | 4.69 to 4.79 (-O2), 3.54 to 4.33 (-O3) |
+| `sub`, 2 limbs, N = 80 | 0.1 to 0.34 (-O2), -2.17 to -0.03 (-O3) | -1.15 to 1.7 (-O2), -1.66 to -0.11 (-O3) | 3.75 to 5.04 (-O2), 3.2 to 3.9 (-O3) | 3.62 to 4.07 (-O2), 4.34 to 5.55 (-O3) |
+| `scale`, 1 limb, N = 3 | 0.218 to 0.274 (-O2), 0.236 to 0.284 (-O3) | 0.602 to 0.718 (-O2), 0.541 to 0.551 (-O3) | 2.46 to 2.48 (-O2), 4.12 to 4.15 (-O3) | 3.88 to 3.9 |
+| `scale`, 1 limb, N = 7 | 0.196 to 0.223 (-O2), 0.119 to 0.15 (-O3) | 0.358 to 0.617 (-O2), 0.466 to 0.528 (-O3) | 1.78 to 1.8 (-O2), 2.53 to 2.57 (-O3) | 2.55 to 2.66 (-O2), 2.61 to 2.71 (-O3) |
+| `scale`, 1 limb, N = 13 | 0.24 to 0.375 (-O2), -0.058 to 0.239 (-O3) | -0.012 to 0.357 (-O2), 0.353 to 0.439 (-O3) | 2.14 to 2.17 (-O2), 2.41 to 2.49 (-O3) | 2.12 to 2.54 (-O2), 2.47 to 2.54 (-O3) |
+| `scale`, 1 limb, N = 18 | 0.057 to 0.226 (-O2), 0.166 to 0.562 (-O3) | 0.041 to 0.414 (-O2), 0.605 to 0.739 (-O3) | 1.9 to 1.99 (-O2), 2.01 to 2.19 (-O3) | 2.58 (-O2), 2.41 to 2.56 (-O3) |
+| `scale`, 1 limb, N = 80 | 0.14 to 0.22 (-O2), -1.18 to 0.31 (-O3) | -1.37 to 0.44 (-O2), 0.25 to 0.29 (-O3) | 2.24 to 2.43 (-O2), 1.54 to 1.69 (-O3) | 2.98 to 3.17 (-O2), -8.72 to 17.6 (-O3) |
+| `scale`, 2 limbs, N = 3 | 0.157 to 0.168 (-O2), 0.083 to 0.101 (-O3) | -0.003 to 0.318 (-O2), 0.385 to 0.451 (-O3) | 2.48 to 2.56 (-O2), 2.72 to 2.74 (-O3) | 2.41 to 2.48 |
+| `scale`, 2 limbs, N = 7 | 0.66 to 0.692 (-O2), 0.368 to 0.525 (-O3) | -0.148 to 0.118 (-O2), 0.255 to 0.343 (-O3) | 2.88 to 2.96 (-O2), 2.28 to 2.32 (-O3) | 2.62 to 2.75 |
+| `scale`, 2 limbs, N = 13 | 0.046 to 0.083 (-O2), -0.201 to 0.325 (-O3) | -0.311 to 0.246 (-O2), -0.047 to 0.259 (-O3) | 2.87 to 2.95 (-O2), 2.48 to 2.62 (-O3) | 2.87 to 2.96 (-O2), 2.67 to 2.91 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.075 to 0.088 (-O2), 0.024 to 0.068 (-O3) | -0.29 to 0.31 (-O2), 0.089 to 0.313 (-O3) | 2.75 to 2.78 (-O2), 2.34 to 2.41 (-O3) | 1.58 to 1.62 (-O2), 1.43 to 1.58 (-O3) |
+| `scale`, 2 limbs, N = 80 | -0.58 to 0.06 (-O2), -0.53 to 0.11 (-O3) | -1.81 to 0.83 (-O2), 0.22 to 0.29 (-O3) | 2.76 to 4.62 (-O2), 0.91 to 1.2 (-O3) | 2.43 to 2.99 (-O2), 2.43 to 2.88 (-O3) |
+| `half`, 1 limb, N = 3 | 0.286 to 0.307 (-O2), 0.277 to 0.29 (-O3) | 0.069 to 0.359 (-O2), 0.213 to 0.269 (-O3) | 2.64 to 2.73 (-O2), 3.92 to 3.99 (-O3) | 3.25 to 3.41 |
+| `half`, 1 limb, N = 7 | 0.298 to 0.3 (-O2), 0.206 to 0.301 (-O3) | 0.022 to 0.363 (-O2), 0.098 to 0.271 (-O3) | 2.32 to 2.44 (-O2), 2.88 to 2.96 (-O3) | 2.1 to 2.16 (-O2), 2.3 to 2.33 (-O3) |
+| `half`, 1 limb, N = 13 | 0.175 to 0.232 (-O2), -0.038 to 0.132 (-O3) | -0.093 to 0.236 (-O2), 0.106 to 0.275 (-O3) | 2.33 to 2.62 (-O2), 1.93 to 2.16 (-O3) | 2.11 to 2.21 |
+| `half`, 1 limb, N = 18 | 0.312 to 0.577 (-O2), 0.188 to 0.712 (-O3) | -0.126 to 0.433 (-O2), 0.437 to 0.527 (-O3) | 2.62 to 2.74 (-O2), 3.06 to 3.21 (-O3) | 3.21 to 3.33 (-O2), 3.47 to 3.54 (-O3) |
+| `half`, 1 limb, N = 80 | -0.46 to 0.29 (-O2), -0.19 to 0.36 (-O3) | -1.28 to 0.54 (-O2), 0.24 to 0.96 (-O3) | 4.13 to 4.38 (-O2), 4.54 (-O3) | 5.64 to 5.84 (-O2), 3.32 to 3.98 (-O3) |
+| `half`, 2 limbs, N = 3 | 0.202 to 0.269 (-O2), 0.213 to 0.221 (-O3) | -0.233 to 0.102 (-O2), 0.376 to 0.442 (-O3) | 1.6 to 1.62 (-O2), 3.74 to 3.77 (-O3) | 2.16 to 2.2 |
+| `half`, 2 limbs, N = 7 | 0.178 to 0.244 (-O2), 0.001 to 0.221 (-O3) | -0.333 to 0.135 (-O2), 0.242 to 0.381 (-O3) | 1.1 to 1.18 (-O2), 2.98 to 3.01 (-O3) | 2.66 to 2.74 (-O2), 2.54 to 2.64 (-O3) |
+| `half`, 2 limbs, N = 13 | 0.1 to 0.2 (-O2), 0.17 to 0.597 (-O3) | -0.43 to 0.08 (-O2), 0.305 to 0.506 (-O3) | 1.99 to 2.05 (-O2), 3.58 to 3.64 (-O3) | 2.66 to 2.77 |
+| `half`, 2 limbs, N = 18 | -0.13 to 0.19 (-O2), -0.02 to 0.23 (-O3) | -0.44 to 0.38 (-O2), -0.13 to 0.14 (-O3) | 0.89 to 1.02 (-O2), 3.02 to 3.11 (-O3) | 2.61 to 2.66 (-O2), 2.53 to 2.72 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.17 to 0.2 (-O2), -0.11 to 0.17 (-O3) | -0.81 to 1.19 (-O2), -0.67 to 0.93 (-O3) | 3.23 to 3.59 (-O2), 4.69 to 5.19 (-O3) | 5 to 6.05 (-O2), 5.13 to 6.2 (-O3) |
+| the constructor, 1 limb, N = 3 | 1.85 to 10.9 (-O2), 4.02 to 11.6 (-O3) | 0.903 to 1.13 (-O2), 0.651 to 0.703 (-O3) | 5.5 to 6.49 (-O2), 5.97 to 7.52 (-O3) | 18.5 to 18.8 |
+| the constructor, 1 limb, N = 7 | 13.1 to 14.2 (-O2), 13.2 to 14.7 (-O3) | 1.4 to 3.14 (-O2), 1.03 to 1.15 (-O3) | 4.72 to 4.75 (-O2), 5.09 to 5.34 (-O3) | 16.6 to 18.2 (-O2), 16.6 to 17.4 (-O3) |
+| the constructor, 1 limb, N = 13 | 12.9 to 13.9 (-O2), 12.8 to 15.6 (-O3) | -0.06 to 1.07 (-O2), 0.987 to 1.18 (-O3) | 2.65 to 2.76 (-O2), 3.22 to 3.32 (-O3) | 13.4 to 14 (-O2), 13.8 to 19.8 (-O3) |
+| the constructor, 1 limb, N = 18 | -0.67 to -0.52 (-O2), -0.25 to 2.15 (-O3) | -0.99 to 0.45 (-O2), -0.31 to 0.48 (-O3) | 2.21 to 2.46 (-O2), 2.21 to 2.98 (-O3) | -1.12 to 0.83 (-O2), -1.9 to 0.2 (-O3) |
+| the constructor, 1 limb, N = 80 | -2.62 to -2.51 (-O2), -3.12 to -0.12 (-O3) | -20.7 to 18.8 (-O2), -10.3 to 0.7 (-O3) | -1.9 to -1.7 (-O2), -1.5 to -1.1 (-O3) | 3.95 to 13.5 (-O2), -14 to 20.6 (-O3) |
+| the constructor, 2 limbs, N = 3 | 8.59 to 9.92 (-O2), 8.88 to 9.51 (-O3) | -0.068 to 0.237 (-O2), 1.28 to 1.31 (-O3) | 6.46 to 7.06 (-O2), 3.05 to 4.75 (-O3) | 12 to 16.4 (-O2), 12.1 to 15.9 (-O3) |
+| the constructor, 2 limbs, N = 7 | 7.42 to 7.72 (-O2), 8.37 to 8.89 (-O3) | -0.73 to 0.35 (-O2), 2.12 to 2.22 (-O3) | 1.07 to 1.29 (-O2), 5.97 to 6.28 (-O3) | 6.67 to 10.5 (-O2), 6.8 to 9.7 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.31 to 0.58 (-O2), -3.13 to -0.91 (-O3) | -1.15 to 0.84 (-O2), 3.62 to 3.84 (-O3) | -0.09 to 0.29 (-O2), 7.4 to 7.45 (-O3) | -1.52 to 0.48 (-O2), -0.07 to 0.6 (-O3) |
+| the constructor, 2 limbs, N = 18 | -0.43 to 0.17 (-O2), -0.34 to 0.53 (-O3) | -2.84 to 1.25 (-O2), -0.3 to 0.28 (-O3) | 1.21 to 1.43 (-O2), -15.2 to -15 (-O3) | 0.92 to 6.1 (-O2), -4.08 to 7.9 (-O3) |
+| the constructor, 2 limbs, N = 80 | -0.12 to 0.02 (-O2), -2.83 to 0.01 (-O3) | -12.6 to 1 (-O2), -11.2 to -0.1 (-O3) | -20.4 to -17.3 (-O2), -3.5 to -2.8 (-O3) | -2.6 to 1.9 (-O2), 1.6 to 5.7 (-O3) |
 
 | Short ball vectors, 2026-11-23, one operation per unit, many vectors: the header of 2026-11-23 over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 0.88 to 0.92 | 0.78 to 0.80 | 0.95 to 0.99 | 1.00 |
-| `add(x, y, z)`, 1 limb, N = 7 | 0.96 to 0.98 (-O2), 0.96 to 1.02 (-O3) | 0.94 to 0.96 (-O2), 0.81 to 0.83 (-O3) | 0.97 to 1.00 | 0.99 to 1.00 |
-| `add(x, y, z)`, 1 limb, N = 13 | 0.92 to 0.95 | 0.99 to 1.01 (-O2), 0.90 to 0.92 (-O3) | 0.99 to 1.01 (-O2), 0.93 to 0.95 (-O3) | 0.99 to 1.00 |
-| `add(x, y, z)`, 1 limb, N = 18 | 0.92 to 0.97 (-O2), 0.94 to 1.02 (-O3) | 0.99 to 1.03 (-O2), 0.94 to 0.95 (-O3) | 0.97 to 1.01 | 0.99 to 1.00 |
-| `add(x, y, z)`, 1 limb, N = 80 | 0.98 to 1.02 (-O2), 0.96 to 1.01 (-O3) | 0.97 to 1.05 (-O2), 0.98 to 1.01 (-O3) | 0.99 to 1.02 | 0.99 to 1.03 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.96 to 1.00 (-O2), 0.93 to 0.98 (-O3) | 1.01 to 1.03 (-O2), 0.94 to 0.96 (-O3) | 0.98 to 1.00 | 1.01 to 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 7 | 0.97 to 1.01 (-O2), 0.95 to 1.00 (-O3) | 0.99 to 1.02 (-O2), 0.96 to 0.98 (-O3) | 0.97 to 1.00 | 1.01 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 0.97 to 1.02 | 0.97 to 0.99 | 1.00 (-O2), 0.95 (-O3) | 0.99 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 0.95 to 0.99 | 0.98 to 1.01 | 0.99 to 1.01 | 0.99 to 1.00 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.96 to 1.00 | 0.96 to 0.97 (-O2), 0.99 to 1.01 (-O3) | 0.99 to 1.01 | 1.00 |
-| `z = x + y`, 1 limb, N = 3 | 0.94 to 0.98 | 0.90 (-O2), 0.76 to 0.80 (-O3) | 0.95 to 1.05 (-O2), 1.00 to 1.05 (-O3) | 0.99 to 1.00 |
-| `z = x + y`, 1 limb, N = 7 | 0.96 to 1.00 | 0.98 to 0.99 (-O2), 0.87 to 0.90 (-O3) | 0.96 to 1.03 (-O2), 1.02 to 1.07 (-O3) | 1.00 to 1.01 |
-| `z = x + y`, 1 limb, N = 13 | 0.71 to 0.73 (-O2), 0.73 to 0.80 (-O3) | 0.98 (-O2), 0.89 to 0.91 (-O3) | 0.96 to 1.00 | 0.96 to 1.01 |
-| `z = x + y`, 1 limb, N = 18 | 0.98 to 1.07 (-O2), 1.02 (-O3) | 0.78 to 0.80 (-O2), 0.88 to 0.89 (-O3) | 0.98 to 1.02 | 0.97 to 1.00 |
-| `z = x + y`, 1 limb, N = 80 | 1.01 to 1.05 (-O2), 0.97 to 1.01 (-O3) | 0.98 to 1.01 | 0.95 to 1.00 (-O2), 0.96 to 1.02 (-O3) | 0.90 to 1.06 (-O2), 0.89 to 1.07 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 0.97 to 1.02 (-O2), 0.95 to 0.99 (-O3) | 1.01 to 1.04 (-O2), 0.95 to 0.97 (-O3) | 0.99 to 1.01 | 0.91 to 1.10 (-O2), 0.91 to 1.00 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 0.97 to 1.03 (-O2), 0.98 to 1.01 (-O3) | 0.96 to 0.99 | 0.99 to 1.00 | 0.94 to 1.08 (-O2), 0.93 to 1.00 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 0.98 to 1.03 | 1.00 to 1.01 (-O2), 0.92 to 0.93 (-O3) | 0.99 to 1.00 | 0.95 to 1.08 (-O2), 0.96 to 1.02 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 0.95 (-O2), 1.00 (-O3) | 0.97 to 0.99 (-O2), 1.00 to 1.03 (-O3) | 0.99 to 1.00 | 0.95 to 1.05 (-O2), 0.95 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 0.97 to 1.00 | 0.98 to 1.03 | 0.98 to 1.02 | 0.97 to 1.03 (-O2), 0.97 to 1.02 (-O3) |
-| `sub`, 1 limb, N = 3 | 0.90 to 0.91 | 0.76 to 0.81 | 0.99 to 1.00 (-O2), 0.95 (-O3) | 1.00 |
-| `sub`, 1 limb, N = 7 | 0.97 to 0.99 | 0.92 to 0.94 (-O2), 0.82 to 0.83 (-O3) | 0.97 to 1.00 | 0.98 to 1.00 |
-| `sub`, 1 limb, N = 13 | 0.91 to 0.95 | 0.97 to 0.99 (-O2), 0.91 to 0.93 (-O3) | 0.99 to 1.00 (-O2), 0.94 to 0.95 (-O3) | 0.99 to 1.00 |
-| `sub`, 1 limb, N = 18 | 0.98 to 1.00 (-O2), 0.99 to 1.04 (-O3) | 1.00 to 1.02 (-O2), 0.94 to 0.97 (-O3) | 1.00 to 1.03 (-O2), 0.97 to 0.98 (-O3) | 0.98 to 1.00 |
-| `sub`, 1 limb, N = 80 | 0.98 to 1.01 | 1.00 to 1.04 (-O2), 0.98 to 1.00 (-O3) | 0.99 to 1.03 | 0.99 to 1.01 |
-| `sub`, 2 limbs, N = 3 | 0.96 to 0.99 (-O2), 1.00 to 1.02 (-O3) | 0.97 to 1.01 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.00 | 1.01 |
-| `sub`, 2 limbs, N = 7 | 0.97 to 1.01 | 0.99 to 1.02 (-O2), 0.96 to 0.98 (-O3) | 0.98 to 1.00 | 1.01 |
-| `sub`, 2 limbs, N = 13 | 0.97 to 0.99 (-O2), 1.01 to 1.04 (-O3) | 0.98 to 1.01 | 0.99 to 1.00 | 1.01 to 1.02 |
-| `sub`, 2 limbs, N = 18 | 0.95 to 0.99 (-O2), 1.00 (-O3) | 0.97 to 1.01 | 1.00 | 1.01 to 1.02 |
-| `sub`, 2 limbs, N = 80 | 0.96 to 1.01 | 0.98 to 1.02 | 0.99 to 1.01 | 1.00 to 1.01 |
-| `scale`, 1 limb, N = 3 | 0.92 to 0.96 | 0.80 to 0.84 | 0.99 (-O2), 0.93 (-O3) | 1.00 |
-| `scale`, 1 limb, N = 7 | 0.97 to 0.98 | 0.88 to 0.89 | 0.97 to 1.02 | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 13 | 0.98 to 0.99 (-O2), 0.97 to 1.02 (-O3) | 0.96 to 1.01 (-O2), 0.92 to 0.94 (-O3) | 0.98 | 0.99 to 1.02 |
-| `scale`, 1 limb, N = 18 | 1.03 (-O2), 0.95 to 0.96 (-O3) | 1.00 to 1.01 (-O2), 0.89 to 0.91 (-O3) | 0.99 to 1.00 | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 80 | 0.98 to 1.04 (-O2), 1.01 to 1.03 (-O3) | 0.99 to 1.02 | 0.99 to 1.00 (-O2), 1.09 to 1.11 (-O3) | 0.98 to 1.02 |
-| `scale`, 2 limbs, N = 3 | 0.94 to 0.98 | 0.99 to 1.02 (-O2), 0.87 to 0.89 (-O3) | 1.00 (-O2), 0.91 (-O3) | 0.99 to 1.00 |
-| `scale`, 2 limbs, N = 7 | 0.89 to 0.94 (-O2), 0.88 to 0.90 (-O3) | 0.96 to 1.01 (-O2), 0.92 to 0.94 (-O3) | 0.99 | 0.94 |
-| `scale`, 2 limbs, N = 13 | 0.99 to 1.05 (-O2), 1.02 to 1.03 (-O3) | 1.00 to 1.02 (-O2), 0.95 to 0.97 (-O3) | 0.96 to 1.00 | 1.00 to 1.01 |
-| `scale`, 2 limbs, N = 18 | 1.02 to 1.04 | 1.00 (-O2), 0.95 to 0.97 (-O3) | 0.96 to 1.00 | 1.00 to 1.01 |
-| `scale`, 2 limbs, N = 80 | 0.98 to 1.00 | 0.97 to 1.01 | 0.99 to 1.01 | 1.00 to 1.01 |
-| `half`, 1 limb, N = 3 | 0.92 to 0.94 | 0.91 to 0.94 | 0.98 to 0.99 (-O2), 0.92 (-O3) | 0.92 to 0.93 |
-| `half`, 1 limb, N = 7 | 0.94 to 0.97 | 0.95 to 0.97 (-O2), 0.92 to 0.94 (-O3) | 0.98 to 1.01 | 0.98 to 0.99 |
-| `half`, 1 limb, N = 13 | 0.97 to 1.00 | 0.97 to 1.01 | 0.97 to 1.00 | 0.99 to 1.00 |
-| `half`, 1 limb, N = 18 | 0.93 to 0.97 | 0.96 to 1.00 (-O2), 0.95 to 0.96 (-O3) | 0.97 to 0.99 (-O2), 0.93 to 0.94 (-O3) | 1.01 (-O2), 0.35 to 1.01 (-O3) |
-| `half`, 1 limb, N = 80 | 0.97 to 1.00 | 0.97 to 1.01 | 0.99 to 1.00 | 0.99 to 1.00 |
-| `half`, 2 limbs, N = 3 | 0.93 to 0.97 | 0.97 to 0.98 (-O2), 0.90 to 0.92 (-O3) | 0.95 to 0.99 | 0.99 |
-| `half`, 2 limbs, N = 7 | 0.95 to 0.99 | 0.95 to 0.97 | 0.99 to 1.00 | 1.01 |
-| `half`, 2 limbs, N = 13 | 0.96 to 1.00 | 1.00 to 1.02 (-O2), 0.95 to 0.97 (-O3) | 0.98 to 0.99 | 1.01 |
-| `half`, 2 limbs, N = 18 | 0.98 to 1.00 | 0.98 to 1.01 | 0.99 to 1.00 | 0.99 to 1.01 |
-| `half`, 2 limbs, N = 80 | 0.98 to 1.01 | 0.98 to 1.00 | 0.99 to 1.00 | 0.99 to 1.01 |
-| the constructor, 1 limb, N = 3 | 0.72 to 0.85 (-O2), 0.28 to 0.89 (-O3) | 0.79 to 0.80 (-O2), 0.82 to 0.85 (-O3) | 0.95 to 1.04 (-O2), 0.95 to 1.02 (-O3) | 0.36 to 0.37 |
-| the constructor, 1 limb, N = 7 | 0.41 to 0.43 | 0.76 to 0.81 | 0.98 to 1.01 (-O2), 1.02 to 1.07 (-O3) | 0.42 to 0.44 |
-| the constructor, 1 limb, N = 13 | 0.60 to 0.61 (-O2), 0.56 to 0.60 (-O3) | 1.00 to 1.02 (-O2), 0.88 to 0.89 (-O3) | 0.99 to 1.00 (-O2), 1.04 to 1.05 (-O3) | 0.63 to 0.65 |
-| the constructor, 1 limb, N = 18 | 1.36 to 1.43 (-O2), 0.72 to 0.75 (-O3) | 0.93 to 1.00 (-O2), 0.97 to 0.99 (-O3) | 0.97 to 1.02 (-O2), 1.00 to 1.06 (-O3) | 0.95 to 1.05 (-O2), 0.79 to 0.81 (-O3) |
-| the constructor, 1 limb, N = 80 | 1.01 to 1.06 (-O2), 0.96 to 0.97 (-O3) | 1.00 (-O2), 0.98 to 1.05 (-O3) | 1.00 to 1.04 | 0.93 to 0.96 (-O2), 0.87 to 0.93 (-O3) |
-| the constructor, 2 limbs, N = 3 | 0.41 to 0.43 (-O2), 0.40 to 0.46 (-O3) | 1.01 to 1.02 (-O2), 0.71 to 0.73 (-O3) | 0.95 to 0.99 (-O2), 1.21 to 1.35 (-O3) | 0.42 to 0.51 (-O2), 0.41 to 0.42 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.61 to 0.75 (-O2), 0.69 to 0.71 (-O3) | 1.00 to 1.02 (-O2), 0.71 to 0.72 (-O3) | 0.96 to 1.02 (-O2), 0.93 to 0.97 (-O3) | 0.72 to 0.80 (-O2), 0.70 to 0.71 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.94 to 0.96 (-O2), 1.39 to 1.40 (-O3) | 1.00 to 1.01 (-O2), 0.70 to 0.72 (-O3) | 1.01 to 1.02 (-O2), 0.91 to 0.93 (-O3) | 0.91 to 1.04 (-O2), 1.05 to 1.10 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.96 to 0.98 (-O2), 1.26 to 1.29 (-O3) | 0.87 to 0.91 (-O2), 0.98 to 1.00 (-O3) | 1.08 to 1.09 (-O2), 1.01 (-O3) | 0.90 to 0.98 (-O2), 1.17 to 1.26 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.00 to 1.01 | 0.97 to 1.02 | 0.99 to 1.01 | 0.97 to 1.02 |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.92 | 0.77 to 0.81 | 0.98 to 1.01 (-O2), 0.95 to 0.96 (-O3) | 1.00 |
+| `add(x, y, z)`, 1 limb, N = 7 | 0.96 to 0.98 | 0.98 to 1.04 (-O2), 0.83 to 0.84 (-O3) | 0.96 to 1.00 | 0.99 to 1.00 |
+| `add(x, y, z)`, 1 limb, N = 13 | 0.93 to 0.96 | 0.97 to 1.00 (-O2), 0.89 to 0.92 (-O3) | 0.99 to 1.01 (-O2), 0.93 to 0.95 (-O3) | 0.99 to 1.00 |
+| `add(x, y, z)`, 1 limb, N = 18 | 1.00 to 1.06 (-O2), 0.96 to 1.01 (-O3) | 0.98 to 1.02 (-O2), 0.96 (-O3) | 0.97 to 1.00 | 0.97 to 0.99 |
+| `add(x, y, z)`, 1 limb, N = 80 | 1.00 to 1.02 | 1.00 to 1.06 (-O2), 1.00 to 1.03 (-O3) | 0.98 to 1.01 | 0.99 to 1.03 |
+| `add(x, y, z)`, 2 limbs, N = 3 | 0.98 to 0.99 | 0.99 to 1.11 (-O2), 0.96 to 0.97 (-O3) | 0.98 to 1.00 | 1.01 to 1.02 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.98 to 1.01 (-O2), 1.02 to 1.03 (-O3) | 0.98 to 1.04 (-O2), 0.98 to 1.01 (-O3) | 0.98 to 1.00 | 1.01 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 0.99 to 1.02 | 0.97 to 1.02 | 1.00 (-O2), 0.95 (-O3) | 0.99 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.96 to 1.00 | 0.97 to 1.03 (-O2), 1.01 to 1.02 (-O3) | 0.99 to 1.00 | 1.00 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 0.98 to 1.00 | 0.95 to 1.01 (-O2), 1.01 (-O3) | 0.99 to 1.02 | 1.00 to 1.01 |
+| `z = x + y`, 1 limb, N = 3 | 0.95 to 0.99 | 0.88 to 0.94 (-O2), 0.77 to 0.80 (-O3) | 1.00 to 1.05 (-O2), 0.95 to 1.00 (-O3) | 0.99 to 1.00 |
+| `z = x + y`, 1 limb, N = 7 | 0.99 to 1.00 | 0.97 to 1.03 (-O2), 0.89 to 0.90 (-O3) | 0.96 to 1.01 (-O2), 0.97 to 1.01 (-O3) | 1.00 |
+| `z = x + y`, 1 limb, N = 13 | 0.73 to 0.74 | 0.97 to 1.06 (-O2), 0.90 to 0.91 (-O3) | 0.97 to 1.00 | 0.98 to 1.00 |
+| `z = x + y`, 1 limb, N = 18 | 1.03 to 1.11 (-O2), 1.00 to 1.04 (-O3) | 0.77 to 0.82 (-O2), 0.90 to 0.91 (-O3) | 0.98 to 0.99 | 0.95 to 0.99 |
+| `z = x + y`, 1 limb, N = 80 | 1.01 to 1.02 | 0.98 to 1.05 (-O2), 1.01 (-O3) | 0.97 to 1.03 (-O2), 0.97 to 0.99 (-O3) | 1.05 to 1.10 (-O2), 0.89 to 1.02 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 0.98 to 1.02 | 0.99 to 1.03 (-O2), 0.97 to 0.98 (-O3) | 0.98 to 1.01 | 0.97 to 0.99 |
+| `z = x + y`, 2 limbs, N = 7 | 0.97 to 1.01 | 0.97 to 1.01 | 0.99 to 1.00 | 1.00 (-O2), 0.74 to 0.99 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 1.00 to 1.03 | 0.98 to 1.04 (-O2), 0.93 (-O3) | 0.99 to 1.00 | 1.01 to 1.02 (-O2), 0.75 to 1.02 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 0.96 to 0.97 (-O2), 0.99 to 1.01 (-O3) | 0.98 to 1.04 (-O2), 1.02 (-O3) | 0.99 to 1.01 | 0.98 to 1.01 |
+| `z = x + y`, 2 limbs, N = 80 | 1.00 | 1.00 to 1.03 | 0.96 to 1.01 | 1.01 to 1.03 (-O2), 0.95 to 1.00 (-O3) |
+| `sub`, 1 limb, N = 3 | 0.90 to 0.91 | 0.77 to 0.82 (-O2), 0.79 to 0.81 (-O3) | 1.00 to 1.03 (-O2), 0.95 to 0.96 (-O3) | 1.00 |
+| `sub`, 1 limb, N = 7 | 0.97 to 0.98 | 0.92 to 0.98 (-O2), 0.83 (-O3) | 0.97 to 1.01 | 0.99 to 1.00 |
+| `sub`, 1 limb, N = 13 | 0.94 to 0.98 | 0.99 to 1.06 (-O2), 0.92 (-O3) | 0.99 to 1.01 (-O2), 0.94 to 0.96 (-O3) | 1.00 to 1.02 |
+| `sub`, 1 limb, N = 18 | 1.03 to 1.06 (-O2), 0.97 to 1.08 (-O3) | 0.99 to 1.06 (-O2), 0.95 to 0.96 (-O3) | 0.98 to 1.01 | 0.97 to 1.00 |
+| `sub`, 1 limb, N = 80 | 1.00 to 1.02 | 1.01 to 1.07 (-O2), 1.00 to 1.02 (-O3) | 0.99 to 1.03 | 1.00 to 1.01 |
+| `sub`, 2 limbs, N = 3 | 0.97 to 1.02 | 0.98 to 1.04 (-O2), 0.96 to 0.97 (-O3) | 1.00 to 1.01 | 1.01 |
+| `sub`, 2 limbs, N = 7 | 0.99 to 1.00 | 0.98 to 1.04 (-O2), 0.98 (-O3) | 0.98 to 1.00 | 1.01 |
+| `sub`, 2 limbs, N = 13 | 1.00 to 1.01 | 0.97 to 1.03 (-O2), 1.00 to 1.03 (-O3) | 0.99 to 1.00 | 1.01 to 1.02 |
+| `sub`, 2 limbs, N = 18 | 0.96 to 1.00 | 0.99 to 1.05 (-O2), 0.99 to 1.02 (-O3) | 0.99 to 1.01 | 1.01 to 1.02 |
+| `sub`, 2 limbs, N = 80 | 1.00 | 0.99 to 1.06 (-O2), 0.97 to 1.00 (-O3) | 0.99 to 1.02 | 0.99 to 1.01 |
+| `scale`, 1 limb, N = 3 | 0.92 to 0.95 | 0.79 to 0.84 (-O2), 0.84 (-O3) | 0.99 (-O2), 0.93 (-O3) | 1.00 |
+| `scale`, 1 limb, N = 7 | 0.97 to 0.99 | 0.87 to 0.92 (-O2), 0.89 (-O3) | 0.98 to 1.02 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 13 | 1.01 to 1.05 (-O2), 0.95 to 0.99 (-O3) | 0.95 to 1.01 (-O2), 0.95 to 0.97 (-O3) | 0.97 to 0.99 | 1.00 to 1.02 |
+| `scale`, 1 limb, N = 18 | 0.95 to 1.09 (-O2), 0.94 to 0.99 (-O3) | 0.99 to 1.05 (-O2), 0.91 (-O3) | 0.98 to 1.00 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 80 | 1.00 to 1.01 | 1.00 to 1.05 | 1.01 (-O2), 1.10 to 1.11 (-O3) | 0.99 to 1.01 (-O2), 0.62 to 0.99 (-O3) |
+| `scale`, 2 limbs, N = 3 | 0.96 to 0.98 | 0.98 to 1.00 (-O2), 0.89 (-O3) | 1.00 (-O2), 0.91 (-O3) | 1.00 |
+| `scale`, 2 limbs, N = 7 | 0.87 to 0.88 (-O2), 0.90 to 0.94 (-O3) | 0.99 to 1.03 (-O2), 0.93 (-O3) | 0.98 to 0.99 | 0.94 |
+| `scale`, 2 limbs, N = 13 | 1.02 to 1.05 (-O2), 0.98 to 1.05 (-O3) | 0.98 to 1.05 (-O2), 0.97 to 0.99 (-O3) | 0.96 to 1.00 | 1.00 to 1.01 |
+| `scale`, 2 limbs, N = 18 | 1.02 to 1.05 | 0.98 to 1.05 (-O2), 0.97 (-O3) | 0.96 to 1.00 | 1.00 to 1.01 |
+| `scale`, 2 limbs, N = 80 | 1.00 to 1.03 | 0.98 to 1.04 (-O2), 1.00 (-O3) | 0.97 to 1.02 | 0.99 to 1.00 |
+| `half`, 1 limb, N = 3 | 0.94 to 0.95 | 0.93 to 0.96 (-O2), 0.91 (-O3) | 0.98 (-O2), 0.91 to 0.92 (-O3) | 0.92 to 0.93 |
+| `half`, 1 limb, N = 7 | 0.96 | 0.94 to 1.00 (-O2), 0.94 to 0.96 (-O3) | 0.98 to 0.99 | 0.99 to 1.00 |
+| `half`, 1 limb, N = 13 | 0.99 to 1.00 | 0.98 to 1.03 (-O2), 0.97 to 0.98 (-O3) | 0.97 to 1.01 | 0.99 to 1.01 |
+| `half`, 1 limb, N = 18 | 0.94 to 0.97 | 0.95 to 1.01 (-O2), 0.96 to 0.97 (-O3) | 0.99 to 1.00 (-O2), 0.93 to 0.94 (-O3) | 1.00 to 1.01 |
+| `half`, 1 limb, N = 80 | 0.98 to 1.03 | 0.99 to 1.04 (-O2), 1.00 (-O3) | 0.99 to 1.01 | 0.99 to 1.00 |
+| `half`, 2 limbs, N = 3 | 0.96 to 0.99 | 0.98 to 1.04 (-O2), 0.92 (-O3) | 1.00 to 1.01 (-O2), 0.95 (-O3) | 0.99 to 1.00 |
+| `half`, 2 limbs, N = 7 | 0.98 to 1.01 | 0.98 to 1.04 (-O2), 0.96 to 0.97 (-O3) | 0.99 to 1.00 | 1.00 to 1.01 |
+| `half`, 2 limbs, N = 13 | 0.99 to 1.01 | 0.99 to 1.04 (-O2), 0.97 (-O3) | 0.97 to 0.98 | 1.01 |
+| `half`, 2 limbs, N = 18 | 0.99 to 1.02 | 0.99 to 1.05 (-O2), 1.00 (-O3) | 0.99 to 1.01 | 1.00 to 1.02 |
+| `half`, 2 limbs, N = 80 | 1.00 | 0.98 to 1.02 | 0.99 to 1.01 | 0.99 to 1.01 |
+| the constructor, 1 limb, N = 3 | 0.33 to 0.90 (-O2), 0.30 to 0.62 (-O3) | 0.77 to 0.83 (-O2), 0.82 to 0.85 (-O3) | 0.99 to 1.04 (-O2), 0.98 to 1.06 (-O3) | 0.36 to 0.37 |
+| the constructor, 1 limb, N = 7 | 0.42 to 0.46 | 0.76 to 0.84 (-O2), 0.76 to 0.79 (-O3) | 0.99 to 1.02 (-O2), 1.03 to 1.07 (-O3) | 0.42 to 0.44 |
+| the constructor, 1 limb, N = 13 | 0.61 to 0.64 (-O2), 0.58 to 0.65 (-O3) | 0.98 to 1.04 (-O2), 0.89 to 0.90 (-O3) | 0.99 to 1.04 | 0.63 to 0.65 (-O2), 0.54 to 0.64 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.02 to 1.04 (-O2), 0.91 to 1.01 (-O3) | 0.97 to 1.03 (-O2), 0.99 to 1.00 (-O3) | 1.00 to 1.03 | 0.94 to 1.01 (-O2), 1.00 to 1.08 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.00 to 1.04 | 0.98 to 1.11 (-O2), 0.99 to 1.00 (-O3) | 1.02 to 1.03 | 0.96 to 1.00 (-O2), 0.80 to 1.00 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.43 to 0.47 | 0.97 to 1.04 (-O2), 0.73 (-O3) | 0.94 to 0.97 (-O2), 1.21 to 1.35 (-O3) | 0.41 to 0.49 (-O2), 0.42 to 0.49 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.74 to 0.75 (-O2), 0.69 to 0.70 (-O3) | 0.98 to 1.04 (-O2), 0.72 (-O3) | 0.99 to 1.02 (-O2), 0.94 to 0.97 (-O3) | 0.70 to 0.79 (-O2), 0.70 to 0.79 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.12 to 1.13 (-O2), 1.00 to 1.09 (-O3) | 0.98 to 1.04 (-O2), 0.71 to 0.73 (-O3) | 1.02 to 1.03 (-O2), 0.91 to 0.93 (-O3) | 0.98 to 1.04 (-O2), 1.00 to 1.07 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.99 to 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.09 (-O3) | 1.00 to 1.01 | 1.00 to 1.02 (-O2), 0.87 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.97 to 1.01 | 1.00 to 1.04 | 1.08 to 1.11 (-O2), 0.99 to 1.00 (-O3) | 1.01 to 1.03 (-O2), 0.97 to 1.01 (-O3) |
 
 | Short ball vectors, 2026-11-23, one operation per unit, a dependent chain: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 13.9 to 14.5 | 9.2 to 10.2 (-O2), 9.29 to 10.2 (-O3) | 11.2 (-O2), 9.33 to 9.35 (-O3) | 8.86 to 8.94 |
-| `add(x, y, z)`, 1 limb, N = 7 | 13.9 to 14.6 (-O2), 14.6 to 14.7 (-O3) | 5.06 to 5.2 (-O2), 10.1 to 10.2 (-O3) | 13.1 to 13.2 (-O2), 11.7 to 11.8 (-O3) | 9.67 to 9.73 |
-| `add(x, y, z)`, 1 limb, N = 13 | 13.8 to 14.5 (-O2), 14.3 to 14.6 (-O3) | 5.59 to 5.72 (-O2), 10.1 to 10.3 (-O3) | 12.8 to 12.9 (-O2), 11.7 to 11.8 (-O3) | 10.1 to 10.3 |
-| `add(x, y, z)`, 1 limb, N = 18 | 8.46 to 10.2 (-O2), 9.35 to 10.2 (-O3) | 6.41 to 6.55 (-O2), 5.53 to 5.71 (-O3) | 14.7 (-O2), 13.2 (-O3) | 10.9 |
-| `add(x, y, z)`, 1 limb, N = 80 | 29.5 to 30.2 | 32.2 to 32.9 (-O2), 26.8 to 26.9 (-O3) | 31.1 (-O2), 27.3 to 27.4 (-O3) | 21.6 to 22.3 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 19.1 to 19.4 | 9.66 to 10.1 | 26.9 to 27.1 (-O2), 18.9 to 19 (-O3) | 18 to 18.1 |
-| `add(x, y, z)`, 2 limbs, N = 7 | 11 to 11.1 | 11.6 to 11.9 (-O2), 10.6 to 10.8 (-O3) | 32.1 to 32.2 (-O2), 25.5 to 25.6 (-O3) | 23.4 to 23.5 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 15.2 to 15.6 (-O2), 15.5 to 16.2 (-O3) | 15.8 to 16.1 (-O2), 14.6 (-O3) | 32 to 32.2 (-O2), 27 to 27.2 (-O3) | 24.4 to 24.6 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 19.7 to 20.5 | 19.7 to 20.3 (-O2), 17.8 to 17.9 (-O3) | 41.8 to 42.4 (-O2), 37.3 to 38 (-O3) | 35 to 35.4 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 75.4 to 77.2 | 76.1 to 77.9 (-O2), 71 (-O3) | 101 to 102 (-O2), 96.5 to 96.7 (-O3) | 95.2 to 95.4 |
-| `z = x + y`, 1 limb, N = 3 | 15.1 to 16.1 (-O2), 15.4 to 16.1 (-O3) | 10.3 to 10.8 (-O2), 9.72 to 10.1 (-O3) | 23.9 to 24.3 | 19.7 to 19.8 |
-| `z = x + y`, 1 limb, N = 7 | 15.3 to 15.9 (-O2), 15 to 16.5 (-O3) | 11.8 to 12 (-O2), 11.4 to 11.7 (-O3) | 24 to 24.6 | 21.9 to 22 |
-| `z = x + y`, 1 limb, N = 13 | 15.4 to 16.1 (-O2), 15.3 to 16.1 (-O3) | 10.4 to 12.5 (-O2), 10.1 to 11.6 (-O3) | 22.3 to 26 (-O2), 22.4 (-O3) | 22.2 to 22.3 |
-| `z = x + y`, 1 limb, N = 18 | 12.2 to 12.8 (-O2), 11.4 to 12.3 (-O3) | 9.39 to 9.64 (-O2), 7.96 to 8.09 (-O3) | 27.7 to 29 | 22.3 to 22.4 |
-| `z = x + y`, 1 limb, N = 80 | 41.7 to 41.9 (-O2), 42 to 43.9 (-O3) | 44.9 to 46.4 (-O2), 38 to 38.2 (-O3) | 85.3 to 87.6 | 35.1 to 39.6 (-O2), 36.9 to 39.8 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 20.2 to 20.4 (-O2), 21.1 to 21.7 (-O3) | 13.7 to 14.4 | 37.3 to 40.2 (-O2), 36.5 to 36.8 (-O3) | 27.4 to 30.5 (-O2), 26.1 to 27.4 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 14.7 to 15.2 | 14.4 to 14.8 (-O2), 16.1 to 16.3 (-O3) | 43.3 to 45.3 | 35.3 to 37.6 (-O2), 35.3 to 41.3 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 17.9 to 18.2 (-O2), 17.6 to 18.7 (-O3) | 21.9 to 22.4 (-O2), 17.7 to 17.8 (-O3) | 48.5 to 49.1 (-O2), 42.2 (-O3) | 38.4 to 42.4 (-O2), 38.4 to 42.2 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 22.9 to 24 | 25.4 to 26.1 (-O2), 22.9 to 23 (-O3) | 60.6 to 61.5 (-O2), 55.8 to 55.9 (-O3) | 51.4 to 54.7 (-O2), 50.1 to 54.2 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 104 to 105 | 104 to 106 (-O2), 97.8 to 98 (-O3) | 168 to 170 (-O2), 161 (-O3) | 129 to 132 |
-| `sub`, 1 limb, N = 3 | 13.7 to 14 (-O2), 13.5 to 14.2 (-O3) | 9.58 to 10 (-O2), 10.1 to 10.2 (-O3) | 11.2 (-O2), 9.33 to 9.35 (-O3) | 8.86 to 8.94 |
-| `sub`, 1 limb, N = 7 | 13.8 to 14.2 | 4.76 to 5.41 (-O2), 9.73 to 10.2 (-O3) | 13.2 (-O2), 11.7 to 11.8 (-O3) | 9.67 to 9.73 |
-| `sub`, 1 limb, N = 13 | 13.5 to 14 | 5.5 to 5.6 (-O2), 9.77 to 10.3 (-O3) | 12.8 to 13 (-O2), 11.7 (-O3) | 10.1 to 10.3 |
-| `sub`, 1 limb, N = 18 | 9.01 to 10.3 (-O2), 8.53 to 10.3 (-O3) | 6.41 to 6.55 (-O2), 5.7 (-O3) | 14.7 to 14.8 (-O2), 13.2 (-O3) | 10.9 to 11.2 |
-| `sub`, 1 limb, N = 80 | 29.2 to 30.1 | 32 to 33.1 (-O2), 26.8 to 27 (-O3) | 31.2 (-O2), 27 to 27.1 (-O3) | 22.4 to 22.5 |
-| `sub`, 2 limbs, N = 3 | 18.5 to 19.4 (-O2), 18.9 to 19.5 (-O3) | 9.77 to 10.2 (-O2), 9.49 to 9.73 (-O3) | 27.1 to 27.2 (-O2), 19.8 to 19.9 (-O3) | 18.9 to 19 |
-| `sub`, 2 limbs, N = 7 | 11.1 to 11.4 | 11.7 to 12.2 (-O2), 10.8 to 10.9 (-O3) | 32.5 to 32.7 (-O2), 28.6 (-O3) | 26.9 to 27.7 |
-| `sub`, 2 limbs, N = 13 | 16.2 to 16.6 (-O2), 16.8 to 17.2 (-O3) | 16.1 to 16.7 (-O2), 15.1 to 15.2 (-O3) | 33.1 to 33.4 (-O2), 28.4 to 28.6 (-O3) | 27.8 to 28 |
-| `sub`, 2 limbs, N = 18 | 20.5 to 21.4 | 21.1 to 22.2 (-O2), 19 to 19.1 (-O3) | 42.2 to 42.8 (-O2), 37.9 to 38.5 (-O3) | 36.3 to 37.2 |
-| `sub`, 2 limbs, N = 80 | 80.5 to 83.8 | 83 to 85.3 (-O2), 75.1 to 75.9 (-O3) | 104 to 105 (-O2), 98.8 to 98.9 (-O3) | 98.1 to 98.4 |
-| `scale`, 1 limb, N = 3 | 14.2 to 14.8 | 9.46 to 10.4 (-O2), 9.9 to 9.92 (-O3) | 11.5 (-O2), 9.92 to 9.94 (-O3) | 9.37 to 9.39 |
-| `scale`, 1 limb, N = 7 | 14.8 to 15 | 5.03 to 5.66 (-O2), 9.88 to 10.5 (-O3) | 11.8 to 11.9 (-O2), 10.9 to 11.1 (-O3) | 9.33 to 9.34 |
-| `scale`, 1 limb, N = 13 | 14.2 to 14.6 | 5.07 to 5.79 (-O2), 10.5 (-O3) | 12 (-O2), 10.7 (-O3) | 9.44 to 9.46 |
-| `scale`, 1 limb, N = 18 | 8.45 to 9.6 (-O2), 8.87 to 9.11 (-O3) | 6.18 to 6.52 (-O2), 5.57 to 5.71 (-O3) | 13.6 (-O2), 12.2 (-O3) | 9.92 to 9.98 |
-| `scale`, 1 limb, N = 80 | 26.4 to 27.1 | 29.4 (-O2), 24.6 to 24.7 (-O3) | 24.2 to 25.3 | 18.7 to 18.8 (-O2), 20.8 to 21.8 (-O3) |
-| `scale`, 2 limbs, N = 3 | 15.8 to 16 | 6.57 to 6.84 (-O2), 6.17 to 6.18 (-O3) | 19.4 (-O2), 11.2 (-O3) | 11 to 11.1 |
-| `scale`, 2 limbs, N = 7 | 15.4 to 16 | 7.32 to 7.66 (-O2), 6.31 to 6.57 (-O3) | 21.9 to 22 (-O2), 15.3 (-O3) | 11.7 |
-| `scale`, 2 limbs, N = 13 | 9 to 9.42 (-O2), 9.68 to 11.6 (-O3) | 9.09 to 9.32 (-O2), 8.03 to 8.04 (-O3) | 22 to 22.3 (-O2), 14.9 to 18.3 (-O3) | 14.1 to 14.2 |
-| `scale`, 2 limbs, N = 18 | 10.5 to 10.7 | 10.5 to 10.8 (-O2), 9.26 (-O3) | 24.6 to 24.9 (-O2), 18.8 to 18.9 (-O3) | 15.8 |
-| `scale`, 2 limbs, N = 80 | 40 to 41.5 | 39.8 to 40.6 (-O2), 37.9 (-O3) | 51.5 to 51.7 (-O2), 47.4 to 47.5 (-O3) | 43.4 to 43.5 |
-| `half`, 1 limb, N = 3 | 15.6 to 16 (-O2), 15.6 to 16.4 (-O3) | 4.88 to 5.5 (-O2), 9.19 to 9.36 (-O3) | 19.3 to 19.4 (-O2), 11.4 to 11.5 (-O3) | 15.2 to 15.4 |
-| `half`, 1 limb, N = 7 | 15.7 to 16 | 5.79 to 6.04 (-O2), 9.41 to 9.42 (-O3) | 20.5 to 21 (-O2), 14.6 to 14.7 (-O3) | 15.5 to 15.7 |
-| `half`, 1 limb, N = 13 | 15 to 15.6 | 7.43 to 7.58 (-O2), 9.78 to 10.3 (-O3) | 19.3 to 19.5 (-O2), 13.6 (-O3) | 15.4 to 16.2 |
-| `half`, 1 limb, N = 18 | 15 to 15.3 | 8.89 to 9.09 (-O2), 7.7 (-O3) | 22.2 to 22.4 (-O2), 16.5 to 16.6 (-O3) | 16.6 to 17.3 |
-| `half`, 1 limb, N = 80 | 34 to 35.3 | 35.2 to 36 (-O2), 32.5 (-O3) | 38.9 to 39 (-O2), 34.8 to 34.9 (-O3) | 36.6 to 37 |
-| `half`, 2 limbs, N = 3 | 15.8 to 16.3 | 5.36 to 5.82 (-O2), 4.78 to 4.89 (-O3) | 22.3 to 22.4 (-O2), 16.7 to 16.8 (-O3) | 15.8 to 16 |
-| `half`, 2 limbs, N = 7 | 15.1 to 15.5 | 7.43 to 7.58 (-O2), 5.77 (-O3) | 25.3 to 25.6 (-O2), 21.5 to 21.6 (-O3) | 18.1 to 18.3 |
-| `half`, 2 limbs, N = 13 | 14.1 to 15.5 (-O2), 15.4 to 15.7 (-O3) | 10.7 to 11.1 (-O2), 9.15 (-O3) | 23.8 to 24.1 (-O2), 18.5 to 18.6 (-O3) | 18.6 to 18.8 |
-| `half`, 2 limbs, N = 18 | 14.1 to 14.2 (-O2), 13.9 to 14.8 (-O3) | 13.1 to 13.4 (-O2), 12.1 (-O3) | 29.2 (-O2), 23.9 to 24 (-O3) | 21.2 to 21.5 |
-| `half`, 2 limbs, N = 80 | 48.2 to 49.2 | 46.8 to 49 | 58.1 to 58.5 (-O2), 53.2 to 53.4 (-O3) | 53.7 to 54 |
-| the constructor, 1 limb, N = 3 | 9.05 to 9.48 (-O2), 9.09 to 10.7 (-O3) | 7.62 to 7.81 (-O2), 7.19 (-O3) | 17.7 to 18.7 (-O2), 17.7 to 18.7 (-O3) | 9.89 to 9.93 |
-| the constructor, 1 limb, N = 7 | 9.81 to 11 (-O2), 10.3 to 11.1 (-O3) | 10.1 to 10.4 (-O2), 6.45 to 7.06 (-O3) | 21.1 to 21.2 (-O2), 19.5 to 20.7 (-O3) | 12.3 to 12.4 |
-| the constructor, 1 limb, N = 13 | 14 to 14.2 (-O2), 13.5 to 14.2 (-O3) | 18.2 to 18.5 (-O2), 7.13 to 7.43 (-O3) | 26.5 to 26.6 (-O2), 23.8 (-O3) | 21.3 to 21.4 |
-| the constructor, 1 limb, N = 18 | 25 to 25.9 (-O2), 17.6 to 17.7 (-O3) | 24.6 to 25.1 | 30.9 to 31.4 | 21.7 to 22.1 (-O2), 32.1 to 32.2 (-O3) |
-| the constructor, 1 limb, N = 80 | 71.3 to 73.9 | 195 to 210 (-O2), 199 to 209 (-O3) | 150 to 151 | 65.2 to 68.4 (-O2), 64.6 to 68.3 (-O3) |
-| the constructor, 2 limbs, N = 3 | 9.2 to 9.92 (-O2), 10.1 to 11 (-O3) | 6.96 to 7.22 | 20.2 to 20.7 (-O2), 22 to 23.4 (-O3) | 10.9 to 11.3 |
-| the constructor, 2 limbs, N = 7 | 12.2 to 12.5 | 17.6 to 18.1 (-O2), 6.34 to 7.01 (-O3) | 25 to 25.6 (-O2), 22.5 to 22.9 (-O3) | 22.5 to 22.6 |
-| the constructor, 2 limbs, N = 13 | 19.3 to 19.7 (-O2), 20.5 (-O3) | 28.2 to 30.1 (-O2), 10.4 (-O3) | 47.5 to 47.7 (-O2), 30.6 to 30.9 (-O3) | 30.1 to 30.6 (-O2), 42.4 to 42.5 (-O3) |
-| the constructor, 2 limbs, N = 18 | 32.1 to 32.7 | 57.7 to 58.9 (-O2), 37.7 (-O3) | 62.3 to 62.7 (-O2), 36 to 36.2 (-O3) | 44.7 to 45.7 (-O2), 56.6 (-O3) |
-| the constructor, 2 limbs, N = 80 | 93.1 to 97 | 272 to 295 (-O2), 269 (-O3) | 242 to 243 (-O2), 194 to 195 (-O3) | 143 to 147 |
+| `add(x, y, z)`, 1 limb, N = 3 | 13.9 to 14.2 (-O2), 13.7 to 14.7 (-O3) | 9.36 to 10 (-O2), 10 to 10.4 (-O3) | 11 to 11.1 (-O2), 9.33 to 9.36 (-O3) | 8.8 to 8.9 |
+| `add(x, y, z)`, 1 limb, N = 7 | 13.7 to 14.2 (-O2), 13.3 to 14.3 (-O3) | 4.8 to 5.36 (-O2), 10.2 to 10.4 (-O3) | 13.2 to 13.3 (-O2), 11.8 (-O3) | 9.66 to 9.7 |
+| `add(x, y, z)`, 1 limb, N = 13 | 14.1 to 14.3 (-O2), 13.5 to 14.2 (-O3) | 5.33 to 5.76 (-O2), 9.81 to 10.5 (-O3) | 12.8 to 14 (-O2), 11.7 to 11.8 (-O3) | 10.1 to 10.3 |
+| `add(x, y, z)`, 1 limb, N = 18 | 8.59 to 9.64 (-O2), 8.64 to 10.1 (-O3) | 6.41 to 6.68 (-O2), 5.66 to 5.71 (-O3) | 14.6 (-O2), 13.2 (-O3) | 10.9 to 11.1 |
+| `add(x, y, z)`, 1 limb, N = 80 | 29 to 29.7 | 32.3 to 33.9 (-O2), 26.9 to 27.4 (-O3) | 31.3 to 31.4 (-O2), 27.3 to 27.4 (-O3) | 21.6 to 22 |
+| `add(x, y, z)`, 2 limbs, N = 3 | 19 to 19.1 (-O2), 17.7 to 19 (-O3) | 9.65 to 10.4 (-O2), 9.52 to 9.87 (-O3) | 26.9 (-O2), 18.9 to 19 (-O3) | 18 to 18.1 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 10.5 to 10.9 | 11.6 to 12.1 (-O2), 10.5 to 11 (-O3) | 31.9 to 32 (-O2), 25.4 to 25.8 (-O3) | 23.4 to 23.5 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 15.1 to 15.8 | 15.7 to 16.5 (-O2), 14.6 to 15.5 (-O3) | 31.7 to 32.3 (-O2), 26.9 to 27 (-O3) | 24.4 to 24.7 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 19.3 to 19.9 | 19.5 to 20.7 (-O2), 17.9 to 18.2 (-O3) | 41.4 to 42.8 (-O2), 37.6 to 38.3 (-O3) | 35.2 to 35.5 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 75.2 to 77 | 76.6 to 80.7 (-O2), 71 to 72.4 (-O3) | 100 to 101 (-O2), 96 to 96.5 (-O3) | 94.6 to 95 |
+| `z = x + y`, 1 limb, N = 3 | 14.9 to 15 (-O2), 14.7 to 15.7 (-O3) | 10.3 to 11.2 (-O2), 10.6 to 11.3 (-O3) | 23.9 to 24.3 | 19.2 to 19.8 |
+| `z = x + y`, 1 limb, N = 7 | 14.5 to 14.8 (-O2), 13.4 to 14.7 (-O3) | 11 to 11.5 (-O2), 10.8 to 11.1 (-O3) | 23.8 to 24.3 (-O2), 24.4 to 26.3 (-O3) | 21.3 to 21.5 |
+| `z = x + y`, 1 limb, N = 13 | 14.8 to 15.8 (-O2), 13.5 to 15.8 (-O3) | 10.5 to 11.4 (-O2), 10.8 to 11.6 (-O3) | 22.2 to 22.4 | 22.2 to 22.3 |
+| `z = x + y`, 1 limb, N = 18 | 11.8 to 12.2 (-O2), 11.4 to 12.2 (-O3) | 9.38 to 9.79 (-O2), 7.58 to 8.12 (-O3) | 27.6 to 28.9 | 22.3 to 22.4 |
+| `z = x + y`, 1 limb, N = 80 | 39.8 to 41.4 | 45 to 47 (-O2), 38 to 39.1 (-O3) | 84.9 to 86.4 | 38.2 to 43.8 (-O2), 38.8 to 39.5 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 19.5 to 20.7 (-O2), 18.4 to 20.4 (-O3) | 14.1 to 14.7 (-O2), 13.1 to 14.1 (-O3) | 36.3 to 37.4 | 27.3 to 27.5 |
+| `z = x + y`, 2 limbs, N = 7 | 14.4 to 14.5 (-O2), 13.7 to 14.5 (-O3) | 14.4 to 15.1 (-O2), 14.4 to 16.6 (-O3) | 42.9 to 44.4 | 37.1 to 37.4 |
+| `z = x + y`, 2 limbs, N = 13 | 17.5 to 17.9 | 21.8 to 22.7 (-O2), 17.3 to 18.2 (-O3) | 49.1 to 49.6 (-O2), 42.3 to 42.7 (-O3) | 42.4 to 45.8 (-O2), 42 to 42.5 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 22.7 to 23.7 | 26.1 to 27.2 (-O2), 22.3 to 23.4 (-O3) | 60.6 to 61.1 (-O2), 55.7 to 55.8 (-O3) | 53.6 to 56.6 (-O2), 53.1 to 53.6 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | 101 to 103 | 104 to 108 (-O2), 93.9 to 99.2 (-O3) | 168 to 170 (-O2), 161 to 162 (-O3) | 130 to 133 |
+| `sub`, 1 limb, N = 3 | 13.2 to 13.7 (-O2), 13.2 to 14.2 (-O3) | 9.21 to 10 (-O2), 9.94 to 10.4 (-O3) | 11 to 11.2 (-O2), 9.32 to 9.36 (-O3) | 8.85 to 8.89 |
+| `sub`, 1 limb, N = 7 | 12.9 to 13.8 (-O2), 12.8 to 13.8 (-O3) | 5.31 to 5.4 (-O2), 10.2 to 10.4 (-O3) | 13.2 (-O2), 11.8 to 11.9 (-O3) | 9.68 (-O2), 9.69 to 14.7 (-O3) |
+| `sub`, 1 limb, N = 13 | 13.4 to 13.5 (-O2), 12.1 to 13.7 (-O3) | 5.34 to 5.79 (-O2), 10.3 to 10.5 (-O3) | 12.8 (-O2), 11.7 (-O3) | 10.1 to 10.2 |
+| `sub`, 1 limb, N = 18 | 8.4 to 9.91 (-O2), 7.83 to 9.44 (-O3) | 6.41 to 6.7 (-O2), 5.58 to 5.82 (-O3) | 14.6 (-O2), 13.2 (-O3) | 11 (-O2), 11 to 13.8 (-O3) |
+| `sub`, 1 limb, N = 80 | 28.6 to 29.4 | 32.5 to 33.4 (-O2), 26.7 to 27.4 (-O3) | 31.6 to 31.8 (-O2), 27.3 to 27.4 (-O3) | 22.3 to 22.5 |
+| `sub`, 2 limbs, N = 3 | 18 to 19.3 (-O2), 17.7 to 19 (-O3) | 9.99 to 10.2 (-O2), 9.54 to 9.92 (-O3) | 27.1 to 27.4 (-O2), 19.8 to 19.9 (-O3) | 19 |
+| `sub`, 2 limbs, N = 7 | 10.9 to 11.2 | 11.7 to 12.3 (-O2), 10.8 to 11 (-O3) | 32.4 to 32.5 (-O2), 28.4 to 28.6 (-O3) | 26.6 to 26.7 |
+| `sub`, 2 limbs, N = 13 | 16.3 to 16.6 | 16.1 to 17 (-O2), 15 to 15.3 (-O3) | 32.9 to 33 (-O2), 28.2 to 28.7 (-O3) | 27.9 to 28.1 |
+| `sub`, 2 limbs, N = 18 | 20.6 to 21.1 | 20.9 to 22 (-O2), 18.9 to 19.2 (-O3) | 41.6 to 43.5 (-O2), 38.7 to 38.8 (-O3) | 36.5 to 37.6 |
+| `sub`, 2 limbs, N = 80 | 80.1 to 80.7 | 82.4 to 86.5 (-O2), 75.6 to 77.1 (-O3) | 106 to 108 (-O2), 99.3 to 100 (-O3) | 98.5 to 98.9 |
+| `scale`, 1 limb, N = 3 | 14 to 14.5 (-O2), 12.8 to 14.5 (-O3) | 9.62 to 10.2 (-O2), 9.9 to 10.1 (-O3) | 11.9 (-O2), 9.9 to 9.94 (-O3) | 9.36 to 9.41 |
+| `scale`, 1 limb, N = 7 | 13.9 to 14.6 (-O2), 13.7 to 14.7 (-O3) | 4.38 to 5.3 (-O2), 10.5 to 10.7 (-O3) | 11.9 (-O2), 10.9 to 11 (-O3) | 9.32 to 9.35 |
+| `scale`, 1 limb, N = 13 | 14.3 to 14.4 (-O2), 13.6 to 14.4 (-O3) | 5.07 to 5.67 (-O2), 9.47 to 10.6 (-O3) | 12 (-O2), 10.6 (-O3) | 9.45 to 9.54 |
+| `scale`, 1 limb, N = 18 | 8.44 to 9.9 (-O2), 9.25 to 9.88 (-O3) | 6.23 to 6.54 (-O2), 5.7 to 5.72 (-O3) | 13.4 (-O2), 12.3 (-O3) | 9.92 to 9.96 |
+| `scale`, 1 limb, N = 80 | 25.9 to 26.8 | 29.4 to 30.1 (-O2), 24.7 to 25.2 (-O3) | 25.6 to 25.7 (-O2), 24.1 to 24.2 (-O3) | 18.7 (-O2), 20.9 to 37.5 (-O3) |
+| `scale`, 2 limbs, N = 3 | 15 to 15.3 (-O2), 14.2 to 15.7 (-O3) | 6.85 to 6.91 (-O2), 6 to 6.28 (-O3) | 19.4 (-O2), 11.2 (-O3) | 11.1 to 11.2 |
+| `scale`, 2 limbs, N = 7 | 15 to 15.7 (-O2), 14.7 to 15.7 (-O3) | 7.31 to 7.64 (-O2), 6.47 to 6.72 (-O3) | 21.9 (-O2), 15.3 (-O3) | 11.7 to 15.4 (-O2), 11.7 (-O3) |
+| `scale`, 2 limbs, N = 13 | 8.97 to 10.1 (-O2), 8.32 to 9.22 (-O3) | 9.09 to 9.44 (-O2), 8.04 to 8.21 (-O3) | 22.2 to 22.4 (-O2), 14.9 to 18 (-O3) | 14.1 |
+| `scale`, 2 limbs, N = 18 | 10.1 to 10.5 | 10.5 to 11 (-O2), 9.29 to 9.47 (-O3) | 24.9 to 25 (-O2), 18.8 (-O3) | 15.7 to 15.8 (-O2), 15.8 to 19.3 (-O3) |
+| `scale`, 2 limbs, N = 80 | 39.2 to 40.5 | 39.9 to 41.7 (-O2), 37.9 to 38.7 (-O3) | 51.5 to 51.6 (-O2), 47.3 to 47.4 (-O3) | 43.3 to 43.5 |
+| `half`, 1 limb, N = 3 | 14.7 to 15.7 (-O2), 14.7 to 15.7 (-O3) | 4.91 to 5.76 (-O2), 9.08 to 9.26 (-O3) | 19.2 to 19.3 (-O2), 11.4 to 11.5 (-O3) | 15.1 to 15.3 |
+| `half`, 1 limb, N = 7 | 15.7 (-O2), 14.6 to 15.7 (-O3) | 5.72 to 6.04 (-O2), 8.95 to 9.61 (-O3) | 20.4 to 20.5 (-O2), 14.6 to 14.7 (-O3) | 15.6 to 15.7 |
+| `half`, 1 limb, N = 13 | 14.5 to 15.1 | 7.44 to 7.76 (-O2), 9.78 to 10.5 (-O3) | 19.2 to 19.5 (-O2), 13.6 to 13.7 (-O3) | 15.3 to 15.4 |
+| `half`, 1 limb, N = 18 | 14.9 (-O2), 13.9 to 14.9 (-O3) | 8.89 to 9.28 (-O2), 7.7 to 7.85 (-O3) | 22.4 (-O2), 16.4 (-O3) | 16.6 to 16.7 (-O2), 16.6 to 17.8 (-O3) |
+| `half`, 1 limb, N = 80 | 33.8 to 34.6 | 34.8 to 36.7 (-O2), 32.2 to 33.1 (-O3) | 37.9 to 38.8 (-O2), 34.6 to 34.9 (-O3) | 36.5 to 36.7 |
+| `half`, 2 limbs, N = 3 | 15.9 (-O2), 14.8 to 15.9 (-O3) | 5.55 to 5.63 (-O2), 4.79 to 5.25 (-O3) | 22.7 to 22.8 (-O2), 16.6 to 16.7 (-O3) | 15.9 (-O2), 15.8 to 17.1 (-O3) |
+| `half`, 2 limbs, N = 7 | 14.9 to 15.3 (-O2), 14.3 to 15.3 (-O3) | 7.7 to 8.03 (-O2), 5.77 to 5.78 (-O3) | 26 to 26.1 (-O2), 21.7 (-O3) | 18.1 to 18.7 |
+| `half`, 2 limbs, N = 13 | 14.8 to 15.4 | 10.9 to 11.3 (-O2), 9.16 to 9.36 (-O3) | 23.7 to 23.9 (-O2), 18.4 (-O3) | 18.2 to 18.6 |
+| `half`, 2 limbs, N = 18 | 14 to 14.1 | 13.1 to 13.7 (-O2), 12.1 to 12.3 (-O3) | 29 (-O2), 23.9 (-O3) | 21.3 to 23.2 (-O2), 21.1 to 21.3 (-O3) |
+| `half`, 2 limbs, N = 80 | 48 to 48.2 | 48 to 50.2 (-O2), 46.8 to 47.8 (-O3) | 58.1 to 58.3 (-O2), 53 to 53.3 (-O3) | 53.6 to 53.8 |
+| the constructor, 1 limb, N = 3 | 8.82 to 10.4 (-O2), 8.98 to 10.5 (-O3) | 7.25 to 7.58 (-O2), 6.8 to 7.33 (-O3) | 17.7 to 18.6 (-O2), 17.7 to 19.2 (-O3) | 9.86 to 9.92 |
+| the constructor, 1 limb, N = 7 | 9.95 to 10.9 (-O2), 10 to 10.8 (-O3) | 9.85 to 10.5 (-O2), 6.38 to 7.05 (-O3) | 21.1 to 21.3 (-O2), 19.5 to 20.8 (-O3) | 12.3 to 12.4 |
+| the constructor, 1 limb, N = 13 | 13.5 to 14.2 | 18.2 to 19 (-O2), 6.83 to 7.37 (-O3) | 26.4 to 26.5 (-O2), 23.7 to 23.8 (-O3) | 21.2 to 22 |
+| the constructor, 1 limb, N = 18 | 19.9 to 20.1 (-O2), 24.1 to 25 (-O3) | 24.7 to 25.8 (-O2), 23.8 to 25.2 (-O3) | 30.9 to 31.6 | 24 (-O2), 34.9 to 35.7 (-O3) |
+| the constructor, 1 limb, N = 80 | 113 to 115 (-O2), 75.3 to 75.4 (-O3) | 196 to 213 (-O2), 194 to 213 (-O3) | 150 to 151 | 68.7 to 81 (-O2), 70.6 to 72.2 (-O3) |
+| the constructor, 2 limbs, N = 3 | 9.67 to 10.7 (-O2), 10 to 10.7 (-O3) | 6.69 to 6.95 (-O2), 6.64 to 7.09 (-O3) | 20.1 to 20.5 (-O2), 21.9 to 23.4 (-O3) | 10.8 to 10.9 |
+| the constructor, 2 limbs, N = 7 | 11.7 to 12.2 | 17.7 to 18.5 (-O2), 6.68 to 7.08 (-O3) | 25 to 25.7 (-O2), 22.8 to 24.3 (-O3) | 22.5 to 22.6 |
+| the constructor, 2 limbs, N = 13 | 22.1 to 22.2 (-O2), 18.3 to 19.1 (-O3) | 29.3 to 30.2 (-O2), 10.4 to 10.6 (-O3) | 47.4 to 47.9 (-O2), 30.5 to 30.9 (-O3) | 34.1 to 34.2 (-O2), 35.6 to 38 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.9 to 33.1 (-O2), 25.2 to 25.7 (-O3) | 66 to 67.8 (-O2), 36.8 to 41.3 (-O3) | 61.8 to 62.2 (-O2), 36 to 36.1 (-O3) | 47.7 to 51.6 (-O2), 40.2 to 43.5 (-O3) |
+| the constructor, 2 limbs, N = 80 | 92.5 to 96.6 | 279 to 289 (-O2), 255 to 274 (-O3) | 228 to 229 (-O2), 194 to 195 (-O3) | 147 to 148 |
 
 | Short ball vectors, 2026-11-23, one operation per unit, a dependent chain: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.29 to 0.16 (-O2), -0.61 to 0.36 (-O3) | 5.4 to 6.26 (-O2), 5.09 to 5.95 (-O3) | 1.77 to 1.78 (-O2), 2.62 to 2.64 (-O3) | -0.123 to -0.107 (-O2), -0.1 to -0.053 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 7 | -0.49 to 0.26 (-O2), 0 to 0.38 (-O3) | 0.006 to 0.289 (-O2), 5.09 to 5.77 (-O3) | 1.51 to 1.63 (-O2), 0.92 to 1.02 (-O3) | 0.746 to 0.836 (-O2), 0.358 to 0.879 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | -0.01 to 0.56 (-O2), -0.8 to -0.49 (-O3) | 0.122 to 0.262 (-O2), 5.05 to 5.9 (-O3) | 1.5 to 1.6 (-O2), 1.33 to 1.48 (-O3) | 1.29 to 1.45 (-O2), 1.21 to 1.32 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 18 | -1.29 to 1.07 (-O2), -0.069 to 0.469 (-O3) | 0.218 to 0.241 (-O2), 0.087 to 0.278 (-O3) | 1.65 to 1.8 (-O2), 1.8 to 1.83 (-O3) | 0.22 to 1.68 (-O2), 1.63 to 1.65 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 80 | -0.27 to 0.12 (-O2), -0.09 to 0.06 (-O3) | 1.13 to 1.39 (-O2), 0.32 to 0.36 (-O3) | 5.98 to 6.06 (-O2), 5.17 to 5.34 (-O3) | 3.38 to 3.49 (-O2), 3.99 to 4.34 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | -0.03 to 0.19 (-O2), -0.34 to 0.04 (-O3) | -0.235 to -0.05 (-O2), 0.096 to 0.726 (-O3) | 2.51 to 2.84 (-O2), 1.05 to 1.12 (-O3) | 2.33 to 2.39 |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.1 to 0.18 (-O2), 0.01 to 0.07 (-O3) | 0.01 to 0.27 (-O2), -0.07 to 0.14 (-O3) | 2.17 to 2.21 (-O2), -0.39 to -0.24 (-O3) | 2.06 to 2.17 (-O2), 2.09 to 2.23 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.41 to 0.22 (-O2), -0.21 to 0.52 (-O3) | -0.17 to 0.23 (-O2), 0.14 to 0.2 (-O3) | 1.84 to 1.99 (-O2), 1.05 to 1.38 (-O3) | 2.18 to 2.36 (-O2), 2.2 to 2.34 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 18 | -0.23 to 0.45 (-O2), 0.14 to 0.89 (-O3) | 0.99 to 1.12 (-O2), 0.01 to 0.16 (-O3) | 4.25 to 6.33 (-O2), 3.41 to 4.18 (-O3) | 4.43 to 4.69 (-O2), 4.19 to 4.59 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 80 | -0.4 to -0.14 (-O2), -1.86 to 1.12 (-O3) | 0.16 to 1.09 (-O2), 0.4 to 0.48 (-O3) | 4.89 to 6.31 (-O2), 5.56 to 5.76 (-O3) | 5.22 to 5.45 (-O2), 4.87 to 5.43 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | -0.01 to 2.49 (-O2), -0.51 to 0.75 (-O3) | 6.45 to 6.76 (-O2), 5.76 to 6.63 (-O3) | 0.39 to 0.43 (-O2), 0.59 to 0.91 (-O3) | 0.17 to 0.2 (-O2), 0.04 to 0.16 (-O3) |
-| `z = x + y`, 1 limb, N = 7 | -0.52 to 0.44 (-O2), -0.96 to 0.88 (-O3) | -0.19 to 0.3 (-O2), 0.01 to 0.8 (-O3) | 0.3 to 0.39 (-O2), 0.49 to 0.79 (-O3) | 0.15 to 0.24 (-O2), 0 to 0.04 (-O3) |
-| `z = x + y`, 1 limb, N = 13 | -0.27 to 0.12 (-O2), 0.26 to 1.33 (-O3) | -1.46 to -0.57 (-O2), -1.51 to 0 (-O3) | -0.08 to 3.68 (-O2), -0.67 to -0.61 (-O3) | 0.01 to 0.07 (-O2), -0.04 to 0.04 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | -0.09 to 0.32 (-O2), -0.83 to -0.08 (-O3) | -0.003 to 0.176 (-O2), -0.224 to -0.077 (-O3) | -0.18 to 0.03 (-O2), -0.04 to 0.92 (-O3) | 0.31 to 0.34 (-O2), 0.24 to 0.3 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | 1.63 to 2.36 (-O2), -0.68 to 1.33 (-O3) | -0.49 to 1 (-O2), -0.48 to -0.25 (-O3) | -1.26 to -1.17 (-O2), 4.52 to 7 (-O3) | -2.33 to 7.51 (-O2), -2.02 to 1.86 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -0.93 to -0.06 (-O2), 0.06 to 0.98 (-O3) | -0.43 to 0.21 (-O2), 0.04 to 0.07 (-O3) | 1.23 to 4.11 (-O2), 0.36 to 0.7 (-O3) | 0.58 to 3.75 (-O2), -0.47 to 1.05 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | -0.06 to 0.13 (-O2), -0.01 to 0.29 (-O3) | 0.11 to 0.29 (-O2), -0.31 to 0.93 (-O3) | 0.33 to 0.39 (-O2), -1.22 to -0.87 (-O3) | -1.84 to 2.62 (-O2), -6.17 to 6.63 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -1.47 to 0.38 (-O2), -0.47 to 1.05 (-O3) | 1.11 to 1.21 (-O2), -0.47 to 0.2 (-O3) | -0.43 to 1.27 (-O2), -1.05 to -0.82 (-O3) | -7.57 to 4.23 (-O2), -7.41 to 0.28 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | -4.23 to -0.6 (-O2), -0.99 to 0.6 (-O3) | -0.66 to -0.08 (-O2), 0.44 to 0.47 (-O3) | 0.16 to 0.91 (-O2), 0.94 to 1.18 (-O3) | -2.83 to 3.51 (-O2), -3.97 to 0.14 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 0.2 to 1.4 (-O2), -1.2 to -0.6 (-O3) | -1.5 to 0.2 (-O2), 0.55 to 0.71 (-O3) | 0 to 2.2 (-O2), 0.6 to 1.5 (-O3) | -1.8 to 5.2 (-O2), -2.9 to 5.1 (-O3) |
-| `sub`, 1 limb, N = 3 | -0.3 to -0.02 (-O2), -0.1 to 0.18 (-O3) | 4.83 to 5.99 (-O2), 5.32 to 6.06 (-O3) | 1.8 to 1.87 (-O2), 2.61 to 2.63 (-O3) | -0.067 to -0.045 (-O2), -0.052 to 0.003 (-O3) |
-| `sub`, 1 limb, N = 7 | -0.2 to 0.36 (-O2), -0.5 to -0.07 (-O3) | -0.342 to 0.511 (-O2), 4.85 to 5.24 (-O3) | 1.56 to 1.61 (-O2), 1.01 to 1.02 (-O3) | 0.683 to 0.76 (-O2), 0.682 to 0.719 (-O3) |
-| `sub`, 1 limb, N = 13 | -0.01 to 0.28 (-O2), -0.16 to 0.38 (-O3) | 0.083 to 0.218 (-O2), 4.72 to 5.72 (-O3) | 1.48 to 1.71 (-O2), 1.39 to 1.44 (-O3) | 1.26 to 1.39 (-O2), 1.18 to 1.28 (-O3) |
-| `sub`, 1 limb, N = 18 | -0.345 to 0.449 (-O2), -0.556 to 0.267 (-O3) | 0.221 to 0.238 (-O2), 0.259 to 0.269 (-O3) | 1.81 to 1.94 (-O2), 1.76 to 1.81 (-O3) | 1.9 to 1.95 (-O2), 1.64 to 1.69 (-O3) |
-| `sub`, 1 limb, N = 80 | -0.67 to -0.42 (-O2), -0.11 to 0.82 (-O3) | 0.82 to 1.66 (-O2), 0.6 to 0.76 (-O3) | 5.72 to 6 (-O2), 4.75 to 4.89 (-O3) | 3.43 to 3.49 (-O2), 3.82 to 3.92 (-O3) |
-| `sub`, 2 limbs, N = 3 | -0.47 to 0.02 (-O2), -0.45 to 0.44 (-O3) | -0.147 to 0.242 (-O2), -0.104 to 0.19 (-O3) | 2.43 to 2.62 (-O2), 1.92 to 1.95 (-O3) | 2.73 to 2.84 |
-| `sub`, 2 limbs, N = 7 | -0.14 to -0.03 (-O2), -0.35 to 0.28 (-O3) | 0.01 to 0.52 (-O2), -0.06 to 0.04 (-O3) | 1.89 to 2.21 (-O2), 2.03 to 2.06 (-O3) | 3.97 to 4.78 (-O2), 3.84 to 3.9 (-O3) |
-| `sub`, 2 limbs, N = 13 | -0.61 to 0.01 (-O2), 0.09 to 0.47 (-O3) | -0.42 to -0.03 (-O2), 0.04 to 0.15 (-O3) | 2.72 to 2.87 (-O2), 1.45 to 1.61 (-O3) | 4.08 to 4.26 (-O2), 3.97 to 4.09 (-O3) |
-| `sub`, 2 limbs, N = 18 | -0.2 to 0.56 (-O2), -0.6 to 0.35 (-O3) | 0.6 to 1.9 (-O2), 0.46 to 0.48 (-O3) | 3.26 to 4.86 (-O2), 3.34 to 4.15 (-O3) | 4.46 to 5.19 (-O2), 4.46 to 5.42 (-O3) |
-| `sub`, 2 limbs, N = 80 | -3.3 to 1.49 (-O2), -0.32 to 1.17 (-O3) | 2.36 to 5.07 (-O2), -0.2 to 1.01 (-O3) | 4.47 to 5.74 (-O2), 5.02 to 5.16 (-O3) | 5.71 to 5.96 (-O2), 5.51 to 5.92 (-O3) |
-| `scale`, 1 limb, N = 3 | 5.18 to 6 (-O2), 5.67 to 6.64 (-O3) | 4.47 to 6.61 (-O2), 4.9 to 5.99 (-O3) | 2.54 to 2.64 | 2.44 to 2.48 |
-| `scale`, 1 limb, N = 7 | 5.51 to 6.61 (-O2), 5.53 to 6.53 (-O3) | -0.341 to 1.53 (-O2), 5.19 to 5.36 (-O3) | -0.41 to 1.57 (-O2), 1.9 to 2.12 (-O3) | -0.324 to 2.37 (-O2), 2.36 to 2.38 (-O3) |
-| `scale`, 1 limb, N = 13 | 4.82 to 5.91 (-O2), 5.01 to 5.54 (-O3) | -0.245 to 0.549 (-O2), 5.23 to 6.06 (-O3) | 1.97 to 2.02 (-O2), 1.81 to 1.86 (-O3) | 2.38 to 2.46 |
-| `scale`, 1 limb, N = 18 | -1.19 to 0.031 (-O2), -0.763 to 0.321 (-O3) | 0.369 to 0.57 (-O2), 0.198 to 0.408 (-O3) | 0.12 to 2.1 (-O2), 2.24 to 2.25 (-O3) | -1.75 to 2.68 (-O2), -1.83 to 2.73 (-O3) |
-| `scale`, 1 limb, N = 80 | 0.31 to 0.71 (-O2), -0.93 to -0.64 (-O3) | 0.09 to 0.69 (-O2), 0.12 to 0.27 (-O3) | 1.77 to 1.86 (-O2), 3.4 to 3.54 (-O3) | 3.35 to 3.39 (-O2), 0.62 to 3.44 (-O3) |
-| `scale`, 2 limbs, N = 3 | 6.22 to 7.08 (-O2), 6.24 to 7.2 (-O3) | -0.897 to 0.499 (-O2), -0.027 to 0.155 (-O3) | 2.27 to 2.32 (-O2), 0.77 to 0.8 (-O3) | 2.6 to 2.67 |
-| `scale`, 2 limbs, N = 7 | 6.09 to 6.96 (-O2), 6.07 to 7.16 (-O3) | 0.043 to 0.36 (-O2), -0.331 to -0.052 (-O3) | 2.76 to 2.88 (-O2), 0.45 to 0.5 (-O3) | -1.3 to 2.06 (-O2), 2.03 to 2.06 (-O3) |
-| `scale`, 2 limbs, N = 13 | -0.862 to 0.498 (-O2), 0.286 to 2.19 (-O3) | 0.014 to 0.048 (-O2), -0.022 to -0.01 (-O3) | 2.36 to 2.74 (-O2), -0.79 to 3.91 (-O3) | 3.57 to 3.65 |
-| `scale`, 2 limbs, N = 18 | 0.01 to 0.3 (-O2), 0.15 to 0.51 (-O3) | -0.04 to 0.02 (-O2), 0.161 to 0.165 (-O3) | 2.23 to 2.6 (-O2), 0.95 to 0.99 (-O3) | 1.82 to 1.89 |
-| `scale`, 2 limbs, N = 80 | 0.56 to 1.35 (-O2), -0.65 to -0.17 (-O3) | -0.59 to 0.8 (-O2), 0.49 to 0.69 (-O3) | 2.92 to 3.12 (-O2), 0.58 to 0.65 (-O3) | 1.83 to 1.97 (-O2), 1.73 to 1.89 (-O3) |
-| `half`, 1 limb, N = 3 | 0.41 to 0.82 (-O2), 0.44 to 1.49 (-O3) | -1.81 to -0.153 (-O2), 4.99 to 5.52 (-O3) | 2.28 to 2.36 (-O2), 2.48 to 2.51 (-O3) | 0.54 to 0.6 (-O2), 0.27 to 0.33 (-O3) |
-| `half`, 1 limb, N = 7 | 0.72 to 0.92 (-O2), 0.69 to 1.23 (-O3) | -0.759 to 0.065 (-O2), 5.19 to 5.61 (-O3) | 2.21 to 2.63 (-O2), 1.64 to 2.49 (-O3) | 0.3 to 0.35 (-O2), 0.09 to 0.39 (-O3) |
-| `half`, 1 limb, N = 13 | -0.02 to 0.02 (-O2), -0.17 to 0.24 (-O3) | -0.221 to -0.131 (-O2), 3.94 to 4.44 (-O3) | 2.21 to 2.53 (-O2), 0.98 to 2.13 (-O3) | -0.16 to 0.48 (-O2), -0.31 to -0.17 (-O3) |
-| `half`, 1 limb, N = 18 | -0.06 to 0.4 (-O2), -0.26 to 0.42 (-O3) | -0.268 to -0.064 (-O2), 0.265 to 0.266 (-O3) | 2.68 to 2.91 (-O2), 1.53 to 2.64 (-O3) | -1.21 to -1.05 (-O2), -1.19 to -0.57 (-O3) |
-| `half`, 1 limb, N = 80 | -0.6 to -0.06 (-O2), -0.38 to 0.61 (-O3) | -1.06 to 1.16 (-O2), 0.64 to 0.7 (-O3) | 1.33 to 4.16 (-O2), 4.78 to 5.21 (-O3) | 5.88 to 6.2 (-O2), 5.53 to 5.72 (-O3) |
-| `half`, 2 limbs, N = 3 | 0.49 to 1.68 (-O2), 1.02 to 1.31 (-O3) | -0.306 to 0.052 (-O2), 0.002 to 0.166 (-O3) | 1.41 to 1.61 (-O2), 2.32 to 2.8 (-O3) | 0.55 to 0.63 (-O2), 0.76 to 0.82 (-O3) |
-| `half`, 2 limbs, N = 7 | -0.47 to 0.03 (-O2), 0 to 0.42 (-O3) | -0.279 to 0.003 (-O2), -0.076 to 0.006 (-O3) | 0.86 to 1.21 (-O2), 2.75 to 2.88 (-O3) | 2.37 to 2.48 (-O2), 1.85 to 2.3 (-O3) |
-| `half`, 2 limbs, N = 13 | -0.94 to 0.22 (-O2), -0.15 to 0.36 (-O3) | -0.03 to 0.14 (-O2), 0.205 to 0.214 (-O3) | 1.44 to 1.73 (-O2), 3.24 to 3.36 (-O3) | 2.48 to 2.66 (-O2), 2.51 to 2.67 (-O3) |
-| `half`, 2 limbs, N = 18 | -0.22 to 0.01 (-O2), -0.5 to 0.93 (-O3) | 0 to 0.01 (-O2), 0.13 (-O3) | 1.43 to 1.76 (-O2), 3.02 to 3.16 (-O3) | 1.78 to 2.61 (-O2), 2.5 to 2.59 (-O3) |
-| `half`, 2 limbs, N = 80 | 0 to 0.12 (-O2), -0.12 to 0.74 (-O3) | 0.03 to 0.08 (-O2), 0.07 to 0.1 (-O3) | 4.03 to 4.49 (-O2), 5.02 to 5.48 (-O3) | 5.85 to 6.05 (-O2), 5.79 to 6.28 (-O3) |
-| the constructor, 1 limb, N = 3 | -1.56 to -1.02 (-O2), -0.813 to -0.14 (-O3) | -0.169 to 0.05 (-O2), -0.034 to 0.047 (-O3) | 3.01 to 3.68 (-O2), 2.69 to 3.67 (-O3) | 3.64 to 3.71 |
-| the constructor, 1 limb, N = 7 | -0.15 to 0.09 (-O2), -0.44 to 0.3 (-O3) | -6.43 to -5.32 (-O2), -0.016 to 0.634 (-O3) | 4.55 to 4.62 (-O2), 4.39 to 5.56 (-O3) | 1.26 to 1.3 (-O2), 1.23 to 1.27 (-O3) |
-| the constructor, 1 limb, N = 13 | 3.19 to 3.75 (-O2), 2.73 to 3.73 (-O3) | -0.33 to 0.41 (-O2), 0.119 to 0.196 (-O3) | 2.69 to 2.87 (-O2), 3.89 to 3.93 (-O3) | 0.24 to 0.31 (-O2), 0.76 to 0.84 (-O3) |
-| the constructor, 1 limb, N = 18 | 4.82 to 5.98 (-O2), 3.14 to 3.39 (-O3) | 0.19 to 0.2 (-O2), 0.19 to 0.22 (-O3) | 2.23 to 2.71 (-O2), 2.45 to 2.78 (-O3) | -0.33 to 0.59 (-O2), 1.67 to 1.79 (-O3) |
-| the constructor, 1 limb, N = 80 | 0.06 to 0.17 (-O2), -2.43 to 0.67 (-O3) | -2.4 to 0.8 (-O2), -5.3 to 6.8 (-O3) | 2.5 to 3.1 (-O2), 2.5 to 3.4 (-O3) | -4.3 to 2.56 (-O2), -4.53 to 0.31 (-O3) |
-| the constructor, 2 limbs, N = 3 | -1.56 to -0.391 (-O2), 0.06 to 0.76 (-O3) | -0.227 to 0.215 (-O2), 0.07 to 0.294 (-O3) | 5.46 to 5.64 (-O2), 6.94 to 8.65 (-O3) | 1.14 to 1.59 (-O2), 1.09 to 1.14 (-O3) |
-| the constructor, 2 limbs, N = 7 | 1.49 to 2.48 (-O2), 1.41 to 2.57 (-O3) | -0.02 to 0.37 (-O2), -0.544 to -0.061 (-O3) | 2.6 to 2.94 (-O2), 6.45 to 6.77 (-O3) | 0.71 to 0.8 (-O2), 0.74 to 0.75 (-O3) |
-| the constructor, 2 limbs, N = 13 | -0.44 to 0.05 (-O2), -1.63 to -1.58 (-O3) | -0.97 to 0.81 (-O2), -1.01 to -0.99 (-O3) | 1.6 to 1.76 (-O2), 5.89 to 6.24 (-O3) | 0.27 to 0.84 (-O2), 2.24 to 2.46 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.57 to 0.08 (-O2), -0.03 to 0.11 (-O3) | -8.49 to -8.24 (-O2), 0.15 to 0.19 (-O3) | 6.54 to 6.97 (-O2), -14.1 to -13.8 (-O3) | -0.19 to 3.6 (-O2), 1.32 to 1.61 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.86 to 3.38 (-O2), 0.98 to 4.38 (-O3) | -16.7 to 5.5 (-O2), -0.4 to 12 (-O3) | -2.2 to -1.3 (-O2), -0.3 to 1 (-O3) | -2.5 to 3.3 (-O2), -2.5 to 0.3 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | -0.29 to -0.02 (-O2), 0.02 to 0.89 (-O3) | 4.44 to 5.26 (-O2), 5.24 to 5.51 (-O3) | 1.61 to 1.67 (-O2), 2.61 to 2.63 (-O3) | -0.154 to -0.101 (-O2), -0.166 to -0.09 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 7 | -0.36 to 0.58 (-O2), -0.02 to 0 (-O3) | -0.084 to 0.309 (-O2), 5.25 to 5.81 (-O3) | 0.55 to 1.72 (-O2), 0.94 to 1.02 (-O3) | 0.711 to 0.789 (-O2), 0.757 to 0.79 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 13 | -0.12 to 0.74 (-O2), -0.88 to -0.45 (-O3) | -0.023 to 0.112 (-O2), 4.77 to 5.86 (-O3) | 1.51 to 2.72 (-O2), 1.44 to 1.46 (-O3) | 1.31 to 1.42 (-O2), 1.31 to 1.34 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 18 | -0.05 to 0.319 (-O2), -0.288 to 0.403 (-O3) | 0.21 to 0.357 (-O2), -0.005 to 0.274 (-O3) | 1.68 to 1.73 (-O2), 1.75 to 1.79 (-O3) | 1.73 to 1.74 (-O2), 1.81 to 1.94 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 80 | -0.35 to 0.51 (-O2), -0.64 to -0.08 (-O3) | 1.16 to 1.37 (-O2), 0.6 to 0.69 (-O3) | 6.29 to 6.43 (-O2), 3.45 to 3.56 (-O3) | 3.3 to 3.37 (-O2), 3.99 to 4.05 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | -0.09 to 0.07 (-O2), -0.4 to 0 (-O3) | -0.151 to 0.043 (-O2), -0.063 to 0.033 (-O3) | -1.14 to 2.78 (-O2), -1.28 to 1.13 (-O3) | 2.29 to 2.34 (-O2), 2.39 to 2.44 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.07 to 0.26 (-O2), -0.1 to 0.05 (-O3) | -0.03 to 0.03 (-O2), -0.32 to 0.05 (-O3) | 0.04 to 2.15 (-O2), -0.44 to -0.14 (-O3) | 2.18 to 2.2 (-O2), 2.21 to 2.34 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 13 | 0.21 to 0.68 (-O2), -0.24 to -0.05 (-O3) | -0.23 to -0.03 (-O2), -0.1 to 1.1 (-O3) | -0.67 to 2.19 (-O2), 0.84 to 0.94 (-O3) | 2.42 to 2.82 (-O2), 2.18 to 2.44 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | -0.18 to 0.19 (-O2), 0.09 to 0.51 (-O3) | 0.39 to 1.3 (-O2), 0.08 to 0.29 (-O3) | 1.37 to 6.08 (-O2), 3.34 to 4.56 (-O3) | 4.17 to 4.86 (-O2), 4.19 to 4.67 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 80 | 0.07 to 1.45 (-O2), -0.75 to -0.03 (-O3) | 0.12 to 3.21 (-O2), 0.41 to 1.63 (-O3) | 4.07 to 5.32 (-O2), 5.09 to 5.51 (-O3) | 4.81 to 5.19 (-O2), 4.92 to 5.4 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | -0.71 to 0.4 (-O2), 0 to 0.79 (-O3) | 5.87 to 6.82 (-O2), 5.6 to 7.87 (-O3) | 0.37 to 0.73 (-O2), 0.32 to 0.89 (-O3) | -0.41 to 0.17 (-O2), 0.15 to 0.18 (-O3) |
+| `z = x + y`, 1 limb, N = 7 | -1.14 to 0.24 (-O2), -0.48 to 0.07 (-O3) | -0.91 to 0.97 (-O2), 0.01 to 0.1 (-O3) | -0.01 to 0.34 (-O2), 0.25 to 2.43 (-O3) | -0.12 to -0.08 (-O2), -0.17 to 0 (-O3) |
+| `z = x + y`, 1 limb, N = 13 | -0.66 to 0 (-O2), -1.22 to 0.31 (-O3) | -2.04 to -0.89 (-O2), -1.33 to 1.51 (-O3) | -0.08 to -0.06 (-O2), -0.7 to -0.59 (-O3) | -0.02 to 0.06 (-O2), 0.03 to 0.1 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -0.87 to -0.31 (-O2), -0.35 to 0.29 (-O3) | -0.05 to -0.015 (-O2), -0.399 to -0.039 (-O3) | -0.25 to 0 (-O2), 0.22 to 0.93 (-O3) | 0.19 to 0.25 (-O2), 0.17 to 0.3 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | -0.2 to 0.09 (-O2), -0.69 to -0.44 (-O3) | -0.48 to -0.14 (-O2), -0.46 to 0.19 (-O3) | 2.09 to 2.8 (-O2), 0.14 to 0.28 (-O3) | -0.13 to 8.86 (-O2), -0.77 to 0.72 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | -1.06 to -0.01 (-O2), -0.97 to 1.02 (-O3) | -0.18 to -0.07 (-O2), -0.64 to 0.13 (-O3) | -1.04 to 1.34 (-O2), -0.19 to 0.73 (-O3) | 0.62 to 0.71 (-O2), -0.86 to 0.78 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | -0.04 to 0.09 (-O2), -0.31 to 0.06 (-O3) | -0.04 to 0.16 (-O2), -1.7 to 0 (-O3) | -3.99 to 0.43 (-O2), -1.13 to -0.74 (-O3) | -4.53 to 0.82 (-O2), 0.55 to 0.74 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.11 to 0.5 (-O2), 0.06 to 0.35 (-O3) | 0.43 to 0.76 (-O2), -0.9 to -0.26 (-O3) | 0.69 to 1.69 (-O2), -1.56 to -0.92 (-O3) | -0.01 to 3.35 (-O2), -0.35 to -0.05 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | -0.22 to -0.07 (-O2), -0.9 to 0.02 (-O3) | -0.46 to 0.3 (-O2), -0.21 to 0.49 (-O3) | 0.09 to 0.83 (-O2), 0.8 to 1.09 (-O3) | 0.36 to 3.12 (-O2), -0.5 to 0.23 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | -0.2 to 0.6 (-O2), -4.8 to -1.1 (-O3) | -0.6 to 0.1 (-O2), -3.68 to 1.18 (-O3) | 1.1 to 2.2 (-O2), 1.3 to 2.7 (-O3) | 3.7 to 6.4 (-O2), -0.4 to 2.3 (-O3) |
+| `sub`, 1 limb, N = 3 | -0.02 to 0.24 (-O2), 0.19 to 0.75 (-O3) | 4.46 to 5.84 (-O2), 5.03 to 5.9 (-O3) | 1.62 to 1.79 (-O2), 2.61 to 2.63 (-O3) | -0.12 to -0.084 (-O2), -0.008 to 0.023 (-O3) |
+| `sub`, 1 limb, N = 7 | -0.87 to 0.09 (-O2), -0.45 to 0.02 (-O3) | 0.187 to 0.52 (-O2), 5.65 to 5.92 (-O3) | 1.57 to 1.61 (-O2), 1.03 to 1.05 (-O3) | 0.674 to 0.765 (-O2), 0.756 to 5.78 (-O3) |
+| `sub`, 1 limb, N = 13 | -0.35 to 0.1 (-O2), -0.68 to 0.61 (-O3) | -0.024 to 0.172 (-O2), 5.22 to 5.68 (-O3) | 1.47 to 1.55 (-O2), 1.36 to 1.43 (-O3) | 1.32 (-O2), 1.16 to 1.32 (-O3) |
+| `sub`, 1 limb, N = 18 | -1.26 to 0.262 (-O2), -1.03 to 0.883 (-O3) | 0.22 to 0.424 (-O2), 0.146 to 0.264 (-O3) | 1.74 to 1.79 (-O2), 0.7 to 1.8 (-O3) | 1.81 (-O2), 1.8 to 4.58 (-O3) |
+| `sub`, 1 limb, N = 80 | -0.56 to 0.06 (-O2), 0.1 to 0.32 (-O3) | 1.26 to 1.3 (-O2), 0.21 to 0.95 (-O3) | 6.14 to 6.4 (-O2), 5.04 to 5.19 (-O3) | 3.27 to 3.3 (-O2), 4.03 to 4.11 (-O3) |
+| `sub`, 2 limbs, N = 3 | -0.04 to 1.03 (-O2), -0.17 to 0.01 (-O3) | -0.12 to 1.58 (-O2), -0.08 to 1.23 (-O3) | -1.12 to 2.84 (-O2), 1.87 to 1.91 (-O3) | 2.88 to 2.94 |
+| `sub`, 2 limbs, N = 7 | -0.12 to 0.17 (-O2), -0.41 to 0.13 (-O3) | -0.13 to 0.02 (-O2), 0.01 to 0.1 (-O3) | -0.19 to 1.11 (-O2), 1.97 to 2.05 (-O3) | 4.02 to 4.14 |
+| `sub`, 2 limbs, N = 13 | -0.15 to 0.2 (-O2), -0.32 to 0.37 (-O3) | -0.44 to -0.06 (-O2), 0.03 to 0.3 (-O3) | 0 to 2.83 (-O2), 1.65 to 2.36 (-O3) | 4.05 to 4.15 (-O2), 4.16 to 4.31 (-O3) |
+| `sub`, 2 limbs, N = 18 | -0.1 to -0.07 (-O2), 0.04 to 0.42 (-O3) | 0.82 to 1.14 (-O2), -0.17 to 0.24 (-O3) | 0.51 to 5.07 (-O2), 3.25 to 4.38 (-O3) | 4.94 to 5.42 (-O2), 4.87 to 5.27 (-O3) |
+| `sub`, 2 limbs, N = 80 | -0.03 to 0.22 (-O2), -1.52 to -0.17 (-O3) | 2.88 to 3.87 (-O2), -1.48 to 0.43 (-O3) | 5.4 to 7.3 (-O2), 5.44 to 6.31 (-O3) | 5.69 to 6.01 (-O2), 5.89 to 6.03 (-O3) |
+| `scale`, 1 limb, N = 3 | 5.02 to 6.04 (-O2), 4.25 to 5.44 (-O3) | 5.02 to 6.18 (-O2), 4.74 to 4.76 (-O3) | 3.02 to 3.05 (-O2), 2.59 to 2.63 (-O3) | 2.45 to 2.49 |
+| `scale`, 1 limb, N = 7 | 4.92 to 6.01 (-O2), 5.04 to 6.19 (-O3) | 0.258 to 1.13 (-O2), 5.28 to 5.38 (-O3) | -0.7 to 1.86 (-O2), 1.87 to 2.04 (-O3) | 2.35 to 2.38 |
+| `scale`, 1 limb, N = 13 | 4.91 to 5.82 (-O2), 4.67 to 5.86 (-O3) | 0.049 to 0.638 (-O2), 4.17 to 5.05 (-O3) | 2.2 to 2.23 (-O2), 1.76 to 1.77 (-O3) | 2.48 to 2.57 |
+| `scale`, 1 limb, N = 18 | -0.626 to 0.451 (-O2), 0.028 to 0.517 (-O3) | 0.391 to 0.506 (-O2), 0.267 to 0.43 (-O3) | 0.47 to 1.94 (-O2), 2.35 to 2.38 (-O3) | 2.63 to 2.67 |
+| `scale`, 1 limb, N = 80 | 0.1 to 0.27 (-O2), -1.04 to -1 (-O3) | 0.06 to 0.73 (-O2), -0.27 to 0.3 (-O3) | 2.41 to 2.45 (-O2), 3.43 to 3.55 (-O3) | 1.82 to 1.84 (-O2), 2.62 to 19.2 (-O3) |
+| `scale`, 2 limbs, N = 3 | 5.44 to 6.74 (-O2), 5.27 to 6.72 (-O3) | 0.074 to 0.457 (-O2), -0.232 to 0.271 (-O3) | 2.36 to 2.38 (-O2), 0.75 (-O3) | 2.72 to 2.78 |
+| `scale`, 2 limbs, N = 7 | 6.04 to 6.88 (-O2), 5.79 to 6.76 (-O3) | -0.002 to 0.071 (-O2), -0.183 to 0.14 (-O3) | 2.74 to 2.82 (-O2), 0.39 to 0.44 (-O3) | 2.05 to 5.76 (-O2), 2.05 to 2.08 (-O3) |
+| `scale`, 2 limbs, N = 13 | -1.09 to 1 (-O2), -0.263 to 1.07 (-O3) | -0.014 to 0.019 (-O2), -0.187 to -0.003 (-O3) | 2.66 to 2.88 (-O2), 0.5 to 3.66 (-O3) | 3.55 to 3.61 |
+| `scale`, 2 limbs, N = 18 | -0.01 to 0.24 (-O2), 0.06 to 0.28 (-O3) | -0.02 to 0.04 (-O2), 0.162 to 0.19 (-O3) | 2.47 to 2.63 (-O2), 0.5 to 0.95 (-O3) | -0.38 to 1.83 (-O2), 1.91 to 5.44 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.5 to 0.86 (-O2), -1.63 to -0.16 (-O3) | -0.43 to 1.03 (-O2), 0.07 to 0.55 (-O3) | 2.92 to 3.14 (-O2), 0.6 to 0.63 (-O3) | 1.71 to 1.82 (-O2), 1.76 to 1.84 (-O3) |
+| `half`, 1 limb, N = 3 | 0.18 to 0.82 (-O2), 0.79 to 0.98 (-O3) | -0.243 to 0.342 (-O2), 4.89 to 5.21 (-O3) | 2.26 to 2.32 (-O2), 2.36 to 2.44 (-O3) | 0.27 to 0.33 (-O2), 0.35 to 0.43 (-O3) |
+| `half`, 1 limb, N = 7 | 0.68 to 1.18 (-O2), 0.41 to 0.98 (-O3) | -0.082 to 0.176 (-O2), 5.16 to 5.59 (-O3) | 2.14 to 2.22 (-O2), 2.68 to 2.75 (-O3) | 0.38 to 0.44 (-O2), 0.27 to 0.35 (-O3) |
+| `half`, 1 limb, N = 13 | -0.53 to 0.01 (-O2), -0.33 to 0.14 (-O3) | 0.13 to 0.134 (-O2), 3.93 to 4.6 (-O3) | 2.2 to 2.46 (-O2), 2.02 to 2.17 (-O3) | -0.22 to -0.19 (-O2), -0.31 to 0.3 (-O3) |
+| `half`, 1 limb, N = 18 | -0.06 to 0.54 (-O2), -0.04 to 0.82 (-O3) | 0.001 to 0.219 (-O2), 0.093 to 0.265 (-O3) | 2.97 to 2.99 (-O2), 2.36 to 2.41 (-O3) | -1.17 to -1.16 (-O2), -1.2 to 0.07 (-O3) |
+| `half`, 1 limb, N = 80 | -0.19 to -0.04 (-O2), -0.17 to 0.01 (-O3) | -0.01 to 0.46 (-O2), -0.01 to 0.7 (-O3) | 3.13 to 3.83 (-O2), 4.56 to 4.92 (-O3) | 5.76 to 6.16 (-O2), 5.49 to 5.56 (-O3) |
+| `half`, 2 limbs, N = 3 | 1.3 to 1.42 (-O2), 1.19 to 1.94 (-O3) | -0.498 to 0.062 (-O2), 0.188 to 0.333 (-O3) | 1.94 to 2.02 (-O2), 2.7 to 2.73 (-O3) | 0.6 to 0.63 (-O2), 0.6 to 1.7 (-O3) |
+| `half`, 2 limbs, N = 7 | -0.22 to 0.35 (-O2), 0.03 to 0.14 (-O3) | -0.14 to -0.132 (-O2), -0.295 to 0.134 (-O3) | 0.28 to 1.56 (-O2), 3.01 to 3.05 (-O3) | 2.37 to 2.84 (-O2), 2.15 to 2.36 (-O3) |
+| `half`, 2 limbs, N = 13 | -0.51 to -0.03 (-O2), -0.94 to 0.01 (-O3) | -0.16 to -0.13 (-O2), 0.222 to 0.333 (-O3) | 1.38 to 1.47 (-O2), 2.7 to 3.14 (-O3) | 2.09 to 2.31 (-O2), 2.53 to 2.8 (-O3) |
+| `half`, 2 limbs, N = 18 | -0.06 to 0.01 (-O2), -0.28 to 0.22 (-O3) | 0 (-O2), 0.09 to 0.14 (-O3) | 1.39 to 1.51 (-O2), 2.93 to 3.01 (-O3) | 2.43 to 4.29 (-O2), 2.29 to 2.39 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.04 to 0.11 (-O2), -0.17 to 0.17 (-O3) | -0.01 to 2.14 (-O2), -0.93 to 0.1 (-O3) | 4.15 to 4.55 (-O2), 5.13 to 5.47 (-O3) | 5.8 to 6.17 (-O2), 5.77 to 5.88 (-O3) |
+| the constructor, 1 limb, N = 3 | -0.841 to -0.13 (-O2), -0.996 to 0.32 (-O3) | -0.848 to -0.267 (-O2), -0.405 to -0.029 (-O3) | 3 to 3.9 (-O2), 2.67 to 4.45 (-O3) | 3.66 to 3.75 |
+| the constructor, 1 limb, N = 7 | -0.128 to 0.218 (-O2), -0.12 to 0.09 (-O3) | -5.64 to -5.55 (-O2), -0.965 to 0.437 (-O3) | 4.57 to 4.78 (-O2), 4.32 to 5.76 (-O3) | 1.26 to 1.34 (-O2), 1.25 to 1.29 (-O3) |
+| the constructor, 1 limb, N = 13 | 2.82 to 3.61 (-O2), 3.12 to 3.46 (-O3) | -0.05 to -0.01 (-O2), -0.447 to -0.221 (-O3) | 2.72 to 2.76 (-O2), 3.79 to 3.83 (-O3) | 0.82 to 0.85 (-O2), 1.5 to 1.53 (-O3) |
+| the constructor, 1 limb, N = 18 | -1.4 to -0.18 (-O2), -1.88 to -1.02 (-O3) | 0.08 to 0.17 (-O2), -0.8 to 0.18 (-O3) | 2.26 to 2.69 (-O2), 2.43 to 2.96 (-O3) | -0.93 to -0.88 (-O2), -0.01 to 0.85 (-O3) |
+| the constructor, 1 limb, N = 80 | 42.2 to 43.5 (-O2), -1.3 to 0.22 (-O3) | -4.4 to 1.2 (-O2), -9.2 to 3.9 (-O3) | 2.5 to 2.7 (-O2), 2.9 to 3.4 (-O3) | 1.11 to 13.8 (-O2), 1.43 to 3.75 (-O3) |
+| the constructor, 2 limbs, N = 3 | -0.564 to 0.07 (-O2), 0.067 to 0.452 (-O3) | -0.568 to 0.34 (-O2), -0.189 to 0.285 (-O3) | 5.1 to 5.44 (-O2), 6.95 to 8.36 (-O3) | 1.08 to 1.15 (-O2), 1.08 to 1.12 (-O3) |
+| the constructor, 2 limbs, N = 7 | 1.43 to 2.35 (-O2), 1.48 to 1.72 (-O3) | 0.02 to 0.18 (-O2), -0.628 to 0.008 (-O3) | 2.6 to 3.34 (-O2), 6.78 to 8.24 (-O3) | 0.74 to 0.8 (-O2), 0.76 to 0.78 (-O3) |
+| the constructor, 2 limbs, N = 13 | 2.23 to 2.5 (-O2), 0.2 to 0.27 (-O3) | -0.39 to 0.34 (-O2), -1.14 to -0.89 (-O3) | 1.54 to 2.29 (-O2), 5.87 to 6.29 (-O3) | -0.36 to -0.23 (-O2), -0.38 to 2.03 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.27 to 0.45 (-O2), -0.35 to 0.25 (-O3) | -0.06 to 0.95 (-O2), -0.78 to 2.13 (-O3) | 1.52 to 2.63 (-O2), -14.2 to -14.1 (-O3) | 2.92 to 6.78 (-O2), -0.9 to 2.27 (-O3) |
+| the constructor, 2 limbs, N = 80 | 2.49 to 4.48 (-O2), 0.07 to 0.1 (-O3) | -10.4 to -0.4 (-O2), -14.1 to -0.5 (-O3) | 6.8 to 8.2 (-O2), -1.6 to -0.5 (-O3) | 1.2 to 1.5 (-O2), 0.8 to 1.9 (-O3) |
 
 | Short ball vectors before 2026-11-23, measured again, one operation per unit, a dependent chain: the check, ns per operation (the header before minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.3 to 0 (-O2), -0.65 to 0.43 (-O3) | 5.38 to 6.29 (-O2), 4.65 to 5.16 (-O3) | 2.12 to 2.21 (-O2), 3.23 to 3.24 (-O3) | -0.223 to -0.198 (-O2), -0.237 to -0.187 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 7 | -0.68 to 0.31 (-O2), -0.05 to 0.07 (-O3) | 0.018 to 0.336 (-O2), 4.21 to 5.14 (-O3) | 1.82 to 1.94 (-O2), 1.21 to 1.24 (-O3) | 0.725 to 0.793 (-O2), 0.33 to 0.801 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | -4.51 to -3.71 (-O2), -6.01 to -5.21 (-O3) | 0.22 to 0.281 (-O2), 4.65 to 6.63 (-O3) | 1.82 to 1.86 (-O2), 1.3 to 1.42 (-O3) | 1.39 to 1.49 (-O2), 1.41 to 1.52 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 18 | -0.77 to 0.662 (-O2), 0.057 to 0.395 (-O3) | 0.184 to 0.303 (-O2), 0.183 to 0.39 (-O3) | 1.72 to 1.84 (-O2), 1.85 to 1.87 (-O3) | 0.34 to 1.81 (-O2), 1.79 to 4.59 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 80 | -0.19 to 0.61 (-O2), -1 to 1.41 (-O3) | -0.25 to 0.46 (-O2), 0.22 to 0.76 (-O3) | 6.01 to 6.16 (-O2), 4.88 to 4.99 (-O3) | 3.47 to 3.52 (-O2), 3.26 to 3.34 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | -0.15 to 0.41 (-O2), -0.08 to 0.54 (-O3) | -0.271 to 0.01 (-O2), -0.135 to 0.688 (-O3) | 2.72 to 2.86 (-O2), 1.68 to 1.71 (-O3) | 2.12 to 2.13 (-O2), 2 to 2.09 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.13 to 0.26 (-O2), -0.04 to 0.08 (-O3) | -0.02 to 0.02 (-O2), 0.04 to 0.25 (-O3) | 2.26 to 2.51 (-O2), -0.21 (-O3) | 1.93 to 1.96 (-O2), 2.01 to 2.08 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 13 | 0.07 to 0.3 (-O2), -0.39 to 0.19 (-O3) | 0.02 to 1.21 (-O2), 0.4 to 0.56 (-O3) | 2.06 to 2.36 (-O2), 1.92 to 2.06 (-O3) | 2.14 to 2.32 (-O2), 2.28 to 2.31 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 18 | -0.06 to 0.74 (-O2), 0.41 to 0.84 (-O3) | 0.63 to 1.15 (-O2), 0.43 to 0.78 (-O3) | 4.38 to 5.46 (-O2), 4.24 to 4.79 (-O3) | 3.8 to 4.13 (-O2), 3.89 to 4.35 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 80 | -0.08 to 1.45 (-O2), -0.06 to 1.18 (-O3) | 0.05 to 1.33 (-O2), 1.38 to 2.74 (-O3) | 4.41 to 4.99 (-O2), 5.74 to 6.38 (-O3) | 5.01 to 5.45 (-O2), 4.84 to 4.96 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | -0.23 to 1.78 (-O2), -0.71 to 0.51 (-O3) | 6.11 to 7.77 (-O2), 6.25 to 6.41 (-O3) | 0.14 to 0.72 (-O2), 1.03 to 1.07 (-O3) | 0.13 to 0.18 (-O2), 0.08 to 0.17 (-O3) |
-| `z = x + y`, 1 limb, N = 7 | -0.28 to 0.77 (-O2), -0.01 to 0.8 (-O3) | -2.54 to -1.05 (-O2), -1.19 to -0.55 (-O3) | -0.07 to 0.52 (-O2), 0.73 to 0.8 (-O3) | 0.26 to 0.31 (-O2), 0.13 to 0.17 (-O3) |
-| `z = x + y`, 1 limb, N = 13 | -0.44 to 0.69 (-O2), 1.16 to 1.45 (-O3) | -2.08 to -1.05 (-O2), -1.14 to -0.48 (-O3) | -0.12 to 0.01 (-O2), -0.61 to -0.57 (-O3) | -0.16 to 0.01 (-O2), -0.07 to 0 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | -0.35 to 0.02 (-O2), 0.01 to 0.08 (-O3) | 1.64 to 1.7 (-O2), -0.828 to 0.059 (-O3) | 0 to 0.55 (-O2), -1.69 to -1.05 (-O3) | 0.21 to 0.33 (-O2), 0.27 to 0.29 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | 0.16 to 1.56 (-O2), -0.37 to 0.67 (-O3) | -1.77 to 0.11 (-O2), -0.06 to 0.76 (-O3) | -2.67 to -0.34 (-O2), 5.4 to 5.76 (-O3) | 0.85 to 6.04 (-O2), -0.83 to 2.94 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -0.76 to 0.43 (-O2), -0.06 to 0.31 (-O3) | -0.12 to 0.03 (-O2), 2.1 to 3.01 (-O3) | 1.02 to 1.34 (-O2), -0.01 to 0.28 (-O3) | -0.72 to 2.36 (-O2), 0.22 to 2.66 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | -0.09 to 0.35 (-O2), 0.06 to 0.26 (-O3) | -0.01 to 0.16 (-O2), 0.63 to 0.9 (-O3) | 0.15 to 0.76 (-O2), -2.07 to -0.82 (-O3) | -2.02 to 2.91 (-O2), -5.95 to 3.24 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -1.64 to 0.21 (-O2), -0.17 to 0.91 (-O3) | -0.16 to 0.01 (-O2), 0.39 to 0.95 (-O3) | -0.14 to 1.25 (-O2), 2.7 to 3.58 (-O3) | -3.78 to 4.24 (-O2), -3.67 to 4.28 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | -4.12 to 0.1 (-O2), -0.58 to -0.01 (-O3) | -0.16 to 0.17 (-O2), 0.44 to 1 (-O3) | 0.17 to 1.05 (-O2), 1.33 to 1.67 (-O3) | -2.97 to 3.22 (-O2), -0.47 to 3.69 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 0 to 2.1 (-O2), -1 to 1.8 (-O3) | -0.7 to 0.6 (-O2), -0.82 to 1.33 (-O3) | -0.3 to 4.1 (-O2), 0.4 to 3 (-O3) | 0.3 to 6.3 (-O2), -1.9 to 9.2 (-O3) |
-| `sub`, 1 limb, N = 3 | -0.24 to 0.13 (-O2), -0.06 to 0.37 (-O3) | 5.06 to 6.2 (-O2), 4.89 to 6.29 (-O3) | 2.16 to 4.47 (-O2), 3.2 to 3.22 (-O3) | -0.222 to -0.154 (-O2), -0.147 to -0.116 (-O3) |
-| `sub`, 1 limb, N = 7 | -0.25 to 0.34 (-O2), -0.57 to 0.19 (-O3) | 0.295 to 0.474 (-O2), 4.53 to 5.17 (-O3) | 1.77 to 1.9 (-O2), 1.24 to 1.3 (-O3) | 0.691 to 4.2 (-O2), 0.656 to 0.68 (-O3) |
-| `sub`, 1 limb, N = 13 | -5.45 to -4.73 (-O2), -5.21 to -4.62 (-O3) | 0.192 to 0.32 (-O2), 4.19 to 4.85 (-O3) | 1.67 to 1.74 (-O2), 1.42 to 4.17 (-O3) | 1.38 to 1.49 (-O2), 1.37 to 1.46 (-O3) |
-| `sub`, 1 limb, N = 18 | -0.331 to 0.608 (-O2), -1.17 to 0.398 (-O3) | 0.08 to 0.178 (-O2), 0.286 to 0.67 (-O3) | 1.83 to 1.86 | 1.79 to 4.42 (-O2), 1.8 to 1.84 (-O3) |
-| `sub`, 1 limb, N = 80 | -0.57 to -0.02 (-O2), -0.38 to 0.97 (-O3) | 0.23 to 0.38 (-O2), 0.47 to 1.03 (-O3) | 5.46 to 5.6 (-O2), 4.55 to 4.62 (-O3) | 3.48 to 3.7 (-O2), 3.38 to 3.53 (-O3) |
-| `sub`, 2 limbs, N = 3 | -0.15 to 0.64 (-O2), -0.34 to 1.07 (-O3) | -0.113 to 0.046 (-O2), -0.052 to 0.365 (-O3) | 2.73 to 3.19 (-O2), 1.99 to 2.3 (-O3) | 2.56 to 2.63 (-O2), 2.59 to 2.72 (-O3) |
-| `sub`, 2 limbs, N = 7 | 0.11 to 0.18 (-O2), 0.19 to 0.84 (-O3) | -0.19 to 0.04 (-O2), 0.01 to 0.2 (-O3) | 1.9 to 2.04 (-O2), 2.06 to 2.17 (-O3) | 3.38 to 3.67 (-O2), 3.38 to 3.54 (-O3) |
-| `sub`, 2 limbs, N = 13 | -0.17 to -0.13 (-O2), -0.27 to 0.12 (-O3) | 0.18 to 0.49 (-O2), 0.29 to 0.74 (-O3) | 2.42 to 2.78 (-O2), 1.58 to 1.88 (-O3) | 3.18 to 3.28 |
-| `sub`, 2 limbs, N = 18 | 0.21 to 0.46 (-O2), -0.29 to 0.63 (-O3) | 0.54 to 0.8 (-O2), 0.23 to 1.19 (-O3) | 3.04 to 5.1 (-O2), 3.33 to 4.35 (-O3) | 4.04 to 4.69 (-O2), 3.83 to 4.42 (-O3) |
-| `sub`, 2 limbs, N = 80 | -2.88 to 1.89 (-O2), -0.05 to 0.87 (-O3) | 0.16 to 2.84 (-O2), 0.99 to 2.01 (-O3) | 4.47 to 4.84 (-O2), 5.16 to 5.21 (-O3) | 5.69 to 6.12 (-O2), 5.54 to 5.7 (-O3) |
-| `scale`, 1 limb, N = 3 | 4.68 to 6.22 (-O2), 5.63 to 6.52 (-O3) | 4.68 to 5.93 (-O2), 4.55 to 6.58 (-O3) | 2.83 to 3.24 (-O2), 2.62 (-O3) | 2.47 to 2.54 |
-| `scale`, 1 limb, N = 7 | 5.49 to 6.52 (-O2), 5.5 to 6.83 (-O3) | -0.042 to 0.49 (-O2), 4.35 to 5.92 (-O3) | 0 to 2.06 (-O2), 1.79 to 1.98 (-O3) | -0.32 to 2.37 (-O2), 2.38 to 2.43 (-O3) |
-| `scale`, 1 limb, N = 13 | 4.49 to 5.01 (-O2), 3.55 to 4.6 (-O3) | 0.351 to 0.595 (-O2), 3.86 to 5.69 (-O3) | 2.21 to 2.3 (-O2), 2.08 to 2.16 (-O3) | 2.5 to 2.6 |
-| `scale`, 1 limb, N = 18 | -1.21 to 0.901 (-O2), 0.466 to 1.23 (-O3) | 0.346 to 0.504 (-O2), 0.195 to 0.546 (-O3) | 0.32 to 2.32 (-O2), 2.48 to 4.95 (-O3) | -1.56 to 2.9 (-O2), -1.68 to 2.9 (-O3) |
-| `scale`, 1 limb, N = 80 | 0.45 to 0.66 (-O2), -0.86 to -0.07 (-O3) | 0.48 to 0.62 (-O2), -0.21 to 0.44 (-O3) | 1.59 to 1.8 (-O2), 4.12 to 4.19 (-O3) | 3.24 to 3.32 (-O2), 4.05 to 13 (-O3) |
-| `scale`, 2 limbs, N = 3 | 5.83 to 6.59 (-O2), 6 to 7 (-O3) | -1.56 to 0.002 (-O2), -0.098 to -0.026 (-O3) | 2.57 to 2.67 (-O2), 1.78 to 1.79 (-O3) | 2.78 to 2.8 (-O2), 2.63 to 2.66 (-O3) |
-| `scale`, 2 limbs, N = 7 | 0.766 to 1.63 (-O2), -0.176 to 0.859 (-O3) | 0.069 to 0.195 (-O2), -0.13 to 0.133 (-O3) | 2.75 to 2.84 (-O2), 0.49 to 0.51 (-O3) | 0.92 to 4.29 (-O2), 4.22 to 4.23 (-O3) |
-| `scale`, 2 limbs, N = 13 | -1 to 1.38 (-O2), 0.795 to 1.71 (-O3) | -0.01 to 0.093 (-O2), 0.028 to 0.189 (-O3) | 2.82 to 3.76 (-O2), -0.56 to 0.76 (-O3) | 3.29 to 3.37 |
-| `scale`, 2 limbs, N = 18 | -0.23 to 0.04 (-O2), 0 to 0.64 (-O3) | 0.07 to 0.24 (-O2), 0.283 to 0.514 (-O3) | 2.34 to 2.52 (-O2), 1.06 to 1.08 (-O3) | 1.69 to 4.78 (-O2), 1.74 to 1.77 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.51 to 0.61 (-O2), -0.14 to -0.03 (-O3) | -0.82 to 0.62 (-O2), 0.6 to 1.55 (-O3) | 2.69 to 3.23 (-O2), 0.58 to 0.65 (-O3) | 1.83 to 1.87 (-O2), 1.76 to 1.83 (-O3) |
-| `half`, 1 limb, N = 3 | 0.85 to 0.93 (-O2), 0.94 to 1.74 (-O3) | -1.42 to -0.213 (-O2), 4.87 to 5.48 (-O3) | 2.44 to 2.59 (-O2), 3.09 to 3.2 (-O3) | 1.05 to 1.08 (-O2), 0.94 to 0.97 (-O3) |
-| `half`, 1 limb, N = 7 | 0.26 to 1.31 (-O2), 0.24 to 1.5 (-O3) | -0.308 to 0.004 (-O2), 5.28 to 5.7 (-O3) | 2.76 to 3 (-O2), 1.73 to 2.64 (-O3) | 0.33 to 0.5 (-O2), 0.26 to 0.38 (-O3) |
-| `half`, 1 limb, N = 13 | -0.78 to 0.31 (-O2), -0.19 to 0.1 (-O3) | -0.082 to 0.009 (-O2), 3.4 to 3.89 (-O3) | 2.42 to 2.52 (-O2), 1.13 to 2.27 (-O3) | -0.12 to 0.02 (-O2), -0.09 to 0.02 (-O3) |
-| `half`, 1 limb, N = 18 | -0.53 to -0.05 (-O2), -0.88 to 0.41 (-O3) | 0.003 to 0.341 (-O2), 0.308 to 0.458 (-O3) | 2.77 to 3.2 (-O2), 1.78 to 2.81 (-O3) | -1.02 to -0.95 (-O2), -1.16 to 9.36 (-O3) |
-| `half`, 1 limb, N = 80 | -0.34 to 0.31 (-O2), -0.46 to 1.64 (-O3) | 0.14 to 0.87 (-O2), 0.25 to 0.88 (-O3) | 1.53 to 4.05 (-O2), 4.83 to 5.29 (-O3) | 5.87 to 6.07 (-O2), 5.56 to 5.81 (-O3) |
-| `half`, 2 limbs, N = 3 | 0.88 to 1.34 (-O2), 0.75 to 1.95 (-O3) | -0.184 to 0.305 (-O2), 0.068 to 0.146 (-O3) | 2.14 to 2.34 (-O2), 3.51 to 4.04 (-O3) | 0.49 to 0.54 (-O2), 0.57 to 0.59 (-O3) |
-| `half`, 2 limbs, N = 7 | -0.52 to 0.31 (-O2), 0.01 to 0.03 (-O3) | 0.264 to 0.454 (-O2), 0.248 to 0.35 (-O3) | 0.96 to 1.15 (-O2), 3.17 to 3.18 (-O3) | 2.24 to 2.29 (-O2), 1.55 to 2.1 (-O3) |
-| `half`, 2 limbs, N = 13 | -0.1 to 0.32 (-O2), -0.1 to 0.74 (-O3) | 0.29 to 0.47 (-O2), 0.445 to 0.637 (-O3) | 1.68 to 1.96 (-O2), 3.26 to 3.3 (-O3) | 2.52 to 2.64 (-O2), 2.36 to 2.53 (-O3) |
-| `half`, 2 limbs, N = 18 | -0.24 to 0.07 (-O2), 0.06 to 0.37 (-O3) | 0.27 to 0.34 (-O2), 0.01 to 0.24 (-O3) | 1.22 to 1.49 (-O2), 3.15 to 3.31 (-O3) | 1.69 to 2.95 (-O2), 2.56 to 2.63 (-O3) |
-| `half`, 2 limbs, N = 80 | -0.1 to 1.21 (-O2), 0.7 to 1.24 (-O3) | -0.29 to 1.37 (-O2), 0.61 to 1.54 (-O3) | 4.24 to 4.51 (-O2), 4.72 to 5.56 (-O3) | 5.87 to 6.2 (-O2), 6.32 to 6.75 (-O3) |
-| the constructor, 1 limb, N = 3 | 3.39 to 4.74 (-O2), 3.33 to 6.29 (-O3) | -1.21 to -0.27 (-O2), 0.005 to 0.237 (-O3) | 2.73 to 3.96 (-O2), 2.69 to 3 (-O3) | 19.6 |
-| the constructor, 1 limb, N = 7 | 10.3 to 11.1 (-O2), 9.7 to 11 (-O3) | -7.73 to -6.92 (-O2), 0.238 to 0.945 (-O3) | 4.45 to 4.6 (-O2), 5.22 to 5.52 (-O3) | 17 to 18.1 (-O2), 17 to 18.9 (-O3) |
-| the constructor, 1 limb, N = 13 | 13.8 to 15 (-O2), 14.5 to 15.5 (-O3) | -0.15 to 0.45 (-O2), 0.299 to 0.677 (-O3) | 2.74 to 2.97 (-O2), 3.75 to 3.77 (-O3) | 11.6 to 11.9 (-O2), 12.4 to 12.8 (-O3) |
-| the constructor, 1 limb, N = 18 | -0.16 to 0.91 (-O2), 10.3 to 13.2 (-O3) | -0.16 to 0.23 (-O2), 0.38 to 0.87 (-O3) | 2.33 to 3.06 (-O2), 2.53 to 2.91 (-O3) | 2.63 to 3.1 (-O2), 4.4 to 5.4 (-O3) |
-| the constructor, 1 limb, N = 80 | -2.23 to 0.52 (-O2), 2.79 to 5.56 (-O3) | 0.4 to 5.7 (-O2), -9.7 to 14 (-O3) | 2 to 2.6 (-O2), 0.8 to 1.1 (-O3) | 2.37 to 5.69 (-O2), 2.95 to 5.89 (-O3) |
-| the constructor, 2 limbs, N = 3 | 8.84 to 10.1 (-O2), 8.4 to 9.74 (-O3) | -0.555 to -0.026 (-O2), -0.476 to 0.411 (-O3) | 5.22 to 5.88 (-O2), 8.95 to 9.02 (-O3) | 12.6 to 17.5 (-O2), 16.2 to 17.5 (-O3) |
-| the constructor, 2 limbs, N = 7 | 10.4 to 12.1 (-O2), 7.81 to 10.4 (-O3) | -0.1 to 0 (-O2), 0.215 to 0.566 (-O3) | 2.34 to 3.23 (-O2), 6.49 to 7.21 (-O3) | 6.03 to 9.82 (-O2), 8.43 to 9.82 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.23 to 1.1 (-O2), -2.86 to -2.45 (-O3) | 0.03 to 0.44 (-O2), 2.16 to 2.45 (-O3) | 2.07 to 2.75 (-O2), 8.38 to 8.48 (-O3) | 2.13 to 4.96 (-O2), -3.47 to -2.05 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.89 to 1.61 (-O2), -5.18 to -4.61 (-O3) | -1.36 to 0 (-O2), -0.13 to 0.85 (-O3) | 6.57 to 6.75 (-O2), -14.1 to -14 (-O3) | -0.74 to 4.87 (-O2), -16.1 to -11.5 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.45 to 3.07 (-O2), 0.46 to 4.17 (-O3) | -14.3 to 5.5 (-O2), 0.1 to 12.5 (-O3) | 0.8 to 3.3 (-O2), 0.9 to 1.4 (-O3) | -2.9 to 3.6 (-O2), 0.4 to 4 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | -0.98 to -0.39 (-O2), -0.56 to 0.9 (-O3) | 5.12 to 5.51 (-O2), 4.67 to 5.55 (-O3) | 2.1 to 2.15 (-O2), 3.19 to 3.23 (-O3) | -0.2 to -0.166 (-O2), -0.198 to -0.191 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 7 | -0.49 to 0.17 (-O2), -0.95 to 0.97 (-O3) | 0.186 to 0.552 (-O2), 3.97 to 5.14 (-O3) | 0.7 to 1.89 (-O2), 1.15 to 1.33 (-O3) | 0.688 to 0.746 (-O2), 0.71 to 0.742 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 13 | -5.2 to -4.61 (-O2), -6.27 to -4.33 (-O3) | -0.058 to 0.324 (-O2), 4.97 to 6.38 (-O3) | 1.72 to 1.79 (-O2), 1.39 to 1.49 (-O3) | 1.4 to 1.44 |
+| `add(x, y, z)`, 1 limb, N = 18 | -0.61 to 1 (-O2), -0.566 to -0.009 (-O3) | 0.005 to 0.304 (-O2), 0.028 to 0.276 (-O3) | 1.82 to 1.91 (-O2), 1.84 to 3.07 (-O3) | 1.8 to 1.86 |
+| `add(x, y, z)`, 1 limb, N = 80 | 0.05 to 0.21 (-O2), -0.42 to -0.34 (-O3) | -1.01 to 0.4 (-O2), 0.32 to 0.51 (-O3) | 5.89 to 5.98 (-O2), 3.2 to 3.27 (-O3) | 3.38 to 3.51 |
+| `add(x, y, z)`, 2 limbs, N = 3 | -0.13 to 0.06 (-O2), -0.43 to 1.28 (-O3) | -0.831 to 0.01 (-O2), -0.128 to -0.078 (-O3) | -1.16 to 2.84 (-O2), -0.67 to 1.73 (-O3) | 2.03 to 2.12 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.04 to 0.15 (-O2), -0.04 to 0.27 (-O3) | -0.49 to 0.19 (-O2), -0.06 to -0.02 (-O3) | 0.19 to 2.32 (-O2), -0.17 to -0.13 (-O3) | 1.94 to 1.98 (-O2), 2.05 to 2.16 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 13 | -0.12 to 0.38 (-O2), -0.05 to -0.01 (-O3) | -0.71 to 0.38 (-O2), 0.18 to 0.44 (-O3) | -0.24 to 2.27 (-O2), 1.62 to 2.18 (-O3) | 2.63 to 2.86 (-O2), 2.27 to 2.57 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.2 to 0.27 (-O2), 0.12 to 0.54 (-O3) | 0.44 to 1.22 (-O2), 0.42 to 0.62 (-O3) | 1.31 to 5.56 (-O2), 3.81 to 4.3 (-O3) | 3.59 to 4.51 (-O2), 3.83 to 4.05 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 80 | -0.69 to 0.55 (-O2), -0.41 to 0 (-O3) | -2.21 to 1.42 (-O2), 1.31 to 2.6 (-O3) | 3.72 to 4.62 (-O2), 5.14 to 5.44 (-O3) | 4.74 to 5.53 (-O2), 5.15 to 5.29 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | -1.05 to 0.79 (-O2), -1.06 to 0.94 (-O3) | 6.56 to 7.44 (-O2), 5.92 to 8.26 (-O3) | 0.03 to 0.39 (-O2), 0.72 to 1.3 (-O3) | 0.16 to 0.18 (-O2), 0.12 to 0.17 (-O3) |
+| `z = x + y`, 1 limb, N = 7 | -1.25 to -0.03 (-O2), -0.77 to 0.99 (-O3) | -1.29 to -1 (-O2), -1.64 to -1.39 (-O3) | 0.24 to 0.36 (-O2), 0.43 to 1.04 (-O3) | -0.13 to -0.08 (-O2), -0.13 to -0.04 (-O3) |
+| `z = x + y`, 1 limb, N = 13 | -0.66 to 0.34 (-O2), 0.11 to 0.73 (-O3) | -2.87 to -1.65 (-O2), -0.86 to 1.38 (-O3) | -0.08 to -0.03 (-O2), -0.68 to -0.56 (-O3) | -0.04 to 0.04 (-O2), 0 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -1.74 to -0.32 (-O2), -0.48 to 0.41 (-O3) | 1.24 to 1.9 (-O2), -0.648 to -0.101 (-O3) | 0.18 to 0.55 (-O2), 0.8 to 1.47 (-O3) | 0.23 to 0.3 (-O2), 0.12 to 0.32 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | 0.73 to 0.94 (-O2), -0.35 to -0.3 (-O3) | -1.71 to 0.91 (-O2), -0.38 to 0 (-O3) | 1.34 to 3.59 (-O2), 1.43 to 1.47 (-O3) | -2.6 to 9.07 (-O2), -3.48 to 15.8 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | -1.32 to 0.09 (-O2), -0.16 to 0.51 (-O3) | -0.74 to 0.28 (-O2), 1.77 to 2.36 (-O3) | -1.37 to 0.92 (-O2), -0.18 to 0.67 (-O3) | -0.69 to 0.8 (-O2), -0.72 to 0.95 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | -0.14 to 0.03 (-O2), -0.34 to 0.57 (-O3) | -0.69 to 0.4 (-O2), -0.06 to 1.3 (-O3) | -4.15 to 0.22 (-O2), -2.25 to -1.63 (-O3) | -7 to 0.72 (-O2), -1.94 to 0.67 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.04 to 0.36 (-O2), -0.04 to 0.06 (-O3) | -1.49 to 0.09 (-O2), -0.52 to 0.31 (-O3) | 0.76 to 1.11 (-O2), 2.45 to 2.99 (-O3) | -4.13 to 1.75 (-O2), -1.32 to 0.43 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | -0.13 to 0.11 (-O2), -1.15 to -0.72 (-O3) | -0.84 to 0.44 (-O2), 0.1 to 0.46 (-O3) | -0.06 to 0.42 (-O2), 1.1 to 1.52 (-O3) | -2.99 to 1.92 (-O2), -3.57 to 1.73 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | 0.2 to 0.9 (-O2), -5.1 to -1.2 (-O3) | -4.2 to 2.3 (-O2), -2.41 to 0.18 (-O3) | 2.1 to 6.3 (-O2), 0.4 to 2.1 (-O3) | 0.2 to 6.1 (-O2), -0.4 to 5.3 (-O3) |
+| `sub`, 1 limb, N = 3 | -0.06 to 0.68 (-O2), -0.54 to 0.71 (-O3) | 5.36 to 5.9 (-O2), 4.82 to 5.93 (-O3) | 2.11 to 4.95 (-O2), 3.2 to 3.23 (-O3) | -0.227 to -0.172 (-O2), -0.105 to -0.091 (-O3) |
+| `sub`, 1 limb, N = 7 | -0.47 to 0.03 (-O2), -1.23 to 0.95 (-O3) | 0.131 to 0.552 (-O2), 4.7 to 5.65 (-O3) | 1.82 to 1.88 (-O2), 1.25 to 1.29 (-O3) | 0.679 to 0.74 (-O2), 0.701 to 0.757 (-O3) |
+| `sub`, 1 limb, N = 13 | -4.79 to -4.21 (-O2), -3.97 to -3.45 (-O3) | -0.007 to 0.364 (-O2), 4.17 to 5.19 (-O3) | 1.74 to 3.62 (-O2), 1.33 to 1.79 (-O3) | 1.42 to 1.44 (-O2), 1.34 to 1.42 (-O3) |
+| `sub`, 1 limb, N = 18 | -1.19 to -0.013 (-O2), 0.548 to 0.847 (-O3) | 0.112 to 0.231 (-O2), 0.14 to 1.21 (-O3) | 1.82 to 1.85 (-O2), 0.77 to 1.87 (-O3) | 1.76 to 1.85 |
+| `sub`, 1 limb, N = 80 | -0.55 to -0.05 (-O2), -0.38 to -0.08 (-O3) | -0.6 to 0.62 (-O2), -0.11 to 0.78 (-O3) | 5.18 to 5.48 (-O2), 4.88 to 4.96 (-O3) | 3.43 to 3.52 (-O2), 3.59 to 3.64 (-O3) |
+| `sub`, 2 limbs, N = 3 | 0.21 to 1 (-O2), -0.77 to 1.41 (-O3) | -0.671 to 2.1 (-O2), -0.013 to 1.26 (-O3) | -0.99 to 2.82 (-O2), 1.97 to 3.68 (-O3) | 2.61 to 2.69 (-O2), 2.55 to 2.63 (-O3) |
+| `sub`, 2 limbs, N = 7 | -0.05 to 0.24 (-O2), 0.21 to 0.69 (-O3) | -0.63 to 0.26 (-O2), -0.03 to 0.1 (-O3) | -0.37 to 1.15 (-O2), 1.99 to 2.15 (-O3) | 3.55 to 3.63 |
+| `sub`, 2 limbs, N = 13 | -0.08 to 0.07 (-O2), -0.64 to -0.1 (-O3) | -0.37 to 0.53 (-O2), 0.26 to 0.69 (-O3) | -0.18 to 2.67 (-O2), 2.42 to 2.79 (-O3) | 3.2 to 3.24 (-O2), 3.09 to 3.3 (-O3) |
+| `sub`, 2 limbs, N = 18 | -0.34 to 0.06 (-O2), -0.22 to -0.17 (-O3) | -0.25 to 1.13 (-O2), -0.06 to 0.44 (-O3) | 0.82 to 4.96 (-O2), 2.81 to 3.98 (-O3) | 3.9 to 4.7 (-O2), 3.91 to 4.6 (-O3) |
+| `sub`, 2 limbs, N = 80 | 0.15 to 0.51 (-O2), -1.25 to 0.06 (-O3) | -1.54 to 3.52 (-O2), -0.65 to 0.94 (-O3) | 4.5 to 5.3 (-O2), 5.41 to 6.08 (-O3) | 6.18 to 6.42 (-O2), 6.07 to 6.47 (-O3) |
+| `scale`, 1 limb, N = 3 | 5.19 to 5.82 (-O2), 4.6 to 5.18 (-O3) | 5.1 to 6.82 (-O2), 4.64 to 5.03 (-O3) | 2.89 to 2.91 (-O2), 2.62 to 2.65 (-O3) | 2.49 to 2.55 |
+| `scale`, 1 limb, N = 7 | 4.76 to 6.37 (-O2), 4.99 to 6.18 (-O3) | 0.789 to 1.64 (-O2), 4.58 to 5.09 (-O3) | 2.25 to 2.32 (-O2), 1.77 to 1.8 (-O3) | 2.36 to 2.38 (-O2), 2.36 to 5.71 (-O3) |
+| `scale`, 1 limb, N = 13 | 4.39 to 5.19 (-O2), 3.72 to 4.47 (-O3) | 0.549 to 0.79 (-O2), 4.7 to 4.91 (-O3) | 2.38 to 2.42 (-O2), 1.87 to 1.94 (-O3) | 2.47 to 2.55 |
+| `scale`, 1 limb, N = 18 | 0.015 to 0.443 (-O2), -0.044 to 0.892 (-O3) | 0.281 to 0.512 (-O2), 0.098 to 0.469 (-O3) | 2.26 to 3.37 (-O2), 2.36 to 2.45 (-O3) | 2.76 to 2.79 (-O2), 2.79 to 7.35 (-O3) |
+| `scale`, 1 limb, N = 80 | -0.94 to -0.37 (-O2), -0.95 to -0.93 (-O3) | -0.61 to 1.22 (-O2), -0.33 to 0.17 (-O3) | 1.8 to 1.88 (-O2), 4.05 to 4.24 (-O3) | 1.75 to 1.83 (-O2), 3.04 to 15.3 (-O3) |
+| `scale`, 2 limbs, N = 3 | 5.86 to 6.36 (-O2), 6.1 to 6.48 (-O3) | -0.37 to 0.269 (-O2), -0.366 to 0.166 (-O3) | 2.36 to 2.47 (-O2), 1.75 to 1.79 (-O3) | 2.78 to 2.8 (-O2), 2.65 to 2.67 (-O3) |
+| `scale`, 2 limbs, N = 7 | 0.195 to 1.2 (-O2), -0.446 to 1.06 (-O3) | -0.225 to 0.223 (-O2), -0.187 to 0.208 (-O3) | 2.66 to 2.73 (-O2), 0.39 to 0.53 (-O3) | 4.21 to 4.31 |
+| `scale`, 2 limbs, N = 13 | -1.52 to 18.7 (-O2), 0.428 to 1.32 (-O3) | -0.353 to 0.082 (-O2), -0.259 to 0.048 (-O3) | 2.77 to 2.85 (-O2), 0.75 to 0.79 (-O3) | 3.29 (-O2), 3.13 to 3.22 (-O3) |
+| `scale`, 2 limbs, N = 18 | -0.24 to -0.06 (-O2), -0.02 to 0.23 (-O3) | -0.4 to 0.36 (-O2), 0.234 to 0.323 (-O3) | 2.37 to 2.42 (-O2), 0.76 to 1.34 (-O3) | -0.48 to 1.73 (-O2), 1.76 to 1.78 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.45 to 1.07 (-O2), -1.41 to 0.12 (-O3) | -0.39 to 0.9 (-O2), -0.75 to 0.66 (-O3) | 2.6 to 3.1 (-O2), 0.53 to 0.77 (-O3) | 1.75 to 1.83 |
+| `half`, 1 limb, N = 3 | 0.45 to 0.91 (-O2), 0.9 to 1.92 (-O3) | -0.988 to -0.02 (-O2), 4.74 to 5.54 (-O3) | 2.54 to 2.61 (-O2), 3.03 to 3.12 (-O3) | 0.96 to 1.06 (-O2), 0.96 to 1 (-O3) |
+| `half`, 1 limb, N = 7 | -0.19 to 1.29 (-O2), -0.51 to 1.04 (-O3) | 0.118 to 0.289 (-O2), 5.17 to 5.55 (-O3) | 2.67 to 2.81 (-O2), 2.86 to 2.94 (-O3) | 0.4 to 0.64 (-O2), 0.29 to 0.34 (-O3) |
+| `half`, 1 limb, N = 13 | -0.79 to -0.04 (-O2), -0.47 to 0.46 (-O3) | -0.056 to 0.408 (-O2), 3.63 to 3.69 (-O3) | 2.42 to 2.58 (-O2), 2.25 to 2.38 (-O3) | -0.12 to -0.03 (-O2), -0.17 to 0.36 (-O3) |
+| `half`, 1 limb, N = 18 | -0.89 to -0.04 (-O2), 0.22 to 0.37 (-O3) | 0.089 to 0.44 (-O2), 0.136 to 0.308 (-O3) | 2.84 to 2.93 | -1.04 to -0.9 (-O2), -1.01 to -0.99 (-O3) |
+| `half`, 1 limb, N = 80 | 0.21 to 0.37 (-O2), -0.29 to -0.2 (-O3) | -1.34 to 1.06 (-O2), -0.73 to 0.36 (-O3) | 3.71 to 4.19 (-O2), 4.91 to 5.14 (-O3) | 6.04 to 6.19 (-O2), 5.57 to 5.68 (-O3) |
+| `half`, 2 limbs, N = 3 | 1.25 to 1.32 (-O2), 1.24 to 2.23 (-O3) | -0.27 to 0.011 (-O2), -0.221 to 0.419 (-O3) | 2.2 to 2.24 (-O2), 3.87 to 3.97 (-O3) | 0.59 to 0.72 (-O2), 0.52 to 0.7 (-O3) |
+| `half`, 2 limbs, N = 7 | 0.04 to 0.34 (-O2), -0.03 to 1.11 (-O3) | -0.342 to 0.154 (-O2), 0.107 to 0.423 (-O3) | -0.07 to 1.21 (-O2), 3.04 to 3.13 (-O3) | 2.18 to 2.64 (-O2), 1.98 to 2.13 (-O3) |
+| `half`, 2 limbs, N = 13 | -0.16 to 0.07 (-O2), -0.83 to -0.08 (-O3) | -0.35 to 0.35 (-O2), 0.459 to 0.562 (-O3) | 1.9 to 2.12 (-O2), 2.83 to 3.19 (-O3) | 2.43 to 2.53 (-O2), 2.63 to 2.81 (-O3) |
+| `half`, 2 limbs, N = 18 | 0 to 0.02 (-O2), -0.27 to 0.25 (-O3) | -0.3 to 0.54 (-O2), -0.04 to 0.01 (-O3) | 1.09 to 1.2 (-O2), 2.93 to 3.09 (-O3) | 2.33 to 2.6 (-O2), 2.51 to 2.57 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.14 to 0.23 (-O2), 0.35 to 0.66 (-O3) | 0.35 to 1.32 (-O2), -0.44 to 0.63 (-O3) | 4.44 to 4.77 (-O2), 5.42 to 5.49 (-O3) | 5.9 to 6.33 (-O2), 5.96 to 6.26 (-O3) |
+| the constructor, 1 limb, N = 3 | 3.42 to 5.82 (-O2), 3.93 to 5.49 (-O3) | -0.849 to -0.454 (-O2), -0.477 to 0.029 (-O3) | 2.69 to 3.01 (-O2), 2.69 to 3.05 (-O3) | 19.6 to 19.9 |
+| the constructor, 1 limb, N = 7 | 9.15 to 10.4 (-O2), 8.6 to 12.7 (-O3) | -7.72 to -6.89 (-O2), -1.14 to 0.595 (-O3) | 4.4 to 4.5 (-O2), 5.22 to 5.47 (-O3) | 17 to 18.9 (-O2), 17 to 18 (-O3) |
+| the constructor, 1 limb, N = 13 | 12.9 to 15 (-O2), 13.1 to 14.7 (-O3) | -0.78 to 0.07 (-O2), 0.185 to 0.341 (-O3) | 2.78 to 2.87 (-O2), 3.68 to 3.71 (-O3) | 12.2 to 12.7 |
+| the constructor, 1 limb, N = 18 | -1.46 to -0.47 (-O2), -2.25 to -0.55 (-O3) | -0.92 to 0.7 (-O2), -1.4 to 0.31 (-O3) | 2.51 to 2.6 (-O2), 2.54 to 3 (-O3) | -0.33 to 0.45 (-O2), -1.9 to 0.02 (-O3) |
+| the constructor, 1 limb, N = 80 | -1.48 to -1.33 (-O2), -1.8 to -0.1 (-O3) | -11.2 to 18 (-O2), -8.9 to 3.6 (-O3) | 2.1 to 2.3 (-O2), 0.7 to 1.1 (-O3) | 2 to 15.7 (-O2), 1.75 to 22.8 (-O3) |
+| the constructor, 2 limbs, N = 3 | 8.79 to 9.59 (-O2), 7.94 to 9.07 (-O3) | -0.102 to 0.77 (-O2), -0.688 to 0.112 (-O3) | 5.57 to 5.89 (-O2), 8.93 to 9.29 (-O3) | 16.2 to 17.3 (-O2), 16.5 to 17.5 (-O3) |
+| the constructor, 2 limbs, N = 7 | 9.4 to 10.7 (-O2), 8.26 to 9.27 (-O3) | -0.79 to 0.02 (-O2), 0.041 to 0.215 (-O3) | 2.4 to 2.57 (-O2), 6.67 to 7.44 (-O3) | 8.54 to 9.86 (-O2), 8.8 to 15.7 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0 to 0.37 (-O2), -0.42 to 0.78 (-O3) | -1.29 to 0.8 (-O2), 2.06 to 2.83 (-O3) | 2.09 to 2.47 (-O2), 8.15 to 8.57 (-O3) | -2.45 to 0.41 (-O2), -1.15 to 0.77 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.22 to 0.44 (-O2), 0.95 to 1.15 (-O3) | -0.9 to 1.15 (-O2), -1.15 to 0.14 (-O3) | 1.83 to 2.63 (-O2), -14.3 to -14.1 (-O3) | -0.57 to 6.96 (-O2), -5.53 to 7.74 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.2 to 0.21 (-O2), 0.02 to 0.06 (-O3) | -0.4 to 6 (-O2), -11 to 0 (-O3) | 23.2 to 25.3 (-O2), -2.1 to -0.4 (-O3) | -2 to 0.7 (-O2), -1.8 to 4.2 (-O3) |
 
 | Short ball vectors, 2026-11-23, one operation per unit, a dependent chain: the header of 2026-11-23 over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 1.00 to 1.03 | 0.94 to 1.07 (-O2), 1.02 to 1.08 (-O3) | 0.94 to 0.97 | 1.01 to 1.02 |
-| `add(x, y, z)`, 1 limb, N = 7 | 0.98 to 1.02 | 0.97 to 1.00 (-O2), 1.01 to 1.10 (-O3) | 0.97 to 0.99 | 1.00 to 1.01 |
-| `add(x, y, z)`, 1 limb, N = 13 | 1.41 to 1.49 (-O2), 1.46 to 1.59 (-O3) | 0.98 to 1.00 (-O2), 0.93 to 1.06 (-O3) | 0.97 to 1.01 | 0.98 to 1.00 |
-| `add(x, y, z)`, 1 limb, N = 18 | 0.94 to 1.04 (-O2), 0.95 to 1.04 (-O3) | 0.98 to 1.01 | 1.00 | 0.99 (-O2), 0.79 to 0.99 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 80 | 0.97 to 1.01 (-O2), 0.96 to 1.03 (-O3) | 1.03 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 1.00 to 1.01 | 1.00 (-O2), 1.03 to 1.05 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.97 to 1.01 | 0.98 to 1.02 | 0.97 to 1.00 | 1.01 to 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 7 | 0.97 to 1.01 | 1.00 to 1.02 (-O2), 0.97 to 1.01 (-O3) | 0.99 to 1.00 | 1.00 to 1.01 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 0.96 to 1.00 (-O2), 1.00 to 1.02 (-O3) | 0.92 to 1.01 (-O2), 0.97 to 0.99 (-O3) | 0.97 to 0.99 | 1.00 to 1.01 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 0.97 to 1.00 | 1.00 to 1.02 (-O2), 0.96 to 0.99 (-O3) | 0.98 to 1.03 | 1.00 to 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.96 to 1.00 | 0.97 to 1.00 | 0.99 to 1.02 | 1.00 |
-| `z = x + y`, 1 limb, N = 3 | 1.00 to 1.05 | 0.89 to 1.06 (-O2), 0.94 to 1.04 (-O3) | 0.98 to 1.01 | 1.00 |
-| `z = x + y`, 1 limb, N = 7 | 0.97 to 1.03 (-O2), 0.94 to 1.03 (-O3) | 1.13 to 1.24 (-O2), 1.05 to 1.21 (-O3) | 0.99 to 1.02 | 0.99 to 1.00 |
-| `z = x + y`, 1 limb, N = 13 | 0.96 to 1.01 (-O2), 0.94 to 0.99 (-O3) | 0.96 to 1.14 (-O2), 0.96 to 1.09 (-O3) | 1.00 to 1.17 (-O2), 1.00 (-O3) | 1.00 to 1.01 |
-| `z = x + y`, 1 limb, N = 18 | 0.99 to 1.06 (-O2), 0.93 to 0.99 (-O3) | 0.85 to 0.87 (-O2), 0.98 to 1.08 (-O3) | 0.98 to 1.00 (-O2), 1.06 to 1.08 (-O3) | 1.00 |
-| `z = x + y`, 1 limb, N = 80 | 0.99 to 1.04 | 0.99 to 1.03 (-O2), 0.97 to 0.99 (-O3) | 0.99 to 1.02 | 0.92 to 1.04 (-O2), 0.93 to 1.02 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 0.94 to 1.00 (-O2), 1.00 to 1.03 (-O3) | 0.98 to 1.01 (-O2), 0.82 to 0.87 (-O3) | 1.01 to 1.07 (-O2), 1.01 (-O3) | 0.99 to 1.11 (-O2), 0.94 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 0.97 to 1.01 | 1.00 to 1.02 (-O2), 0.95 to 1.00 (-O3) | 0.99 to 1.03 | 0.94 to 1.07 (-O2), 0.93 to 1.09 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 0.98 to 1.02 | 1.06 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.00 (-O2), 0.91 to 0.92 (-O3) | 0.91 to 1.11 (-O2), 0.91 to 1.00 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 0.97 to 1.00 (-O2), 0.96 to 1.03 (-O3) | 0.98 to 1.00 | 0.99 to 1.01 | 0.95 to 1.07 (-O2), 0.93 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 0.98 to 1.00 | 0.98 to 1.02 | 0.98 to 1.01 | 0.98 to 1.02 (-O2), 0.97 to 1.02 (-O3) |
-| `sub`, 1 limb, N = 3 | 0.98 to 1.02 (-O2), 0.97 to 1.02 (-O3) | 0.95 to 0.98 (-O2), 0.98 to 1.04 (-O3) | 0.81 to 0.97 (-O2), 0.94 (-O3) | 1.01 to 1.02 |
-| `sub`, 1 limb, N = 7 | 0.98 to 1.02 | 0.88 to 1.02 (-O2), 1.00 to 1.08 (-O3) | 0.98 | 0.73 to 1.01 (-O2), 1.00 (-O3) |
-| `sub`, 1 limb, N = 13 | 1.54 to 1.63 (-O2), 1.56 to 1.60 (-O3) | 0.97 to 0.98 (-O2), 1.06 to 1.09 (-O3) | 0.98 to 1.00 (-O2), 0.81 to 1.00 (-O3) | 0.98 to 1.00 |
-| `sub`, 1 limb, N = 18 | 0.98 to 1.05 (-O2), 0.90 to 1.14 (-O3) | 1.01 to 1.02 (-O2), 0.93 to 1.00 (-O3) | 0.99 to 1.01 | 0.82 to 1.01 (-O2), 0.99 (-O3) |
-| `sub`, 1 limb, N = 80 | 0.99 to 1.01 | 1.01 to 1.05 (-O2), 0.98 to 1.01 (-O3) | 1.01 | 0.99 to 1.02 |
-| `sub`, 2 limbs, N = 3 | 0.97 to 1.01 (-O2), 0.97 to 1.04 (-O3) | 0.98 to 1.04 (-O2), 0.96 to 1.01 (-O3) | 0.98 to 1.00 | 1.01 |
-| `sub`, 2 limbs, N = 7 | 0.95 to 0.98 | 1.00 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 1.00 to 1.01 | 1.01 to 1.05 |
-| `sub`, 2 limbs, N = 13 | 0.97 to 1.01 (-O2), 1.01 to 1.05 (-O3) | 0.95 to 0.99 | 0.99 to 1.01 | 1.03 to 1.04 |
-| `sub`, 2 limbs, N = 18 | 0.98 to 1.01 | 1.00 to 1.07 (-O2), 0.96 to 1.01 (-O3) | 0.97 to 1.03 (-O2), 0.99 to 1.01 (-O3) | 1.01 to 1.03 |
-| `sub`, 2 limbs, N = 80 | 0.98 to 1.00 | 0.99 to 1.06 (-O2), 0.98 to 0.99 (-O3) | 1.00 to 1.01 | 1.00 |
-| `scale`, 1 limb, N = 3 | 0.98 to 1.04 (-O2), 0.95 to 1.03 (-O3) | 0.96 to 1.07 (-O2), 0.92 to 1.04 (-O3) | 0.95 to 1.00 | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 7 | 0.97 to 1.01 | 0.94 to 1.26 (-O2), 0.94 to 1.11 (-O3) | 0.96 to 0.97 (-O2), 0.99 to 1.03 (-O3) | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 13 | 1.02 to 1.07 (-O2), 1.07 to 1.11 (-O3) | 0.87 to 1.04 (-O2), 0.98 to 1.15 (-O3) | 0.97 to 0.98 | 0.98 to 0.99 |
-| `scale`, 1 limb, N = 18 | 0.85 to 1.14 (-O2), 0.88 to 0.93 (-O3) | 1.00 to 1.04 (-O2), 0.97 to 1.03 (-O3) | 0.98 to 0.99 (-O2), 0.82 to 0.98 (-O3) | 0.98 to 0.99 |
-| `scale`, 1 limb, N = 80 | 0.98 to 1.00 | 0.98 to 1.02 | 0.97 to 1.01 | 1.00 to 1.01 (-O2), 0.63 to 0.97 (-O3) |
-| `scale`, 2 limbs, N = 3 | 1.01 to 1.03 | 1.04 to 1.11 (-O2), 1.00 to 1.04 (-O3) | 0.98 to 0.99 (-O2), 0.92 (-O3) | 0.98 to 1.00 |
-| `scale`, 2 limbs, N = 7 | 1.39 to 1.63 (-O2), 1.51 to 1.68 (-O3) | 0.99 to 1.02 (-O2), 0.97 to 1.00 (-O3) | 1.00 | 0.84 |
-| `scale`, 2 limbs, N = 13 | 0.91 to 1.02 (-O2), 0.94 to 1.14 (-O3) | 0.98 to 1.01 | 0.95 to 0.99 (-O2), 0.98 to 1.21 (-O3) | 1.02 |
-| `scale`, 2 limbs, N = 18 | 0.99 to 1.03 | 0.96 to 0.99 | 0.99 to 1.01 | 0.84 to 1.01 (-O2), 1.01 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.99 to 1.02 | 0.98 to 1.02 | 1.00 to 1.01 | 1.00 |
-| `half`, 1 limb, N = 3 | 0.97 to 1.00 | 0.93 to 1.03 (-O2), 0.96 to 1.04 (-O3) | 0.99 to 1.00 (-O2), 0.94 to 0.95 (-O3) | 0.96 to 0.97 |
-| `half`, 1 limb, N = 7 | 0.96 to 1.03 (-O2), 0.95 to 1.07 (-O3) | 0.93 to 1.01 (-O2), 0.97 to 0.99 (-O3) | 0.96 to 0.99 | 0.99 to 1.00 |
-| `half`, 1 limb, N = 13 | 0.98 to 1.05 (-O2), 1.00 to 1.01 (-O3) | 0.98 (-O2), 1.04 to 1.06 (-O3) | 0.99 to 1.00 | 0.99 to 1.04 (-O2), 0.98 to 0.99 (-O3) |
-| `half`, 1 limb, N = 18 | 1.00 to 1.05 | 0.94 to 0.99 (-O2), 0.98 to 0.99 (-O3) | 0.98 to 1.00 | 0.99 (-O2), 0.64 to 1.00 (-O3) |
-| `half`, 1 limb, N = 80 | 0.99 (-O2), 0.95 to 1.00 (-O3) | 0.95 to 1.03 (-O2), 0.99 to 1.01 (-O3) | 0.99 to 1.00 | 0.99 to 1.01 |
-| `half`, 2 limbs, N = 3 | 0.98 to 1.03 (-O2), 0.94 to 1.04 (-O3) | 0.93 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 0.93 to 0.97 | 1.00 to 1.01 |
-| `half`, 2 limbs, N = 7 | 0.98 to 1.03 | 0.91 to 0.96 (-O2), 0.93 to 0.95 (-O3) | 0.98 to 1.00 | 1.00 to 1.02 |
-| `half`, 2 limbs, N = 13 | 0.92 to 1.02 (-O2), 0.98 to 1.01 (-O3) | 0.96 to 0.98 | 0.98 to 1.00 | 0.99 to 1.01 |
-| `half`, 2 limbs, N = 18 | 0.98 to 1.00 (-O2), 0.96 to 1.04 (-O3) | 0.98 to 1.01 | 0.99 to 1.01 | 0.98 to 1.00 |
-| `half`, 2 limbs, N = 80 | 0.98 to 1.00 | 0.97 to 1.01 | 0.99 to 1.01 | 0.99 to 1.00 |
-| the constructor, 1 limb, N = 3 | 0.59 to 0.67 (-O2), 0.60 to 0.76 (-O3) | 1.04 to 1.16 (-O2), 0.97 to 0.99 (-O3) | 0.95 to 1.05 (-O2), 1.00 to 1.05 (-O3) | 0.38 |
-| the constructor, 1 limb, N = 7 | 0.47 to 0.52 (-O2), 0.48 to 0.54 (-O3) | 1.13 to 1.21 (-O2), 0.96 to 1.03 (-O3) | 1.00 to 1.01 (-O2), 0.96 to 1.02 (-O3) | 0.41 to 0.44 |
-| the constructor, 1 limb, N = 13 | 0.53 to 0.58 | 0.96 to 1.02 (-O2), 0.94 to 0.98 (-O3) | 1.00 to 1.01 | 0.64 to 0.65 |
-| the constructor, 1 limb, N = 18 | 1.24 to 1.25 (-O2), 0.64 to 0.71 (-O3) | 0.97 to 1.01 | 0.98 to 1.01 | 0.88 to 0.92 |
-| the constructor, 1 limb, N = 80 | 0.99 to 1.03 (-O2), 0.93 to 0.94 (-O3) | 0.96 to 1.00 (-O2), 0.97 to 1.02 (-O3) | 1.00 to 1.02 | 0.91 to 0.96 (-O2), 0.90 to 0.95 (-O3) |
-| the constructor, 2 limbs, N = 3 | 0.47 to 0.49 (-O2), 0.53 to 0.57 (-O3) | 0.97 to 1.12 (-O2), 0.98 to 1.09 (-O3) | 0.98 to 1.02 (-O2), 0.92 to 0.98 (-O3) | 0.40 to 0.49 (-O2), 0.40 to 0.42 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.54 to 0.61 (-O2), 0.60 to 0.66 (-O3) | 1.00 to 1.03 (-O2), 0.85 to 0.96 (-O3) | 0.97 to 1.02 | 0.71 to 0.81 (-O2), 0.71 to 0.75 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.95 to 0.97 (-O2), 1.04 to 1.06 (-O3) | 0.97 to 1.03 (-O2), 0.75 to 0.77 (-O3) | 0.98 to 0.99 (-O2), 0.92 to 0.93 (-O3) | 0.88 to 0.94 (-O2), 1.12 to 1.16 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.94 to 0.97 (-O2), 1.17 to 1.19 (-O3) | 0.88 to 0.89 (-O2), 0.98 to 1.01 (-O3) | 1.00 to 1.01 | 0.95 to 1.03 (-O2), 1.30 to 1.45 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.00 to 1.01 | 0.98 to 1.00 | 0.98 to 1.00 | 0.98 to 1.03 (-O2), 0.97 to 0.99 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | 1.01 to 1.07 (-O2), 0.97 to 1.11 (-O3) | 0.90 to 1.01 (-O2), 0.97 to 1.06 (-O3) | 0.94 to 0.96 | 1.00 to 1.01 |
+| `add(x, y, z)`, 1 limb, N = 7 | 0.98 to 1.03 (-O2), 0.93 to 1.07 (-O3) | 0.88 to 1.02 (-O2), 1.03 to 1.14 (-O3) | 0.97 to 0.99 | 1.00 |
+| `add(x, y, z)`, 1 limb, N = 13 | 1.47 to 1.71 (-O2), 1.40 to 1.63 (-O3) | 0.95 to 1.03 (-O2), 0.91 to 1.03 (-O3) | 0.98 to 1.07 (-O2), 1.00 (-O3) | 0.99 to 1.00 |
+| `add(x, y, z)`, 1 limb, N = 18 | 0.93 to 1.07 (-O2), 0.99 to 1.11 (-O3) | 0.99 to 1.06 (-O2), 0.99 to 1.02 (-O3) | 0.98 to 0.99 (-O2), 0.91 to 1.00 (-O3) | 0.99 to 1.01 |
+| `add(x, y, z)`, 1 limb, N = 80 | 0.99 to 1.01 | 1.02 to 1.08 (-O2), 1.00 to 1.01 (-O3) | 1.01 to 1.02 | 0.99 to 1.03 |
+| `add(x, y, z)`, 2 limbs, N = 3 | 1.00 (-O2), 0.93 to 1.00 (-O3) | 1.00 to 1.09 (-O2), 1.00 to 1.01 (-O3) | 0.97 to 1.00 | 1.01 to 1.02 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.97 to 1.01 | 0.98 to 1.04 (-O2), 0.97 to 1.01 (-O3) | 0.99 to 1.00 | 1.01 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 0.99 to 1.02 | 0.97 to 1.03 (-O2), 0.98 to 1.05 (-O3) | 0.96 to 1.00 | 0.99 to 1.00 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.98 to 1.00 | 0.98 to 1.04 (-O2), 0.98 (-O3) | 0.99 to 1.03 | 1.01 to 1.02 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 0.99 to 1.01 | 0.99 to 1.07 (-O2), 0.99 (-O3) | 1.00 to 1.01 | 0.99 to 1.00 |
+| `z = x + y`, 1 limb, N = 3 | 0.97 to 1.03 (-O2), 0.94 to 1.13 (-O3) | 0.87 to 1.02 (-O2), 0.97 to 1.00 (-O3) | 0.98 to 1.02 | 0.97 to 1.00 |
+| `z = x + y`, 1 limb, N = 7 | 1.01 to 1.03 (-O2), 0.94 to 1.02 (-O3) | 1.04 to 1.21 (-O2), 1.16 to 1.18 (-O3) | 0.99 to 1.00 (-O2), 0.99 to 1.06 (-O3) | 1.00 to 1.01 |
+| `z = x + y`, 1 limb, N = 13 | 0.94 to 1.04 (-O2), 0.87 to 1.01 (-O3) | 0.96 to 1.14 (-O2), 0.96 to 1.15 (-O3) | 1.00 | 1.00 |
+| `z = x + y`, 1 limb, N = 18 | 1.00 to 1.08 (-O2), 0.99 to 1.01 (-O3) | 0.83 to 0.88 (-O2), 1.01 to 1.08 (-O3) | 0.98 to 0.99 | 1.00 |
+| `z = x + y`, 1 limb, N = 80 | 0.98 to 1.00 | 0.98 to 1.03 (-O2), 0.99 to 1.01 (-O3) | 0.98 to 1.02 | 1.00 to 1.10 (-O2), 0.72 to 1.08 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 0.95 to 1.01 (-O2), 0.94 to 1.03 (-O3) | 0.98 to 1.04 (-O2), 0.84 to 0.88 (-O3) | 1.00 to 1.01 | 0.99 to 1.05 (-O2), 0.99 to 1.04 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | 1.00 to 1.01 (-O2), 0.95 to 1.02 (-O3) | 0.98 to 1.05 (-O2), 0.87 to 0.98 (-O3) | 1.00 to 1.03 | 1.00 to 1.08 (-O2), 1.00 to 1.07 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 1.00 to 1.02 | 1.03 to 1.09 (-O2), 0.94 to 0.98 (-O3) | 1.00 to 1.01 (-O2), 0.91 to 0.92 (-O3) | 1.01 to 1.11 (-O2), 0.99 to 1.02 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 0.99 to 1.03 | 0.98 to 1.04 (-O2), 0.97 to 1.00 (-O3) | 0.99 to 1.01 | 1.01 to 1.07 (-O2), 0.97 to 1.07 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | 0.99 to 1.00 | 0.98 to 1.03 (-O2), 0.99 to 1.01 (-O3) | 0.97 to 1.01 | 1.00 to 1.03 (-O2), 0.96 to 1.01 (-O3) |
+| `sub`, 1 limb, N = 3 | 0.97 to 1.00 (-O2), 0.98 to 1.10 (-O3) | 0.90 to 1.00 (-O2), 0.97 to 1.07 (-O3) | 0.78 to 0.96 (-O2), 0.94 (-O3) | 1.01 |
+| `sub`, 1 limb, N = 7 | 0.97 to 1.00 (-O2), 0.93 to 1.06 (-O3) | 0.99 to 1.05 (-O2), 1.03 to 1.10 (-O3) | 0.98 | 1.00 (-O2), 1.01 to 1.52 (-O3) |
+| `sub`, 1 limb, N = 13 | 1.42 to 1.54 (-O2), 1.34 to 1.43 (-O3) | 0.94 to 1.03 (-O2), 1.00 to 1.11 (-O3) | 0.86 to 0.98 (-O2), 0.97 to 1.00 (-O3) | 0.98 to 0.99 |
+| `sub`, 1 limb, N = 18 | 0.94 to 1.17 (-O2), 0.81 to 1.00 (-O3) | 1.00 to 1.05 (-O2), 0.86 to 1.01 (-O3) | 0.99 to 1.00 | 1.00 (-O2), 1.00 to 1.25 (-O3) |
+| `sub`, 1 limb, N = 80 | 0.99 to 1.02 | 1.02 to 1.06 (-O2), 1.01 to 1.02 (-O3) | 1.00 to 1.04 | 0.99 to 1.02 |
+| `sub`, 2 limbs, N = 3 | 0.98 to 1.00 (-O2), 0.93 to 1.04 (-O3) | 0.95 to 1.06 (-O2), 0.99 to 1.03 (-O3) | 0.99 to 1.00 (-O2), 0.92 to 1.00 (-O3) | 1.01 to 1.02 |
+| `sub`, 2 limbs, N = 7 | 0.98 to 1.01 (-O2), 0.95 to 0.98 (-O3) | 0.98 to 1.04 (-O2), 1.00 to 1.01 (-O3) | 0.99 to 1.01 | 1.02 |
+| `sub`, 2 limbs, N = 13 | 0.99 to 1.03 | 0.94 to 1.02 (-O2), 0.98 to 0.99 (-O3) | 0.97 to 1.01 | 1.03 to 1.04 |
+| `sub`, 2 limbs, N = 18 | 0.99 to 1.03 | 0.99 to 1.07 (-O2), 0.99 (-O3) | 0.99 to 1.02 | 1.01 to 1.03 |
+| `sub`, 2 limbs, N = 80 | 0.99 to 1.00 | 0.99 to 1.07 (-O2), 0.99 (-O3) | 0.99 to 1.02 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 3 | 0.97 to 1.02 (-O2), 0.93 to 1.05 (-O3) | 0.93 to 0.99 (-O2), 0.97 to 1.01 (-O3) | 1.00 to 1.01 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 7 | 0.98 to 1.01 (-O2), 0.93 to 1.07 (-O3) | 0.76 to 0.99 (-O2), 1.03 to 1.07 (-O3) | 0.80 to 0.97 (-O2), 1.01 to 1.03 (-O3) | 1.00 (-O2), 0.74 to 1.00 (-O3) |
+| `scale`, 1 limb, N = 13 | 1.04 to 1.09 (-O2), 1.03 to 1.11 (-O3) | 0.90 to 0.99 (-O2), 0.93 to 1.03 (-O3) | 0.98 to 0.99 | 0.99 to 1.01 |
+| `scale`, 1 limb, N = 18 | 0.89 to 1.05 (-O2), 0.93 to 1.06 (-O3) | 0.98 to 1.04 (-O2), 0.99 to 1.05 (-O3) | 0.88 to 0.98 (-O2), 0.99 to 1.00 (-O3) | 0.99 (-O2), 0.68 to 0.99 (-O3) |
+| `scale`, 1 limb, N = 80 | 1.00 to 1.04 | 0.98 to 1.02 | 1.02 (-O2), 0.97 to 0.98 (-O3) | 1.00 (-O2), 0.65 to 1.76 (-O3) |
+| `scale`, 2 limbs, N = 3 | 0.97 to 1.04 (-O2), 0.94 to 1.03 (-O3) | 0.97 to 1.14 (-O2), 0.99 to 1.05 (-O3) | 0.99 to 1.00 (-O2), 0.91 to 0.92 (-O3) | 0.99 to 1.01 |
+| `scale`, 2 limbs, N = 7 | 1.57 to 1.64 (-O2), 1.57 to 1.68 (-O3) | 0.98 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 0.99 to 1.01 | 0.84 to 1.11 (-O2), 0.84 to 0.85 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.35 to 1.05 (-O2), 0.89 to 0.97 (-O3) | 0.99 to 1.04 | 0.99 to 1.00 (-O2), 0.98 to 1.19 (-O3) | 1.02 to 1.03 |
+| `scale`, 2 limbs, N = 18 | 0.99 to 1.03 | 0.97 to 1.04 (-O2), 0.99 (-O3) | 0.98 to 1.01 | 1.01 (-O2), 1.01 to 1.23 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.99 to 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.02 (-O3) | 1.00 to 1.01 | 1.00 |
+| `half`, 1 limb, N = 3 | 0.98 to 0.99 (-O2), 0.93 to 1.00 (-O3) | 1.02 to 1.19 (-O2), 0.97 to 1.02 (-O3) | 0.94 to 0.99 | 0.95 to 0.97 |
+| `half`, 1 limb, N = 7 | 0.99 to 1.09 (-O2), 0.99 to 1.09 (-O3) | 0.94 to 1.01 (-O2), 0.96 to 1.01 (-O3) | 0.97 to 0.99 | 0.98 to 1.00 |
+| `half`, 1 limb, N = 13 | 0.97 to 1.06 (-O2), 0.98 to 1.01 (-O3) | 0.96 to 1.03 (-O2), 1.02 to 1.10 (-O3) | 0.98 to 1.00 | 0.98 to 1.00 |
+| `half`, 1 limb, N = 18 | 1.04 to 1.06 (-O2), 0.97 to 1.04 (-O3) | 0.95 to 1.01 (-O2), 0.99 (-O3) | 0.97 to 1.01 | 0.98 to 0.99 (-O2), 0.99 to 1.06 (-O3) |
+| `half`, 1 limb, N = 80 | 0.98 to 1.01 | 0.97 to 1.04 (-O2), 1.01 to 1.02 (-O3) | 0.98 to 1.00 | 0.99 to 1.00 |
+| `half`, 2 limbs, N = 3 | 1.00 to 1.01 (-O2), 0.93 to 1.01 (-O3) | 0.96 to 1.01 (-O2), 0.98 to 1.12 (-O3) | 0.99 (-O2), 0.93 to 0.94 (-O3) | 0.99 to 1.00 (-O2), 1.00 to 1.07 (-O3) |
+| `half`, 2 limbs, N = 7 | 0.98 to 1.00 (-O2), 0.94 to 1.01 (-O3) | 0.96 to 1.03 (-O2), 0.93 to 0.95 (-O3) | 0.99 to 1.01 | 1.01 |
+| `half`, 2 limbs, N = 13 | 0.96 to 1.01 (-O2), 0.99 to 1.03 (-O3) | 0.96 to 1.02 (-O2), 0.97 to 0.98 (-O3) | 0.97 to 1.00 | 0.98 to 1.01 |
+| `half`, 2 limbs, N = 18 | 1.00 | 0.96 to 1.02 (-O2), 1.01 (-O3) | 1.00 to 1.01 | 0.99 to 1.09 (-O2), 0.99 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.99 to 1.00 | 0.97 to 1.04 (-O2), 0.99 (-O3) | 0.99 to 1.00 | 0.99 to 1.00 |
+| the constructor, 1 limb, N = 3 | 0.60 to 0.75 (-O2), 0.65 to 0.67 (-O3) | 1.00 to 1.04 (-O2), 0.94 to 1.04 (-O3) | 1.00 to 1.05 (-O2), 1.00 to 1.09 (-O3) | 0.38 |
+| the constructor, 1 limb, N = 7 | 0.49 to 0.54 (-O2), 0.44 to 0.56 (-O3) | 1.15 to 1.25 (-O2), 0.87 to 1.16 (-O3) | 1.00 to 1.02 (-O2), 0.96 to 1.02 (-O3) | 0.41 to 0.44 |
+| the constructor, 1 limb, N = 13 | 0.55 to 0.58 | 0.99 to 1.04 (-O2), 0.90 to 0.95 (-O3) | 1.00 to 1.01 | 0.64 to 0.67 |
+| the constructor, 1 limb, N = 18 | 0.98 to 1.02 | 0.98 to 1.04 (-O2), 0.99 to 1.03 (-O3) | 0.99 to 1.01 | 0.95 to 0.98 (-O2), 1.00 to 1.08 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.62 to 1.64 (-O2), 1.00 to 1.01 (-O3) | 0.92 to 1.06 (-O2), 1.00 (-O3) | 1.00 to 1.02 | 0.98 to 0.99 (-O2), 0.79 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.49 to 0.55 (-O2), 0.53 to 0.58 (-O3) | 0.92 to 0.96 (-O2), 0.96 to 1.16 (-O3) | 0.98 to 0.99 (-O2), 0.91 to 0.98 (-O3) | 0.40 to 0.42 |
+| the constructor, 2 limbs, N = 7 | 0.59 to 0.64 | 1.00 to 1.05 (-O2), 0.91 to 0.97 (-O3) | 1.00 to 1.03 (-O2), 0.97 to 1.05 (-O3) | 0.71 to 0.74 (-O2), 0.60 to 0.74 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.11 (-O2), 0.97 to 1.04 (-O3) | 0.98 to 1.03 (-O2), 0.74 to 0.77 (-O3) | 0.99 to 1.00 (-O2), 0.92 to 0.94 (-O3) | 0.98 to 1.07 (-O2), 0.98 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 (-O2), 0.95 to 0.97 (-O3) | 0.98 to 1.03 (-O2), 0.98 to 1.09 (-O3) | 0.99 to 1.01 | 1.00 to 1.08 (-O2), 0.89 to 1.13 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.05 | 0.95 to 1.00 | 0.93 (-O2), 0.99 to 1.01 (-O3) | 0.98 to 1.02 |
 
 | Short ball vectors, 2026-11-23, every size in one unit, many vectors: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 2.27 to 2.35 | 3.95 to 4.07 | 15.2 (-O2), 14.3 to 14.5 (-O3) | 8.41 to 8.44 |
-| `add(x, y, z)`, 1 limb, N = 7 | 3.03 to 3.08 | 4.81 to 4.92 | 16.4 to 16.5 (-O2), 15.6 to 15.8 (-O3) | 9.39 to 9.41 |
-| `add(x, y, z)`, 1 limb, N = 13 | 4.52 to 4.62 | 6.49 to 6.64 (-O2), 6.2 (-O3) | 16.6 to 17.7 (-O2), 15.8 to 16 (-O3) | 9.53 to 9.55 |
-| `add(x, y, z)`, 1 limb, N = 18 | 6.16 to 6.59 (-O2), 6.65 to 6.98 (-O3) | 7.89 to 8.06 (-O2), 7.39 to 7.43 (-O3) | 17.9 to 18.1 (-O2), 17.1 to 17.3 (-O3) | 10.2 to 10.3 |
-| `add(x, y, z)`, 1 limb, N = 80 | 29.9 to 30.7 | 34 to 34.7 (-O2), 29 (-O3) | 31 to 31.6 (-O2), 30 (-O3) | 22.1 to 23.1 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 4.97 to 5.2 | 6.27 to 6.43 | 25.8 to 26.9 | 17.9 |
-| `add(x, y, z)`, 2 limbs, N = 7 | 9.15 to 9.35 | 9.63 to 10 | 30.9 to 31.8 | 23.2 to 23.3 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 14.8 to 15.1 (-O2), 15.4 to 15.7 (-O3) | 15.2 to 15.5 (-O2), 15.8 to 16 (-O3) | 30.1 to 30.7 | 24.6 to 24.7 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 19.2 to 19.8 | 19.9 to 20.5 | 40.7 to 41 | 34.7 to 34.8 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 74.8 to 77.8 (-O2), 77.3 to 80 (-O3) | 75.5 to 77.7 | 99.7 to 103 | 96 to 96.9 |
-| `z = x + y`, 1 limb, N = 3 | 2.38 to 2.41 (-O2), 2.48 to 2.56 (-O3) | 4.18 to 4.33 | 20.2 to 20.6 (-O2), 19.1 to 19.9 (-O3) | 8.41 to 8.46 |
-| `z = x + y`, 1 limb, N = 7 | 3.51 to 3.58 | 5.41 to 5.55 (-O2), 5.72 to 5.73 (-O3) | 20.3 to 21.3 | 9.76 to 9.79 |
-| `z = x + y`, 1 limb, N = 13 | 5.2 to 5.32 (-O2), 5.24 to 5.5 (-O3) | 8 to 8.18 | 21.2 to 21.5 (-O2), 20.2 to 20.7 (-O3) | 9.93 to 10.2 |
-| `z = x + y`, 1 limb, N = 18 | 9.48 to 9.95 (-O2), 9.95 to 10.6 (-O3) | 13.8 to 14.1 (-O2), 12.8 (-O3) | 22.1 to 23.2 | 11.3 to 11.5 |
-| `z = x + y`, 1 limb, N = 80 | 40.9 to 42.5 (-O2), 42.6 to 44.2 (-O3) | 49.2 to 50.5 (-O2), 41.5 to 42 (-O3) | 87.6 to 90.2 (-O2), 89.8 to 92.3 (-O3) | 36.9 to 40.3 (-O2), 40.8 to 42.8 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 5.41 to 5.56 (-O2), 5.54 to 5.72 (-O3) | 7.7 to 7.95 | 29.2 to 30.4 | 19 to 20.9 (-O2), 19 to 21 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 10.4 to 10.5 | 11.6 to 12.1 | 35.1 to 36 | 25.3 to 27.1 (-O2), 25.4 to 27.2 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 17.1 to 17.5 (-O2), 17.6 to 18.1 (-O3) | 17.8 to 18.4 | 50.6 to 50.9 (-O2), 48.1 to 48.8 (-O3) | 27.6 to 29.1 (-O2), 27.6 to 29.1 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 22.4 to 23.1 | 24.6 to 24.9 | 62.7 to 63.7 | 42.5 to 45.6 (-O2), 40.3 to 42.5 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 104 to 109 | 107 to 109 (-O2), 104 to 105 (-O3) | 168 to 174 (-O2), 167 to 176 (-O3) | 130 to 135 |
-| `sub`, 1 limb, N = 3 | 2.26 to 2.29 | 3.99 to 4.08 (-O2), 2.26 (-O3) | 15.1 to 15.2 (-O2), 9.49 to 9.51 (-O3) | 8.42 to 8.43 |
-| `sub`, 1 limb, N = 7 | 3.03 to 3.1 | 4.81 to 4.91 (-O2), 2.83 to 2.84 (-O3) | 16.5 to 16.6 (-O2), 11 to 11.1 (-O3) | 9.38 to 9.41 |
-| `sub`, 1 limb, N = 13 | 4.53 to 4.62 (-O2), 4.53 to 4.79 (-O3) | 6.51 to 6.64 (-O2), 4.04 to 4.09 (-O3) | 16.6 to 17.6 (-O2), 10.8 to 10.9 (-O3) | 9.53 to 9.56 |
-| `sub`, 1 limb, N = 18 | 6.17 to 6.58 (-O2), 6.77 to 7.3 (-O3) | 7.91 to 8.04 (-O2), 5.25 to 5.26 (-O3) | 17.9 to 18.1 (-O2), 12.4 to 12.5 (-O3) | 10.2 to 10.3 |
-| `sub`, 1 limb, N = 80 | 30 to 30.8 | 34.1 to 35.8 (-O2), 26.8 to 27.1 (-O3) | 31.1 to 31.7 (-O2), 27.2 to 27.3 (-O3) | 22 to 23.1 |
-| `sub`, 2 limbs, N = 3 | 5.28 to 5.48 | 6.47 to 6.66 (-O2), 4.95 (-O3) | 27.1 to 27.2 (-O2), 19.9 to 20 (-O3) | 18.7 to 18.8 |
-| `sub`, 2 limbs, N = 7 | 10.1 to 10.3 | 10.2 to 10.5 (-O2), 8.89 to 8.92 (-O3) | 31.6 to 31.9 (-O2), 27.4 to 28 (-O3) | 26.2 to 26.3 |
-| `sub`, 2 limbs, N = 13 | 16 to 16.7 | 16.1 to 16.5 (-O2), 14.6 (-O3) | 30.9 to 31 (-O2), 26.4 to 26.5 (-O3) | 26.7 |
-| `sub`, 2 limbs, N = 18 | 20.7 to 21.3 | 21.3 to 21.7 (-O2), 19.2 (-O3) | 41.1 to 41.2 (-O2), 37.7 (-O3) | 36 to 36.7 |
-| `sub`, 2 limbs, N = 80 | 80.3 to 82.7 | 83.2 to 84.8 (-O2), 76.1 to 77.1 (-O3) | 104 (-O2), 98.4 to 99.8 (-O3) | 98 to 98.2 |
-| `scale`, 1 limb, N = 3 | 2.28 to 2.34 | 3.86 to 3.94 | 15.4 to 15.6 (-O2), 9.33 to 9.35 (-O3) | 8.41 to 8.42 |
-| `scale`, 1 limb, N = 7 | 2.96 to 3.07 | 4.62 to 4.63 | 16.4 to 16.5 (-O2), 11.4 (-O3) | 9.35 to 9.38 |
-| `scale`, 1 limb, N = 13 | 4.16 to 4.28 | 6.34 to 6.5 (-O2), 5.91 (-O3) | 16.6 to 17.3 (-O2), 11.2 to 11.3 (-O3) | 9.49 to 9.54 |
-| `scale`, 1 limb, N = 18 | 5.78 to 5.87 (-O2), 5.92 to 6.42 (-O3) | 7.89 to 8.05 (-O2), 7.24 to 7.25 (-O3) | 17.8 to 18 (-O2), 12.7 to 12.8 (-O3) | 10.3 |
-| `scale`, 1 limb, N = 80 | 27.5 to 28.8 | 34 to 34.7 (-O2), 27.2 to 27.3 (-O3) | 29.5 to 30.9 | 20.6 to 20.9 (-O2), 26.4 to 27.6 (-O3) |
-| `scale`, 2 limbs, N = 3 | 3.11 to 3.17 | 4.79 to 4.88 | 19.6 (-O2), 11.1 to 11.2 (-O3) | 9.97 to 10 |
-| `scale`, 2 limbs, N = 7 | 4.71 to 4.81 (-O2), 4.8 to 4.98 (-O3) | 6.55 to 6.65 | 22.7 to 22.8 (-O2), 15.7 to 16 (-O3) | 12.9 to 13 |
-| `scale`, 2 limbs, N = 13 | 7.88 to 8 (-O2), 8.07 to 8.27 (-O3) | 8.83 to 9 (-O2), 9.36 to 9.56 (-O3) | 22.8 to 22.9 (-O2), 15.4 to 15.5 (-O3) | 14 to 14.1 |
-| `scale`, 2 limbs, N = 18 | 10.2 to 10.7 | 10.8 to 11.3 | 25.6 (-O2), 18.7 (-O3) | 16.2 to 16.4 |
-| `scale`, 2 limbs, N = 80 | 39.8 to 41.4 | 40 to 40.1 (-O2), 43.7 to 43.9 (-O3) | 54.3 to 54.9 (-O2), 48.6 to 48.8 (-O3) | 44.7 to 45.2 |
-| `half`, 1 limb, N = 3 | 3.29 to 3.43 | 4.52 to 4.62 | 19.4 to 19.5 (-O2), 17.8 to 17.9 (-O3) | 11.2 |
-| `half`, 1 limb, N = 7 | 4.6 to 4.7 (-O2), 4.69 to 4.86 (-O3) | 5.34 to 5.47 | 20 to 21 | 13.9 to 14.1 |
-| `half`, 1 limb, N = 13 | 7.06 to 7.23 | 7.36 to 7.52 | 19.9 to 21.2 (-O2), 18.8 to 18.9 (-O3) | 14.1 to 14.2 |
-| `half`, 1 limb, N = 18 | 8.13 to 8.29 (-O2), 8.28 to 8.57 (-O3) | 8.99 to 9.2 | 22.1 to 22.5 (-O2), 21.2 to 21.3 (-O3) | 17.1 to 17.2 |
-| `half`, 1 limb, N = 80 | 34 to 35.4 | 34.8 to 35.8 | 39.7 to 39.9 (-O2), 37.7 to 38 (-O3) | 36.3 to 36.8 |
-| `half`, 2 limbs, N = 3 | 4.11 to 4.2 | 5.18 to 5.32 | 21.6 to 22.4 | 14.5 |
-| `half`, 2 limbs, N = 7 | 7.09 to 7.29 | 7.54 to 7.81 | 25.6 to 26.3 | 18.7 to 18.8 |
-| `half`, 2 limbs, N = 13 | 10.6 to 11.1 | 10.8 to 11.1 | 23.8 to 24.9 | 19.2 to 19.3 |
-| `half`, 2 limbs, N = 18 | 13.3 to 13.8 | 13.3 to 13.5 | 29.2 to 29.9 | 22.8 to 23 |
-| `half`, 2 limbs, N = 80 | 48.1 to 50.1 | 48.4 to 49.3 | 59.5 to 61.5 | 56 to 56.9 |
-| the constructor, 1 limb, N = 3 | 4.44 to 4.65 | 3.43 to 3.49 (-O2), 2.4 to 2.41 (-O3) | 16.5 to 17.5 (-O2), 16.5 to 17.8 (-O3) | 8.96 to 9.02 |
-| the constructor, 1 limb, N = 7 | 8.81 to 9.17 | 8.26 to 8.75 (-O2), 3.49 to 3.5 (-O3) | 19.2 to 19.4 (-O2), 18.1 to 19 (-O3) | 12.1 to 12.4 |
-| the constructor, 1 limb, N = 13 | 14.5 to 15.2 | 17.5 to 17.9 (-O2), 6.58 to 6.59 (-O3) | 24.1 (-O2), 22.8 to 22.9 (-O3) | 21.1 |
-| the constructor, 1 limb, N = 18 | 19.8 to 20.6 | 24.3 to 24.8 | 29 to 29.4 | 23.6 to 25.4 (-O2), 28.9 (-O3) |
-| the constructor, 1 limb, N = 80 | 71.3 to 73.7 | 205 to 211 | 150 to 155 | 66 to 68.3 |
-| the constructor, 2 limbs, N = 3 | 6.55 to 6.7 (-O2), 6.73 to 6.99 (-O3) | 4.65 to 4.68 (-O2), 2.95 to 2.96 (-O3) | 18.5 to 19 (-O2), 20.8 to 22.1 (-O3) | 10.8 to 11.2 |
-| the constructor, 2 limbs, N = 7 | 13.2 to 13.5 | 17.6 to 18.1 (-O2), 5.24 (-O3) | 22.5 to 23.4 (-O2), 20.5 to 21.1 (-O3) | 22.1 |
-| the constructor, 2 limbs, N = 13 | 22.4 to 22.7 (-O2), 27.5 to 28.1 (-O3) | 29.1 to 30 (-O2), 10 (-O3) | 46.5 to 47 (-O2), 28.9 to 29.1 (-O3) | 31 to 33.9 (-O2), 39.7 (-O3) |
-| the constructor, 2 limbs, N = 18 | 31.9 to 32.7 (-O2), 34.5 to 35.8 (-O3) | 55.6 to 59 (-O2), 37.5 (-O3) | 64.2 to 64.6 (-O2), 35.3 (-O3) | 42.3 to 45.8 (-O2), 50.6 to 50.7 (-O3) |
-| the constructor, 2 limbs, N = 80 | 91.8 to 94.9 | 282 to 295 (-O2), 269 to 270 (-O3) | 249 to 255 (-O2), 196 to 198 (-O3) | 144 to 147 |
+| `add(x, y, z)`, 1 limb, N = 3 | 2.23 to 2.28 | 3.99 to 4.07 | 15.1 (-O2), 14.2 to 14.5 (-O3) | 8.4 to 8.43 |
+| `add(x, y, z)`, 1 limb, N = 7 | 2.97 to 3.1 | 4.81 to 4.91 | 16.4 (-O2), 15.5 to 15.7 (-O3) | 9.37 to 9.4 |
+| `add(x, y, z)`, 1 limb, N = 13 | 4.46 to 4.6 | 6.51 to 6.64 (-O2), 6.19 to 6.2 (-O3) | 16.7 to 17.1 (-O2), 15.6 to 15.8 (-O3) | 9.53 to 9.62 |
+| `add(x, y, z)`, 1 limb, N = 18 | 6.06 to 6.41 (-O2), 6.09 to 6.12 (-O3) | 7.89 to 8.18 (-O2), 7.4 to 7.54 (-O3) | 17.3 to 18.1 | 10.4 to 10.7 |
+| `add(x, y, z)`, 1 limb, N = 80 | 30.4 to 30.5 (-O2), 29 to 29.7 (-O3) | 34.8 to 36.1 (-O2), 28.1 to 29.6 (-O3) | 31 to 31.3 (-O2), 29 to 29.4 (-O3) | 22.8 to 22.9 (-O2), 21.8 to 21.9 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | 4.95 to 4.97 | 6.29 to 6.58 | 25.7 to 26.8 | 17.8 to 17.9 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 8.96 to 9.15 | 9.63 to 10 (-O2), 10 to 10.4 (-O3) | 30.4 to 31.5 | 22.6 to 23.2 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 14.3 to 14.9 | 15.2 to 15.9 (-O2), 15.8 to 16.1 (-O3) | 29.9 to 30.7 | 24.5 to 24.6 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 19.2 to 19.5 | 19.9 to 20.8 (-O2), 19.3 to 19.7 (-O3) | 40.6 to 41.2 | 34.8 to 35 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 75.7 to 75.9 | 77.7 to 81.2 | 99.3 to 103 | 95.7 to 96.2 |
+| `z = x + y`, 1 limb, N = 3 | 2.32 to 2.38 | 4.22 to 4.25 (-O2), 4.19 to 4.44 (-O3) | 19.9 to 20.4 (-O2), 19 to 19.9 (-O3) | 8.4 to 8.45 |
+| `z = x + y`, 1 limb, N = 7 | 3.46 to 3.51 | 5.42 to 5.66 (-O2), 5.72 to 5.82 (-O3) | 20.6 to 21 (-O2), 20 to 20.5 (-O3) | 9.75 to 9.81 |
+| `z = x + y`, 1 limb, N = 13 | 5.2 to 5.38 | 8.02 to 8.38 | 21.3 to 21.6 (-O2), 20.4 to 20.7 (-O3) | 9.97 to 10.2 |
+| `z = x + y`, 1 limb, N = 18 | 9.3 to 9.85 (-O2), 9.45 to 9.48 (-O3) | 13.8 to 14.4 (-O2), 12.8 to 13.1 (-O3) | 22.5 to 23.1 | 11.4 to 11.8 |
+| `z = x + y`, 1 limb, N = 80 | 41.3 to 42 | 49.2 to 51.4 (-O2), 41.2 to 42.7 (-O3) | 86.9 to 87.6 | 40.6 to 45 (-O2), 40.8 to 42.4 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 5.39 to 5.44 | 7.69 to 7.95 | 30.4 to 30.8 (-O2), 29.2 to 29.7 (-O3) | 20.7 to 20.8 |
+| `z = x + y`, 2 limbs, N = 7 | 10.2 to 10.3 | 11.6 to 12.1 (-O2), 11.5 to 12.4 (-O3) | 35.2 to 35.8 | 27 to 27.1 |
+| `z = x + y`, 2 limbs, N = 13 | 16.9 to 17.3 | 17.8 to 18.7 | 50.6 to 50.7 (-O2), 48.1 to 48.8 (-O3) | 28.9 to 29.4 |
+| `z = x + y`, 2 limbs, N = 18 | 22.3 to 22.8 | 24.9 to 26.2 (-O2), 25.1 to 25.4 (-O3) | 62.8 to 63.5 | 42.2 to 42.5 |
+| `z = x + y`, 2 limbs, N = 80 | 103 to 104 | 106 to 112 (-O2), 105 to 108 (-O3) | 165 to 169 | 132 to 136 |
+| `sub`, 1 limb, N = 3 | 2.21 to 2.26 | 3.99 to 4.17 | 15.4 (-O2), 9.47 to 9.49 (-O3) | 8.4 to 8.44 |
+| `sub`, 1 limb, N = 7 | 3.01 to 3.05 | 4.81 to 5.02 | 16.4 to 16.5 (-O2), 11.1 (-O3) | 9.37 to 9.41 |
+| `sub`, 1 limb, N = 13 | 4.52 to 4.62 | 6.51 to 6.65 (-O2), 6.18 to 6.31 (-O3) | 16.7 to 16.9 (-O2), 10.8 to 10.9 (-O3) | 9.5 to 9.7 |
+| `sub`, 1 limb, N = 18 | 6.06 to 6.54 (-O2), 6.13 to 6.15 (-O3) | 7.88 to 8.08 (-O2), 7.39 to 7.54 (-O3) | 18 to 18.2 (-O2), 12.6 (-O3) | 10.4 to 10.6 |
+| `sub`, 1 limb, N = 80 | 28.8 to 29.9 | 34.7 to 36.2 (-O2), 28.8 to 29.8 (-O3) | 31.2 to 31.6 (-O2), 27.3 (-O3) | 22.8 to 22.9 (-O2), 21.5 to 21.8 (-O3) |
+| `sub`, 2 limbs, N = 3 | 5.28 to 5.29 | 6.46 to 6.82 (-O2), 4.95 to 5.05 (-O3) | 27.1 to 27.2 (-O2), 19.9 to 20 (-O3) | 18.7 to 18.8 |
+| `sub`, 2 limbs, N = 7 | 9.87 to 10.1 | 10.2 to 10.7 (-O2), 8.91 to 9.17 (-O3) | 31.8 (-O2), 27.4 to 27.5 (-O3) | 26.1 to 26.2 (-O2), 24.9 to 26.2 (-O3) |
+| `sub`, 2 limbs, N = 13 | 15.9 to 16.1 | 16.1 to 16.8 (-O2), 14.6 to 14.9 (-O3) | 30.8 to 30.9 (-O2), 26.4 to 26.5 (-O3) | 26.6 to 26.7 |
+| `sub`, 2 limbs, N = 18 | 20.4 | 21.3 to 22.2 (-O2), 19.3 to 19.6 (-O3) | 41 to 41.1 (-O2), 37.7 to 37.9 (-O3) | 36.1 to 36.6 |
+| `sub`, 2 limbs, N = 80 | 80.5 to 81.2 | 83.2 to 86.8 (-O2), 77.1 to 78.2 (-O3) | 104 to 105 (-O2), 98.3 to 98.8 (-O3) | 97.8 to 98.3 |
+| `scale`, 1 limb, N = 3 | 2.23 to 2.29 | 3.86 to 4.03 | 15.5 (-O2), 14.7 (-O3) | 8.4 to 8.43 |
+| `scale`, 1 limb, N = 7 | 2.92 to 3 | 4.61 to 4.8 | 15.8 to 16.3 | 9.34 to 9.38 |
+| `scale`, 1 limb, N = 13 | 4.15 to 4.35 | 6.33 to 6.49 (-O2), 5.91 to 5.97 (-O3) | 16.2 to 16.7 | 9.49 to 9.53 |
+| `scale`, 1 limb, N = 18 | 5.71 to 5.96 | 7.88 to 8.23 (-O2), 7.25 to 7.41 (-O3) | 17.6 to 18.1 | 10.5 to 10.6 |
+| `scale`, 1 limb, N = 80 | 27 to 28.3 | 34 to 35.4 (-O2), 27.2 to 27.8 (-O3) | 29.6 to 31 | 20.4 (-O2), 25.4 to 28.3 (-O3) |
+| `scale`, 2 limbs, N = 3 | 3.14 to 3.24 (-O2), 3.06 to 3.07 (-O3) | 4.79 to 4.99 | 19.5 to 19.6 (-O2), 11.1 to 11.2 (-O3) | 9.95 to 10 |
+| `scale`, 2 limbs, N = 7 | 4.7 to 4.82 | 6.39 to 6.79 (-O2), 6.61 to 6.95 (-O3) | 22.4 to 22.5 (-O2), 15.7 (-O3) | 12.9 to 13 |
+| `scale`, 2 limbs, N = 13 | 7.55 to 7.83 | 8.83 to 9.22 (-O2), 9.36 to 9.56 (-O3) | 22.7 to 22.8 (-O2), 15.5 (-O3) | 13.9 to 14.1 |
+| `scale`, 2 limbs, N = 18 | 9.95 to 10 | 10.9 to 11.3 (-O2), 11.3 to 11.5 (-O3) | 25.5 to 25.6 (-O2), 18.7 to 18.8 (-O3) | 16.3 to 16.4 |
+| `scale`, 2 limbs, N = 80 | 39.5 to 40.5 | 40.2 to 42 (-O2), 43.9 to 44.6 (-O3) | 53.8 to 53.9 (-O2), 47.9 to 48.2 (-O3) | 44.7 to 45.1 |
+| `half`, 1 limb, N = 3 | 3.29 to 3.33 | 4.52 to 4.72 (-O2), 4.26 to 4.34 (-O3) | 19.4 (-O2), 17.8 to 17.9 (-O3) | 11.2 |
+| `half`, 1 limb, N = 7 | 4.6 to 4.64 | 5.36 (-O2), 5.6 to 5.71 (-O3) | 20 to 20.8 | 13.9 to 14.2 |
+| `half`, 1 limb, N = 13 | 7.03 to 7.21 | 7.37 to 7.68 | 19.9 to 20 (-O2), 18.8 to 18.9 (-O3) | 14.1 to 14.2 |
+| `half`, 1 limb, N = 18 | 8.11 to 8.12 | 8.99 to 9.39 | 22.3 to 22.4 (-O2), 21.3 to 21.4 (-O3) | 17.2 to 17.3 |
+| `half`, 1 limb, N = 80 | 34.2 to 34.5 | 34.7 to 36.2 | 39.9 to 40.2 (-O2), 38 to 38.2 (-O3) | 36.6 to 37 |
+| `half`, 2 limbs, N = 3 | 4.14 to 4.28 | 5.32 to 5.54 | 22.7 to 22.8 (-O2), 21.5 to 21.6 (-O3) | 14.5 to 14.7 |
+| `half`, 2 limbs, N = 7 | 7.09 to 7.13 | 7.8 to 8.24 (-O2), 7.8 to 8.09 (-O3) | 25.6 to 26.5 | 18.7 |
+| `half`, 2 limbs, N = 13 | 10.4 to 10.6 | 10.9 to 11.4 | 23.7 to 24.5 | 19.1 |
+| `half`, 2 limbs, N = 18 | 13.1 to 13.4 | 13.4 to 14 | 29.2 to 29.9 | 22.8 to 23 |
+| `half`, 2 limbs, N = 80 | 47.9 to 48.2 | 48.4 to 50.5 | 59.3 to 60.9 | 55.6 to 55.9 |
+| the constructor, 1 limb, N = 3 | 4.41 to 4.48 | 3.36 to 3.52 (-O2), 2.39 to 2.45 (-O3) | 16.5 to 17.4 (-O2), 16.5 to 17.7 (-O3) | 8.98 to 9.03 |
+| the constructor, 1 limb, N = 7 | 8.69 to 8.95 | 8.29 to 8.63 (-O2), 3.52 to 3.54 (-O3) | 19.2 to 19.3 (-O2), 18 to 18.9 (-O3) | 12.1 to 12.3 |
+| the constructor, 1 limb, N = 13 | 14.4 to 14.9 | 17.4 to 17.8 (-O2), 6.59 to 6.72 (-O3) | 24 to 24.1 (-O2), 22.8 to 22.9 (-O3) | 21 to 21.1 |
+| the constructor, 1 limb, N = 18 | 18.9 to 19 (-O2), 23.1 to 24.6 (-O3) | 24.2 to 25.3 | 29 to 29.3 | 24.5 to 24.6 (-O2), 36 to 36.7 (-O3) |
+| the constructor, 1 limb, N = 80 | 70.8 to 72.7 | 207 to 216 | 148 to 150 | 69.1 to 81.7 (-O2), 71 to 71.6 (-O3) |
+| the constructor, 2 limbs, N = 3 | 6.52 to 6.57 | 4.65 to 4.88 (-O2), 2.94 to 3.04 (-O3) | 18.4 to 18.9 (-O2), 20.8 to 22.1 (-O3) | 10.8 |
+| the constructor, 2 limbs, N = 7 | 13.1 | 17.6 to 18.5 (-O2), 4.97 to 4.99 (-O3) | 22.6 to 23.4 (-O2), 20.5 to 21.1 (-O3) | 22.1 |
+| the constructor, 2 limbs, N = 13 | 22.3 to 22.4 (-O2), 20.1 to 21.1 (-O3) | 29.1 to 30.4 (-O2), 10 to 10.2 (-O3) | 46.4 to 46.7 (-O2), 28.9 to 29.1 (-O3) | 34 (-O2), 35.9 to 37.9 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.9 to 33.7 (-O2), 26.2 (-O3) | 65.9 to 68.9 (-O2), 37.5 to 41.2 (-O3) | 58.9 to 59.4 (-O2), 35.5 to 35.7 (-O3) | 47.4 to 51.8 (-O2), 40.5 to 43 (-O3) |
+| the constructor, 2 limbs, N = 80 | 89.4 to 93.6 | 289 to 302 (-O2), 269 to 275 (-O3) | 224 to 227 (-O2), 196 to 198 (-O3) | 148 to 150 |
 
 | Short ball vectors, 2026-11-23, every size in one unit, many vectors: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.045 to 0.059 (-O2), 0.03 to 0.048 (-O3) | 0.166 to 0.254 (-O2), 0.176 to 0.193 (-O3) | 2.41 to 2.44 (-O2), 2.21 to 2.37 (-O3) | 3.71 to 3.73 |
-| `add(x, y, z)`, 1 limb, N = 7 | -0.016 to 0.06 (-O2), -0.034 to 0.074 (-O3) | 0.174 to 0.302 (-O2), 0.245 to 0.252 (-O3) | 2.5 to 2.59 (-O2), 2.09 to 2.33 (-O3) | 2.55 to 2.62 |
-| `add(x, y, z)`, 1 limb, N = 13 | 0.029 to 0.042 (-O2), 0.045 to 0.059 (-O3) | 0.42 to 0.569 (-O2), 0.461 to 0.468 (-O3) | 2.3 to 3.62 (-O2), 2.43 to 2.7 (-O3) | 2.31 to 2.47 (-O2), 2.35 to 2.39 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 18 | -0.694 to -0.302 (-O2), 0.237 to 0.804 (-O3) | 0.042 to 0.204 (-O2), 0.057 to 0.169 (-O3) | 2.06 to 2.13 (-O2), 2.42 to 2.87 (-O3) | 2 to 2.29 (-O2), 2.12 to 2.19 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 80 | -0.5 to -0.07 (-O2), -0.41 to -0.04 (-O3) | -1.74 to 0.09 (-O2), -0.22 to -0.17 (-O3) | 4.42 to 4.98 (-O2), 4.28 to 5.07 (-O3) | 3.89 to 3.97 (-O2), 3.52 to 3.69 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | -0.127 to 0.028 (-O2), -0.003 to 0.204 (-O3) | 0.008 to 0.136 (-O2), 0.073 to 0.102 (-O3) | 2.64 to 2.77 (-O2), 2.96 to 3.06 (-O3) | 2.28 to 2.4 (-O2), 2.09 to 2.16 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.131 to -0.058 (-O2), 0.002 to 0.057 (-O3) | -0.24 to 0.206 (-O2), 0.032 to 0.046 (-O3) | 1.57 to 1.61 (-O2), 3.07 to 3.16 (-O3) | 2.61 to 2.73 (-O2), 2.6 to 2.73 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.29 to -0.18 (-O2), 0.35 to 0.92 (-O3) | -0.06 to -0.05 (-O2), -0.22 to -0.02 (-O3) | 2.71 to 2.8 (-O2), 2.9 to 3.03 (-O3) | 3.12 to 3.23 |
-| `add(x, y, z)`, 2 limbs, N = 18 | -0.32 to -0.07 (-O2), -0.25 to 0.04 (-O3) | -0.55 to 0.24 (-O2), -0.07 to -0.06 (-O3) | 5.25 to 5.34 (-O2), 5.33 to 5.65 (-O3) | 4.38 to 4.45 (-O2), 4.23 to 4.47 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 80 | -2.34 to 2.03 (-O2), -0.31 to 3.59 (-O3) | -1.85 to -1.64 (-O2), 0.02 to 0.26 (-O3) | 3.28 to 4.28 (-O2), 3.99 to 5.43 (-O3) | 4.43 to 4.99 (-O2), 4.37 to 5.26 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | -0.059 to 0.083 (-O2), 0.051 to 0.135 (-O3) | 0.08 to 0.095 (-O2), 0.022 to 0.061 (-O3) | 4.14 to 4.4 (-O2), 3.98 to 5.14 (-O3) | 2.77 to 2.83 |
-| `z = x + y`, 1 limb, N = 7 | -0.021 to 0.036 (-O2), -0.086 to 0.033 (-O3) | -0.471 to -0.347 (-O2), -0.011 to -0.005 (-O3) | 3.45 to 3.89 (-O2), 3.72 to 4.06 (-O3) | 2.27 to 2.28 (-O2), 2.36 to 2.39 (-O3) |
-| `z = x + y`, 1 limb, N = 13 | -0.22 to 0.003 (-O2), -0.058 to 0.179 (-O3) | -0.616 to -0.452 (-O2), -0.084 to -0.057 (-O3) | 3.18 to 3.62 (-O2), 3.48 to 3.92 (-O3) | 1.94 to 2.17 (-O2), 1.91 to 2.19 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | -0.621 to -0.157 (-O2), 0.312 to 1.03 (-O3) | 0.41 to 0.68 (-O2), -0.01 to 0.02 (-O3) | 2.63 to 2.76 (-O2), 2.84 to 3.32 (-O3) | 1.71 to 1.94 (-O2), 1.73 to 1.95 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | -1.43 to 0.41 (-O2), -0.21 to 2.28 (-O3) | -1.24 to 0.78 (-O2), -0.74 to 0 (-O3) | 1.35 to 5.59 (-O2), 5.71 to 8.52 (-O3) | -1.69 to 5.82 (-O2), 2.05 to 3.88 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -0.17 to 0.032 (-O2), -0.021 to 0.267 (-O3) | 0.175 to 0.351 (-O2), 0.105 to 0.106 (-O3) | 2.76 to 2.99 (-O2), 2.66 to 3.11 (-O3) | 0.73 to 2.92 (-O2), 0.97 to 4.27 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | -0.01 to 0.24 (-O2), 0.08 to 0.13 (-O3) | 0.11 to 0.58 (-O2), 0.08 to 0.09 (-O3) | 2.41 to 2.9 (-O2), 2.2 to 2.63 (-O3) | 0.66 to 2.6 (-O2), 0.93 to 4.26 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -0.41 to 0.06 (-O2), 0.12 to 0.6 (-O3) | 0.13 to 0.47 (-O2), 0.14 to 0.51 (-O3) | 2.72 to 3.18 (-O2), 0.4 to 1.19 (-O3) | 1.17 to 2.59 (-O2), 0.83 to 4.22 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | -0.36 to -0.02 (-O2), -0.54 to 0.64 (-O3) | -1.65 to -1.08 (-O2), 0.27 to 0.31 (-O3) | 0.09 to 0.51 (-O2), 0.46 to 0.95 (-O3) | 3.68 to 7.1 (-O2), 1.84 to 5.26 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | -0.2 to 0.9 (-O2), 0.6 to 4.9 (-O3) | 1.3 to 1.6 (-O2), -1.5 to -0.6 (-O3) | -0.8 to 7.1 (-O2), -3 to 11.7 (-O3) | -3.5 to 4.7 (-O2), -3.3 to 2.6 (-O3) |
-| `sub`, 1 limb, N = 3 | -0.041 to 0.089 (-O2), -0.002 to 0.028 (-O3) | 0.128 to 0.144 (-O2), 0.085 to 0.088 (-O3) | 2.17 to 2.24 (-O2), 3.85 to 3.88 (-O3) | 3.7 to 3.73 |
-| `sub`, 1 limb, N = 7 | 0.038 to 0.122 (-O2), 0.077 to 0.093 (-O3) | -0.257 to -0.256 (-O2), 0.06 to 0.073 (-O3) | 2.48 to 2.6 (-O2), 1.95 to 2.03 (-O3) | 2.53 to 2.61 |
-| `sub`, 1 limb, N = 13 | -0.149 to 0.023 (-O2), -0.051 to 0.277 (-O3) | -0.013 to 0.211 (-O2), -0.08 to -0.002 (-O3) | 2.34 to 3.45 (-O2), 1.98 to 2.08 (-O3) | 2.35 to 2.47 (-O2), 2.35 to 2.44 (-O3) |
-| `sub`, 1 limb, N = 18 | -0.672 to -0.283 (-O2), 0.34 to 0.972 (-O3) | 0.031 to 0.25 (-O2), -0.064 to -0.039 (-O3) | 1.89 to 1.98 (-O2), 1.9 to 2.15 (-O3) | 1.99 to 2.27 (-O2), 2.12 to 2.2 (-O3) |
-| `sub`, 1 limb, N = 80 | 0.31 to 0.49 (-O2), 0.08 to 1.38 (-O3) | -0.56 to 1.33 (-O2), -0.3 to 0 (-O3) | 4.2 to 4.87 (-O2), 4.7 to 4.97 (-O3) | 3.89 to 3.99 (-O2), 3.4 to 3.66 (-O3) |
-| `sub`, 2 limbs, N = 3 | -0.1 to -0.042 (-O2), 0.025 to 0.213 (-O3) | 0.095 to 0.186 (-O2), 0.104 to 0.116 (-O3) | 2.6 to 2.71 | 2.45 to 2.54 |
-| `sub`, 2 limbs, N = 7 | -0.07 to 0.151 (-O2), 0.06 to 0.38 (-O3) | -0.14 to 0.3 (-O2), -0.015 to 0.048 (-O3) | 1.69 to 1.92 (-O2), 2.74 to 3.39 (-O3) | 3.2 to 3.31 |
-| `sub`, 2 limbs, N = 13 | -0.55 to -0.13 (-O2), 0.25 to 0.34 (-O3) | 0.03 to 0.42 (-O2), -0.05 to -0.02 (-O3) | 2.46 to 2.52 (-O2), 2.93 to 2.99 (-O3) | 3.49 to 3.62 |
-| `sub`, 2 limbs, N = 18 | -0.26 to 0.37 (-O2), -0.3 to 0.24 (-O3) | 0.21 to 0.45 (-O2), 0.06 to 0.1 (-O3) | 4.72 to 4.8 (-O2), 4.45 to 4.59 (-O3) | 4.73 to 4.8 (-O2), 4.69 to 4.93 (-O3) |
-| `sub`, 2 limbs, N = 80 | -2.16 to 1.34 (-O2), 0.5 to 1.1 (-O3) | 0.83 to 3.01 (-O2), -1.09 to 0.09 (-O3) | 3.79 to 4.61 (-O2), 3.33 to 5.28 (-O3) | 4.42 to 5.14 (-O2), 4.42 to 4.97 (-O3) |
-| `scale`, 1 limb, N = 3 | 0.081 to 0.13 (-O2), 0.062 to 0.107 (-O3) | -0.043 to 0.047 (-O2), 0.04 to 0.042 (-O3) | 2.48 to 2.57 (-O2), -3.06 to -2.95 (-O3) | 3.88 to 3.9 |
-| `scale`, 1 limb, N = 7 | 0.227 to 0.26 (-O2), 0.033 to 0.047 (-O3) | -0.017 to 0.072 (-O2), 0.081 to 0.086 (-O3) | 2.51 to 2.55 (-O2), -2.33 to -2.26 (-O3) | 2.54 to 2.62 |
-| `scale`, 1 limb, N = 13 | 0.027 to 0.081 (-O2), 0.009 to 0.079 (-O3) | 0.143 to 0.304 (-O2), 0.02 to 0.026 (-O3) | 2.21 to 2.82 (-O2), -2.18 to -2.1 (-O3) | 2.4 to 2.49 |
-| `scale`, 1 limb, N = 18 | -0.091 to -0.064 (-O2), 0.021 to 0.748 (-O3) | 0.198 to 0.36 (-O2), 0.061 to 0.064 (-O3) | 1.92 to 1.95 (-O2), -2.35 to -2.19 (-O3) | 2.45 to 2.56 (-O2), 2.4 to 2.48 (-O3) |
-| `scale`, 1 limb, N = 80 | 0.09 to 0.16 (-O2), 0.4 to 1.06 (-O3) | -0.58 to 0.97 (-O2), -0.41 to -0.18 (-O3) | 3.47 to 3.74 (-O2), 3.38 to 3.72 (-O3) | 3.01 to 3.41 (-O2), 2.45 to 5.36 (-O3) |
-| `scale`, 2 limbs, N = 3 | -0.077 to 0.041 (-O2), 0.033 to 0.062 (-O3) | 0.185 to 0.268 (-O2), 0.181 to 0.188 (-O3) | 2.47 to 2.61 (-O2), 1.6 to 1.67 (-O3) | 2.4 to 2.43 |
-| `scale`, 2 limbs, N = 7 | -0.036 to 0.075 (-O2), 0.065 to 0.225 (-O3) | 0.059 to 0.281 (-O2), 0.062 to 0.075 (-O3) | 2.72 to 2.98 (-O2), 2.03 to 2.35 (-O3) | 1.85 to 1.95 (-O2), 1.84 to 1.93 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.177 to 0.485 (-O2), 0.448 to 0.759 (-O3) | 0.021 to 0.108 (-O2), 0.245 to 0.452 (-O3) | 2.8 to 2.92 (-O2), 1.92 to 1.96 (-O3) | 2.93 to 3.04 |
-| `scale`, 2 limbs, N = 18 | 0.466 to 0.535 (-O2), 0.479 to 0.996 (-O3) | -0.01 to 0.31 (-O2), 0.25 to 0.27 (-O3) | 2.67 to 2.95 (-O2), 1.72 to 1.82 (-O3) | 1.52 to 1.75 (-O2), 1.6 to 1.73 (-O3) |
-| `scale`, 2 limbs, N = 80 | -0.18 to 0.58 (-O2), 0.3 to 0.31 (-O3) | -0.86 to 0.13 (-O2), -1.21 to -0.96 (-O3) | 3.68 to 4.28 (-O2), 1.3 to 1.82 (-O3) | 2.18 to 2.47 (-O2), 2.35 to 2.69 (-O3) |
-| `half`, 1 limb, N = 3 | 0.022 to 0.144 (-O2), 0.078 to 0.142 (-O3) | -0.264 to -0.243 (-O2), -0.001 to 0.001 (-O3) | 2.29 to 2.42 (-O2), 2.65 to 2.69 (-O3) | 2.39 to 2.44 |
-| `half`, 1 limb, N = 7 | -0.059 to 0.091 (-O2), 0.091 to 0.263 (-O3) | -0.268 to -0.156 (-O2), 0.129 to 0.131 (-O3) | 2.02 to 2.03 (-O2), 2.52 to 2.6 (-O3) | 2.18 to 2.24 (-O2), 2 to 2.06 (-O3) |
-| `half`, 1 limb, N = 13 | -0.09 to 0.148 (-O2), 0.081 to 0.098 (-O3) | -0.126 to 0.03 (-O2), 0.251 to 0.253 (-O3) | 2.36 to 3.68 (-O2), 2.3 to 2.43 (-O3) | 2.13 to 2.17 (-O2), 2.08 to 2.21 (-O3) |
-| `half`, 1 limb, N = 18 | -0.372 to -0.204 (-O2), -0.127 to 0.358 (-O3) | -0.225 to -0.206 (-O2), 0 to 0.004 (-O3) | 2.23 to 2.46 (-O2), 1.85 to 2.11 (-O3) | 3.52 to 3.66 |
-| `half`, 1 limb, N = 80 | -0.76 to -0.12 (-O2), 0.19 to 1.09 (-O3) | -0.46 to 0.79 (-O2), 0.15 to 0.32 (-O3) | 3.92 to 4.16 (-O2), 3.52 to 3.95 (-O3) | 4.78 to 5.22 (-O2), 5.37 to 5.57 (-O3) |
-| `half`, 2 limbs, N = 3 | -0.039 to 0.067 (-O2), -0.071 to 0.075 (-O3) | 0.134 to 0.236 (-O2), 0.263 to 0.264 (-O3) | 1.27 to 1.37 (-O2), 1.85 to 2.03 (-O3) | 1.99 to 2.06 |
-| `half`, 2 limbs, N = 7 | 0.05 to 0.136 (-O2), -0.06 to 0.101 (-O3) | -0.144 to 0.149 (-O2), 0.001 to 0.004 (-O3) | 0.95 to 1.05 (-O2), 1.11 to 1.14 (-O3) | 2.68 to 2.76 |
-| `half`, 2 limbs, N = 13 | 0.13 to 0.28 (-O2), 0.26 to 0.68 (-O3) | 0.12 to 0.3 (-O2), 0.25 to 0.37 (-O3) | 1.62 to 1.68 (-O2), 1.06 to 1.11 (-O3) | 2.9 to 3.01 |
-| `half`, 2 limbs, N = 18 | 0.16 to 0.29 (-O2), 0.12 to 0.77 (-O3) | 0.02 to 0.25 (-O2), 0.25 to 0.27 (-O3) | 0.97 to 1.1 (-O2), 1.29 to 1.34 (-O3) | 2.83 to 3.01 (-O2), 2.68 to 2.91 (-O3) |
-| `half`, 2 limbs, N = 80 | -1.07 to 0.84 (-O2), 0.02 to 0.25 (-O3) | 0.11 to 1.1 (-O2), 0.15 to 0.2 (-O3) | 3.22 to 3.87 (-O2), 3.72 to 4.02 (-O3) | 5.45 to 6.2 (-O2), 5.24 to 5.86 (-O3) |
-| the constructor, 1 limb, N = 3 | 1.23 to 1.35 (-O2), 1.4 to 1.48 (-O3) | 0.165 to 0.287 (-O2), 0.196 to 0.203 (-O3) | 6.22 to 6.33 (-O2), 5.7 to 6.95 (-O3) | 2.95 to 3.02 |
-| the constructor, 1 limb, N = 7 | 2.43 to 2.47 (-O2), 2.47 to 2.87 (-O3) | -2.87 to -2.68 (-O2), 0.106 to 0.11 (-O3) | 4.8 to 5.01 (-O2), 5.4 to 6.59 (-O3) | 1.04 to 1.27 (-O2), 1.04 to 1.12 (-O3) |
-| the constructor, 1 limb, N = 13 | 3.66 to 3.89 (-O2), 3.68 to 4.15 (-O3) | -0.3 to 0.48 (-O2), 0.165 to 0.173 (-O3) | 2.67 to 2.69 (-O2), 4.06 to 4.19 (-O3) | 1.75 to 1.82 (-O2), 1.69 to 1.76 (-O3) |
-| the constructor, 1 limb, N = 18 | -0.68 to -0.11 (-O2), 1.19 to 1.41 (-O3) | -0.14 to 0.34 (-O2), 0.26 to 0.27 (-O3) | 2.55 to 2.78 (-O2), 2.42 to 2.79 (-O3) | 0.19 to 1.16 (-O2), 0.28 to 0.39 (-O3) |
-| the constructor, 1 limb, N = 80 | -1.73 to -0.08 (-O2), -2.21 to 0.8 (-O3) | -5.8 to 2.5 (-O2), 0.5 to 0.6 (-O3) | 5.2 to 7.9 (-O2), 4.7 to 5.2 (-O3) | -3.53 to 3.24 (-O2), -2.95 to 1.27 (-O3) |
-| the constructor, 2 limbs, N = 3 | 1.07 to 1.18 (-O2), 1.26 to 1.47 (-O3) | 0.074 to 0.189 (-O2), 0.164 to 0.17 (-O3) | 5.92 to 6 (-O2), 7.44 to 9.68 (-O3) | 0.935 to 1.33 (-O2), 0.934 to 1.03 (-O3) |
-| the constructor, 2 limbs, N = 7 | 2.69 to 2.94 (-O2), 2.93 to 2.95 (-O3) | -0.06 to 0.18 (-O2), 0.721 to 0.728 (-O3) | 1.02 to 1.67 (-O2), 4.53 to 5.15 (-O3) | 1.04 to 1.06 (-O2), 0.91 to 1.05 (-O3) |
-| the constructor, 2 limbs, N = 13 | 2.59 to 3.18 (-O2), 1.5 to 2.53 (-O3) | -0.04 to 0.76 (-O2), -0.24 to -0.22 (-O3) | 1.13 to 1.34 (-O2), 4.77 to 5 (-O3) | -2.3 to 2.43 (-O2), 1.45 to 1.6 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.12 to 0.19 (-O2), 0.28 to 1.15 (-O3) | -8.59 to -6.98 (-O2), -0.63 to 0.14 (-O3) | 4.99 to 5.25 (-O2), -15.2 to -15.1 (-O3) | -3.59 to 4.77 (-O2), 1.25 to 1.5 (-O3) |
-| the constructor, 2 limbs, N = 80 | -1.84 to 0.55 (-O2), -0.17 to 2.02 (-O3) | -10.7 to -3.6 (-O2), -0.5 to 0.4 (-O3) | 2 to 9.8 (-O2), -0.2 to 1.5 (-O3) | -2.9 to 3.6 (-O2), -1.4 to 1.4 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.009 to 0.097 (-O2), -0.043 to 0.048 (-O3) | 0.095 to 0.23 (-O2), -0.054 to 0.178 (-O3) | 2.27 to 2.29 (-O2), 1.85 to 2.12 (-O3) | 3.7 to 3.74 |
+| `add(x, y, z)`, 1 limb, N = 7 | 0.044 to 0.101 (-O2), -0.082 to 0.049 (-O3) | -0.026 to 0.201 (-O2), 0.139 to 0.235 (-O3) | 2.51 to 2.56 (-O2), 2.04 to 2.21 (-O3) | 2.56 to 2.66 |
+| `add(x, y, z)`, 1 limb, N = 13 | 0.026 to 0.13 (-O2), 0.026 to 0.051 (-O3) | 0.308 to 0.44 (-O2), 0.236 to 0.46 (-O3) | 2.43 to 2.79 (-O2), 2.2 to 2.4 (-O3) | 2.47 to 2.5 (-O2), 2.36 to 2.49 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 18 | -0.332 to 0.032 (-O2), -0.128 to 0.154 (-O3) | -0.018 to 0.073 (-O2), -0.093 to 0.136 (-O3) | 2.13 to 2.24 (-O2), 2.66 to 2.76 (-O3) | 2.27 to 2.51 (-O2), 2.31 to 2.38 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 80 | -0.35 to 0.38 (-O2), -1.08 to -0.17 (-O3) | -0.07 to 0.8 (-O2), -1.15 to 0.48 (-O3) | 4.22 to 4.52 (-O2), 3.62 to 4.09 (-O3) | 3.72 to 3.84 (-O2), 3.25 to 3.39 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | -0.074 to 0.01 (-O2), -0.089 to 0.015 (-O3) | -0.285 to 0.008 (-O2), -0.039 to 0.084 (-O3) | 2.61 to 2.68 (-O2), 2.9 to 3.05 (-O3) | 2.27 to 2.33 (-O2), 2.18 to 2.26 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.016 to 0.103 (-O2), -0.128 to 0.048 (-O3) | -0.167 to 0.241 (-O2), -0.04 to 0.442 (-O3) | 1.49 to 2.01 (-O2), 2.82 to 2.91 (-O3) | 2.65 to 2.74 (-O2), 2 to 2.72 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 13 | 0.06 to 0.2 (-O2), -0.38 to 0.12 (-O3) | -0.26 to 0.38 (-O2), -0.27 to -0.06 (-O3) | 2.78 to 2.91 | 3.19 to 3.21 (-O2), 2.89 to 3.2 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | -0.39 to -0.2 (-O2), -0.11 to 0.27 (-O3) | -0.17 to -0.16 (-O2), -1.25 to -0.87 (-O3) | 4.84 to 5.1 (-O2), 5.36 to 5.9 (-O3) | 4.44 to 4.53 |
+| `add(x, y, z)`, 2 limbs, N = 80 | -0.05 to 0.22 (-O2), -0.95 to 0.07 (-O3) | 0.33 to 0.54 (-O2), -1.61 to 0.13 (-O3) | 4.75 to 5.37 (-O2), 3.48 to 4.01 (-O3) | 4.08 to 4.29 (-O2), 2.92 to 3.33 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | -0.017 to 0.109 (-O2), -0.011 to 0.059 (-O3) | -0.063 to 0.124 (-O2), 0.069 to 0.122 (-O3) | -10.6 to 3.93 (-O2), 3.86 to 4.61 (-O3) | 2.78 to 2.83 |
+| `z = x + y`, 1 limb, N = 7 | -0.041 to 0.003 (-O2), -0.017 to 0.026 (-O3) | -0.473 to -0.322 (-O2), -0.091 to 0.014 (-O3) | 3.32 to 3.68 (-O2), 3.42 to 3.88 (-O3) | 2.3 to 2.34 (-O2), 2.36 to 2.41 (-O3) |
+| `z = x + y`, 1 limb, N = 13 | -0.017 to 0.146 (-O2), -0.135 to 0.021 (-O3) | -0.63 to -0.596 (-O2), -0.27 to -0.035 (-O3) | 3.1 to 3.8 (-O2), 3.64 to 3.77 (-O3) | 2.11 to 2.31 (-O2), 1.99 to 2.21 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -0.214 to 0.22 (-O2), -0.027 to 0.287 (-O3) | 0.42 to 0.93 (-O2), -0.33 to 0.01 (-O3) | 2.56 to 2.89 (-O2), 3.13 to 3.47 (-O3) | 1.73 to 1.95 (-O2), 1.67 to 2.1 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | 0.09 to 0.28 (-O2), -0.26 to 0.22 (-O3) | -0.45 to -0.35 (-O2), -1.53 to -0.41 (-O3) | 2.87 to 3.47 (-O2), 1.53 to 3.24 (-O3) | 4.07 to 8.69 (-O2), 1.92 to 3.4 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | -0.348 to -0.034 (-O2), -0.119 to 0.028 (-O3) | -0.14 to 0.056 (-O2), -0.124 to 0.098 (-O3) | 2.99 to 3.55 (-O2), 2.59 to 3.23 (-O3) | 2.53 to 2.61 (-O2), 1.28 to 3.9 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | 0.12 to 0.15 (-O2), -0.14 to 0.15 (-O3) | -0.09 to 0.3 (-O2), -0.08 to 0.72 (-O3) | 2.74 to 3.02 (-O2), 2.43 to 2.8 (-O3) | 2.53 to 2.55 (-O2), 0.44 to 4.19 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.19 to 0.69 (-O2), -0.48 to 0.11 (-O3) | 0 to 0.88 (-O2), -0.03 to 0.26 (-O3) | 2.78 to 3.34 (-O2), 0.49 to 1.1 (-O3) | 3.04 to 3.05 (-O2), 0.25 to 4.53 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | -0.08 to 0.07 (-O2), -0.93 to 0.19 (-O3) | -0.8 to 0.1 (-O2), -0.34 to 0.47 (-O3) | 0.4 to 0.47 (-O2), 0.6 to 0.84 (-O3) | 3.91 to 4.2 (-O2), 5.3 to 5.59 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | -0.2 to 0.1 (-O2), -0.2 to 0.7 (-O3) | 0.9 to 1.5 (-O2), -2.2 to 0.3 (-O3) | 0.3 to 2 (-O2), 1 to 1.9 (-O3) | 4.6 to 6 (-O2), -2.5 to 0.5 (-O3) |
+| `sub`, 1 limb, N = 3 | 0.002 to 0.087 (-O2), 0.017 to 0.054 (-O3) | 0.176 to 0.188 (-O2), -0.131 to 0.177 (-O3) | 2.49 to 2.56 (-O2), 3.83 to 3.84 (-O3) | 3.71 to 3.74 |
+| `sub`, 1 limb, N = 7 | 0.058 to 0.084 (-O2), 0.067 to 0.101 (-O3) | 0.189 to 0.38 (-O2), 0.226 to 0.318 (-O3) | 2.41 to 2.56 (-O2), 1.99 to 2.04 (-O3) | 2.57 to 2.66 |
+| `sub`, 1 limb, N = 13 | -0.07 to 0.052 (-O2), -0.137 to 0.036 (-O3) | 0.101 to 0.112 (-O2), 0.326 to 0.459 (-O3) | 2.33 to 2.55 (-O2), 1.96 to 2.15 (-O3) | 2.47 to 2.66 (-O2), 2.35 to 2.47 (-O3) |
+| `sub`, 1 limb, N = 18 | -0.331 to 0.108 (-O2), 0.1 to 0.118 (-O3) | 0.017 to 0.225 (-O2), -0.101 to 0.095 (-O3) | 2.01 to 2.19 (-O2), 2.12 to 2.16 (-O3) | 2.32 to 2.51 (-O2), 2.28 to 2.32 (-O3) |
+| `sub`, 1 limb, N = 80 | 0.01 to 0.18 (-O2), -0.42 to 0.13 (-O3) | -0.19 to 0.14 (-O2), -0.45 to 0.01 (-O3) | 4.31 to 4.99 (-O2), 5.02 to 5.08 (-O3) | 3.78 to 3.81 (-O2), 2.87 to 3.31 (-O3) |
+| `sub`, 2 limbs, N = 3 | -0.133 to 0.03 (-O2), -0.078 to 0.061 (-O3) | 0.104 to 0.143 (-O2), -0.001 to 0.115 (-O3) | 2.57 to 2.75 (-O2), 2.61 to 2.69 (-O3) | 2.53 to 2.65 |
+| `sub`, 2 limbs, N = 7 | 0.045 to 0.283 (-O2), -0.37 to 0.053 (-O3) | 0.07 to 0.16 (-O2), -0.067 to 0.034 (-O3) | 2.01 to 2.14 (-O2), 2.69 to 2.78 (-O3) | 3.2 to 3.25 (-O2), 1.92 to 3.22 (-O3) |
+| `sub`, 2 limbs, N = 13 | -0.15 to 0.03 (-O2), -0.27 to 0.26 (-O3) | 0.04 to 0.39 (-O2), -0.18 to -0.03 (-O3) | 2.43 to 2.49 (-O2), 2.88 to 2.92 (-O3) | 3.56 to 3.57 (-O2), 3.35 to 3.63 (-O3) |
+| `sub`, 2 limbs, N = 18 | -0.25 to -0.22 (-O2), -0.49 to -0.06 (-O3) | 0.19 to 1.2 (-O2), -0.21 to 0.08 (-O3) | 4.46 to 4.67 | 4.9 to 4.96 |
+| `sub`, 2 limbs, N = 80 | -0.19 to 0.81 (-O2), 0.14 to 0.45 (-O3) | 1.06 to 1.74 (-O2), 0 to 1.37 (-O3) | 4.68 to 5.44 (-O2), 3.54 to 4.12 (-O3) | 4.55 to 5.22 (-O2), 4.44 to 4.97 (-O3) |
+| `scale`, 1 limb, N = 3 | 0.068 to 0.117 (-O2), 0.068 to 0.121 (-O3) | -0.002 to 0.045 (-O2), -0.306 to 0.045 (-O3) | 2.44 to 2.56 (-O2), 2.4 to 2.68 (-O3) | 3.88 to 3.91 |
+| `scale`, 1 limb, N = 7 | -0.003 to 0.052 (-O2), 0.26 to 0.319 (-O3) | -0.015 to 0.049 (-O2), 0.081 to 0.088 (-O3) | 2.44 to 2.49 (-O2), 2.15 to 2.29 (-O3) | 2.55 to 2.59 |
+| `scale`, 1 limb, N = 13 | 0.02 to 0.251 (-O2), 0.249 to 0.391 (-O3) | 0.13 to 0.157 (-O2), -0.158 to 0.034 (-O3) | 2.1 to 2.35 (-O2), 2.74 to 2.91 (-O3) | 2.43 to 2.51 |
+| `scale`, 1 limb, N = 18 | 0.238 to 0.504 (-O2), -0.157 to 0.103 (-O3) | 0.188 to 0.302 (-O2), 0.061 to 0.199 (-O3) | 1.94 to 2 (-O2), 2.54 to 2.83 (-O3) | 2.55 to 2.61 (-O2), 2.4 to 2.54 (-O3) |
+| `scale`, 1 limb, N = 80 | -0.03 to 0.24 (-O2), 0.1 to 0.89 (-O3) | 0.22 to 0.24 (-O2), -0.37 to 0.27 (-O3) | 3.3 to 3.63 (-O2), 3.67 to 3.74 (-O3) | 2.97 to 3.01 (-O2), -11 to 4.09 (-O3) |
+| `scale`, 2 limbs, N = 3 | -0.014 to 0.034 (-O2), 0.022 to 0.041 (-O3) | 0.192 to 0.244 (-O2), 0.082 to 0.271 (-O3) | 2.46 to 2.5 (-O2), -5.07 to -5.02 (-O3) | 2.41 to 2.46 |
+| `scale`, 2 limbs, N = 7 | 0.066 to 0.169 (-O2), 0.054 to 0.071 (-O3) | 0.037 to 0.136 (-O2), -0.098 to 0.079 (-O3) | 2.67 to 2.89 (-O2), -3.75 to -3.7 (-O3) | 1.93 to 2.02 (-O2), 1.86 to 1.88 (-O3) |
+| `scale`, 2 limbs, N = 13 | -0.054 to 0.474 (-O2), 0.117 to 0.473 (-O3) | 0.109 to 0.489 (-O2), -0.177 to 0.031 (-O3) | 2.69 to 2.74 (-O2), -4.19 to -4.18 (-O3) | 2.92 to 3.01 (-O2), 2.68 to 3 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.238 to 0.435 (-O2), -0.122 to 0.3 (-O3) | 0.09 to 0.39 (-O2), 0.01 to 0.06 (-O3) | 2.65 to 2.72 (-O2), -3.71 to -3.62 (-O3) | 1.57 to 1.66 (-O2), 1.49 to 1.62 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.07 to 0.24 (-O2), -0.23 to 0.38 (-O3) | 0.09 to 0.38 (-O2), -2.09 to -1.17 (-O3) | 2.06 to 3.23 (-O2), -1.95 to -1.24 (-O3) | 1.67 to 1.96 (-O2), 1.96 to 2.17 (-O3) |
+| `half`, 1 limb, N = 3 | 0.06 to 0.089 (-O2), 0.041 to 0.091 (-O3) | -0.057 to 0.002 (-O2), -0.292 to -0.264 (-O3) | 2.36 to 2.44 | 2.41 to 2.47 |
+| `half`, 1 limb, N = 7 | 0.089 to 0.128 (-O2), 0.089 to 0.09 (-O3) | -0.21 to 0.019 (-O2), 0.14 to 0.265 (-O3) | 1.89 to 1.93 (-O2), 2.35 to 2.36 (-O3) | 2.27 to 2.29 (-O2), 2.07 to 2.2 (-O3) |
+| `half`, 1 limb, N = 13 | 0.13 to 0.213 (-O2), 0.09 (-O3) | 0.007 to 0.161 (-O2), 0.093 to 0.215 (-O3) | 2.49 to 2.5 (-O2), 2.35 to 2.37 (-O3) | 2.16 to 2.26 |
+| `half`, 1 limb, N = 18 | 0.011 to 0.058 (-O2), -0.296 to 0.057 (-O3) | 0.01 to 0.202 (-O2), -0.044 to 0.17 (-O3) | 2.05 to 2.28 (-O2), 1.94 to 2.15 (-O3) | 3.57 to 3.64 |
+| `half`, 1 limb, N = 80 | 0.07 to 0.14 (-O2), -0.89 to 1.41 (-O3) | -0.43 to 1.28 (-O2), -0.43 to 0.43 (-O3) | 3.68 to 4.21 (-O2), 3.42 to 3.81 (-O3) | 5.01 to 5.13 (-O2), 5.38 to 5.67 (-O3) |
+| `half`, 2 limbs, N = 3 | 0.137 to 0.215 (-O2), -0.005 to 0.097 (-O3) | -0.003 to 0.227 (-O2), 0.1 to 0.228 (-O3) | 1.72 to 1.77 (-O2), 1.78 to 1.86 (-O3) | 2.19 to 2.2 (-O2), 2.01 to 2.09 (-O3) |
+| `half`, 2 limbs, N = 7 | 0.126 to 0.133 (-O2), -0.119 to 0.088 (-O3) | 0.003 to 0.203 (-O2), 0.265 to 0.53 (-O3) | 1.16 to 1.29 (-O2), 1.17 to 1.29 (-O3) | 2.67 to 2.75 (-O2), 2.72 to 2.84 (-O3) |
+| `half`, 2 limbs, N = 13 | 0 to 0.27 (-O2), 0.13 to 0.27 (-O3) | 0 to 0.01 (-O2), 0.11 to 0.35 (-O3) | 1.33 to 1.42 (-O2), 0.95 to 0.99 (-O3) | 2.73 to 2.81 (-O2), 2.7 to 2.91 (-O3) |
+| `half`, 2 limbs, N = 18 | 0.15 to 0.44 (-O2), -0.06 to 0.14 (-O3) | 0.23 to 0.25 (-O2), 0.17 to 0.45 (-O3) | 1.03 to 1.09 (-O2), 1.31 to 1.49 (-O3) | 2.62 to 2.84 (-O2), 2.8 to 2.93 (-O3) |
+| `half`, 2 limbs, N = 80 | -0.17 to 0.1 (-O2), -0.61 to 0.12 (-O3) | 0.09 to 0.11 (-O2), -0.02 to 1.35 (-O3) | 2.8 to 3.76 (-O2), 3.81 to 4.48 (-O3) | 5.21 to 5.65 (-O2), 4.96 to 5.51 (-O3) |
+| the constructor, 1 limb, N = 3 | 1.25 to 1.32 (-O2), 1.25 to 1.3 (-O3) | 0.101 to 0.163 (-O2), 0.131 to 0.202 (-O3) | 6.17 to 7.21 (-O2), 5.69 to 7.77 (-O3) | 2.99 to 3.04 |
+| the constructor, 1 limb, N = 7 | 2.46 to 2.7 (-O2), 2.54 to 2.58 (-O3) | -5.74 to -4.89 (-O2), 0.004 to 0.127 (-O3) | 4.8 to 4.97 (-O2), 5.63 to 6.56 (-O3) | 1.1 to 1.13 (-O2), 1.02 to 1.21 (-O3) |
+| the constructor, 1 limb, N = 13 | 3.6 to 3.97 (-O2), 3.86 to 3.88 (-O3) | -0.76 to 0.35 (-O2), 0.272 to 0.415 (-O3) | 2.56 to 2.64 (-O2), 4.07 to 4.13 (-O3) | 1.74 to 1.89 (-O2), 1.79 to 1.86 (-O3) |
+| the constructor, 1 limb, N = 18 | -0.38 to 0.07 (-O2), -0.73 to 0.51 (-O3) | -0.13 to 0.39 (-O2), 0.11 to 0.69 (-O3) | 2.39 to 2.68 (-O2), 2.43 to 2.94 (-O3) | -0.97 to -0.85 (-O2), 0.16 to 0.88 (-O3) |
+| the constructor, 1 limb, N = 80 | -0.02 to 0.27 (-O2), -0.41 to -0.11 (-O3) | 0.5 to 9 (-O2), -3.7 to 1.4 (-O3) | 2 (-O2), 0.6 to 2.7 (-O3) | 1.64 to 14.4 (-O2), -13.4 to 2.22 (-O3) |
+| the constructor, 2 limbs, N = 3 | 1.13 to 1.17 | 0.158 to 0.261 (-O2), 0.233 to 0.264 (-O3) | 5.37 to 5.96 (-O2), 7.71 to 9.23 (-O3) | 0.944 to 0.954 (-O2), 0.777 to 0.985 (-O3) |
+| the constructor, 2 limbs, N = 7 | 2.7 to 2.83 (-O2), 2.49 to 2.83 (-O3) | -0.01 to 0.18 (-O2), 0.341 to 0.464 (-O3) | 0.85 to 1.69 (-O2), 4.56 to 5.57 (-O3) | 0.98 to 1 (-O2), 1 to 1.07 (-O3) |
+| the constructor, 2 limbs, N = 13 | 2.73 to 2.78 (-O2), -2.25 to 0.11 (-O3) | 0.27 to 0.8 (-O2), -0.47 to -0.2 (-O3) | 0.91 to 1.31 (-O2), 4.73 to 4.95 (-O3) | -0.3 to -0.24 (-O2), 0.42 to 2.38 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.07 to 0.88 (-O2), 0.3 to 0.37 (-O3) | -0.08 to 1.73 (-O2), 0.1 to 3.81 (-O3) | -0.09 to 0.74 (-O2), -15.1 to -14.6 (-O3) | 1.61 to 5.97 (-O2), -0.85 to 1.67 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.12 to 1.7 (-O2), -2.81 to -2.59 (-O3) | 0 to 0.4 (-O2), -5.4 to 0.4 (-O3) | -28.8 to -26.1 (-O2), -0.2 to 2.9 (-O3) | 2.6 to 3.9 (-O2), 1.6 to 2.3 (-O3) |
 
 | Short ball vectors before 2026-11-23, measured again, every size in one unit, many vectors: the check, ns per operation (the header before minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 0.208 to 0.308 (-O2), 0.24 to 0.275 (-O3) | 0.16 to 0.2 (-O2), 0.227 to 0.349 (-O3) | 2.71 to 2.77 (-O2), 2.4 to 2.89 (-O3) | 3.71 to 3.72 |
-| `add(x, y, z)`, 1 limb, N = 7 | 0.092 to 0.149 (-O2), 0.133 to 0.176 (-O3) | 0.172 to 0.243 (-O2), 0.304 to 0.413 (-O3) | 2.55 to 2.7 (-O2), 2.22 to 2.27 (-O3) | 2.55 to 2.6 (-O2), 2.59 to 2.72 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | 0.235 to 0.416 (-O2), 0.224 to 0.332 (-O3) | 0.392 to 0.424 (-O2), 0.72 to 0.891 (-O3) | 2.32 to 2.92 (-O2), 2.89 to 3.19 (-O3) | 2.37 to 2.53 (-O2), 2.38 to 2.53 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 18 | -0.803 to -0.576 (-O2), -0.244 to 0.034 (-O3) | 0.032 to 0.073 (-O2), 0.363 to 0.549 (-O3) | 2.14 to 2.34 (-O2), 2.65 to 3.27 (-O3) | 2.18 to 2.34 (-O2), 2.26 to 2.37 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 80 | -0.49 to 0.21 (-O2), -0.27 to 0.27 (-O3) | -0.14 to 0.86 (-O2), 0.04 to 0.78 (-O3) | 5.5 to 5.6 (-O2), 3.92 to 4.43 (-O3) | 3.63 to 3.73 (-O2), 3.44 to 3.73 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.064 to 0.318 (-O2), 0.122 to 0.339 (-O3) | 0.121 to 0.274 (-O2), 0.35 to 0.493 (-O3) | 2.7 to 2.89 (-O2), 3.3 to 3.37 (-O3) | 2.04 to 2.13 (-O2), 1.89 to 1.97 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.062 to 0.202 (-O2), -0.102 to 0.25 (-O3) | -0.122 to 0.086 (-O2), 0.132 to 0.352 (-O3) | 1.39 to 1.61 (-O2), 3.84 to 4.03 (-O3) | 2.22 to 2.33 |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.41 to 0.02 (-O2), 0.13 to 0.76 (-O3) | 0.1 to 0.14 (-O2), -0.1 to 0.22 (-O3) | 2.79 to 2.94 (-O2), 3.14 to 3.45 (-O3) | 2.7 to 2.81 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 0.45 to 0.99 (-O2), 0.05 to 1.11 (-O3) | 0.1 to 0.47 (-O2), 0.03 to 0.46 (-O3) | 5.01 to 5.17 (-O2), 5.24 to 5.54 (-O3) | 4.37 to 4.48 (-O2), 4.23 to 4.46 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.47 to 1.11 (-O2), 0.08 to 4.08 (-O3) | -1.17 to 0.93 (-O2), 0.25 to 1.94 (-O3) | 5.58 to 5.87 (-O2), 6.09 to 6.96 (-O3) | 4.15 to 4.9 (-O2), 4.24 to 4.75 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | 0.069 to 0.187 (-O2), 0.011 to 0.176 (-O3) | -0.051 to 0.079 (-O2), 0.187 to 0.276 (-O3) | 4.06 to 4.38 (-O2), 5.07 to 11.7 (-O3) | 2.84 to 2.88 |
-| `z = x + y`, 1 limb, N = 7 | 0 to 0.134 (-O2), -0.058 to 0.078 (-O3) | 0.056 to 0.124 (-O2), 0.525 to 0.655 (-O3) | 3.68 to 3.79 (-O2), 3.18 to 9.25 (-O3) | 2.25 to 2.36 |
-| `z = x + y`, 1 limb, N = 13 | 1.72 to 2.14 (-O2), 1.92 to 2.1 (-O3) | -0.014 to 0.031 (-O2), 0.128 to 0.299 (-O3) | 3.29 to 3.58 (-O2), 3.44 to 3.51 (-O3) | 2.15 to 2.16 (-O2), 2 to 2.1 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | -0.808 to -0.655 (-O2), -0.24 to 0.056 (-O3) | 0.34 to 0.62 (-O2), 0.23 to 0.49 (-O3) | 2.59 to 3 (-O2), 2.85 to 10.4 (-O3) | 2 to 2.03 (-O2), 1.9 to 2.07 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | -1.35 to -0.63 (-O2), -0.47 to 1.56 (-O3) | -0.02 to 1.19 (-O2), 0.14 to 0.68 (-O3) | 5.11 to 9.82 (-O2), 2.6 to 3.33 (-O3) | -0.44 to 5.84 (-O2), 2.52 to 7.25 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -0.113 to 0.137 (-O2), -0.037 to 0.206 (-O3) | 0.25 to 0.475 (-O2), 0.495 to 0.547 (-O3) | 3.11 to 3.41 (-O2), 3.08 to 6.62 (-O3) | 0.79 to 2.77 (-O2), 2.65 to 4.1 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | -0.08 to 0.49 (-O2), 0.08 to 0.3 (-O3) | 0.08 to 0.33 (-O2), 0.96 to 1.28 (-O3) | 2.47 to 3.09 (-O2), 2.2 to 6.74 (-O3) | 0.54 to 2.59 (-O2), 2.66 to 4.34 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -0.74 to -0.02 (-O2), -0.14 to 0.49 (-O3) | 0.18 to 0.26 (-O2), 0.46 to 0.83 (-O3) | 2.62 to 3.46 (-O2), 3.2 to 3.4 (-O3) | 0.34 to 2.51 (-O2), 1.96 to 3.84 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 0.72 to 1.33 (-O2), -0.53 to 1.15 (-O3) | -0.64 to -0.48 (-O2), 0.21 to 0.67 (-O3) | 0.32 to 0.76 (-O2), 0.53 to 0.91 (-O3) | 1.47 to 3.87 (-O2), 3.42 to 4.84 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | -0.8 to 2.2 (-O2), 0.5 to 5.3 (-O3) | -1.4 to 1.7 (-O2), -3.4 to 2.2 (-O3) | 1 to 4.6 (-O2), -0.4 to 4.7 (-O3) | -0.9 to 6.8 (-O2), -2 to 1.1 (-O3) |
-| `sub`, 1 limb, N = 3 | 0.21 to 0.346 (-O2), 0.254 to 0.314 (-O3) | 0.052 to 0.196 (-O2), 1.92 to 2 (-O3) | 2.39 to 2.55 (-O2), 4.3 to 4.32 (-O3) | 3.71 to 3.72 |
-| `sub`, 1 limb, N = 7 | 0.1 to 0.251 (-O2), 0.157 to 0.284 (-O3) | -0.256 to -0.224 (-O2), 2.09 to 2.2 (-O3) | 2.23 to 2.39 (-O2), 2.38 to 2.45 (-O3) | 2.53 to 2.59 (-O2), 2.59 to 2.73 (-O3) |
-| `sub`, 1 limb, N = 13 | 0.125 to 0.223 (-O2), 0.319 to 0.51 (-O3) | 0.041 to 0.051 (-O2), 2.32 to 2.53 (-O3) | 2.25 to 2.86 (-O2), 2.49 to 2.54 (-O3) | 2.41 to 2.53 (-O2), 2.39 to 2.6 (-O3) |
-| `sub`, 1 limb, N = 18 | -0.787 to -0.639 (-O2), -0.245 to 0.048 (-O3) | 0.08 to 0.185 (-O2), 2.37 to 2.5 (-O3) | 1.9 to 2.12 (-O2), 2.26 to 2.46 (-O3) | 2.17 to 2.33 (-O2), 2.24 to 2.37 (-O3) |
-| `sub`, 1 limb, N = 80 | 0.09 to 0.67 (-O2), 0.04 to 1.37 (-O3) | 0.91 to 1.13 (-O2), 2.05 to 2.8 (-O3) | 5.3 to 5.44 (-O2), 4.61 to 4.95 (-O3) | 3.53 to 3.6 (-O2), 3.22 to 3.59 (-O3) |
-| `sub`, 2 limbs, N = 3 | 0.08 to 0.141 (-O2), 0.186 to 0.451 (-O3) | 0.145 to 0.329 (-O2), 0.291 to 0.314 (-O3) | 2.68 to 2.82 (-O2), 2.62 to 2.67 (-O3) | 2.34 to 2.4 |
-| `sub`, 2 limbs, N = 7 | -0.051 to 0.09 (-O2), 0.15 to 0.55 (-O3) | 0.03 to 0.07 (-O2), 0.252 to 0.454 (-O3) | 2.21 to 2.38 (-O2), 2.85 to 2.89 (-O3) | 2.91 to 2.99 |
-| `sub`, 2 limbs, N = 13 | -0.66 to 0.02 (-O2), 0.15 to 0.24 (-O3) | 0.16 to 0.27 (-O2), 0.12 to 0.41 (-O3) | 2.61 to 2.66 (-O2), 3.34 to 3.44 (-O3) | 3.18 to 3.26 (-O2), 3.08 to 3.2 (-O3) |
-| `sub`, 2 limbs, N = 18 | 0.27 to 0.82 (-O2), -0.26 to 0.79 (-O3) | -0.81 to 0.07 (-O2), 0.36 to 0.82 (-O3) | 4.71 to 4.85 | 4.47 to 4.54 (-O2), 4.04 to 4.24 (-O3) |
-| `sub`, 2 limbs, N = 80 | -1.89 to -0.32 (-O2), 0.14 to 3.61 (-O3) | 1.4 to 1.73 (-O2), 0.48 to 2.49 (-O3) | 5.91 to 6.39 (-O2), 3.82 to 4.26 (-O3) | 4.29 to 4.4 (-O2), 4.1 to 4.35 (-O3) |
-| `scale`, 1 limb, N = 3 | 0.231 to 0.295 (-O2), 0.263 to 0.326 (-O3) | 0.235 to 0.413 (-O2), 0.265 to 0.346 (-O3) | 2.66 to 2.73 (-O2), 2.72 to 2.86 (-O3) | 3.88 to 3.9 |
-| `scale`, 1 limb, N = 7 | 0.301 to 0.399 (-O2), 0.106 to 0.142 (-O3) | 1.04 to 1.11 (-O2), 0.281 to 0.38 (-O3) | 2.62 to 2.71 (-O2), 2.34 to 2.36 (-O3) | 2.53 to 2.65 |
-| `scale`, 1 limb, N = 13 | 0.108 to 0.12 (-O2), 0.103 to 0.288 (-O3) | 1.02 to 1.06 (-O2), 0.412 to 0.543 (-O3) | 2.39 to 2.56 (-O2), 2.63 to 2.79 (-O3) | 2.39 to 2.5 |
-| `scale`, 1 limb, N = 18 | -0.234 to -0.227 (-O2), -0.064 to 0.246 (-O3) | 1.29 to 1.46 (-O2), 0.216 to 0.366 (-O3) | 2.24 to 2.49 (-O2), 2.61 to 2.77 (-O3) | 2.55 to 2.58 (-O2), 2.45 to 2.59 (-O3) |
-| `scale`, 1 limb, N = 80 | -0.41 to 0.78 (-O2), 0.21 to 1.8 (-O3) | 3.68 to 4.25 (-O2), 0.36 to 0.95 (-O3) | 4.66 to 4.89 (-O2), 3.79 to 4.15 (-O3) | 2.92 to 3.13 (-O2), 3.17 to 4.35 (-O3) |
-| `scale`, 2 limbs, N = 3 | 0.015 to 0.142 (-O2), 0.093 to 0.161 (-O3) | 0.2 to 0.281 (-O2), 0.455 to 0.57 (-O3) | 2.46 to 2.67 (-O2), 2.71 to 2.76 (-O3) | 2.41 to 2.45 |
-| `scale`, 2 limbs, N = 7 | 0.492 to 0.613 (-O2), 0.57 to 0.707 (-O3) | 0.124 to 0.137 (-O2), 0.384 to 0.515 (-O3) | 2.84 to 3.14 (-O2), 2.24 to 2.27 (-O3) | 2.66 to 2.77 |
-| `scale`, 2 limbs, N = 13 | -0.239 to 0.22 (-O2), 0.241 to 0.488 (-O3) | -0.018 to 0.281 (-O2), 0.436 to 0.62 (-O3) | 2.9 to 2.96 (-O2), 2.43 to 2.45 (-O3) | 2.87 to 2.96 |
-| `scale`, 2 limbs, N = 18 | -0.028 to 0.265 (-O2), 0.091 to 0.566 (-O3) | 0.08 to 0.1 (-O2), 0.6 to 0.84 (-O3) | 2.63 to 2.93 (-O2), 2.47 to 2.55 (-O3) | 1.53 to 1.8 (-O2), 1.59 to 1.68 (-O3) |
-| `scale`, 2 limbs, N = 80 | -0.53 to 0.37 (-O2), 0.21 to 1.46 (-O3) | -0.09 to 0.47 (-O2), -0.35 to 0.79 (-O3) | 5.29 to 6.07 (-O2), 0.84 to 1.56 (-O3) | 2.21 to 2.59 (-O2), 2.18 to 2.78 (-O3) |
-| `half`, 1 limb, N = 3 | 0.29 to 0.323 (-O2), 0.287 to 0.381 (-O3) | -0.069 to 0.054 (-O2), 0.264 to 0.36 (-O3) | 2.61 to 2.74 (-O2), 2.9 to 2.92 (-O3) | 3.35 to 3.4 (-O2), 3.24 to 3.27 (-O3) |
-| `half`, 1 limb, N = 7 | 0.244 to 0.407 (-O2), 0.305 to 0.422 (-O3) | -0.002 to 0.075 (-O2), 0.4 to 0.515 (-O3) | 2.28 to 2.37 (-O2), 2.9 to 2.93 (-O3) | 2.46 to 2.57 (-O2), 2.25 to 2.29 (-O3) |
-| `half`, 1 limb, N = 13 | -0.061 to 0.238 (-O2), 0.146 to 0.398 (-O3) | 0.002 to 0.023 (-O2), 0.642 to 0.796 (-O3) | 2.44 to 2.67 (-O2), 2.7 to 2.76 (-O3) | 2.09 to 2.1 (-O2), 2.09 to 2.22 (-O3) |
-| `half`, 1 limb, N = 18 | 0.3 to 0.351 (-O2), 0.354 to 0.694 (-O3) | 0.003 to 0.181 (-O2), 0.234 to 0.414 (-O3) | 2.28 to 2.89 (-O2), 2.67 to 2.9 (-O3) | 3.45 to 3.47 (-O2), 3.47 to 35.7 (-O3) |
-| `half`, 1 limb, N = 80 | -0.5 to 1 (-O2), 0.07 to 1.88 (-O3) | 0.38 to 0.87 (-O2), 0.02 to 0.86 (-O3) | 4.82 to 5.27 (-O2), 3.93 to 4.11 (-O3) | 4.9 to 4.94 (-O2), 5.77 to 5.96 (-O3) |
-| `half`, 2 limbs, N = 3 | 0.189 to 0.312 (-O2), 0.218 to 0.32 (-O3) | 0.265 to 0.395 (-O2), 0.532 to 0.647 (-O3) | 1.39 to 1.51 (-O2), 2.39 to 2.54 (-O3) | 2.16 to 2.21 |
-| `half`, 2 limbs, N = 7 | 0.013 to 0.326 (-O2), 0.136 to 0.343 (-O3) | 0.255 to 0.273 (-O2), 0.272 to 0.43 (-O3) | 1.09 to 1.23 (-O2), 1.44 (-O3) | 2.52 to 2.64 |
-| `half`, 2 limbs, N = 13 | 0.06 to 0.43 (-O2), 0.21 to 0.66 (-O3) | 0.28 to 0.42 (-O2), 0.79 to 0.87 (-O3) | 2.07 to 2.16 (-O2), 1.12 to 1.22 (-O3) | 2.7 to 2.79 |
-| `half`, 2 limbs, N = 18 | 0.03 to 0.3 (-O2), 0.16 to 0.9 (-O3) | 0.12 to 0.36 (-O2), 0.79 to 1.07 (-O3) | 1.01 to 1.11 (-O2), 1.34 to 1.48 (-O3) | 2.81 to 2.82 (-O2), 2.64 to 2.69 (-O3) |
-| `half`, 2 limbs, N = 80 | -0.01 to 0.99 (-O2), 0.08 to 1.56 (-O3) | 0.6 to 0.93 (-O2), 7.39 to 8.52 (-O3) | 4.63 to 5.16 (-O2), 3.24 to 3.89 (-O3) | 5.38 to 5.52 (-O2), 4.7 to 5.46 (-O3) |
-| the constructor, 1 limb, N = 3 | 1.9 to 10.7 (-O2), 1.93 to 2.99 (-O3) | 1.04 to 1.07 (-O2), 2.55 to 2.64 (-O3) | 5.62 to 7.31 (-O2), 6.94 to 7.22 (-O3) | 18.2 to 18.5 |
-| the constructor, 1 limb, N = 7 | 11.6 to 14.2 (-O2), 13.4 to 16 (-O3) | 0.04 to 0.33 (-O2), 5.7 to 5.88 (-O3) | 4.65 to 4.89 (-O2), 8.27 to 8.64 (-O3) | 15.8 to 16.9 (-O2), 15.7 to 17.4 (-O3) |
-| the constructor, 1 limb, N = 13 | 12.4 to 13.2 (-O2), 12.7 to 14.2 (-O3) | -0.48 to 0.45 (-O2), 11.5 to 11.9 (-O3) | 2.48 to 2.6 (-O2), 6.88 to 6.97 (-O3) | 13.5 to 13.9 (-O2), 13.2 to 13.9 (-O3) |
-| the constructor, 1 limb, N = 18 | -2.74 to -1.78 (-O2), 5.54 to 8.33 (-O3) | -0.14 to 0.39 (-O2), 2.12 to 2.62 (-O3) | 2.71 to 3.32 (-O2), 6.42 to 6.71 (-O3) | -0.96 to 1.41 (-O2), 7.39 to 8.1 (-O3) |
-| the constructor, 1 limb, N = 80 | -3.56 to -0.96 (-O2), 0.35 to 3.04 (-O3) | -2.8 to 3.4 (-O2), 0.5 to 4.8 (-O3) | 3.8 to 4.5 (-O2), -4.2 to -4 (-O3) | 2.05 to 7.3 (-O2), 2.09 to 9.76 (-O3) |
-| the constructor, 2 limbs, N = 3 | 8.4 to 10.1 (-O2), 9.47 to 9.95 (-O3) | 0.123 to 0.237 (-O2), 3.36 to 3.49 (-O3) | 6.01 to 7.01 (-O2), 6.82 to 7.14 (-O3) | 12.1 to 15.9 (-O2), 15.9 to 16.4 (-O3) |
-| the constructor, 2 limbs, N = 7 | 7.6 to 9.04 (-O2), 8.74 to 9.65 (-O3) | -0.12 to 0.29 (-O2), 7.53 to 7.76 (-O3) | 1.19 to 1.97 (-O2), 7.57 to 7.91 (-O3) | 6.66 to 9.64 (-O2), 9.88 to 10.7 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.47 to 1.02 (-O2), -6.47 to -5.6 (-O3) | 0.03 to 0.19 (-O2), 15.3 to 15.9 (-O3) | 0.3 to 0.82 (-O2), 8.34 to 8.51 (-O3) | -0.8 to 3.49 (-O2), -2.04 to -0.09 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.85 to 0.95 (-O2), -8.41 to -7.4 (-O3) | -0.02 to 2.23 (-O2), -0.57 to 0.77 (-O3) | -0.33 to 0.41 (-O2), -13.3 to -13.1 (-O3) | 0.65 to 5.57 (-O2), -9.04 to -5.84 (-O3) |
-| the constructor, 2 limbs, N = 80 | -0.01 to 1.36 (-O2), -0.03 to 3.59 (-O3) | -3.8 to -2.7 (-O2), -5.4 to 5.2 (-O3) | -17.9 to -16.4 (-O2), -0.5 to 4.6 (-O3) | -2.1 to 2.8 (-O2), 1.4 to 4.4 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.231 to 0.285 (-O2), 0.191 to 0.283 (-O3) | 0.027 to 0.307 (-O2), 0.046 to 0.275 (-O3) | 2.69 to 2.71 (-O2), 2.23 to 2.74 (-O3) | 3.71 to 3.72 |
+| `add(x, y, z)`, 1 limb, N = 7 | 0.111 to 0.172 (-O2), 0.015 to 0.177 (-O3) | -0.026 to 0.296 (-O2), 0.201 to 0.295 (-O3) | 2.51 to 2.6 (-O2), 2.17 to 2.2 (-O3) | 2.55 to 2.66 (-O2), 2.63 to 2.75 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 13 | 0.286 to 0.349 (-O2), 0.272 to 0.382 (-O3) | 0.141 to 0.509 (-O2), 0.622 to 0.739 (-O3) | 2.22 to 2.56 (-O2), 2.54 to 3.25 (-O3) | 2.45 to 2.51 (-O2), 2.35 to 2.5 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 18 | 0.023 to 0.386 (-O2), -0.243 to 0.136 (-O3) | -0.313 to 0.25 (-O2), 0.064 to 0.372 (-O3) | 2.29 to 2.34 (-O2), 2.67 to 3 (-O3) | 2.45 to 2.48 (-O2), 2.4 to 2.53 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 80 | -0.76 to -0.17 (-O2), -0.52 to -0.19 (-O3) | 0.48 to 1.27 (-O2), -0.08 to 0.69 (-O3) | 5.36 to 5.85 (-O2), 4.16 to 4.47 (-O3) | 3.57 to 3.67 (-O2), 3.25 to 3.52 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | 0.188 to 0.245 (-O2), 0.022 to 0.118 (-O3) | -0.287 to 0.182 (-O2), 0.151 to 0.357 (-O3) | 2.73 to 2.76 (-O2), 3.27 to 3.36 (-O3) | 2.07 to 2.11 (-O2), 1.93 to 2.04 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.04 to 0.15 (-O2), -0.269 to 0.051 (-O3) | -0.122 to -0.08 (-O2), 0.09 to 0.362 (-O3) | 1.37 to 2 (-O2), 3.54 to 3.64 (-O3) | 2.26 to 2.32 (-O2), 2.23 to 2.35 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 13 | 0.04 to 0.19 (-O2), -0.1 to 0.51 (-O3) | -0.14 to 0.27 (-O2), -0.16 to 0.02 (-O3) | 2.8 to 2.84 (-O2), 3.2 to 3.27 (-O3) | 2.71 to 2.79 (-O2), 2.39 to 2.77 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.12 to 0.37 (-O2), 0.11 to 0.49 (-O3) | -0.78 to 0.23 (-O2), 0.01 to 0.46 (-O3) | 5 to 5.21 (-O2), 5.31 to 5.38 (-O3) | 4.45 to 4.48 (-O2), 4.31 to 4.53 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 80 | 0.47 to 0.85 (-O2), -0.57 to 0.27 (-O3) | -2.43 to 2.11 (-O2), -1.44 to 0.23 (-O3) | 6.25 to 6.85 (-O2), 6.16 to 6.91 (-O3) | 3.89 to 3.92 (-O2), 2.78 to 3 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | 0.107 to 0.192 (-O2), 0.133 to 0.182 (-O3) | -0.114 to 0.153 (-O2), 0.129 to 0.254 (-O3) | -10.6 to 4.41 (-O2), 4.56 to 4.8 (-O3) | 2.86 to 2.89 |
+| `z = x + y`, 1 limb, N = 7 | -0.003 to 0.07 (-O2), 0.013 to 0.028 (-O3) | -0.048 to 0.156 (-O2), 0.459 to 0.585 (-O3) | 3.73 to 3.98 (-O2), 3.18 to 4.02 (-O3) | 2.27 to 2.3 (-O2), 2.35 to 2.5 (-O3) |
+| `z = x + y`, 1 limb, N = 13 | 1.86 to 1.94 (-O2), 1.74 to 1.91 (-O3) | -0.378 to 0.149 (-O2), -0.079 to 0.135 (-O3) | 3.54 to 3.99 (-O2), 3.27 to 3.93 (-O3) | 2.11 to 2.33 (-O2), 2.05 to 2.1 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -0.002 to 0.471 (-O2), -0.197 to 0.038 (-O3) | 0.3 to 0.62 (-O2), -0.24 to 0.26 (-O3) | 2.78 to 2.96 (-O2), 2.78 to 3.18 (-O3) | 2.03 to 2.14 (-O2), 1.99 to 2.14 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | -0.91 to -0.69 (-O2), -0.5 to -0.12 (-O3) | -2.38 to 0.68 (-O2), -1.08 to 0.45 (-O3) | 5.17 to 9.98 (-O2), 0.74 to 4.47 (-O3) | 0.12 to 8.69 (-O2), 0.7 to 6.14 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | -0.222 to -0.031 (-O2), -0.138 to 0.025 (-O3) | -0.192 to 0.326 (-O2), 0.362 to 0.506 (-O3) | 2.96 to 3.24 (-O2), 2.95 to 3.31 (-O3) | 2.44 to 2.6 (-O2), 1.53 to 4.44 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | 0.19 to 0.2 (-O2), -0.23 to 0.1 (-O3) | 0.05 to 0.36 (-O2), 0.9 to 1.03 (-O3) | 2.65 to 2.85 (-O2), 2.07 to 2.63 (-O3) | 2.44 to 2.62 (-O2), 0.56 to 13.9 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.03 to 0.54 (-O2), -0.41 to 0.11 (-O3) | 0.12 to 0.52 (-O2), 0.39 to 0.47 (-O3) | 2.66 to 3.29 (-O2), 3.24 to 3.7 (-O3) | 2.38 to 2.66 (-O2), -0.12 to 15.1 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 0.84 to 0.92 (-O2), -0.99 to 0.24 (-O3) | -0.89 to -0.5 (-O2), -0.39 to 0.19 (-O3) | 0.56 to 0.85 (-O2), 0.55 to 0.69 (-O3) | 3.89 to 4.13 (-O2), 5.22 to 6.2 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | -0.4 to -0.1 (-O2), -0.5 to 0.5 (-O3) | -2.7 to 3.8 (-O2), -2.2 to 0.2 (-O3) | 2.4 to 6.8 (-O2), 4.3 to 6.5 (-O3) | 1.6 to 4 (-O2), -3.3 to 4.7 (-O3) |
+| `sub`, 1 limb, N = 3 | 0.211 to 0.305 (-O2), 0.256 to 0.297 (-O3) | 0.012 to 0.255 (-O2), -0.109 to 0.274 (-O3) | 2.42 to 2.51 (-O2), 4.28 to 4.3 (-O3) | 3.7 to 3.73 |
+| `sub`, 1 limb, N = 7 | 0.115 to 0.175 (-O2), 0.159 to 0.173 (-O3) | 0.173 to 0.297 (-O2), 0.304 to 0.389 (-O3) | 2.2 to 2.29 (-O2), 2.37 to 2.46 (-O3) | 2.56 to 2.68 (-O2), 2.65 to 2.75 (-O3) |
+| `sub`, 1 limb, N = 13 | 0.212 to 0.225 (-O2), 0.137 to 0.295 (-O3) | -0.065 to 0.188 (-O2), 0.605 to 0.762 (-O3) | 2.15 to 2.34 (-O2), 2.55 to 2.77 (-O3) | 2.47 to 2.53 (-O2), 2.37 to 2.49 (-O3) |
+| `sub`, 1 limb, N = 18 | 0.015 to 0.383 (-O2), 0.007 to 0.082 (-O3) | 0.028 to 0.224 (-O2), 0.171 to 0.371 (-O3) | 2.11 to 2.29 (-O2), 2.39 to 2.45 (-O3) | 2.45 to 2.47 (-O2), 2.38 to 2.58 (-O3) |
+| `sub`, 1 limb, N = 80 | 0.03 to 0.11 (-O2), -0.01 to 0.2 (-O3) | -0.59 to 1.2 (-O2), -0.26 to 0.31 (-O3) | 5.12 to 5.56 (-O2), 4.96 to 5.03 (-O3) | 3.53 to 3.61 (-O2), 2.93 to 3.25 (-O3) |
+| `sub`, 2 limbs, N = 3 | -0.024 to 0.104 (-O2), 0.073 to 0.208 (-O3) | -0.166 to 0.289 (-O2), 0.178 to 0.295 (-O3) | 2.67 to 2.77 (-O2), 2.62 to 2.65 (-O3) | 2.4 to 2.5 |
+| `sub`, 2 limbs, N = 7 | 0.019 to 0.07 (-O2), -0.293 to 0.164 (-O3) | -0.37 to 0.39 (-O2), 0.089 to 0.275 (-O3) | 2.43 to 2.5 (-O2), 2.8 to 2.89 (-O3) | 2.91 to 3.01 |
+| `sub`, 2 limbs, N = 13 | -0.14 to 0.28 (-O2), -0.1 to 0.32 (-O3) | -0.19 to 0.52 (-O2), -0.02 to 0.13 (-O3) | 2.49 to 2.57 (-O2), 3.31 to 3.44 (-O3) | 3.16 to 3.2 (-O2), 2.92 to 3.24 (-O3) |
+| `sub`, 2 limbs, N = 18 | 0.36 to 0.89 (-O2), -0.52 to -0.12 (-O3) | 0.07 to 0.11 (-O2), 0.07 to 0.37 (-O3) | 4.58 to 4.94 (-O2), 4.63 to 4.69 (-O3) | 4.67 to 4.73 (-O2), 4.25 to 4.41 (-O3) |
+| `sub`, 2 limbs, N = 80 | 0.09 to 0.18 (-O2), 0.08 to 0.17 (-O3) | -1.46 to 3.17 (-O2), 0.58 to 2.34 (-O3) | 6.64 to 6.75 (-O2), 3.73 to 4.23 (-O3) | 4.06 to 4.54 (-O2), 4.03 to 4.87 (-O3) |
+| `scale`, 1 limb, N = 3 | 0.225 to 0.27 (-O2), 0.249 to 0.272 (-O3) | 0.096 to 0.388 (-O2), -0.078 to 0.269 (-O3) | 2.62 to 2.67 (-O2), 2.98 to 3.23 (-O3) | 3.87 to 3.89 |
+| `scale`, 1 limb, N = 7 | 0.001 to 0.126 (-O2), 0.263 to 0.315 (-O3) | 0.779 to 1.15 (-O2), 0.277 to 0.29 (-O3) | 2.6 to 2.67 (-O2), 2.43 to 2.45 (-O3) | 2.56 to 2.68 (-O2), 2.58 to 2.7 (-O3) |
+| `scale`, 1 limb, N = 13 | 0.1 to 0.12 (-O2), 0.231 to 0.377 (-O3) | 0.894 to 1.17 (-O2), 0.311 to 0.419 (-O3) | 2.21 to 2.35 (-O2), 2.64 to 2.95 (-O3) | 2.45 to 2.58 |
+| `scale`, 1 limb, N = 18 | 0.099 to 0.157 (-O2), -0.194 to 0.105 (-O3) | 1.05 to 1.35 (-O2), 0.068 to 0.361 (-O3) | 2.21 to 2.4 (-O2), 2.79 to 3.06 (-O3) | 2.63 to 2.67 (-O2), 2.41 to 2.63 (-O3) |
+| `scale`, 1 limb, N = 80 | -0.07 to 0.15 (-O2), -0.19 to 0.68 (-O3) | 2.13 to 4.31 (-O2), 0.43 to 1.07 (-O3) | 4.4 to 4.67 (-O2), 4.15 to 4.23 (-O3) | 2.79 to 2.96 (-O2), -8.08 to 16.6 (-O3) |
+| `scale`, 2 limbs, N = 3 | -0.12 to -0.009 (-O2), 0.081 to 0.103 (-O3) | 0.064 to 0.299 (-O2), 0.445 to 0.544 (-O3) | 2.56 to 2.57 (-O2), -3.99 to -3.94 (-O3) | 2.4 to 2.49 |
+| `scale`, 2 limbs, N = 7 | 0.56 to 0.573 (-O2), 0.527 to 0.559 (-O3) | -0.166 to 0.259 (-O2), 0.193 to 0.333 (-O3) | 2.98 to 3.09 (-O2), -3.47 to -3.38 (-O3) | 2.67 to 2.79 |
+| `scale`, 2 limbs, N = 13 | 0.071 to 0.321 (-O2), 0.222 to 0.313 (-O3) | 0.198 to 0.386 (-O2), -0.017 to 0.217 (-O3) | 2.88 to 2.93 (-O2), -3.72 to -3.67 (-O3) | 2.83 to 2.94 (-O2), 2.49 to 2.93 (-O3) |
+| `scale`, 2 limbs, N = 18 | -0.013 to 0.133 (-O2), -0.374 to 0.046 (-O3) | -0.39 to 0.4 (-O2), 0.36 to 0.4 (-O3) | 2.71 to 2.78 (-O2), -3 to -2.94 (-O3) | 1.57 to 1.62 (-O2), 1.48 to 1.52 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.26 to 0.38 (-O2), -0.71 to 0.18 (-O3) | -1.26 to 1.11 (-O2), -1.36 to -0.45 (-O3) | 4.18 to 5.48 (-O2), -1.77 to -1.59 (-O3) | 1.52 to 1.98 (-O2), 1.63 to 2.24 (-O3) |
+| `half`, 1 limb, N = 3 | 0.233 to 0.29 (-O2), 0.238 to 0.291 (-O3) | 0.01 to 0.265 (-O2), 0.25 to 0.263 (-O3) | 2.65 to 2.7 | 3.26 to 3.4 |
+| `half`, 1 limb, N = 7 | 0.298 to 0.399 (-O2), 0.298 to 0.3 (-O3) | 0.026 to 0.371 (-O2), 0.279 to 0.402 (-O3) | 2.29 to 2.32 (-O2), 2.66 to 2.73 (-O3) | 2.47 to 2.57 (-O2), 2.27 to 2.99 (-O3) |
+| `half`, 1 limb, N = 13 | 0.121 to 0.176 (-O2), 0.132 (-O3) | -0.028 to 0.276 (-O2), 0.481 to 0.61 (-O3) | 2.46 to 2.62 (-O2), 2.64 to 3.01 (-O3) | 2.07 to 2.14 (-O2), 2.18 to 2.25 (-O3) |
+| `half`, 1 limb, N = 18 | 0.539 to 0.577 (-O2), 0.171 to 0.527 (-O3) | 0.043 to 0.421 (-O2), 0.184 to 0.399 (-O3) | 2.53 to 2.73 (-O2), 2.78 to 2.83 (-O3) | 3.42 to 3.57 |
+| `half`, 1 limb, N = 80 | 0.19 to 0.41 (-O2), -1.24 to 1.37 (-O3) | 0.28 to 1.01 (-O2), -1.42 to 0.18 (-O3) | 4.93 to 5.15 (-O2), 3.82 to 4.1 (-O3) | 4.91 to 4.94 (-O2), 5.62 to 5.85 (-O3) |
+| `half`, 2 limbs, N = 3 | 0.139 to 0.213 (-O2), 0.112 to 0.215 (-O3) | -0.002 to 0.101 (-O2), 0.375 to 0.496 (-O3) | 1.4 to 1.45 (-O2), 2.36 to 2.48 (-O3) | 2.15 to 2.23 |
+| `half`, 2 limbs, N = 7 | 0.163 to 0.166 (-O2), -0.079 to 0.129 (-O3) | -0.242 to 0.156 (-O2), 0.542 to 0.673 (-O3) | 1.16 to 1.21 (-O2), 1.48 to 1.5 (-O3) | 2.57 to 2.68 |
+| `half`, 2 limbs, N = 13 | 0.18 to 0.32 (-O2), 0.3 (-O3) | -0.44 to 0.04 (-O2), 0.37 to 0.62 (-O3) | 2.09 to 2.17 (-O2), 1.05 to 1.15 (-O3) | 2.62 to 2.7 (-O2), 2.51 to 2.74 (-O3) |
+| `half`, 2 limbs, N = 18 | 0.17 to 0.25 (-O2), 0.04 to 0.18 (-O3) | -0.44 to 0.12 (-O2), 0.61 to 0.89 (-O3) | 1.01 to 1.08 (-O2), 1.31 to 1.38 (-O3) | 2.4 to 2.66 (-O2), 2.58 to 2.73 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.23 to 0.24 (-O2), -0.54 to 0.33 (-O3) | -1.49 to 1.56 (-O2), 6.25 to 7.27 (-O3) | 4 to 5.14 (-O2), 3.63 to 4.01 (-O3) | 5.11 to 5.27 (-O2), 4.79 to 5.4 (-O3) |
+| the constructor, 1 limb, N = 3 | 5.61 to 10.4 (-O2), 1.85 to 9.7 (-O3) | 0.83 to 1.13 (-O2), 2.52 to 2.54 (-O3) | 5.56 to 6.62 (-O2), 6.28 to 7.86 (-O3) | 18.2 to 18.5 |
+| the constructor, 1 limb, N = 7 | 11.8 to 12.8 (-O2), 12.5 to 14.2 (-O3) | -2.98 to -1.67 (-O2), 5.69 to 5.74 (-O3) | 4.64 to 4.72 (-O2), 8.38 to 8.6 (-O3) | 15.8 to 17.2 (-O2), 15.6 to 17 (-O3) |
+| the constructor, 1 limb, N = 13 | 11.9 to 12.5 (-O2), 11.8 to 13.7 (-O3) | -1.1 to 0.73 (-O2), 11.8 (-O3) | 2.43 to 2.47 (-O2), 6.94 to 6.99 (-O3) | 13.4 to 14 (-O2), 13.7 to 19.7 (-O3) |
+| the constructor, 1 limb, N = 18 | -0.84 to -0.65 (-O2), -1.14 to 1.08 (-O3) | -0.56 to 0.41 (-O2), 2.04 to 2.59 (-O3) | 2.45 to 2.71 (-O2), 6.3 to 6.99 (-O3) | -1.04 to 0.86 (-O2), -1.96 to 0.11 (-O3) |
+| the constructor, 1 limb, N = 80 | -2.48 to -1.49 (-O2), -0.72 to -0.38 (-O3) | 0.8 to 5.4 (-O2), -12.3 to 0.6 (-O3) | 4.2 to 4.3 (-O2), -7 to -3.6 (-O3) | 3.73 to 14.7 (-O2), -13.9 to 20.7 (-O3) |
+| the constructor, 2 limbs, N = 3 | 9.5 to 9.79 (-O2), 7.92 to 8.71 (-O3) | 0.02 to 0.228 (-O2), 3.44 to 3.51 (-O3) | 6.42 to 7.02 (-O2), 6.21 to 8.21 (-O3) | 12.1 to 16.4 (-O2), 12.1 to 15.9 (-O3) |
+| the constructor, 2 limbs, N = 7 | 8.13 to 9 (-O2), 7.55 to 8.62 (-O3) | -0.7 to 0.35 (-O2), 7.44 to 7.81 (-O3) | 1.05 to 1.19 (-O2), 7.37 to 8.07 (-O3) | 6.75 to 10.6 (-O2), 6.92 to 9.78 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.29 to 0.74 (-O2), -3.1 to -1.52 (-O3) | -0.35 to 0.41 (-O2), 15.4 (-O3) | 0.1 to 0.44 (-O2), 8.53 to 8.56 (-O3) | -1.51 to 0.46 (-O2), -0.13 to 0.71 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.09 to 0.18 (-O2), 0.42 to 0.44 (-O3) | -2.9 to 1.87 (-O2), -0.8 to 0.97 (-O3) | -0.42 to 0.26 (-O2), -13.1 to -12.7 (-O3) | 0.9 to 5.92 (-O2), -4 to 7.99 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.21 to 1.63 (-O2), -0.26 to 0.01 (-O3) | -11.4 to 6.4 (-O2), -16 to 0.5 (-O3) | -26 to -25.2 (-O2), -1.2 to 1.4 (-O3) | -2.2 to 2.7 (-O2), 2.4 to 5.2 (-O3) |
 
 | Short ball vectors, 2026-11-23, every size in one unit, many vectors: the header of 2026-11-23 over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 0.90 to 0.92 | 0.99 to 1.02 (-O2), 0.96 to 0.99 (-O3) | 0.95 to 0.99 | 1.00 |
-| `add(x, y, z)`, 1 limb, N = 7 | 0.94 to 0.98 | 0.97 to 1.01 | 0.99 to 1.00 | 0.99 to 1.00 |
-| `add(x, y, z)`, 1 limb, N = 13 | 0.92 to 0.96 | 1.00 to 1.02 (-O2), 0.94 to 0.96 (-O3) | 1.00 to 1.04 (-O2), 0.97 (-O3) | 0.99 to 1.00 |
-| `add(x, y, z)`, 1 limb, N = 18 | 1.01 to 1.05 (-O2), 1.08 to 1.12 (-O3) | 1.00 to 1.02 (-O2), 0.94 to 0.97 (-O3) | 0.98 to 1.00 | 0.98 to 1.00 |
-| `add(x, y, z)`, 1 limb, N = 80 | 0.98 to 1.01 | 0.94 to 0.98 (-O2), 0.97 to 0.99 (-O3) | 0.97 to 0.98 (-O2), 1.01 to 1.02 (-O3) | 1.00 to 1.01 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.95 to 0.98 | 0.96 to 1.00 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.00 | 1.01 to 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 7 | 0.97 to 1.02 | 0.99 to 1.02 (-O2), 0.97 to 0.99 (-O3) | 0.97 to 1.01 | 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 0.98 to 1.01 | 0.97 to 1.01 | 0.99 to 1.00 | 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 0.94 to 0.99 | 0.97 to 1.00 | 1.00 to 1.01 | 1.00 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.96 to 1.01 (-O2), 0.99 to 1.00 (-O3) | 0.97 to 1.00 | 0.97 to 0.99 | 1.00 to 1.01 |
-| `z = x + y`, 1 limb, N = 3 | 0.95 to 0.96 (-O2), 0.98 to 1.02 (-O3) | 1.00 to 1.03 (-O2), 0.94 to 0.97 (-O3) | 0.99 to 1.02 (-O2), 0.71 to 1.00 (-O3) | 0.99 to 1.00 |
-| `z = x + y`, 1 limb, N = 7 | 0.97 to 1.01 | 0.90 to 0.93 | 0.98 to 1.01 (-O2), 0.79 to 1.03 (-O3) | 1.00 to 1.01 |
-| `z = x + y`, 1 limb, N = 13 | 0.71 to 0.74 | 0.93 to 0.98 | 0.99 to 1.02 | 0.98 to 1.01 |
-| `z = x + y`, 1 limb, N = 18 | 1.02 to 1.06 (-O2), 1.06 to 1.10 (-O3) | 0.96 to 1.01 | 0.98 to 1.01 (-O2), 0.76 to 1.01 (-O3) | 0.97 to 0.99 |
-| `z = x + y`, 1 limb, N = 80 | 1.00 to 1.03 | 0.97 to 1.01 | 0.96 to 0.97 (-O2), 1.03 to 1.07 (-O3) | 0.91 to 1.04 (-O2), 0.90 to 1.03 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 0.98 to 1.01 | 0.95 to 0.99 | 0.98 to 1.00 (-O2), 0.89 to 0.99 (-O3) | 0.93 to 1.11 (-O2), 0.91 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 0.98 to 1.01 | 0.98 to 1.02 (-O2), 0.91 to 0.93 (-O3) | 0.99 to 1.01 (-O2), 0.90 to 1.00 (-O3) | 0.94 to 1.08 (-O2), 0.93 to 1.00 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 1.00 to 1.03 | 0.99 to 1.02 (-O2), 0.96 to 1.00 (-O3) | 0.99 to 1.00 (-O2), 0.94 to 0.96 (-O3) | 0.95 to 1.08 (-O2), 0.96 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 0.94 to 0.95 (-O2), 0.98 to 1.00 (-O3) | 0.95 to 1.00 | 0.99 to 1.00 | 1.01 to 1.10 (-O2), 0.96 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 0.98 to 1.02 | 1.00 to 1.03 (-O2), 0.97 to 1.02 (-O3) | 0.99 to 1.01 (-O2), 0.98 to 1.04 (-O3) | 0.98 to 1.02 |
-| `sub`, 1 limb, N = 3 | 0.88 to 0.91 | 0.99 to 1.02 (-O2), 0.54 to 0.55 (-O3) | 0.95 to 0.99 | 1.00 |
-| `sub`, 1 limb, N = 7 | 0.96 to 0.99 (-O2), 0.94 to 0.98 (-O3) | 0.99 to 1.00 (-O2), 0.57 to 0.58 (-O3) | 1.01 to 1.02 (-O2), 0.96 (-O3) | 0.99 to 1.00 |
-| `sub`, 1 limb, N = 13 | 0.92 to 0.96 | 0.99 to 1.03 (-O2), 0.62 to 0.63 (-O3) | 0.99 to 1.03 (-O2), 0.95 to 0.96 (-O3) | 0.98 to 1.00 |
-| `sub`, 1 limb, N = 18 | 1.02 to 1.06 (-O2), 1.09 to 1.20 (-O3) | 0.98 to 1.02 (-O2), 0.67 to 0.69 (-O3) | 0.97 to 1.00 | 0.98 to 0.99 |
-| `sub`, 1 limb, N = 80 | 0.99 to 1.01 | 0.96 to 1.01 (-O2), 0.90 to 0.93 (-O3) | 0.96 to 1.00 | 0.99 to 1.02 |
-| `sub`, 2 limbs, N = 3 | 0.96 to 0.97 | 0.96 to 0.99 | 0.99 to 1.00 | 1.01 |
-| `sub`, 2 limbs, N = 7 | 0.98 to 1.02 | 0.98 to 1.03 (-O2), 0.96 to 0.97 (-O3) | 0.98 to 1.02 | 1.01 |
-| `sub`, 2 limbs, N = 13 | 0.99 to 1.02 | 0.97 to 1.01 | 0.98 to 1.00 | 1.01 to 1.02 |
-| `sub`, 2 limbs, N = 18 | 0.97 to 1.00 | 1.01 to 1.05 (-O2), 0.96 to 0.98 (-O3) | 0.99 to 1.00 | 1.01 to 1.02 |
-| `sub`, 2 limbs, N = 80 | 1.00 to 1.02 (-O2), 0.97 to 1.00 (-O3) | 0.97 to 1.02 | 0.98 to 1.01 | 1.00 to 1.01 |
-| `scale`, 1 limb, N = 3 | 0.90 to 0.94 | 0.91 to 0.95 | 0.99 (-O2), 0.61 to 0.62 (-O3) | 1.00 |
-| `scale`, 1 limb, N = 7 | 0.96 to 0.98 | 0.81 to 0.83 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.00 (-O2), 0.71 (-O3) | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 13 | 0.95 to 0.99 | 0.88 to 0.90 (-O2), 0.92 to 0.94 (-O3) | 0.98 to 1.03 (-O2), 0.70 (-O3) | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 18 | 1.02 to 1.03 (-O2), 1.01 to 1.09 (-O3) | 0.88 (-O2), 0.96 to 0.98 (-O3) | 0.97 to 0.98 (-O2), 0.72 (-O3) | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 80 | 0.97 to 1.02 | 0.89 to 0.93 (-O2), 0.95 to 0.97 (-O3) | 0.96 to 0.99 | 1.00 to 1.02 (-O2), 0.97 to 1.05 (-O3) |
-| `scale`, 2 limbs, N = 3 | 0.96 to 0.98 | 0.98 to 1.00 (-O2), 0.93 to 0.95 (-O3) | 1.00 (-O2), 0.91 (-O3) | 1.00 |
-| `scale`, 2 limbs, N = 7 | 0.89 to 0.91 | 0.99 to 1.02 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.01 | 0.94 |
-| `scale`, 2 limbs, N = 13 | 1.03 to 1.06 | 0.96 to 1.00 | 0.97 to 1.00 | 1.00 to 1.01 |
-| `scale`, 2 limbs, N = 18 | 1.03 to 1.05 | 0.99 to 1.02 (-O2), 0.95 to 0.97 (-O3) | 0.96 to 1.00 | 1.00 to 1.01 |
-| `scale`, 2 limbs, N = 80 | 0.97 to 1.01 | 0.96 to 1.01 | 0.96 to 1.01 | 0.99 to 1.01 |
-| `half`, 1 limb, N = 3 | 0.92 to 0.95 | 0.93 to 0.96 | 0.98 to 0.99 | 0.92 to 0.93 |
-| `half`, 1 limb, N = 7 | 0.94 to 0.97 | 0.93 to 0.96 | 0.98 to 0.99 | 0.97 to 0.98 |
-| `half`, 1 limb, N = 13 | 0.96 to 1.00 | 0.98 to 1.00 (-O2), 0.93 to 0.95 (-O3) | 0.99 to 1.06 (-O2), 0.98 (-O3) | 1.00 |
-| `half`, 1 limb, N = 18 | 0.92 to 0.94 (-O2), 0.95 to 0.98 (-O3) | 0.96 to 0.98 | 0.96 to 1.00 | 1.01 (-O2), 0.35 to 1.01 (-O3) |
-| `half`, 1 limb, N = 80 | 0.97 to 1.00 | 0.96 to 1.01 | 0.97 to 1.00 | 0.99 to 1.01 |
-| `half`, 2 limbs, N = 3 | 0.94 to 0.97 (-O2), 0.91 to 0.97 (-O3) | 0.95 to 0.99 (-O2), 0.93 to 0.95 (-O3) | 0.98 to 0.99 | 0.99 |
-| `half`, 2 limbs, N = 7 | 0.97 to 1.01 (-O2), 0.95 to 1.00 (-O3) | 0.95 to 0.99 | 0.99 to 1.00 | 1.00 to 1.01 |
-| `half`, 2 limbs, N = 13 | 0.99 to 1.01 | 0.98 to 1.00 (-O2), 0.95 to 0.96 (-O3) | 0.98 to 1.00 | 1.01 |
-| `half`, 2 limbs, N = 18 | 0.99 to 1.01 | 0.99 to 1.01 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.00 | 1.00 to 1.01 |
-| `half`, 2 limbs, N = 80 | 0.97 to 1.01 | 0.99 to 1.00 (-O2), 0.85 to 0.87 (-O3) | 0.97 to 1.01 | 1.00 to 1.01 |
-| the constructor, 1 limb, N = 3 | 0.32 to 0.89 (-O2), 0.74 to 0.90 (-O3) | 0.79 to 0.82 (-O2), 0.50 to 0.51 (-O3) | 0.94 to 1.04 (-O2), 0.93 to 1.00 (-O3) | 0.37 |
-| the constructor, 1 limb, N = 7 | 0.43 to 0.49 (-O2), 0.41 to 0.45 (-O3) | 0.74 (-O2), 0.38 (-O3) | 1.00 to 1.02 (-O2), 0.86 to 0.90 (-O3) | 0.43 to 0.46 |
-| the constructor, 1 limb, N = 13 | 0.60 to 0.63 | 1.00 to 1.01 (-O2), 0.36 to 0.37 (-O3) | 1.00 to 1.01 (-O2), 0.89 (-O3) | 0.63 to 0.65 |
-| the constructor, 1 limb, N = 18 | 1.09 to 1.11 (-O2), 0.74 to 0.82 (-O3) | 0.98 to 1.02 (-O2), 0.91 to 0.93 (-O3) | 0.98 to 1.00 (-O2), 0.87 to 0.88 (-O3) | 0.95 to 1.05 (-O2), 0.79 to 0.81 (-O3) |
-| the constructor, 1 limb, N = 80 | 1.01 to 1.04 (-O2), 0.97 (-O3) | 0.96 to 1.02 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.03 (-O2), 1.06 to 1.07 (-O3) | 0.92 to 0.95 (-O2), 0.87 to 0.93 (-O3) |
-| the constructor, 2 limbs, N = 3 | 0.43 to 0.47 | 0.97 to 1.01 (-O2), 0.47 to 0.48 (-O3) | 0.95 to 1.00 (-O2), 1.01 to 1.15 (-O3) | 0.42 to 0.51 (-O2), 0.41 to 0.42 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.68 to 0.74 (-O2), 0.66 to 0.70 (-O3) | 0.99 to 1.02 (-O2), 0.43 (-O3) | 0.96 to 1.02 (-O2), 0.87 to 0.89 (-O3) | 0.72 to 0.80 (-O2), 0.70 to 0.71 (-O3) |
-| the constructor, 2 limbs, N = 13 | 1.08 to 1.11 (-O2), 1.40 to 1.41 (-O3) | 0.99 to 1.02 (-O2), 0.38 to 0.39 (-O3) | 1.01 to 1.02 (-O2), 0.89 to 0.90 (-O3) | 0.91 to 1.04 (-O2), 1.04 to 1.10 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.97 to 0.98 (-O2), 1.29 to 1.36 (-O3) | 0.84 to 0.89 (-O2), 0.98 to 1.00 (-O3) | 1.08 to 1.09 (-O2), 0.95 (-O3) | 0.91 to 0.98 (-O2), 1.17 to 1.26 (-O3) |
-| the constructor, 2 limbs, N = 80 | 0.97 to 1.01 | 0.97 to 1.02 | 1.09 to 1.12 (-O2), 0.98 to 1.01 (-O3) | 0.98 to 1.02 |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.90 to 0.92 | 0.98 to 1.02 | 0.95 to 0.99 | 1.00 |
+| `add(x, y, z)`, 1 limb, N = 7 | 0.96 to 0.98 | 0.98 to 1.00 | 0.99 to 1.00 | 0.99 to 1.00 |
+| `add(x, y, z)`, 1 limb, N = 13 | 0.93 to 0.96 | 0.99 to 1.03 (-O2), 0.94 to 0.96 (-O3) | 1.01 (-O2), 0.94 to 0.99 (-O3) | 0.99 to 1.00 |
+| `add(x, y, z)`, 1 limb, N = 18 | 0.94 to 1.00 (-O2), 1.00 to 1.02 (-O3) | 0.98 to 1.04 (-O2), 0.97 to 1.01 (-O3) | 0.98 to 1.00 | 0.98 to 1.00 |
+| `add(x, y, z)`, 1 limb, N = 80 | 0.98 to 1.02 | 0.96 to 1.01 | 0.95 to 0.99 | 0.99 to 1.01 |
+| `add(x, y, z)`, 2 limbs, N = 3 | 0.94 to 0.98 | 0.96 to 1.00 | 0.99 to 1.00 | 1.01 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.99 to 1.02 | 0.99 to 1.03 | 0.97 to 1.01 | 0.99 to 1.02 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 0.96 to 1.00 | 0.97 to 1.03 (-O2), 0.99 (-O3) | 0.99 to 1.00 | 1.02 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.97 to 0.99 | 0.98 to 1.03 (-O2), 0.94 to 0.96 (-O3) | 1.00 to 1.01 | 1.00 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 0.99 to 1.00 | 0.98 to 1.04 (-O2), 1.00 (-O3) | 0.97 to 0.99 | 1.00 |
+| `z = x + y`, 1 limb, N = 3 | 0.94 to 0.97 | 0.99 to 1.01 (-O2), 0.96 to 1.00 (-O3) | 0.95 to 1.00 | 0.99 |
+| `z = x + y`, 1 limb, N = 7 | 0.98 to 1.00 | 0.90 to 0.95 (-O2), 0.91 to 0.92 (-O3) | 0.98 to 1.01 | 0.99 to 1.00 |
+| `z = x + y`, 1 limb, N = 13 | 0.73 to 0.76 | 0.92 to 0.97 (-O2), 0.97 to 0.98 (-O3) | 0.98 to 1.02 | 0.98 to 1.02 |
+| `z = x + y`, 1 limb, N = 18 | 0.97 to 1.02 (-O2), 1.02 to 1.03 (-O3) | 0.99 to 1.04 (-O2), 0.98 to 0.99 (-O3) | 0.98 to 1.02 | 0.96 to 1.00 |
+| `z = x + y`, 1 limb, N = 80 | 1.01 to 1.02 | 0.98 to 1.04 (-O2), 0.97 to 0.99 (-O3) | 0.92 to 0.98 (-O2), 0.99 to 1.01 (-O3) | 1.00 to 1.11 (-O2), 0.94 to 1.03 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 0.98 to 1.00 | 0.97 to 1.01 (-O2), 0.94 to 0.95 (-O3) | 0.99 to 1.01 | 0.97 to 1.01 |
+| `z = x + y`, 2 limbs, N = 7 | 0.99 to 1.01 | 0.96 to 1.02 (-O2), 0.92 to 0.98 (-O3) | 1.00 to 1.01 | 1.00 (-O2), 0.74 to 1.00 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.99 to 1.01 | 0.97 to 1.04 (-O2), 0.98 to 0.99 (-O3) | 1.00 (-O2), 0.95 (-O3) | 1.01 to 1.02 (-O2), 0.74 to 1.01 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 0.96 to 1.00 | 0.99 to 1.04 | 0.99 to 1.00 | 0.98 to 1.01 |
+| `z = x + y`, 2 limbs, N = 80 | 1.00 | 0.98 to 1.04 (-O2), 1.00 (-O3) | 0.96 to 1.00 | 1.01 to 1.02 (-O2), 0.95 to 1.02 (-O3) |
+| `sub`, 1 limb, N = 3 | 0.90 to 0.92 | 0.98 to 1.04 (-O2), 0.98 to 0.99 (-O3) | 1.00 (-O2), 0.95 to 0.96 (-O3) | 1.00 |
+| `sub`, 1 limb, N = 7 | 0.97 to 0.98 | 0.98 to 1.04 (-O2), 0.98 to 0.99 (-O3) | 1.01 to 1.02 (-O2), 0.96 to 0.97 (-O3) | 0.99 to 1.00 |
+| `sub`, 1 limb, N = 13 | 0.94 to 0.96 | 0.99 to 1.03 (-O2), 0.95 to 0.96 (-O3) | 1.01 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.01 |
+| `sub`, 1 limb, N = 18 | 0.94 to 1.01 (-O2), 1.01 to 1.02 (-O3) | 0.97 to 1.02 (-O2), 0.96 to 0.97 (-O3) | 0.98 to 1.00 | 0.97 to 1.00 |
+| `sub`, 1 limb, N = 80 | 0.98 to 1.01 | 0.96 to 1.01 | 0.96 to 1.00 | 1.00 to 1.01 |
+| `sub`, 2 limbs, N = 3 | 0.97 to 0.99 | 0.97 to 1.05 (-O2), 0.96 to 0.97 (-O3) | 1.00 | 1.01 |
+| `sub`, 2 limbs, N = 7 | 0.99 to 1.02 | 0.98 to 1.04 (-O2), 0.97 to 0.98 (-O3) | 0.99 to 1.00 | 0.96 to 1.01 |
+| `sub`, 2 limbs, N = 13 | 0.98 to 1.00 | 0.97 to 1.04 (-O2), 0.99 (-O3) | 0.98 to 1.00 | 1.01 to 1.02 |
+| `sub`, 2 limbs, N = 18 | 0.95 to 0.97 (-O2), 1.00 (-O3) | 1.00 to 1.05 (-O2), 0.99 (-O3) | 0.99 to 1.00 | 1.00 to 1.02 |
+| `sub`, 2 limbs, N = 80 | 1.00 to 1.01 | 0.98 to 1.04 (-O2), 0.99 (-O3) | 0.98 to 1.00 | 1.00 to 1.01 |
+| `scale`, 1 limb, N = 3 | 0.92 to 0.94 | 0.92 to 0.98 (-O2), 0.95 (-O3) | 0.96 to 0.99 | 1.00 |
+| `scale`, 1 limb, N = 7 | 0.98 to 1.00 | 0.81 to 0.86 (-O2), 0.96 (-O3) | 0.98 to 0.99 | 0.98 to 1.00 |
+| `scale`, 1 limb, N = 13 | 0.98 to 1.03 | 0.86 to 0.90 (-O2), 0.93 to 0.94 (-O3) | 0.99 to 1.01 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 18 | 1.02 to 1.06 (-O2), 1.00 to 1.01 (-O3) | 0.87 to 0.92 (-O2), 0.98 to 1.00 (-O3) | 0.98 to 1.00 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 80 | 1.00 to 1.01 | 0.89 to 0.95 (-O2), 0.97 to 0.98 (-O3) | 0.97 to 0.99 | 1.00 to 1.01 (-O2), 0.69 to 0.99 (-O3) |
+| `scale`, 2 limbs, N = 3 | 1.01 to 1.03 (-O2), 0.98 (-O3) | 0.98 to 1.04 (-O2), 0.93 to 0.95 (-O3) | 0.99 to 1.00 (-O2), 0.91 (-O3) | 1.00 |
+| `scale`, 2 limbs, N = 7 | 0.90 to 0.92 | 0.97 to 1.05 (-O2), 0.95 to 0.98 (-O3) | 0.98 to 0.99 | 0.94 |
+| `scale`, 2 limbs, N = 13 | 0.98 to 1.02 | 0.97 to 1.03 (-O2), 0.98 (-O3) | 0.97 to 0.99 | 1.00 to 1.01 |
+| `scale`, 2 limbs, N = 18 | 1.02 to 1.03 | 1.00 to 1.04 (-O2), 0.97 (-O3) | 0.96 to 1.00 | 1.00 to 1.01 |
+| `scale`, 2 limbs, N = 80 | 0.99 to 1.01 | 0.98 to 1.04 (-O2), 0.98 to 0.99 (-O3) | 0.95 to 0.98 (-O2), 0.99 to 1.01 (-O3) | 1.00 to 1.01 |
+| `half`, 1 limb, N = 3 | 0.94 to 0.95 | 0.95 to 0.99 (-O2), 0.89 (-O3) | 0.98 to 0.99 | 0.92 to 0.93 |
+| `half`, 1 limb, N = 7 | 0.94 to 0.96 | 0.94 to 0.98 | 0.98 | 0.95 to 0.99 |
+| `half`, 1 limb, N = 13 | 0.99 to 1.01 | 0.97 to 1.03 (-O2), 0.95 (-O3) | 0.97 to 1.00 | 1.00 to 1.01 |
+| `half`, 1 limb, N = 18 | 0.94 to 0.95 | 0.96 to 1.02 (-O2), 0.98 (-O3) | 0.96 to 0.99 | 1.00 to 1.01 |
+| `half`, 1 limb, N = 80 | 0.99 to 1.01 | 0.96 to 1.02 (-O2), 1.01 to 1.03 (-O3) | 0.97 to 0.99 | 0.99 to 1.01 |
+| `half`, 2 limbs, N = 3 | 0.97 to 1.00 | 0.98 to 1.04 (-O2), 0.95 (-O3) | 0.97 to 1.01 | 0.99 to 1.00 |
+| `half`, 2 limbs, N = 7 | 0.99 to 1.00 | 0.98 to 1.06 (-O2), 0.97 to 0.98 (-O3) | 0.99 to 1.00 | 1.00 to 1.01 |
+| `half`, 2 limbs, N = 13 | 0.97 to 1.00 | 1.00 to 1.04 (-O2), 0.98 (-O3) | 0.97 to 1.00 | 1.01 |
+| `half`, 2 limbs, N = 18 | 0.99 to 1.02 | 1.01 to 1.05 (-O2), 0.97 (-O3) | 1.00 | 1.00 to 1.01 |
+| `half`, 2 limbs, N = 80 | 0.99 to 1.00 | 0.97 to 1.03 (-O2), 0.89 (-O3) | 0.97 to 1.01 | 0.99 to 1.01 |
+| the constructor, 1 limb, N = 3 | 0.33 to 0.51 (-O2), 0.35 to 0.89 (-O3) | 0.78 to 0.83 (-O2), 0.50 to 0.51 (-O3) | 0.98 to 1.04 (-O2), 0.96 to 1.04 (-O3) | 0.37 |
+| the constructor, 1 limb, N = 7 | 0.46 to 0.50 (-O2), 0.43 to 0.47 (-O3) | 0.72 to 0.76 (-O2), 0.38 to 0.39 (-O3) | 1.01 (-O2), 0.86 to 0.90 (-O3) | 0.43 to 0.46 |
+| the constructor, 1 limb, N = 13 | 0.63 to 0.65 (-O2), 0.60 to 0.65 (-O3) | 0.98 to 1.02 (-O2), 0.37 (-O3) | 1.00 to 1.01 (-O2), 0.89 (-O3) | 0.64 to 0.65 (-O2), 0.54 to 0.64 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.02 to 1.04 (-O2), 0.95 to 1.02 (-O3) | 0.98 to 1.04 (-O2), 0.93 (-O3) | 0.99 to 1.00 (-O2), 0.88 to 0.89 (-O3) | 0.93 to 1.01 (-O2), 1.00 to 1.08 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.00 to 1.04 | 0.98 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 0.98 to 0.99 (-O2), 1.04 to 1.06 (-O3) | 0.97 to 1.00 (-O2), 0.79 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.43 to 0.44 (-O2), 0.47 to 0.49 (-O3) | 0.99 to 1.05 (-O2), 0.48 (-O3) | 0.94 to 0.97 (-O2), 1.01 to 1.15 (-O3) | 0.41 to 0.49 (-O2), 0.42 to 0.49 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.68 to 0.72 | 0.98 to 1.05 (-O2), 0.40 to 0.42 (-O3) | 0.99 to 1.02 (-O2), 0.88 to 0.90 (-O3) | 0.70 to 0.79 (-O2), 0.72 to 0.79 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.10 to 1.12 (-O2), 1.04 to 1.09 (-O3) | 1.00 to 1.04 (-O2), 0.39 (-O3) | 1.01 to 1.02 (-O2), 0.88 to 0.89 (-O3) | 0.98 to 1.04 (-O2), 0.99 to 1.07 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 to 1.02 | 1.00 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.01 (-O2), 0.94 to 0.95 (-O3) | 1.00 to 1.02 (-O2), 0.87 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.97 to 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.06 (-O3) | 0.99 to 1.01 | 1.01 to 1.03 (-O2), 0.98 to 1.00 (-O3) |
 
 | Short ball vectors, 2026-11-23, every size in one unit, a dependent chain: ns per operation, with the check | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 13.5 to 14.1 | 5.43 to 5.66 | 15.4 to 15.5 (-O2), 14.2 to 14.8 (-O3) | 8.85 to 8.93 |
-| `add(x, y, z)`, 1 limb, N = 7 | 13.6 to 13.8 | 5.51 to 5.61 (-O2), 5.22 to 5.45 (-O3) | 16.9 to 17 (-O2), 16 to 16.1 (-O3) | 9.69 to 12.3 (-O2), 9.68 to 9.69 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | 13.5 to 13.8 | 6.95 to 7.28 | 16.8 to 16.9 (-O2), 15.7 to 15.8 (-O3) | 10.1 to 10.2 |
-| `add(x, y, z)`, 1 limb, N = 18 | 8.22 to 8.58 | 7.87 to 8.15 (-O2), 7.22 to 7.24 (-O3) | 18.1 to 19.9 (-O2), 17.4 to 17.5 (-O3) | 10.9 to 11.1 |
-| `add(x, y, z)`, 1 limb, N = 80 | 28.9 to 29.8 (-O2), 29.6 to 30.5 (-O3) | 32.1 to 34.8 (-O2), 28.1 to 28.4 (-O3) | 31.2 to 31.4 (-O2), 29.7 to 29.9 (-O3) | 22.4 to 22.5 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 18.4 to 18.8 (-O2), 18.8 to 19.4 (-O3) | 9.21 to 10.1 (-O2), 9.74 to 9.86 (-O3) | 25.9 to 27 | 18 (-O2), 18.1 to 20.3 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | 10.8 to 11 | 11.6 to 11.9 (-O2), 12.9 to 13 (-O3) | 31.2 to 32.2 | 23.4 to 24.2 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 15.2 to 15.4 (-O2), 15.6 to 16.1 (-O3) | 15.6 to 15.9 (-O2), 17.9 (-O3) | 31.5 to 32.5 | 24.5 to 24.7 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 19.2 to 20.1 (-O2), 19.7 to 20.3 (-O3) | 18.8 to 20 (-O2), 20.1 to 20.2 (-O3) | 41.4 to 42.6 | 35.2 to 35.5 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 75 to 77.5 (-O2), 76.3 to 79 (-O3) | 73.2 to 77.4 (-O2), 75.5 to 75.9 (-O3) | 98.4 to 102 | 95.4 to 95.9 |
-| `z = x + y`, 1 limb, N = 3 | 14.8 to 16.1 (-O2), 16.1 (-O3) | 11.4 to 11.7 (-O2), 9.94 to 10.4 (-O3) | 24.1 | 19.8 to 19.9 |
-| `z = x + y`, 1 limb, N = 7 | 15.1 to 15.9 (-O2), 15.2 to 15.9 (-O3) | 9.87 to 10.4 (-O2), 9.88 to 10.3 (-O3) | 23.9 to 24.8 | 21.9 to 22 |
-| `z = x + y`, 1 limb, N = 13 | 15.2 to 16.1 (-O2), 14.8 to 16.1 (-O3) | 10.3 to 10.9 (-O2), 10.1 to 10.3 (-O3) | 22.2 to 22.7 | 23 to 23.1 |
-| `z = x + y`, 1 limb, N = 18 | 11.8 to 12.4 (-O2), 11.1 to 11.5 (-O3) | 13.6 to 13.9 (-O2), 12.8 (-O3) | 25.7 to 30.5 (-O2), 24.5 to 27.8 (-O3) | 22.2 to 22.4 |
-| `z = x + y`, 1 limb, N = 80 | 41.1 to 42.9 | 48.4 to 49.5 (-O2), 41.6 (-O3) | 88.5 to 112 (-O2), 90.6 to 90.9 (-O3) | 36.4 to 38.4 (-O2), 36.4 to 40.4 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 19.8 to 21.5 (-O2), 20.1 to 21.2 (-O3) | 14.1 to 14.6 | 36.8 to 37.5 | 26.1 to 27.4 (-O2), 26.2 to 30.3 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 14.5 to 14.7 | 14.4 to 14.9 | 38.3 to 46.5 (-O2), 38 to 38.4 (-O3) | 30 to 40.1 (-O2), 29.7 to 30.2 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 17.6 to 18.1 | 20.6 to 21.6 | 48 to 48.5 | 32.9 to 42.8 (-O2), 33 to 40.1 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 22.9 to 23.6 | 25.3 to 26 | 60.6 to 61.3 | 50.3 to 53.6 (-O2), 50.1 to 53.5 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 103 to 108 | 100 to 106 (-O2), 104 (-O3) | 166 to 170 | 129 to 132 |
-| `sub`, 1 limb, N = 3 | 13.7 to 14.1 | 5.55 to 5.67 (-O2), 9.18 (-O3) | 15.4 (-O2), 9.33 to 9.35 (-O3) | 8.86 to 8.88 |
-| `sub`, 1 limb, N = 7 | 13.7 to 14.2 | 5.5 to 5.75 (-O2), 9.68 (-O3) | 16.7 to 16.8 (-O2), 11.8 (-O3) | 9.69 to 12.3 (-O2), 9.67 to 9.68 (-O3) |
-| `sub`, 1 limb, N = 13 | 13.7 to 13.8 (-O2), 12.8 to 14 (-O3) | 7.2 to 7.37 (-O2), 9.75 to 10.2 (-O3) | 16.8 to 16.9 (-O2), 11.7 (-O3) | 10.1 to 10.2 |
-| `sub`, 1 limb, N = 18 | 8.69 to 9.91 (-O2), 8.8 to 10.1 (-O3) | 7.98 to 8.17 (-O2), 5.5 to 5.52 (-O3) | 18.1 to 19.9 (-O2), 13.2 (-O3) | 11.1 |
-| `sub`, 1 limb, N = 80 | 28.8 to 30.3 | 34.1 to 35 (-O2), 26.1 to 26.3 (-O3) | 31.2 to 31.3 (-O2), 26.9 to 27.1 (-O3) | 22.3 to 22.5 |
-| `sub`, 2 limbs, N = 3 | 19 to 19.5 | 9.69 to 9.95 (-O2), 8.6 to 9.67 (-O3) | 27 to 27.2 (-O2), 19.8 to 19.9 (-O3) | 18.9 (-O2), 18.9 to 20.4 (-O3) |
-| `sub`, 2 limbs, N = 7 | 11.1 to 11.3 | 11.7 to 12 (-O2), 10.8 (-O3) | 32.4 to 32.6 (-O2), 28.5 (-O3) | 25.6 to 25.9 |
-| `sub`, 2 limbs, N = 13 | 16.5 to 16.9 | 15.9 to 16.3 (-O2), 14.8 (-O3) | 32.8 to 33.1 (-O2), 28.1 to 28.4 (-O3) | 27.8 to 27.9 |
-| `sub`, 2 limbs, N = 18 | 20.7 to 21.6 | 20.7 to 20.9 (-O2), 18.5 to 18.6 (-O3) | 42.1 to 42.5 (-O2), 38.2 to 38.7 (-O3) | 36.2 to 37.5 |
-| `sub`, 2 limbs, N = 80 | 80.1 to 82.1 | 82 to 83.9 (-O2), 74.1 to 74.9 (-O3) | 102 to 103 (-O2), 97.9 to 98.4 (-O3) | 97.6 to 97.9 |
-| `scale`, 1 limb, N = 3 | 13.8 to 14.1 | 4.9 to 5.64 (-O2), 5.5 (-O3) | 15.7 to 15.8 (-O2), 9.92 to 9.95 (-O3) | 9.37 to 9.39 |
-| `scale`, 1 limb, N = 7 | 14.3 to 14.9 | 4.97 to 5.69 (-O2), 6.08 to 6.09 (-O3) | 16.3 to 16.4 (-O2), 11 to 11.1 (-O3) | 9.33 to 12.3 (-O2), 9.32 to 9.34 (-O3) |
-| `scale`, 1 limb, N = 13 | 13.9 to 14.3 | 6.16 to 6.37 | 16.5 to 16.6 (-O2), 10.7 (-O3) | 9.43 to 9.46 |
-| `scale`, 1 limb, N = 18 | 8.11 to 8.26 (-O2), 8.72 to 8.88 (-O3) | 7.22 to 7.37 (-O2), 6.81 to 6.84 (-O3) | 17.5 to 18.5 (-O2), 12.1 to 12.2 (-O3) | 10.1 to 10.3 |
-| `scale`, 1 limb, N = 80 | 25.8 to 26.5 | 33.6 to 34.3 (-O2), 27 to 27.3 (-O3) | 30.4 to 30.6 (-O2), 24.2 (-O3) | 19 to 19.2 (-O2), 22.8 to 40.2 (-O3) |
-| `scale`, 2 limbs, N = 3 | 15 to 15.4 | 6.17 to 6.31 (-O2), 5.86 to 5.89 (-O3) | 19.3 to 19.4 (-O2), 11.2 (-O3) | 11 (-O2), 11 to 15.2 (-O3) |
-| `scale`, 2 limbs, N = 7 | 15 to 15.3 | 7.34 to 7.51 (-O2), 7.86 to 7.87 (-O3) | 21.9 to 22.6 (-O2), 15.3 (-O3) | 11.7 to 26.5 (-O2), 11.7 (-O3) |
-| `scale`, 2 limbs, N = 13 | 8.71 to 9.13 (-O2), 9.29 to 9.62 (-O3) | 8.99 to 9.16 (-O2), 10.3 (-O3) | 22 to 22.4 (-O2), 14.9 (-O3) | 14.1 (-O2), 14.1 to 16.4 (-O3) |
-| `scale`, 2 limbs, N = 18 | 10.3 to 10.6 | 10.5 to 10.7 (-O2), 11.3 to 11.4 (-O3) | 25.9 to 26.7 (-O2), 18.8 to 19.3 (-O3) | 15.8 |
-| `scale`, 2 limbs, N = 80 | 38.6 to 39.8 (-O2), 40.7 to 41.6 (-O3) | 39.6 to 40.5 (-O2), 43.6 to 44.1 (-O3) | 51.8 to 52.1 (-O2), 47.3 to 47.4 (-O3) | 43.4 to 43.6 |
-| `half`, 1 limb, N = 3 | 15.1 to 15.7 | 4.66 to 4.78 | 19.3 (-O2), 17.7 to 17.8 (-O3) | 15.3 to 15.4 |
-| `half`, 1 limb, N = 7 | 15 to 15.3 | 5.62 to 5.83 | 20.7 to 20.8 (-O2), 19.8 to 19.9 (-O3) | 15.5 to 15.8 |
-| `half`, 1 limb, N = 13 | 14.8 to 14.9 | 7.43 to 7.44 | 18.7 to 19.6 | 15.3 to 15.4 |
-| `half`, 1 limb, N = 18 | 14.8 to 15.2 (-O2), 14.9 to 15.7 (-O3) | 8.88 to 9.07 | 21.5 to 22.2 | 16.6 to 17.4 |
-| `half`, 1 limb, N = 80 | 33.6 to 34.3 (-O2), 35.1 to 35.6 (-O3) | 34.3 to 35.4 | 37.4 to 39.3 | 36.4 to 36.9 |
-| `half`, 2 limbs, N = 3 | 16 to 16.3 | 5.97 to 6.13 (-O2), 5.19 to 5.22 (-O3) | 24.8 to 24.9 (-O2), 23.6 to 23.7 (-O3) | 15.9 to 16 (-O2), 16 to 17 (-O3) |
-| `half`, 2 limbs, N = 7 | 15 to 15.6 (-O2), 14.6 to 15 (-O3) | 8.36 to 8.53 (-O2), 7.57 (-O3) | 27.4 to 28.2 | 18.1 to 18.2 |
-| `half`, 2 limbs, N = 13 | 13.9 to 14.2 (-O2), 14.8 to 15.2 (-O3) | 11.8 to 12.1 (-O2), 10.8 (-O3) | 25.5 to 26.6 | 18.5 to 18.7 |
-| `half`, 2 limbs, N = 18 | 13.5 to 13.8 (-O2), 13.5 to 14.6 (-O3) | 14.2 to 14.5 (-O2), 13.1 (-O3) | 30.4 to 31.3 | 21.1 to 21.4 |
-| `half`, 2 limbs, N = 80 | 47.8 to 49.2 | 48.1 to 49.9 | 58.5 to 60.7 | 54.3 to 54.7 |
-| the constructor, 1 limb, N = 3 | 8.04 to 8.76 (-O2), 8.33 to 8.74 (-O3) | 6.71 to 6.82 (-O2), 6.38 to 6.45 (-O3) | 17.7 to 18.7 (-O2), 17.7 to 19.2 (-O3) | 9.9 to 9.92 |
-| the constructor, 1 limb, N = 7 | 9.52 to 9.62 | 9.78 to 10.2 (-O2), 5.96 to 6.12 (-O3) | 21.1 (-O2), 19.5 to 20.7 (-O3) | 12.5 to 12.6 |
-| the constructor, 1 limb, N = 13 | 13.7 to 14.1 | 18.2 to 18.6 (-O2), 6.6 to 6.61 (-O3) | 26.5 to 26.6 (-O2), 23.6 to 23.8 (-O3) | 21.3 |
-| the constructor, 1 limb, N = 18 | 20.6 to 20.9 (-O2), 18.1 to 18.8 (-O3) | 24.6 to 25.2 | 31.1 to 31.6 | 21.8 to 22.1 (-O2), 30.2 (-O3) |
-| the constructor, 1 limb, N = 80 | 69.9 to 72.9 | 195 to 213 (-O2), 208 (-O3) | 150 to 151 | 65.4 to 68.7 |
-| the constructor, 2 limbs, N = 3 | 9.37 to 9.55 | 6.57 to 6.74 (-O2), 6.23 to 6.25 (-O3) | 20.2 to 20.5 (-O2), 22 to 23.4 (-O3) | 10.8 to 11.4 |
-| the constructor, 2 limbs, N = 7 | 11.8 to 12.3 (-O2), 12.2 to 12.4 (-O3) | 17.6 to 17.8 (-O2), 5.98 to 6.02 (-O3) | 25 to 25.7 (-O2), 22.2 to 22.6 (-O3) | 22.5 to 22.6 |
-| the constructor, 2 limbs, N = 13 | 18.8 to 19.2 (-O2), 20.5 to 20.6 (-O3) | 29.3 to 29.7 (-O2), 10.4 (-O3) | 47 to 47.5 (-O2), 30.4 to 30.5 (-O3) | 29.4 to 30.5 (-O2), 42.4 to 42.5 (-O3) |
-| the constructor, 2 limbs, N = 18 | 32.1 to 33.3 | 56.6 to 58.9 (-O2), 37.6 to 37.7 (-O3) | 62.2 to 62.3 (-O2), 36 to 36.1 (-O3) | 44.2 to 45.6 (-O2), 56.6 to 56.7 (-O3) |
-| the constructor, 2 limbs, N = 80 | 93.1 to 95.5 | 277 to 291 (-O2), 269 (-O3) | 223 (-O2), 194 to 196 (-O3) | 144 to 147 |
+| `add(x, y, z)`, 1 limb, N = 3 | 13.5 to 13.6 | 5.54 to 5.79 | 15.2 to 15.4 (-O2), 14.2 to 14.7 (-O3) | 8.81 to 8.88 |
+| `add(x, y, z)`, 1 limb, N = 7 | 13.5 to 13.8 | 5.51 to 5.75 (-O2), 5.46 to 5.57 (-O3) | 16 to 16.7 | 9.71 to 9.74 |
+| `add(x, y, z)`, 1 limb, N = 13 | 13.5 to 13.9 | 6.95 to 7.22 | 16.8 (-O2), 15.7 to 18.9 (-O3) | 10.2 to 10.3 |
+| `add(x, y, z)`, 1 limb, N = 18 | 8.08 to 8.51 (-O2), 8.05 to 8.55 (-O3) | 7.97 to 8.33 (-O2), 7.23 to 7.38 (-O3) | 17.4 to 18.1 | 10.9 to 13.6 (-O2), 11 to 11.1 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 80 | 28.4 to 29.2 | 34.1 to 35.7 (-O2), 28.1 to 29.1 (-O3) | 30.9 to 31.1 (-O2), 29.2 to 29.3 (-O3) | 21.9 to 22.3 |
+| `add(x, y, z)`, 2 limbs, N = 3 | 18.4 to 18.8 | 9.7 to 10.2 (-O2), 9.81 to 10 (-O3) | 25.9 to 26.9 | 17.8 to 18.1 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 10.8 to 11.1 | 11.6 to 12.1 | 31.4 to 32 | 23.7 to 24 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 15.1 to 15.6 | 15.6 to 16.3 (-O2), 19.4 to 19.7 (-O3) | 31.2 to 32.4 | 24.5 to 24.9 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 19.2 to 19.4 | 19.7 to 20.5 | 40.8 to 42.3 | 34.9 to 35.1 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 74.5 to 74.9 | 76.1 to 79.3 (-O2), 75.5 to 77.3 (-O3) | 98.9 to 101 | 95.1 to 95.5 |
+| `z = x + y`, 1 limb, N = 3 | 15.1 to 15.4 (-O2), 14.4 to 15.7 (-O3) | 11.4 to 11.9 (-O2), 9.78 to 10 (-O3) | 24 to 24.4 | 19.8 |
+| `z = x + y`, 1 limb, N = 7 | 14.9 to 15.6 (-O2), 13.4 to 15.6 (-O3) | 9.89 to 10.4 (-O2), 10.4 to 10.7 (-O3) | 23.7 to 24.2 | 21.3 to 21.4 |
+| `z = x + y`, 1 limb, N = 13 | 14.7 to 15.1 (-O2), 14.7 to 15.8 (-O3) | 10.4 to 10.9 (-O2), 10.1 to 10.3 (-O3) | 22.5 to 22.6 (-O2), 22.4 to 28.9 (-O3) | 23 to 23.1 |
+| `z = x + y`, 1 limb, N = 18 | 11.3 to 11.8 (-O2), 10.8 to 11.3 (-O3) | 13.5 to 14.1 (-O2), 12.8 to 13.1 (-O3) | 25.7 to 30.4 (-O2), 24.2 to 27.6 (-O3) | 21.9 to 22.4 |
+| `z = x + y`, 1 limb, N = 80 | 40 to 41.4 | 48.4 to 50.6 (-O2), 41.6 to 42.4 (-O3) | 86.9 to 88.3 | 38.2 to 43 (-O2), 38.5 to 41.5 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 19.6 to 20.8 (-O2), 18.6 to 20.5 (-O3) | 14.2 to 14.8 | 37 to 37.1 (-O2), 36.6 to 41.1 (-O3) | 27.3 to 27.5 |
+| `z = x + y`, 2 limbs, N = 7 | 14 to 14.5 | 14.4 to 15.1 (-O2), 14.1 to 14.7 (-O3) | 45 to 47 (-O2), 44.6 to 47.3 (-O3) | 37.6 to 37.7 (-O2), 37.5 to 42.5 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 17.5 to 18.1 | 20.7 to 21.4 (-O2), 19.9 to 20.6 (-O3) | 48.3 to 49.3 | 42.6 to 46.1 (-O2), 42.1 to 42.6 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 22.4 to 23.2 | 25.7 to 27 (-O2), 25.1 to 25.8 (-O3) | 63.1 to 63.8 | 53.1 to 57.1 (-O2), 53.1 to 53.5 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | 101 to 104 | 104 to 109 (-O2), 104 to 106 (-O3) | 164 to 167 | 130 to 134 |
+| `sub`, 1 limb, N = 3 | 12.2 to 13.7 (-O2), 12.8 to 13.7 (-O3) | 5.45 to 5.79 (-O2), 5.55 to 5.66 (-O3) | 15.4 to 15.5 (-O2), 9.32 to 9.35 (-O3) | 8.81 to 8.93 |
+| `sub`, 1 limb, N = 7 | 13.3 to 13.8 (-O2), 12.8 to 13.8 (-O3) | 5.5 to 5.78 (-O2), 5.45 to 5.61 (-O3) | 16.8 (-O2), 11.8 to 11.9 (-O3) | 9.7 to 9.71 |
+| `sub`, 1 limb, N = 13 | 13.3 to 13.7 (-O2), 12.8 to 13.7 (-O3) | 7.19 to 7.35 (-O2), 6.91 to 7.11 (-O3) | 16.8 (-O2), 11.6 to 15 (-O3) | 10.1 to 10.2 |
+| `sub`, 1 limb, N = 18 | 8.62 to 9.89 (-O2), 8.05 to 9.65 (-O3) | 7.99 to 8.34 (-O2), 7.25 to 7.44 (-O3) | 22.1 (-O2), 13.2 (-O3) | 11 to 13.6 (-O2), 11 to 11.1 (-O3) |
+| `sub`, 1 limb, N = 80 | 28.6 to 29.2 | 34.1 to 34.9 (-O2), 28.6 to 29.4 (-O3) | 35.6 to 35.8 (-O2), 27.1 to 27.2 (-O3) | 21.9 to 22.3 |
+| `sub`, 2 limbs, N = 3 | 18.5 to 19.1 (-O2), 17.8 to 19.1 (-O3) | 9.67 to 10.1 | 27.1 to 27.2 (-O2), 19.8 to 20.4 (-O3) | 18.5 to 19 |
+| `sub`, 2 limbs, N = 7 | 10.9 to 11.3 | 11.7 to 12.2 (-O2), 10.9 to 11.1 (-O3) | 32.4 to 32.5 (-O2), 28.5 to 28.6 (-O3) | 25.2 to 25.9 |
+| `sub`, 2 limbs, N = 13 | 16.3 to 16.5 | 15.9 to 16.4 (-O2), 14.8 to 15.1 (-O3) | 32.7 to 33 (-O2), 28 to 28.4 (-O3) | 27.9 to 28 |
+| `sub`, 2 limbs, N = 18 | 20.5 to 20.6 | 20.9 to 21.8 (-O2), 18.7 to 19.1 (-O3) | 41.4 to 42.9 (-O2), 37.8 to 38 (-O3) | 36.1 to 37 |
+| `sub`, 2 limbs, N = 80 | 80.2 to 81.7 | 82.3 to 85.7 (-O2), 75 to 75.5 (-O3) | 97.5 to 102 | 96.9 to 97.2 |
+| `scale`, 1 limb, N = 3 | 13.4 to 13.8 (-O2), 12.8 to 13.8 (-O3) | 4.91 to 5.54 (-O2), 5.5 to 5.62 (-O3) | 15.7 (-O2), 14.3 to 14.5 (-O3) | 9.36 to 9.38 |
+| `scale`, 1 limb, N = 7 | 13.3 to 14.4 (-O2), 12.9 to 14 (-O3) | 5.03 to 5.6 (-O2), 6.09 to 6.22 (-O3) | 15.5 to 16.2 | 9.31 to 9.35 |
+| `scale`, 1 limb, N = 13 | 13.4 to 13.7 (-O2), 12.7 to 13.7 (-O3) | 6.17 to 6.5 (-O2), 6.32 to 6.48 (-O3) | 16.6 (-O2), 15.9 to 17.8 (-O3) | 9.97 to 10 (-O2), 9.43 to 9.93 (-O3) |
+| `scale`, 1 limb, N = 18 | 8.09 to 8.24 (-O2), 8.68 to 8.69 (-O3) | 7.22 to 7.53 (-O2), 6.83 to 6.97 (-O3) | 17.3 to 17.6 | 9.98 to 10.1 |
+| `scale`, 1 limb, N = 80 | 25.6 to 26.5 | 33.7 to 34.8 (-O2), 27.2 to 27.9 (-O3) | 30.2 to 30.4 (-O2), 28.6 to 28.8 (-O3) | 18.6 to 18.7 (-O2), 20.9 to 38.6 (-O3) |
+| `scale`, 2 limbs, N = 3 | 14.2 to 15.5 (-O2), 14.4 to 15.4 (-O3) | 6.17 to 6.48 (-O2), 5.85 to 6 (-O3) | 19.3 to 19.4 (-O2), 11.2 to 15.6 (-O3) | 11.1 to 11.2 |
+| `scale`, 2 limbs, N = 7 | 15 (-O2), 14 to 15 (-O3) | 7.28 to 7.49 (-O2), 7.82 to 7.86 (-O3) | 22 to 22.5 (-O2), 15.3 to 15.4 (-O3) | 11.8 |
+| `scale`, 2 limbs, N = 13 | 8.94 to 9.07 (-O2), 8.31 to 9.12 (-O3) | 8.98 to 9.36 (-O2), 10.3 to 10.5 (-O3) | 22.3 (-O2), 14.9 to 15 (-O3) | 14.1 to 17.6 (-O2), 14.1 to 14.2 (-O3) |
+| `scale`, 2 limbs, N = 18 | 9.93 to 10.1 | 10.5 to 10.9 (-O2), 11.3 to 11.6 (-O3) | 24.6 to 24.8 (-O2), 18.8 (-O3) | 15.8 to 17.5 (-O2), 15.8 (-O3) |
+| `scale`, 2 limbs, N = 80 | 38.7 to 40.4 | 39.7 to 41.4 (-O2), 43.7 to 44.2 (-O3) | 51.2 to 51.6 (-O2), 47.3 to 47.5 (-O3) | 43.2 to 43.4 |
+| `half`, 1 limb, N = 3 | 14.8 to 15 (-O2), 13.9 to 15.7 (-O3) | 4.66 to 4.89 (-O2), 4.39 to 4.48 (-O3) | 19.2 to 19.3 (-O2), 17.7 to 17.8 (-O3) | 15.1 to 15.3 |
+| `half`, 1 limb, N = 7 | 15 to 15.1 (-O2), 13.9 to 15.7 (-O3) | 5.72 to 5.96 (-O2), 5.98 to 6.1 (-O3) | 19.6 to 20.5 | 15.6 to 15.8 |
+| `half`, 1 limb, N = 13 | 14.2 to 14.9 (-O2), 14.2 to 15 (-O3) | 7.44 to 7.77 | 19.3 to 19.6 (-O2), 21.1 to 22.8 (-O3) | 15.3 to 15.4 |
+| `half`, 1 limb, N = 18 | 14.8 (-O2), 14.1 to 14.9 (-O3) | 8.89 to 9.27 | 21.2 to 22.1 | 16.5 to 17 |
+| `half`, 1 limb, N = 80 | 34 to 34.6 | 34.7 to 35.9 (-O2), 33.3 to 33.9 (-O3) | 37 to 38.8 | 36.2 to 36.8 |
+| `half`, 2 limbs, N = 3 | 15.5 to 15.9 (-O2), 14.8 to 15.9 (-O3) | 6.25 to 6.56 (-O2), 5.31 to 5.42 (-O3) | 24.9 (-O2), 23.2 to 23.4 (-O3) | 15.8 to 16 |
+| `half`, 2 limbs, N = 7 | 14.5 to 14.9 | 8.57 to 8.87 (-O2), 7.57 to 7.72 (-O3) | 27.4 to 28.5 | 18.1 to 18.5 |
+| `half`, 2 limbs, N = 13 | 13.8 to 14.3 (-O2), 14.4 to 14.5 (-O3) | 11.8 to 12.3 (-O2), 11.1 to 11.4 (-O3) | 25.1 to 26.2 | 18.4 to 18.6 |
+| `half`, 2 limbs, N = 18 | 13.2 to 13.3 (-O2), 13.2 to 14 (-O3) | 14.2 to 14.8 (-O2), 13.3 to 13.5 (-O3) | 30 to 31.3 | 21.3 to 22.7 (-O2), 21.2 to 21.3 (-O3) |
+| `half`, 2 limbs, N = 80 | 47.9 to 48.3 | 48.9 to 51 (-O2), 48.1 to 48.3 (-O3) | 57.5 to 59.8 | 53.4 to 53.7 |
+| the constructor, 1 limb, N = 3 | 8.04 to 8.73 (-O2), 7.34 to 8.57 (-O3) | 6.7 to 7 (-O2), 6.23 to 6.6 (-O3) | 17.7 to 18.6 (-O2), 17.7 to 19.2 (-O3) | 9.85 to 9.89 |
+| the constructor, 1 limb, N = 7 | 9.41 to 9.61 (-O2), 9.04 to 9.49 (-O3) | 9.53 to 10.4 (-O2), 5.6 to 5.92 (-O3) | 21.1 to 21.2 (-O2), 19.5 to 20.8 (-O3) | 12.3 to 12.5 |
+| the constructor, 1 limb, N = 13 | 13.9 to 14.5 (-O2), 13.2 to 13.8 (-O3) | 18.2 to 19 (-O2), 6.81 to 6.98 (-O3) | 26.5 (-O2), 23.7 to 23.8 (-O3) | 21.2 to 22 |
+| the constructor, 1 limb, N = 18 | 19.9 to 20.4 (-O2), 22.9 to 25.4 (-O3) | 24.4 to 25.2 | 30.6 to 31.5 | 24 to 24.1 (-O2), 34.8 to 35.7 (-O3) |
+| the constructor, 1 limb, N = 80 | 71.5 to 74.2 | 208 to 213 | 149 to 150 | 68.9 to 80.8 (-O2), 70.9 to 72.2 (-O3) |
+| the constructor, 2 limbs, N = 3 | 9.2 to 9.3 (-O2), 8.62 to 9.2 (-O3) | 6.34 to 6.52 (-O2), 6.04 to 6.38 (-O3) | 20.1 to 20.5 (-O2), 21.6 to 23.4 (-O3) | 10.8 to 10.9 |
+| the constructor, 2 limbs, N = 7 | 11.5 to 12 | 17.6 to 18.3 (-O2), 5.68 to 6.05 (-O3) | 25 to 25.8 (-O2), 22.5 to 22.9 (-O3) | 22.5 to 22.6 |
+| the constructor, 2 limbs, N = 13 | 21.7 to 22.3 (-O2), 18.4 to 19.1 (-O3) | 29.3 to 30.8 (-O2), 10.4 to 10.7 (-O3) | 47.4 to 47.9 (-O2), 30.5 to 30.9 (-O3) | 33.9 to 34 (-O2), 35.6 to 38 (-O3) |
+| the constructor, 2 limbs, N = 18 | 32.9 to 33 (-O2), 26.7 (-O3) | 65.9 to 68.8 (-O2), 37.7 to 41.2 (-O3) | 64.2 to 64.6 (-O2), 36.1 to 36.3 (-O3) | 47.1 to 52.1 (-O2), 40.1 to 43.9 (-O3) |
+| the constructor, 2 limbs, N = 80 | 92.5 to 94.8 | 288 to 302 (-O2), 269 to 270 (-O3) | 222 to 225 (-O2), 191 to 192 (-O3) | 146 to 147 |
 
 | Short ball vectors, 2026-11-23, every size in one unit, a dependent chain: the check, ns per operation (with minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.55 to 0 (-O2), -0.04 to 0.06 (-O3) | -0.246 to -0.137 (-O2), -0.117 to 0.003 (-O3) | 2.7 to 2.76 (-O2), 2.05 to 2.75 (-O3) | -0.111 to -0.09 (-O2), -0.099 to -0.045 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 7 | -0.23 to 0.01 (-O2), -0.01 to 0.25 (-O3) | -0.052 to 0.157 (-O2), -0.244 to -0.007 (-O3) | 0.84 to 2.49 (-O2), 2.02 to 2.12 (-O3) | 0.701 to 3.31 (-O2), 0.681 to 0.722 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | -0.2 to -0.01 (-O2), -0.79 to -0.55 (-O3) | 0.082 to 0.223 (-O2), 0.009 to 0.495 (-O3) | 2.26 to 2.36 (-O2), 2.2 to 2.39 (-O3) | 1.26 to 1.35 (-O2), 1.3 to 1.34 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 18 | -0.218 to -0.036 (-O2), -0.385 to 0.065 (-O3) | -0.161 to 0.082 (-O2), -0.214 to -0.172 (-O3) | 1.52 to 3.3 (-O2), 1.06 to 1.97 (-O3) | 1.89 to 1.91 (-O2), 1.62 to 1.65 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 80 | -0.33 to 0.57 (-O2), -0.01 to 1.54 (-O3) | -0.19 to 1.75 (-O2), 0.16 to 0.41 (-O3) | 4.58 to 4.76 (-O2), 4.44 to 4.65 (-O3) | 3.42 to 3.44 (-O2), 3.83 to 3.93 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 3 | -0.06 to 0.32 (-O2), -0.07 to 0.05 (-O3) | -0.695 to 0.09 (-O2), -0.048 to 0.17 (-O3) | 2.61 to 2.76 (-O2), 2.99 to 3.08 (-O3) | 2.25 to 2.29 (-O2), 2.4 to 4.45 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.22 to -0.07 (-O2), -0.02 to 0.01 (-O3) | 0.02 to 0.07 (-O2), 1.24 to 1.32 (-O3) | 2.21 to 2.41 (-O2), 1.34 to 2.28 (-O3) | 2.04 to 2.94 (-O2), 1.98 to 2.31 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.35 to -0.1 (-O2), -0.2 to 0.66 (-O3) | -0.06 to 0.22 (-O2), -2.5 to -2.43 (-O3) | 2.41 to 2.76 (-O2), 2.85 to 3.19 (-O3) | 2.37 to 2.43 (-O2), 2.51 to 2.61 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 18 | -0.24 to 0.24 (-O2), 0.28 to 1.45 (-O3) | 0.19 to 1.08 (-O2), 0.21 to 0.4 (-O3) | 3.37 to 4.79 (-O2), 4.13 to 5.31 (-O3) | 4.3 to 4.56 (-O2), 4.4 to 5.04 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 80 | -0.92 to 1.07 (-O2), -0.72 to 1.95 (-O3) | -0.04 to 0.24 (-O2), -0.74 to -0.23 (-O3) | 3.11 to 3.37 (-O2), 3.7 to 5.03 (-O3) | 5.17 to 5.36 (-O2), 4.77 to 5.39 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | -0.27 to 0.64 (-O2), 0.01 to 1.64 (-O3) | -0.15 to 0.13 (-O2), -1.05 to -0.56 (-O3) | -0.24 to 0.11 (-O2), -0.08 to 0.23 (-O3) | 0.16 to 0.19 (-O2), 0.11 to 0.15 (-O3) |
-| `z = x + y`, 1 limb, N = 7 | -0.02 to 0.44 (-O2), 0 to 0.53 (-O3) | -0.5 to -0.038 (-O2), -1.12 to -0.65 (-O3) | -4.22 to 0.73 (-O2), -0.39 to -0.03 (-O3) | 0.05 to 0.11 (-O2), -0.02 to 0.06 (-O3) |
-| `z = x + y`, 1 limb, N = 13 | -0.88 to 0.7 (-O2), -1.05 to 0.77 (-O3) | -1.42 to -0.89 (-O2), -1.25 to -0.91 (-O3) | 0.04 to 0.2 (-O2), -0.26 to -0.07 (-O3) | -0.05 to 0.02 (-O2), -0.02 to 0.06 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | 0.02 to 0.58 (-O2), -0.68 to -0.1 (-O3) | -0.07 to -0.01 (-O2), 0.09 to 0.11 (-O3) | -3.62 to 0.77 (-O2), -3.73 to -0.35 (-O3) | 0.2 to 0.28 (-O2), 0.14 to 0.29 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | 1.44 to 1.61 (-O2), -1.41 to 0.46 (-O3) | -0.29 to 0.97 (-O2), -0.33 to -0.08 (-O3) | 2.95 to 25.3 (-O2), 6.09 to 6.43 (-O3) | 0.48 to 6.16 (-O2), -2.19 to 2.24 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -1.02 to 0.24 (-O2), -0.86 to 0.8 (-O3) | -0.06 to 0.08 (-O2), -0.07 to 0.51 (-O3) | 0.73 to 1.02 (-O2), -0.13 to 0.43 (-O3) | -0.81 to 1.98 (-O2), 0.57 to 3.59 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | -0.07 to 0.05 (-O2), -0.25 to 0.24 (-O3) | -0.02 to 0.08 (-O2), -0.13 to -0.03 (-O3) | 0.99 to 9.33 (-O2), -9.09 to 1.52 (-O3) | 0.92 to 11.1 (-O2), 0.37 to 0.98 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -0.11 to 0.03 (-O2), -0.02 to 0.01 (-O3) | 0.31 to 0.74 (-O2), 1.19 to 1.46 (-O3) | 0.65 to 0.96 (-O2), 0.22 to 0.54 (-O3) | -3.53 to 9.91 (-O2), -7.39 to 7.26 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | -0.79 to -0.15 (-O2), -1.65 to -0.11 (-O3) | -1.12 to -0.49 (-O2), 0.77 to 0.8 (-O3) | 0.03 to 0.61 (-O2), 0.03 to 0.92 (-O3) | -3.87 to 2.6 (-O2), -3.55 to 0.11 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | -1 to 2.3 (-O2), 0.3 to 3.2 (-O3) | -1.4 to 2.1 (-O2), 0.1 (-O3) | 0.8 to 3 (-O2), 1.7 to 4.8 (-O3) | 0.1 to 6 (-O2), -0.3 to 3.5 (-O3) |
-| `sub`, 1 limb, N = 3 | -0.17 to -0.01 (-O2), -0.01 to 0.19 (-O3) | 0.278 to 0.393 (-O2), 4.99 to 5.03 (-O3) | 2.38 to 2.47 (-O2), 2.62 to 2.64 (-O3) | -0.105 to -0.094 (-O2), -0.143 to -0.108 (-O3) |
-| `sub`, 1 limb, N = 7 | -0.33 to 0.01 (-O2), -0.03 to 0.75 (-O3) | -0.128 to 0.194 (-O2), 5.41 (-O3) | 0.72 to 2.1 (-O2), 1.02 to 1.08 (-O3) | 0.706 to 3.29 (-O2), 0.679 to 0.709 (-O3) |
-| `sub`, 1 limb, N = 13 | -0.31 to -0.06 (-O2), -1.18 to 0.36 (-O3) | 0.053 to 0.102 (-O2), 5.41 to 5.87 (-O3) | 2.2 to 2.27 (-O2), 1.4 to 1.44 (-O3) | 1.27 to 1.33 |
-| `sub`, 1 limb, N = 18 | -1.15 to 0.235 (-O2), -0.169 to 0.658 (-O3) | -0.093 to -0.069 (-O2), 0.082 to 0.104 (-O3) | 1.35 to 3.2 (-O2), 0.68 to 1.79 (-O3) | 1.85 to 1.92 |
-| `sub`, 1 limb, N = 80 | -0.51 to -0.13 (-O2), -0.23 to 0.7 (-O3) | 0.45 to 0.65 (-O2), -1.28 to -1.04 (-O3) | 4.5 to 4.57 (-O2), 4.69 to 4.87 (-O3) | 3.56 to 3.6 (-O2), 3.85 to 3.92 (-O3) |
-| `sub`, 2 limbs, N = 3 | -0.51 to 0.05 (-O2), -0.12 to 0.04 (-O3) | -0.172 to 0.508 (-O2), -0.587 to 0.043 (-O3) | 2.38 to 2.48 (-O2), 1.87 to 1.99 (-O3) | 2.72 to 2.74 (-O2), 2.81 to 4.13 (-O3) |
-| `sub`, 2 limbs, N = 7 | -0.12 to -0.02 (-O2), -0.41 to 0.11 (-O3) | -0.02 to 0.09 (-O2), 0.01 (-O3) | 1.96 to 2.14 (-O2), 1.99 to 2.02 (-O3) | 3.24 to 3.5 (-O2), 3.24 to 3.31 (-O3) |
-| `sub`, 2 limbs, N = 13 | -0.22 to 0.23 (-O2), -0.09 to 0.47 (-O3) | -0.35 to 0.15 (-O2), -0.06 to 0 (-O3) | 2.37 to 2.6 (-O2), 1.36 to 1.7 (-O3) | 4.04 to 4.14 (-O2), 4.11 to 4.27 (-O3) |
-| `sub`, 2 limbs, N = 18 | 0.03 to 0.09 (-O2), 0.1 to 1.13 (-O3) | 0.51 to 1.02 (-O2), -0.15 to -0.12 (-O3) | 3.36 to 4.46 (-O2), 3.69 to 4.28 (-O3) | 4.69 to 5.19 (-O2), 4.62 to 5.53 (-O3) |
-| `sub`, 2 limbs, N = 80 | -0.19 to 1.17 (-O2), -0.96 to 1.57 (-O3) | 2.9 to 3.71 (-O2), -1.01 to -0.01 (-O3) | 2.7 to 3.38 (-O2), 4.7 to 5.36 (-O3) | 5.54 to 5.95 (-O2), 4.95 to 5.83 (-O3) |
-| `scale`, 1 limb, N = 3 | 5.94 to 6.15 (-O2), 5.66 to 6 (-O3) | -0.579 to 0.45 (-O2), 0.744 to 1.64 (-O3) | 2.69 to 2.77 (-O2), -2.43 to -2.32 (-O3) | 2.44 to 2.48 |
-| `scale`, 1 limb, N = 7 | 6.5 to 6.64 (-O2), 6.1 to 6.24 (-O3) | -0.602 to 0.5 (-O2), 0.667 to 0.757 (-O3) | 1.35 to 2.58 (-O2), -2.32 to -2.27 (-O3) | 2.36 to 5.32 (-O2), 2.36 to 2.38 (-O3) |
-| `scale`, 1 limb, N = 13 | 5.62 to 5.7 (-O2), 5.65 to 6.07 (-O3) | -0.06 to 0.039 (-O2), 0.311 to 0.44 (-O3) | 2.77 to 2.82 (-O2), -2.49 to -2.42 (-O3) | 2.38 to 2.48 |
-| `scale`, 1 limb, N = 18 | -0.201 to 0.106 (-O2), 0.597 to 0.947 (-O3) | -0.12 to 0.051 (-O2), 0.061 to 0.093 (-O3) | 2.17 to 3.32 (-O2), -2.81 to -2.16 (-O3) | 3.05 to 3.16 (-O2), 2.96 to 3.01 (-O3) |
-| `scale`, 1 limb, N = 80 | -0.91 to 0.27 (-O2), -1.45 to -1.03 (-O3) | 0.39 to 1.1 (-O2), -0.44 to -0.07 (-O3) | 3.93 to 4.11 (-O2), -0.7 to -0.66 (-O3) | 3.41 to 3.59 (-O2), 1.68 to 20 (-O3) |
-| `scale`, 2 limbs, N = 3 | 6.7 to 6.9 (-O2), 7.07 to 7.15 (-O3) | -0.218 to 0.387 (-O2), 0.142 to 0.956 (-O3) | 2.24 to 2.31 (-O2), 0.76 to 0.77 (-O3) | 2.61 to 2.62 (-O2), 2.59 to 6.81 (-O3) |
-| `scale`, 2 limbs, N = 7 | 6.32 to 6.84 (-O2), 6.45 to 7.03 (-O3) | 0.095 to 0.248 (-O2), -0.011 to 0 (-O3) | 2.68 to 3.44 (-O2), 0.34 to 0.46 (-O3) | 2.07 to 16.8 (-O2), 2.05 to 2.08 (-O3) |
-| `scale`, 2 limbs, N = 13 | 0.286 to 0.715 (-O2), 0.969 to 1.24 (-O3) | -0.087 to 0.091 (-O2), 0.16 to 0.18 (-O3) | 2.5 to 2.88 (-O2), 0.49 to 0.52 (-O3) | 3.58 to 3.61 (-O2), 1.46 to 5.86 (-O3) |
-| `scale`, 2 limbs, N = 18 | 0.405 to 0.527 (-O2), 0.504 to 0.616 (-O3) | -0.16 to 0.05 (-O2), -0.92 to -0.78 (-O3) | 3.66 to 4.46 (-O2), 0.92 to 1.42 (-O3) | -0.22 to 1.84 (-O2), 1.82 to 1.88 (-O3) |
-| `scale`, 2 limbs, N = 80 | -0.3 to 0.36 (-O2), -0.64 to -0.1 (-O3) | -0.11 to 0.89 (-O2), 0.15 to 0.66 (-O3) | 3.01 to 3.39 (-O2), 0.51 to 0.74 (-O3) | 1.75 to 1.93 (-O2), 1.67 to 1.77 (-O3) |
-| `half`, 1 limb, N = 3 | 0.62 to 1.01 (-O2), 0.94 to 1.32 (-O3) | -0.254 to -0.146 (-O2), 0.002 to 0.023 (-O3) | 2.31 to 2.4 (-O2), 2.59 to 2.65 (-O3) | 0.4 to 0.48 (-O2), 0.39 to 0.46 (-O3) |
-| `half`, 1 limb, N = 7 | 0.43 to 1.59 (-O2), 0.54 to 1.16 (-O3) | -0.363 to -0.259 (-O2), 0.002 to 0.003 (-O3) | 1.36 to 2.29 (-O2), 2.63 to 2.73 (-O3) | 0.08 to 0.39 (-O2), 0.2 to 0.28 (-O3) |
-| `half`, 1 limb, N = 13 | 0.03 to 0.39 (-O2), -0.27 to 0.08 (-O3) | -0.274 to -0.129 (-O2), -0.001 to 0 (-O3) | 2.34 to 2.52 (-O2), 2.66 to 2.77 (-O3) | -0.36 to -0.21 (-O2), -0.35 to -0.21 (-O3) |
-| `half`, 1 limb, N = 18 | 0.48 to 1.21 (-O2), 0.58 to 1.65 (-O3) | -0.264 to -0.261 (-O2), -0.003 to 0 (-O3) | 2.78 to 3 (-O2), 2.56 to 3.06 (-O3) | -1.22 to -1.07 (-O2), -1.28 to -0.45 (-O3) |
-| `half`, 1 limb, N = 80 | -0.73 to 0.02 (-O2), -0.32 to 0.58 (-O3) | 0.04 to 0.76 (-O2), 0.38 to 0.64 (-O3) | 3.61 to 4.14 (-O2), 4.07 to 4.28 (-O3) | 5.61 to 5.79 (-O2), 4.98 to 5.41 (-O3) |
-| `half`, 2 limbs, N = 3 | 1.98 to 2.51 (-O2), 1.58 to 2.26 (-O3) | 0.039 to 0.863 (-O2), -0.038 to -0.01 (-O3) | 1.55 to 1.63 (-O2), 2.01 to 2.04 (-O3) | 0.55 to 0.72 (-O2), 0.74 to 1.68 (-O3) |
-| `half`, 2 limbs, N = 7 | 0.25 to 0.68 (-O2), -0.48 to 0.05 (-O3) | 0.796 to 0.951 (-O2), -0.448 to -0.269 (-O3) | 1.06 to 1.33 (-O2), 1.24 to 1.31 (-O3) | 2.45 to 2.58 (-O2), 2.07 to 2.2 (-O3) |
-| `half`, 2 limbs, N = 13 | -0.66 to -0.42 (-O2), 0.18 to 0.97 (-O3) | 0.82 to 1.29 (-O2), -0.11 (-O3) | 1.39 to 1.61 (-O2), 1.3 to 1.5 (-O3) | 2.63 to 2.72 (-O2), 2.29 to 2.44 (-O3) |
-| `half`, 2 limbs, N = 18 | 0.02 to 0.3 (-O2), 0.44 to 1.43 (-O3) | 1.06 to 1.32 (-O2), 0 (-O3) | 1.07 to 1.18 (-O2), 1.15 to 2.05 (-O3) | 2.4 to 2.52 (-O2), 2.33 to 2.4 (-O3) |
-| `half`, 2 limbs, N = 80 | 0 to 0.76 (-O2), -0.76 to 0.31 (-O3) | 0.92 to 1.87 (-O2), -7.1 to -6.91 (-O3) | 3.56 to 4.38 (-O2), 3.61 to 3.8 (-O3) | 6.27 to 6.4 (-O2), 5.58 to 6.39 (-O3) |
-| the constructor, 1 limb, N = 3 | -1.5 to -0.794 (-O2), -1.07 to -0.786 (-O3) | -0.649 to -0.543 (-O2), -0.004 to 0.083 (-O3) | 2.98 to 3.65 (-O2), 2.71 to 4.24 (-O3) | 3.66 to 3.74 |
-| the constructor, 1 limb, N = 7 | -0.125 to 0.153 (-O2), -0.064 to 0.375 (-O3) | -5.48 to -4.8 (-O2), -0.064 to 0.097 (-O3) | 4.48 to 4.58 (-O2), 4.35 to 5.57 (-O3) | 1.4 to 1.47 (-O2), 1.4 to 1.45 (-O3) |
-| the constructor, 1 limb, N = 13 | 3.94 to 4.18 (-O2), 3.69 to 3.75 (-O3) | 0.02 to 0.24 (-O2), -0.017 to -0.012 (-O3) | 2.73 to 2.82 (-O2), 3.69 to 3.85 (-O3) | 0.8 to 0.86 (-O2), 0.78 to 0.81 (-O3) |
-| the constructor, 1 limb, N = 18 | -0.92 to 0.07 (-O2), 3.31 to 3.98 (-O3) | 0.26 to 0.48 (-O2), 0.1 to 0.21 (-O3) | 2.52 to 2.81 (-O2), 2.37 to 2.87 (-O3) | -0.19 to 0.61 (-O2), -0.22 to -0.04 (-O3) |
-| the constructor, 1 limb, N = 80 | -0.27 to 0.28 (-O2), -4.8 to -2.54 (-O3) | -2.2 to 4.7 (-O2), -0.1 to 8.1 (-O3) | -0.1 to 1.7 (-O2), 2.1 to 2.7 (-O3) | -3.7 to 3.04 (-O2), -3.17 to -0.03 (-O3) |
-| the constructor, 2 limbs, N = 3 | -0.203 to 0.147 (-O2), -0.069 to 0.148 (-O3) | 0.249 to 0.421 (-O2), 0.446 to 0.472 (-O3) | 5.44 to 5.46 (-O2), 6.93 to 8.66 (-O3) | 1.07 to 1.63 (-O2), 1.05 to 1.13 (-O3) |
-| the constructor, 2 limbs, N = 7 | 1.98 to 2.52 (-O2), 2.25 to 2.63 (-O3) | -0.3 to 0.12 (-O2), -0.356 to -0.331 (-O3) | 2.66 to 3.16 (-O2), 6.14 to 6.48 (-O3) | 0.76 to 0.85 (-O2), 0.7 to 0.77 (-O3) |
-| the constructor, 2 limbs, N = 13 | -2.81 to -2.43 (-O2), -1.65 to -1.51 (-O3) | -0.34 to 0.28 (-O2), -1.01 to -0.99 (-O3) | 1.33 to 1.5 (-O2), 5.89 to 6.03 (-O3) | -0.25 to 0.53 (-O2), 2.26 to 2.44 (-O3) |
-| the constructor, 2 limbs, N = 18 | -0.23 to 0.1 (-O2), -0.63 to 0.67 (-O3) | -9.42 to -8.41 (-O2), -0.5 to 0.14 (-O3) | 1.74 to 2.62 (-O2), -14.2 to -14.1 (-O3) | -0.68 to 3.95 (-O2), 1.49 to 1.73 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.39 to 3.99 (-O2), -0.44 to 1.02 (-O3) | -11.7 to 1.4 (-O2), -0.5 to -0.3 (-O3) | -22.4 to -20.8 (-O2), -2 to 0.4 (-O3) | -2.5 to 2.1 (-O2), -2.6 to 0.8 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | -0.01 to 0.04 (-O2), -0.43 to -0.02 (-O3) | -0.404 to -0.245 (-O2), -0.111 to 0.005 (-O3) | 2.52 to 2.67 (-O2), 1.97 to 2.44 (-O3) | -0.137 to -0.088 (-O2), -0.148 to -0.082 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 7 | -0.15 to 0.18 (-O2), -0.26 to 0.26 (-O3) | 0.045 to 0.35 (-O2), -0.146 to -0.017 (-O3) | 2.09 to 2.32 (-O2), 1.92 to 2.24 (-O3) | 0.869 to 0.898 |
+| `add(x, y, z)`, 1 limb, N = 13 | -0.2 to 0 (-O2), -0.07 to -0.02 (-O3) | -0.131 to 0.191 (-O2), 0.159 to 0.255 (-O3) | 1.91 to 2.3 (-O2), 2.24 to 5.44 (-O3) | 1.39 to 1.41 (-O2), -0.26 to 1.48 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 18 | -0.656 to 0.07 (-O2), -0.405 to -0.206 (-O3) | 0.063 to 0.099 (-O2), -0.175 to -0.023 (-O3) | 0.31 to 1.49 (-O2), 1.88 to 1.96 (-O3) | 1.74 to 4.43 (-O2), 1.84 to 1.91 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 80 | -0.34 to -0.18 (-O2), 0.04 to 0.29 (-O3) | 1.23 to 2.63 (-O2), -0.46 to -0.25 (-O3) | 3.8 to 4.52 (-O2), 4.03 to 4.18 (-O3) | 3.53 to 3.59 (-O2), 3.98 to 4.42 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | -0.02 to 0.03 (-O2), -0.25 to 0.1 (-O3) | -0.098 to 0.13 (-O2), -0.27 to 0.019 (-O3) | -1.12 to 2.74 (-O2), 2.94 to 2.97 (-O3) | 2.42 to 2.47 (-O2), 2.15 to 2.47 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 7 | -0.02 to 0.15 (-O2), -0.24 to 0.04 (-O3) | 0 to 0.02 (-O2), 0.01 to 0.25 (-O3) | -0.3 to 2.26 (-O2), 2.29 to 2.55 (-O3) | 2.33 to 2.54 (-O2), 2.32 to 2.45 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 13 | 0.11 to 0.52 (-O2), -0.16 to -0.06 (-O3) | -0.87 to 0.17 (-O2), -1.56 to -0.88 (-O3) | -0.22 to 2.71 (-O2), 2.61 to 3.12 (-O3) | 2.33 to 2.67 (-O2), 2.45 to 2.68 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | -0.35 to -0.17 (-O2), 0.24 to 0.51 (-O3) | 1.01 to 1.09 (-O2), -0.06 to 0.17 (-O3) | 1.99 to 4.58 (-O2), 3.83 to 5.69 (-O3) | 4.34 to 4.78 (-O2), 4.14 to 4.97 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 80 | -1.27 to -0.15 (-O2), -2.43 to -0.32 (-O3) | 0.07 to 0.81 (-O2), -1.87 to 1.15 (-O3) | 3.97 to 5.01 (-O2), 5.28 to 5.68 (-O3) | 5.21 to 5.47 (-O2), 4.92 to 5.24 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | 0.71 to 1.5 (-O2), -1.42 to 1.93 (-O3) | -0.05 to 0.05 (-O2), -4.51 to -1.37 (-O3) | -7.65 to 0.44 (-O2), -0.03 to 0.26 (-O3) | 0.15 to 0.19 (-O2), 0.16 to 0.2 (-O3) |
+| `z = x + y`, 1 limb, N = 7 | -0.7 to 1.18 (-O2), -1.68 to -0.01 (-O3) | -0.57 to -0.15 (-O2), -0.93 to -0.67 (-O3) | 0 to 0.5 (-O2), -0.53 to 0.12 (-O3) | -0.16 to -0.06 (-O2), -0.14 to -0.04 (-O3) |
+| `z = x + y`, 1 limb, N = 13 | -0.85 to 0.23 (-O2), 0 to 0.46 (-O3) | -1.72 to -0.91 (-O2), -1.43 to -1.19 (-O3) | -0.18 to 0.29 (-O2), 0.07 to 6.55 (-O3) | -0.04 to 0.02 (-O2), -0.03 to 0.1 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -0.47 to 0.3 (-O2), -0.57 to -0.33 (-O3) | -0.06 to 0.01 (-O2), 0.11 to 0.16 (-O3) | -3.9 to 0.84 (-O2), -3.98 to -0.31 (-O3) | -0.09 to 0.31 (-O2), 0.3 to 0.35 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | 0.18 to 0.63 (-O2), -0.62 to -0.36 (-O3) | -0.15 to -0.12 (-O2), -1.48 to -0.29 (-O3) | 4.02 to 4.37 (-O2), 3.3 to 3.43 (-O3) | 4.21 to 9 (-O2), -0.16 to 2.97 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | -0.21 to 1.22 (-O2), -1.62 to -0.41 (-O3) | -0.15 to 0.2 (-O2), -0.33 to 0.02 (-O3) | 0.39 to 1.19 (-O2), -0.38 to 4.53 (-O3) | 0.63 to 0.71 (-O2), -6.74 to 0.85 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | 0.09 to 0.12 (-O2), -0.07 to -0.04 (-O3) | -0.16 to 0.09 (-O2), -0.41 to 0.07 (-O3) | 0.08 to 2.37 (-O2), -0.35 to 2.46 (-O3) | 0.64 to 0.71 (-O2), 0.55 to 5.57 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.28 to 0.69 (-O2), -0.15 to 0.23 (-O3) | -0.74 to 0.07 (-O2), 0.3 to 0.38 (-O3) | 0.17 to 1.11 (-O2), 0.45 to 1.07 (-O3) | 0.68 to 3.58 (-O2), -1.05 to 0.77 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | -1.87 to -0.62 (-O2), -1.18 to -0.2 (-O3) | -0.36 to 0.41 (-O2), 0.54 to 1.27 (-O3) | -0.31 to 0.32 (-O2), -0.11 to 0.56 (-O3) | 0.06 to 3.92 (-O2), 0.55 to 0.69 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | -0.1 to 2.5 (-O2), -1.9 to -0.9 (-O3) | 0.2 to 2.3 (-O2), 0 to 2 (-O3) | 1.2 to 2.8 (-O2), 2.4 to 3.9 (-O3) | 4 to 6.3 (-O2), 1.2 to 4.3 (-O3) |
+| `sub`, 1 limb, N = 3 | -0.75 to 0.11 (-O2), -0.43 to -0.01 (-O3) | -0.348 to -0.237 (-O2), 0.004 to 0.019 (-O3) | 2.47 to 2.54 (-O2), 2.61 to 2.62 (-O3) | -0.142 to -0.098 (-O2), -0.079 to -0.034 (-O3) |
+| `sub`, 1 limb, N = 7 | 0.27 to 0.32 (-O2), -0.09 to 0.02 (-O3) | 0.035 to 0.317 (-O2), 0.01 to 0.06 (-O3) | 2.14 to 2.27 (-O2), 1.06 to 1.09 (-O3) | 0.855 to 0.904 (-O2), 0.855 to 0.906 (-O3) |
+| `sub`, 1 limb, N = 13 | -0.41 to 0.33 (-O2), -0.01 (-O3) | 0.062 to 0.244 (-O2), 0.054 to 0.152 (-O3) | 1.83 to 2.18 (-O2), 1.41 to 4.76 (-O3) | 1.35 to 1.44 (-O2), -0.3 to 1.42 (-O3) |
+| `sub`, 1 limb, N = 18 | -1.3 to 0.478 (-O2), -1.6 to -0.003 (-O3) | 0.088 to 0.1 (-O2), -0.287 to -0.189 (-O3) | 4.34 to 5.38 (-O2), 1.76 to 1.78 (-O3) | 1.81 to 4.38 (-O2), 1.81 to 1.92 (-O3) |
+| `sub`, 1 limb, N = 80 | -0.51 to -0.4 (-O2), -0.02 to 0.11 (-O3) | 0.35 to 1.2 (-O2), -0.14 to 0.19 (-O3) | 8.53 to 9.23 (-O2), 3.11 to 3.24 (-O3) | 3.25 to 3.32 (-O2), 4.05 to 4.38 (-O3) |
+| `sub`, 2 limbs, N = 3 | 0.03 to 0.67 (-O2), -0.96 to 0.97 (-O3) | -0.199 to -0.01 (-O2), -0.115 to 1.19 (-O3) | -1.17 to 2.48 (-O2), 1.95 to 2.39 (-O3) | 2.87 to 2.94 (-O2), 2.42 to 2.94 (-O3) |
+| `sub`, 2 limbs, N = 7 | -0.12 to 0.24 (-O2), -0.26 to 0.05 (-O3) | -0.04 to 0.23 (-O2), 0.12 to 0.21 (-O3) | -0.27 to 1.99 (-O2), 1.97 to 2.1 (-O3) | 3.26 to 3.3 (-O2), 2.48 to 3.27 (-O3) |
+| `sub`, 2 limbs, N = 13 | 0.08 to 0.2 (-O2), 0 to 0.03 (-O3) | -0.98 to -0.36 (-O2), -0.33 to 0.01 (-O3) | 0.01 to 3.28 (-O2), 1.42 to 1.83 (-O3) | 4.12 to 4.17 (-O2), 4.17 to 4.35 (-O3) |
+| `sub`, 2 limbs, N = 18 | -0.13 to -0.1 (-O2), -0.34 to 0.18 (-O3) | 0.96 to 1.44 (-O2), -0.01 to 0.43 (-O3) | 1.52 to 4.15 (-O2), 3.38 to 4.06 (-O3) | 5.16 to 5.34 (-O2), 4.51 to 5.3 (-O3) |
+| `sub`, 2 limbs, N = 80 | 0.07 to 1.32 (-O2), -0.63 to 0.29 (-O3) | 3.11 to 5.02 (-O2), -0.27 to 0.36 (-O3) | 3.5 to 4.95 (-O2), 4.43 to 4.75 (-O3) | 5.55 to 5.75 (-O2), 5.4 to 5.62 (-O3) |
+| `scale`, 1 limb, N = 3 | 5.73 to 6.24 (-O2), 5.43 to 5.82 (-O3) | -0.745 to 0.048 (-O2), 0.727 to 0.797 (-O3) | 2.73 to 2.8 (-O2), 2.13 to 2.29 (-O3) | 2.46 to 2.47 (-O2), -0.011 to 2.48 (-O3) |
+| `scale`, 1 limb, N = 7 | 5.67 to 6.39 (-O2), 5.39 to 5.97 (-O3) | -0.533 to 0.06 (-O2), 0.621 to 0.652 (-O3) | 2.54 to 2.58 (-O2), 2.23 to 2.25 (-O3) | 2.36 to 2.39 |
+| `scale`, 1 limb, N = 13 | 5.38 to 5.94 (-O2), 5.11 to 5.58 (-O3) | -0.038 to 0.036 (-O2), 0.313 to 0.363 (-O3) | 2.74 to 2.9 (-O2), 2.53 to 4.52 (-O3) | 2.98 to 3.01 (-O2), -0.75 to 2.9 (-O3) |
+| `scale`, 1 limb, N = 18 | -0.02 to 0.33 (-O2), 0.582 to 0.802 (-O3) | -0.123 to -0.044 (-O2), 0.031 to 0.09 (-O3) | 1.34 to 2.42 (-O2), 2.92 to 2.99 (-O3) | 2.86 to 2.95 |
+| `scale`, 1 limb, N = 80 | 0.35 to 0.56 (-O2), -1.01 to -0.97 (-O3) | 0.45 to 0.78 (-O2), -0.58 to -0.23 (-O3) | 3.88 to 4.08 (-O2), 3.75 to 4.16 (-O3) | 3.26 to 3.34 (-O2), 2.62 to 20.3 (-O3) |
+| `scale`, 2 limbs, N = 3 | 6.44 to 7.23 (-O2), 6.85 to 7.48 (-O3) | 0.146 to 0.413 (-O2), -0.401 to 1.15 (-O3) | 2.24 to 2.31 (-O2), -5.05 to -0.67 (-O3) | 2.72 to 2.77 |
+| `scale`, 2 limbs, N = 7 | 6.69 to 6.72 (-O2), 6.13 to 6.72 (-O3) | -0.107 to 0.044 (-O2), -0.014 to 0.125 (-O3) | 2.71 to 3.16 (-O2), -3.8 to -3.67 (-O3) | 2.07 to 2.09 |
+| `scale`, 2 limbs, N = 13 | 0.672 to 0.797 (-O2), 0.093 to 0.95 (-O3) | -0.135 to -0.084 (-O2), -0.1 to -0.03 (-O3) | 2.6 to 2.64 (-O2), -4.47 to -4.4 (-O3) | 3.45 to 6.96 (-O2), 3.46 to 3.55 (-O3) |
+| `scale`, 2 limbs, N = 18 | 0.138 to 0.268 (-O2), -0.257 to 0.386 (-O3) | 0.03 to 0.25 (-O2), -0.99 to -0.88 (-O3) | 2.33 to 2.57 (-O2), -3.82 to -2.93 (-O3) | 1.82 to 3.58 (-O2), 1.88 to 1.92 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.03 to 1.03 (-O2), -0.73 to 0.02 (-O3) | -0.17 to 0.34 (-O2), -1.13 to -0.56 (-O3) | 2.58 to 3.09 (-O2), -0.42 to -0.12 (-O3) | 1.67 to 1.78 (-O2), 1.64 to 1.79 (-O3) |
+| `half`, 1 limb, N = 3 | 0.66 to 1.56 (-O2), 0.77 to 1.63 (-O3) | -0.002 to 0.036 (-O2), -0.378 to -0.263 (-O3) | 2.31 to 2.33 (-O2), 2.43 to 2.51 (-O3) | 0.42 to 0.44 (-O2), 0.31 to 0.33 (-O3) |
+| `half`, 1 limb, N = 7 | 1.09 to 1.24 (-O2), 0.5 to 1.37 (-O3) | -0.014 to 0.002 (-O2), 0.266 to 0.339 (-O3) | 2.11 to 2.23 (-O2), 2.43 to 2.5 (-O3) | 0.34 to 0.43 (-O2), 0.37 to 0.46 (-O3) |
+| `half`, 1 limb, N = 13 | -0.2 to 0.21 (-O2), -0.16 to 0.78 (-O3) | 0.129 to 0.147 (-O2), 0.133 to 0.136 (-O3) | 2.19 to 2.44 (-O2), 5.05 to 6.67 (-O3) | -0.21 to -0.17 (-O2), -0.29 to 0.23 (-O3) |
+| `half`, 1 limb, N = 18 | 0.76 to 0.8 (-O2), 0.32 to 1.27 (-O3) | 0.002 to 0.005 (-O2), -0.122 to 0.002 (-O3) | 2.19 to 2.85 (-O2), 2.57 to 2.81 (-O3) | -1.16 to -0.74 (-O2), -1.25 to -1.17 (-O3) |
+| `half`, 1 limb, N = 80 | 0.1 to 0.63 (-O2), -0.08 to 0.12 (-O3) | -0.18 to 0.13 (-O2), -1.71 to -1.08 (-O3) | 3.32 to 4 (-O2), 3.3 to 3.84 (-O3) | 5.7 to 5.99 (-O2), 5.21 to 6.03 (-O3) |
+| `half`, 2 limbs, N = 3 | 1.82 to 2.22 (-O2), 2 to 2.2 (-O3) | 0.797 to 0.869 (-O2), 0.033 to 0.128 (-O3) | 2.01 to 2.2 (-O2), -2.93 to -0.22 (-O3) | 0.67 to 0.69 (-O2), 0.48 to 0.85 (-O3) |
+| `half`, 2 limbs, N = 7 | -0.2 to 0.33 (-O2), -0.78 to 0.93 (-O3) | -0.32 to -0.262 (-O2), -0.063 to -0.001 (-O3) | 1.48 to 1.59 (-O2), 1.09 to 1.68 (-O3) | 2.36 to 2.42 (-O2), 2.36 to 2.75 (-O3) |
+| `half`, 2 limbs, N = 13 | -0.55 to -0.29 (-O2), -0.22 to 0.78 (-O3) | -0.27 to -0.26 (-O2), 0.13 (-O3) | 1.28 to 1.36 (-O2), 0.72 to 1.26 (-O3) | 2.45 to 2.54 (-O2), 2.32 to 2.49 (-O3) |
+| `half`, 2 limbs, N = 18 | 0.01 to 0.04 (-O2), 0.13 to 1.18 (-O3) | -0.01 to 0.31 (-O2), -0.3 to 0.01 (-O3) | 1.21 to 1.52 (-O2), 0.5 to 1.05 (-O3) | 2.27 to 3.69 (-O2), 2.42 to 2.45 (-O3) |
+| `half`, 2 limbs, N = 80 | -0.05 to 0.08 (-O2), -1.28 to 0.31 (-O3) | 0.01 to 2.12 (-O2), -3.54 to -0.19 (-O3) | 3.31 to 4.13 (-O2), 3.44 to 4.04 (-O3) | 5.7 to 5.85 (-O2), 5.57 to 5.91 (-O3) |
+| the constructor, 1 limb, N = 3 | -0.805 to -0.377 (-O2), -1.01 to -0.786 (-O3) | -0.586 to -0.438 (-O2), -0.144 to 0.196 (-O3) | 2.92 to 3.8 (-O2), 2.7 to 4.43 (-O3) | 3.64 to 3.69 |
+| the constructor, 1 limb, N = 7 | 0.019 to 0.564 (-O2), -0.103 to 0.625 (-O3) | -5.78 to -5.34 (-O2), -0.435 to -0.052 (-O3) | 4.59 to 4.72 (-O2), 4.33 to 5.8 (-O3) | 1.41 to 1.43 (-O2), 1.26 to 1.29 (-O3) |
+| the constructor, 1 limb, N = 13 | 3.95 to 4.58 (-O2), 3.59 to 3.96 (-O3) | -0.01 to 0.07 (-O2), 0.266 to 0.42 (-O3) | 2.72 to 2.81 (-O2), 3.78 to 3.83 (-O3) | 0.81 to 0.83 (-O2), 0.89 to 0.93 (-O3) |
+| the constructor, 1 limb, N = 18 | -0.16 to 0.05 (-O2), -1.07 to 0.58 (-O3) | -0.4 to 0.17 (-O2), -0.61 to 0.24 (-O3) | 2.37 to 3.02 (-O2), 2.02 to 2.59 (-O3) | -0.93 to -0.89 (-O2), 0 to 0.9 (-O3) |
+| the constructor, 1 limb, N = 80 | -0.09 to 0.08 (-O2), -1.28 to 0.11 (-O3) | -5.5 to 4.2 (-O2), 0 to 13.9 (-O3) | 3.4 to 3.8 (-O2), 3.7 to 4.1 (-O3) | 0.89 to 12.9 (-O2), 2.5 to 3.84 (-O3) |
+| the constructor, 2 limbs, N = 3 | -0.037 to 0.095 (-O2), -0.245 to -0.123 (-O3) | -0.079 to 0.054 (-O2), 0.074 to 0.424 (-O3) | 5.08 to 5.46 (-O2), 6.63 to 8.67 (-O3) | 1.09 to 1.12 (-O2), 0.97 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 7 | 2.17 to 2.31 (-O2), 2.12 to 2.3 (-O3) | -0.09 to 0.02 (-O2), -0.65 to -0.36 (-O3) | 2.57 to 3.41 (-O2), 6.4 to 6.87 (-O3) | 0.26 to 0.34 (-O2), 0.76 to 0.78 (-O3) |
+| the constructor, 2 limbs, N = 13 | 2.57 to 3.08 (-O2), -0.1 to 0.26 (-O3) | -0.16 to 0.19 (-O2), -1.02 to -0.89 (-O3) | 1.72 to 2.03 (-O2), 5.88 to 6.32 (-O3) | -0.65 to -0.57 (-O2), -0.46 to 1.95 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.23 to 0.28 (-O2), 0.36 to 1.45 (-O3) | -0.32 to -0.02 (-O2), 0.1 to 2.61 (-O3) | 6.86 to 7.3 (-O2), -14.8 to -14.5 (-O3) | 2.21 to 7.12 (-O2), -1.18 to 2.44 (-O3) |
+| the constructor, 2 limbs, N = 80 | 2 to 2.35 (-O2), -0.32 to 0.14 (-O3) | -0.1 to 13 (-O2), -4.4 to -0.5 (-O3) | 1.9 to 5.2 (-O2), -1.4 to -0.5 (-O3) | 1 to 2.2 (-O2), 0.5 to 2.1 (-O3) |
 
 | Short ball vectors before 2026-11-23, measured again, every size in one unit, a dependent chain: the check, ns per operation (the header before minus without) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | -0.31 to 0.22 (-O2), 0.46 to 0.73 (-O3) | -1.54 to -1.25 (-O2), -1.01 to -0.347 (-O3) | 2.7 to 2.78 (-O2), 2.31 to 2.5 (-O3) | -0.206 to -0.098 (-O2), -0.229 to -0.206 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 7 | -0.19 to 0.29 (-O2), 0.01 to 0.58 (-O3) | -0.109 to -0.075 (-O2), 0.059 to 0.181 (-O3) | 0.6 to 2.41 (-O2), 1.99 to 2.07 (-O3) | 0.677 to 0.702 (-O2), 0.651 to 3.27 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | -5.28 to -5.2 (-O2), -5.79 to -5.74 (-O3) | -0.048 to -0.037 (-O2), 0.396 to 0.712 (-O3) | 2.37 to 2.85 (-O2), 2.28 to 2.31 (-O3) | 1.42 to 1.46 |
-| `add(x, y, z)`, 1 limb, N = 18 | -0.146 to 0.004 (-O2), -0.015 to 0.379 (-O3) | 0.03 to 0.221 (-O2), 0.525 to 0.722 (-O3) | 1.69 to 1.72 (-O2), 1.15 to 1.93 (-O3) | 1.73 to 1.78 |
-| `add(x, y, z)`, 1 limb, N = 80 | -0.63 to 0.85 (-O2), -0.28 to 0.94 (-O3) | 0.93 to 1.65 (-O2), -0.3 to 0.92 (-O3) | 4.33 to 4.53 (-O2), 4.18 to 4.47 (-O3) | 3.39 to 3.52 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.1 to 0.41 (-O2), 0.18 to 0.5 (-O3) | 0.098 to 0.34 (-O2), 0.995 to 1.25 (-O3) | 2.9 to 3.02 | 2.06 to 2.09 (-O2), 2.08 to 2.19 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | -0.02 to 0.23 (-O2), -0.09 to 0.57 (-O3) | -0.18 to 0.29 (-O2), 0.04 to 0.27 (-O3) | 2.32 to 2.57 (-O2), 1.74 to 2.69 (-O3) | 1.91 to 1.97 (-O2), 1.8 to 2.08 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 13 | -0.41 to -0.17 (-O2), -0.37 to 0.32 (-O3) | 0.01 to 0.42 (-O2), -0.42 to 0 (-O3) | 2.24 to 2.4 (-O2), 2.38 to 3.16 (-O3) | 2.41 to 2.55 (-O2), 2.35 to 2.6 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 18 | 0.32 to 0.6 (-O2), 0.2 to 1.02 (-O3) | 0.87 to 1.38 (-O2), 0.42 to 0.96 (-O3) | 3.69 to 5.97 (-O2), 3.85 to 5.57 (-O3) | 3.84 to 4.24 (-O2), 4.2 to 4.49 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.52 to 1.07 (-O2), -0.67 to 1.89 (-O3) | -0.02 to 1.92 (-O2), -0.26 to 1.21 (-O3) | 3.97 to 4.32 (-O2), 4.33 to 4.69 (-O3) | 4.99 to 5.36 (-O2), 5.01 to 5.52 (-O3) |
-| `z = x + y`, 1 limb, N = 3 | -0.07 to 1.66 (-O2), -0.19 to 0.98 (-O3) | -0.11 to 0.09 (-O2), -0.15 to 0.04 (-O3) | -0.2 to 0.25 (-O2), -0.39 to 0.01 (-O3) | 0.13 to 0.15 (-O2), 0.1 to 0.16 (-O3) |
-| `z = x + y`, 1 limb, N = 7 | -0.69 to 1.13 (-O2), 0.03 to 0.89 (-O3) | -0.03 to 0.1 (-O2), -1.47 to -1.05 (-O3) | -4.88 to 3.75 (-O2), -0.55 to -0.14 (-O3) | 0.16 to 0.2 (-O2), 0.11 to 0.17 (-O3) |
-| `z = x + y`, 1 limb, N = 13 | -0.39 to 0.07 (-O2), -0.22 to 0.91 (-O3) | -0.64 to -0.01 (-O2), -1.43 to -1.12 (-O3) | -0.16 to -0.12 (-O2), -0.01 to 11.8 (-O3) | -0.04 to 0.02 (-O2), -0.1 to -0.02 (-O3) |
-| `z = x + y`, 1 limb, N = 18 | -0.25 to 0 (-O2), 0 to 0.49 (-O3) | -0.08 to 0.36 (-O2), 0.16 to 0.5 (-O3) | -3.9 to 1.21 (-O2), -3.21 to 6.02 (-O3) | 0.2 to 0.28 (-O2), 0.23 to 0.27 (-O3) |
-| `z = x + y`, 1 limb, N = 80 | 0.73 to 1.78 (-O2), -1.03 to -0.31 (-O3) | -0.08 to 0.52 (-O2), 0.03 to 0.62 (-O3) | 2.4 to 3.5 (-O2), 2.66 to 2.71 (-O3) | 0.34 to 5.85 (-O2), -0.63 to 3.67 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | -0.09 to 0.79 (-O2), 0.01 to 0.7 (-O3) | -0.07 to 0.21 (-O2), 0.1 to 0.67 (-O3) | 1.13 to 4.44 (-O2), -4.3 to -0.32 (-O3) | -0.77 to 2.29 (-O2), 0.49 to 2.54 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | -0.01 to 0.39 (-O2), -0.02 to 0.37 (-O3) | -0.17 to 0.04 (-O2), -0.17 to 0.31 (-O3) | 0.61 to 1.24 (-O2), -11.9 to 4.17 (-O3) | 0.45 to 1.29 (-O2), 0.66 to 1.17 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | -0.51 to 0.17 (-O2), -0.24 to -0.08 (-O3) | -1.02 to -0.56 (-O2), 0.54 to 1.02 (-O3) | 0.3 to 1.04 (-O2), 0.85 to 1.49 (-O3) | -3.32 to 4.04 (-O2), -7.23 to 8.6 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | -0.51 to 0.17 (-O2), -1.72 to 0.05 (-O3) | -0.18 to -0.06 (-O2), 0.11 to 0.67 (-O3) | 0.22 to 0.81 (-O2), 0.45 to 1.28 (-O3) | -3.65 to 2.46 (-O2), -0.65 to 3.04 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | -0.9 to 0.3 (-O2), -1.1 to 2.6 (-O3) | 0.2 to 2.9 (-O2), 0.1 to 2.2 (-O3) | 2 to 3.9 (-O2), 0.6 to 1.9 (-O3) | 2.2 to 5.9 (-O2), -0.9 to 7.6 (-O3) |
-| `sub`, 1 limb, N = 3 | -0.01 to 0.07 (-O2), -0.04 to 0.32 (-O3) | -1.02 to -0.726 (-O2), 0.447 to 1.04 (-O3) | 2.51 to 2.59 (-O2), 3.23 to 3.24 (-O3) | -0.209 to -0.1 (-O2), -0.255 to -0.234 (-O3) |
-| `sub`, 1 limb, N = 7 | -0.14 to 0.31 (-O2), 0.03 to 0.43 (-O3) | -0.22 to -0.203 (-O2), 1.23 to 1.34 (-O3) | 0.6 to 2.14 (-O2), 1.26 to 1.38 (-O3) | 0.662 to 0.7 (-O2), 0.639 to 3.26 (-O3) |
-| `sub`, 1 limb, N = 13 | -4.79 to -4.29 (-O2), -5.01 to -4.17 (-O3) | -0.185 to -0.149 (-O2), 2.77 to 2.99 (-O3) | 2.26 to 2.83 (-O2), 1.51 to 1.58 (-O3) | 1.4 to 1.44 |
-| `sub`, 1 limb, N = 18 | -1.02 to 0.751 (-O2), -0.131 to 0.298 (-O3) | -0.059 to 0.135 (-O2), 2.57 to 2.71 (-O3) | 1.5 to 1.56 (-O2), 0.78 to 1.84 (-O3) | 1.74 to 1.78 |
-| `sub`, 1 limb, N = 80 | -0.67 to 0.65 (-O2), -0.84 to 0.27 (-O3) | -0.23 to 0.98 (-O2), 0.91 to 1.99 (-O3) | 4.17 to 4.35 (-O2), 5.14 to 5.17 (-O3) | 3.57 to 3.64 (-O2), 3.4 to 3.51 (-O3) |
-| `sub`, 2 limbs, N = 3 | -0.28 to 0.64 (-O2), -0.63 to 0.24 (-O3) | -0.028 to 1.71 (-O2), -0.245 to 0.102 (-O3) | 2.63 to 2.8 (-O2), 1.95 to 2.08 (-O3) | 2.58 to 2.7 |
-| `sub`, 2 limbs, N = 7 | -0.15 to 0.32 (-O2), 0.21 to 0.63 (-O3) | 0.02 to 0.06 (-O2), -0.13 to 0.04 (-O3) | 1.82 to 2.1 (-O2), 2.09 to 2.16 (-O3) | 2.7 to 2.83 (-O2), 2.89 to 3.05 (-O3) |
-| `sub`, 2 limbs, N = 13 | -0.4 to 0.03 (-O2), -0.1 to 0.57 (-O3) | 0.41 to 0.53 (-O2), 0.24 to 0.3 (-O3) | 1.99 to 2.32 (-O2), 1.8 to 1.88 (-O3) | 3.17 to 3.3 (-O2), 3.08 to 3.43 (-O3) |
-| `sub`, 2 limbs, N = 18 | 0.17 to 0.23 (-O2), -0.15 to 0.75 (-O3) | 0.57 to 0.85 (-O2), 0.3 to 0.54 (-O3) | 3.08 to 5.53 (-O2), 3.37 to 4.55 (-O3) | 4.1 to 4.52 (-O2), 4.06 to 4.46 (-O3) |
-| `sub`, 2 limbs, N = 80 | 0.07 to 0.33 (-O2), 0 to 3.96 (-O3) | 0.83 to 2.98 (-O2), -1.29 to 1.93 (-O3) | 3.92 to 4.88 (-O2), 4.74 to 4.91 (-O3) | 5.14 to 5.34 (-O2), 5.03 to 5.48 (-O3) |
-| `scale`, 1 limb, N = 3 | 5.93 to 6.37 (-O2), 5.93 to 5.96 (-O3) | -0.663 to 1.07 (-O2), -0.501 to 0.984 (-O3) | 2.65 to 2.7 (-O2), 2.21 to 2.53 (-O3) | 2.51 to 2.56 |
-| `scale`, 1 limb, N = 7 | 6.71 to 7.13 (-O2), 6.83 to 7.26 (-O3) | 0.403 to 0.789 (-O2), -0.168 to 0.065 (-O3) | 1.45 to 2.73 (-O2), 2.54 to 2.91 (-O3) | 2.52 to 2.57 (-O2), 2.51 to 5.27 (-O3) |
-| `scale`, 1 limb, N = 13 | 4.47 to 5.87 (-O2), 4.49 to 4.91 (-O3) | 1.35 to 1.42 (-O2), 0.173 to 0.418 (-O3) | 2.68 to 3.35 (-O2), 2.72 to 3.02 (-O3) | 2.54 to 2.62 |
-| `scale`, 1 limb, N = 18 | -0.175 to 0.159 (-O2), 0.606 to 0.948 (-O3) | 1.86 to 2.1 (-O2), 0.311 to 0.521 (-O3) | 2.29 to 2.49 (-O2), 2.52 to 3.08 (-O3) | 2.88 to 2.99 |
-| `scale`, 1 limb, N = 80 | -0.43 to 0.75 (-O2), -1.71 to -1.02 (-O3) | 2.49 to 3.39 (-O2), 0.52 to 1.29 (-O3) | 3.19 to 3.3 (-O2), 4.03 to 4.14 (-O3) | 3.31 to 3.44 (-O2), 2.04 to 4.69 (-O3) |
-| `scale`, 2 limbs, N = 3 | 6.51 to 6.96 (-O2), 6.56 to 6.84 (-O3) | -1.33 to -0.065 (-O2), 1.13 to 2.26 (-O3) | 2.52 to 3.67 (-O2), 1.8 to 1.81 (-O3) | 2.78 to 2.8 (-O2), 2.65 to 2.66 (-O3) |
-| `scale`, 2 limbs, N = 7 | 0.165 to 1.77 (-O2), 0.558 to 0.703 (-O3) | 0.032 to 0.062 (-O2), 0.295 to 0.495 (-O3) | 2.62 to 2.81 (-O2), 0.42 to 0.52 (-O3) | 4.22 to 4.32 |
-| `scale`, 2 limbs, N = 13 | 0.153 to 0.265 (-O2), 1.07 to 1.23 (-O3) | 0.03 to 0.101 (-O2), 0.36 to 0.59 (-O3) | 2.9 to 2.99 (-O2), 0.76 to 1.31 (-O3) | 3.35 to 3.36 (-O2), 1.16 to 3.29 (-O3) |
-| `scale`, 2 limbs, N = 18 | -0.013 to 0.137 (-O2), 0.558 to 0.856 (-O3) | -0.17 to 0.14 (-O2), -1.03 to -0.8 (-O3) | 2.25 to 2.42 (-O2), 1.02 to 1.03 (-O3) | -0.37 to 1.7 (-O2), 1.73 to 4.31 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.59 to 1.07 (-O2), -0.11 to 0.75 (-O3) | 0.04 to 0.7 (-O2), 0.23 to 1.16 (-O3) | 3.22 to 3.42 (-O2), 0.65 to 0.78 (-O3) | 1.72 to 1.81 (-O2), 1.73 to 1.79 (-O3) |
-| `half`, 1 limb, N = 3 | 0.58 to 1.09 (-O2), 1.11 to 1.58 (-O3) | 0.529 to 0.678 (-O2), 0.128 to 0.231 (-O3) | 2.41 to 2.66 (-O2), 4.41 to 4.46 (-O3) | 1.04 to 1.09 (-O2), 0.97 to 1.03 (-O3) |
-| `half`, 1 limb, N = 7 | 0.09 to 1.34 (-O2), 0.07 to 0.67 (-O3) | 0.53 to 0.541 (-O2), 0.266 to 0.389 (-O3) | 1.71 to 2.66 (-O2), 4.16 to 4.47 (-O3) | 0.38 to 0.56 (-O2), 0.33 to 0.69 (-O3) |
-| `half`, 1 limb, N = 13 | -0.78 to -0.01 (-O2), 0.04 to 0.83 (-O3) | 0.529 to 0.548 (-O2), 0.53 to 0.686 (-O3) | 2.35 to 2.53 (-O2), 4.67 to 4.72 (-O3) | -0.21 to -0.07 (-O2), -0.09 to -0.01 (-O3) |
-| `half`, 1 limb, N = 18 | -0.64 to -0.07 (-O2), -0.3 to -0.21 (-O3) | 0.378 to 0.651 (-O2), 0.1 to 0.453 (-O3) | 2.91 to 2.96 (-O2), 4.26 to 4.63 (-O3) | -1 to -0.94 (-O2), -1.13 to 9.46 (-O3) |
-| `half`, 1 limb, N = 80 | 0.51 to 1.38 (-O2), -0.14 to 0.51 (-O3) | 0.36 to 1.31 (-O2), 0.8 to 1.52 (-O3) | 4.09 to 4.28 (-O2), 5.42 to 5.81 (-O3) | 6.15 to 6.29 (-O2), 5.61 to 5.9 (-O3) |
-| `half`, 2 limbs, N = 3 | 1.23 to 1.86 (-O2), 0.86 to 1.69 (-O3) | 0.842 to 1.7 (-O2), 1.26 to 1.39 (-O3) | 1.84 to 2.05 (-O2), 2.07 to 2.21 (-O3) | 0.69 to 0.84 (-O2), 0.56 to 0.63 (-O3) |
-| `half`, 2 limbs, N = 7 | -0.78 to -0.08 (-O2), -0.23 to 0.86 (-O3) | 1.98 to 2.12 (-O2), 0.611 to 0.96 (-O3) | 0.97 to 1.15 (-O2), 1.32 to 1.37 (-O3) | 2.28 to 2.43 (-O2), 2 to 2.04 (-O3) |
-| `half`, 2 limbs, N = 13 | -0.28 to 0.32 (-O2), 0.3 to 0.73 (-O3) | 1.69 to 1.84 (-O2), 1.21 to 1.44 (-O3) | 1.59 to 1.83 (-O2), 1.17 to 1.99 (-O3) | 2.61 to 2.69 (-O2), 2.34 to 3.21 (-O3) |
-| `half`, 2 limbs, N = 18 | -0.05 to 0.79 (-O2), 0.38 to 0.75 (-O3) | 1.82 to 1.9 (-O2), 1.59 to 1.88 (-O3) | 1.12 to 1.36 (-O2), 1.13 to 1.23 (-O3) | 2.36 to 2.71 (-O2), 2.34 to 2.53 (-O3) |
-| `half`, 2 limbs, N = 80 | -0.03 to 0.28 (-O2), 0.71 to 1.42 (-O3) | 1.61 to 1.75 (-O2), -5.78 to -4.62 (-O3) | 4.23 to 5.63 (-O2), 3.14 to 3.72 (-O3) | 5.46 to 5.75 (-O2), 5.32 to 5.84 (-O3) |
-| the constructor, 1 limb, N = 3 | 4.47 to 6.72 (-O2), 4.77 to 6.74 (-O3) | -1.47 to -1.25 (-O2), -2.05 to -1.95 (-O3) | 2.74 to 3.95 (-O2), 4.84 to 5.11 (-O3) | 19.6 to 19.7 |
-| the constructor, 1 limb, N = 7 | 11.3 to 12.2 (-O2), 10.8 to 12.2 (-O3) | -7.06 to -6.2 (-O2), 3.2 to 3.39 (-O3) | 4.41 to 4.83 (-O2), 7.66 to 7.94 (-O3) | 16.9 to 18.1 (-O2), 17 to 18.9 (-O3) |
-| the constructor, 1 limb, N = 13 | 14.6 to 15 (-O2), 14.3 to 15.4 (-O3) | 0.01 to 0.04 (-O2), 12 to 12.4 (-O3) | 2.63 to 2.87 (-O2), 8.73 to 8.79 (-O3) | 12.4 to 13 |
-| the constructor, 1 limb, N = 18 | -1.38 to -0.63 (-O2), 9.4 to 10.5 (-O3) | -0.57 to 1.14 (-O2), 1.79 to 2.33 (-O3) | 2.58 to 3 (-O2), 5.96 to 6.14 (-O3) | 2.68 to 3.33 (-O2), 4.68 to 5.45 (-O3) |
-| the constructor, 1 limb, N = 80 | -2.59 to -0.9 (-O2), 2.5 to 3.38 (-O3) | 0.8 to 6.4 (-O2), 0.9 to 8.9 (-O3) | -1.7 to 0.1 (-O2), 3.6 to 3.8 (-O3) | 2.13 to 5.86 (-O2), 1.53 to 6.04 (-O3) |
-| the constructor, 2 limbs, N = 3 | 9.66 to 9.77 (-O2), 8.82 to 9.97 (-O3) | -0.567 to -0.458 (-O2), 0.364 to 0.374 (-O3) | 4.86 to 5.82 (-O2), 6.16 to 6.91 (-O3) | 12.5 to 17.4 (-O2), 16.2 to 17.5 (-O3) |
-| the constructor, 2 limbs, N = 7 | 10.4 to 11.3 (-O2), 5.16 to 10.3 (-O3) | -0.02 to 0.08 (-O2), 6.88 to 7.23 (-O3) | 2.45 to 3.25 (-O2), 8.67 to 9.41 (-O3) | 5.46 to 9.27 (-O2), 7.92 to 9.29 (-O3) |
-| the constructor, 2 limbs, N = 13 | -1.23 to -0.8 (-O2), -3.38 to -2.97 (-O3) | -0.17 to 0.52 (-O2), 14 to 14.5 (-O3) | 0.53 to 1.38 (-O2), 9.82 to 10.4 (-O3) | 0.58 to 3.3 (-O2), -5.47 to -3.7 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.16 to 0.92 (-O2), -5.82 to -5.09 (-O3) | -1.73 to -0.03 (-O2), -0.51 to 0.91 (-O3) | 1.72 to 2.72 (-O2), -13 (-O3) | -1 to 5.41 (-O2), -15.7 to -12.7 (-O3) |
-| the constructor, 2 limbs, N = 80 | 1.35 to 4.1 (-O2), 0.29 to 1.81 (-O3) | -0.2 to 5.5 (-O2), -0.1 to 5.3 (-O3) | 0.1 to 3 (-O2), -1.7 to -0.7 (-O3) | -2.8 to 1.7 (-O2), 0.3 to 4.4 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 3 | -0.07 to -0.01 (-O2), 0.03 to 0.46 (-O3) | -1.64 to -1.17 (-O2), -1.06 to -0.356 (-O3) | 2.7 to 2.72 (-O2), 2.23 to 2.29 (-O3) | -0.193 to -0.173 (-O2), -0.211 to -0.186 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 7 | -0.16 to 0.01 (-O2), -0.26 to 0.01 (-O3) | -0.272 to 0.161 (-O2), 0.016 to 0.146 (-O3) | 2.25 to 2.36 (-O2), 1.92 to 2 (-O3) | 0.833 to 0.861 (-O2), 0.822 to 0.943 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 13 | -5.67 to -5.11 (-O2), -5.16 to -5.12 (-O3) | -0.387 to 0.05 (-O2), 0.545 to 0.671 (-O3) | 1.96 to 2.37 (-O2), 2.31 to 2.35 (-O3) | 1.42 to 1.45 (-O2), -0.3 to 1.47 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 18 | 0.006 to 0.3 (-O2), -0.305 to 0.004 (-O3) | -0.216 to 0.253 (-O2), 0.515 to 0.728 (-O3) | 0.53 to 1.64 (-O2), 1.92 to 2 (-O3) | 1.77 to 4.7 (-O2), 1.79 to 1.95 (-O3) |
+| `add(x, y, z)`, 1 limb, N = 80 | 0.02 to 0.11 (-O2), -0.33 to -0.06 (-O3) | 0.86 to 1.92 (-O2), -0.03 to 0.25 (-O3) | 3.59 to 4.59 (-O2), 4.24 to 4.35 (-O3) | 3.59 to 3.67 (-O2), 3.33 to 3.39 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | 0.01 to 0.34 (-O2), -0.27 to 0.5 (-O3) | -0.486 to 0.14 (-O2), 0.55 to 1.03 (-O3) | -0.75 to 2.9 (-O2), 2.85 to 2.93 (-O3) | 2.11 to 2.21 |
+| `add(x, y, z)`, 2 limbs, N = 7 | -0.11 to 0.05 (-O2), -0.23 to 0.04 (-O3) | -0.54 to 0.21 (-O2), 0.02 to 0.24 (-O3) | 0.13 to 2.49 (-O2), 2.66 to 2.75 (-O3) | 1.88 to 1.97 (-O2), 1.59 to 1.82 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 13 | -0.01 to 0.04 (-O2), -0.31 to -0.12 (-O3) | -0.81 to 0.21 (-O2), -1.31 to -0.4 (-O3) | -0.2 to 2.55 (-O2), 2.44 to 3.11 (-O3) | 2.31 to 2.62 (-O2), 2.2 to 2.44 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.05 to 0.23 (-O2), 0.16 to 0.26 (-O3) | 0.27 to 1.11 (-O2), 0.38 to 0.74 (-O3) | 1.46 to 5.66 (-O2), 4.7 to 6.35 (-O3) | 4.2 to 4.51 (-O2), 3.87 to 4.63 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 80 | -0.04 to 0.71 (-O2), -1.87 to -0.18 (-O3) | -3.36 to 1.67 (-O2), -2.93 to -0.45 (-O3) | 3.57 to 6.21 (-O2), 5.09 to 5.34 (-O3) | 4.26 to 4.65 (-O2), 4.13 to 4.73 (-O3) |
+| `z = x + y`, 1 limb, N = 3 | 0.6 to 1.71 (-O2), -0.86 to 0.83 (-O3) | -0.46 to 0.16 (-O2), -3.38 to -0.39 (-O3) | -7.84 to 0.07 (-O2), -0.23 to 0.2 (-O3) | 0.15 to 0.17 (-O2), 0.15 to 0.18 (-O3) |
+| `z = x + y`, 1 limb, N = 7 | 0.01 to 0.25 (-O2), -0.51 to 0.59 (-O3) | -0.89 to 0.31 (-O2), -1.67 to -1.41 (-O3) | -0.27 to 0.13 (-O2), -0.57 to -0.28 (-O3) | -0.05 to -0.01 (-O2), -0.11 to 0 (-O3) |
+| `z = x + y`, 1 limb, N = 13 | -0.53 to 0.43 (-O2), -0.5 to 0.57 (-O3) | -1.1 to -0.3 (-O2), -1.57 to -1.32 (-O3) | -0.53 to 0.26 (-O2), 0.12 to 0.24 (-O3) | -0.02 to 0.01 (-O2), -0.07 to 0.02 (-O3) |
+| `z = x + y`, 1 limb, N = 18 | -0.21 to 0.32 (-O2), -0.13 to 0.06 (-O3) | -0.65 to 0.27 (-O2), 0.22 to 0.24 (-O3) | -3.96 to -3.8 (-O2), -3.37 to -0.53 (-O3) | 0.28 to 0.31 (-O2), 0.08 to 0.29 (-O3) |
+| `z = x + y`, 1 limb, N = 80 | 0.77 to 0.86 (-O2), -0.76 to -0.49 (-O3) | -2.05 to -0.06 (-O2), -1.09 to -0.02 (-O3) | 4.12 to 4.64 (-O2), 3.73 to 4.52 (-O3) | 0.82 to 8.98 (-O2), -2.61 to 14.8 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 0.12 to 0.77 (-O2), -1.48 to 0.49 (-O3) | -0.41 to 0.14 (-O2), -0.4 to -0.01 (-O3) | 0.23 to 1.29 (-O2), -4.83 to -0.12 (-O3) | -0.73 to 0.83 (-O2), -6.68 to 1.03 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | 0.06 to 0.08 (-O2), -0.05 to 0.39 (-O3) | -0.49 to 0.28 (-O2), -0.79 to 0.02 (-O3) | -0.09 to 0.24 (-O2), -3.97 to -0.34 (-O3) | -1.93 to 0.95 (-O2), -1.88 to 8.24 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 0.09 to 0.13 (-O2), -0.21 to 0.18 (-O3) | -1.56 to -0.29 (-O2), 1 to 1.6 (-O3) | 0.37 to 0.74 (-O2), 0.44 to 1.59 (-O3) | -3.38 to 0.51 (-O2), -4.9 to 0.96 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | -1.88 to -0.7 (-O2), -1.61 to -0.5 (-O3) | -0.65 to 0.33 (-O2), 0.12 to 0.63 (-O3) | -0.07 to 0.2 (-O2), -0.56 to 0.33 (-O3) | -3.32 to 2.76 (-O2), -3 to 1.49 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | 0.2 to 1.5 (-O2), -1.9 to -1 (-O3) | -1.8 to 2 (-O2), -0.8 to 0.1 (-O3) | 1.9 to 8 (-O2), 1.3 to 3.2 (-O3) | 1.1 to 6.6 (-O2), -0.9 to 7.2 (-O3) |
+| `sub`, 1 limb, N = 3 | -0.06 to 0.18 (-O2), -1.31 to 0.86 (-O3) | -1.85 to -1.44 (-O2), -0.352 to -0.337 (-O3) | 2.51 to 2.54 (-O2), 3.2 to 3.23 (-O3) | -0.191 to -0.187 (-O2), -0.242 to -0.206 (-O3) |
+| `sub`, 1 limb, N = 7 | 0.08 to 0.32 (-O2), -0.09 to 0.95 (-O3) | -0.118 to 0.015 (-O2), 0.046 to 0.053 (-O3) | 2.05 to 2.17 (-O2), 1.23 to 1.35 (-O3) | 0.8 to 0.857 (-O2), 0.831 to 0.976 (-O3) |
+| `sub`, 1 limb, N = 13 | -5.32 to -3.55 (-O2), -5.17 to -3.51 (-O3) | -0.313 to 0.126 (-O2), 0.073 to 0.387 (-O3) | 1.91 to 2.38 (-O2), 1.57 to 1.58 (-O3) | 1.42 to 1.43 (-O2), -0.3 to 1.45 (-O3) |
+| `sub`, 1 limb, N = 18 | -0.854 to -0.27 (-O2), -1.09 to 0.445 (-O3) | -0.218 to 0.278 (-O2), 0.417 to 0.532 (-O3) | 0.47 to 1.47 (-O2), 1.83 to 1.86 (-O3) | 1.77 to 4.67 (-O2), 1.79 to 1.92 (-O3) |
+| `sub`, 1 limb, N = 80 | -0.05 to 0.08 (-O2), -0.36 to -0.09 (-O3) | 0.55 to 0.84 (-O2), 0.09 to 0.44 (-O3) | 3.47 to 4.31 (-O2), 3.38 to 3.52 (-O3) | 3.35 to 3.44 |
+| `sub`, 2 limbs, N = 3 | -1.05 to 0.96 (-O2), -0.23 to 1.52 (-O3) | -0.398 to 0.208 (-O2), -0.348 to 0.779 (-O3) | -0.94 to 2.75 (-O2), 1.94 to 2.01 (-O3) | 2.65 to 2.78 |
+| `sub`, 2 limbs, N = 7 | -0.09 to 0.1 (-O2), 0.13 to 0.56 (-O3) | -0.27 to 0.26 (-O2), 0 to 0.17 (-O3) | -0.17 to 2.03 (-O2), 2.05 to 2.13 (-O3) | 2.76 to 2.87 (-O2), 2.62 to 2.77 (-O3) |
+| `sub`, 2 limbs, N = 13 | -0.14 to 0.23 (-O2), -0.08 to -0.02 (-O3) | -0.57 to 0.66 (-O2), -0.04 to 0.29 (-O3) | -0.23 to 2.94 (-O2), 1.9 to 2.48 (-O3) | 2.99 to 3.24 (-O2), 3.2 to 3.36 (-O3) |
+| `sub`, 2 limbs, N = 18 | 0.05 to 0.47 (-O2), -0.59 to 0.04 (-O3) | 0.2 to 1.01 (-O2), 0.13 to 0.73 (-O3) | 0.71 to 4.75 (-O2), 3.9 to 4.51 (-O3) | 4.73 to 4.94 (-O2), 3.9 to 4.76 (-O3) |
+| `sub`, 2 limbs, N = 80 | -0.34 to 0.31 (-O2), -0.56 to 0.65 (-O3) | -0.54 to 2.43 (-O2), -1.45 to -0.36 (-O3) | 3.7 to 6.65 (-O2), 4.51 to 4.97 (-O3) | 5.74 to 6.14 (-O2), 5.61 to 6.15 (-O3) |
+| `scale`, 1 limb, N = 3 | 5.82 to 6.19 (-O2), 5.15 to 6.31 (-O3) | -1.53 to -0.549 (-O2), -0.133 to 0.048 (-O3) | 2.63 to 2.7 (-O2), 2.38 to 2.59 (-O3) | 2.46 to 2.51 (-O2), 0.047 to 2.54 (-O3) |
+| `scale`, 1 limb, N = 7 | 6.53 to 7.1 (-O2), 5.7 to 7.23 (-O3) | 0.161 to 0.534 (-O2), -0.282 to -0.14 (-O3) | 2.77 to 2.83 (-O2), 2.47 to 2.6 (-O3) | 2.37 to 2.4 |
+| `scale`, 1 limb, N = 13 | 3.79 to 4.81 (-O2), 4.34 to 4.87 (-O3) | 1.09 to 1.51 (-O2), 0.193 to 0.219 (-O3) | 2.53 to 2.69 (-O2), 2.63 to 2.85 (-O3) | 2.56 to 2.59 (-O2), -1.13 to 2.62 (-O3) |
+| `scale`, 1 limb, N = 18 | -0.018 to 0.33 (-O2), 0.582 to 0.802 (-O3) | 1.51 to 2.07 (-O2), 0.25 to 0.393 (-O3) | 1.37 to 2.41 (-O2), 2.93 to 3.09 (-O3) | 2.9 to 6.6 (-O2), 2.92 to 2.96 (-O3) |
+| `scale`, 1 limb, N = 80 | -0.22 to 0.2 (-O2), -1.03 to -1.01 (-O3) | 1.38 to 3.57 (-O2), 0.28 to 0.32 (-O3) | 3.08 to 3.23 (-O2), 3.79 to 4.15 (-O3) | 3.21 to 3.32 (-O2), 3.03 to 15 (-O3) |
+| `scale`, 2 limbs, N = 3 | 5.5 to 6.51 (-O2), 6.06 to 7.23 (-O3) | -0.419 to 0.088 (-O2), 0.659 to 2.32 (-O3) | 2.43 to 2.51 (-O2), -4.04 to -3.97 (-O3) | 2.77 to 2.79 (-O2), 2.6 to 2.67 (-O3) |
+| `scale`, 2 limbs, N = 7 | 0.516 to 0.544 (-O2), 0.498 to 0.916 (-O3) | -0.312 to 0.192 (-O2), 0.458 to 0.487 (-O3) | 2.74 to 2.78 (-O2), -3.76 to -3.71 (-O3) | 4.24 to 4.27 (-O2), 4.18 to 6.07 (-O3) |
+| `scale`, 2 limbs, N = 13 | 0.051 to 0.327 (-O2), 0.892 to 1.01 (-O3) | -0.38 to 0.213 (-O2), 0.1 to 0.12 (-O3) | 2.44 to 2.47 (-O2), -4.14 to -4.09 (-O3) | 3.21 to 7.03 (-O2), 3.22 to 3.25 (-O3) |
+| `scale`, 2 limbs, N = 18 | -0.05 to 0.083 (-O2), -0.004 to 0.65 (-O3) | -0.12 to 0.12 (-O2), -1.18 to -1.13 (-O3) | 2.39 to 2.43 (-O2), -3.72 to -2.8 (-O3) | 1.7 to 1.72 (-O2), 1.76 to 1.81 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.19 to 0.99 (-O2), -0.62 to 0.2 (-O3) | -1.16 to 0.87 (-O2), -1.09 to -0.21 (-O3) | 2.77 to 3.13 (-O2), -0.4 to -0.21 (-O3) | 1.59 to 1.74 (-O2), 1.69 to 1.73 (-O3) |
+| `half`, 1 limb, N = 3 | 1.03 to 1.3 (-O2), 0.36 to 2.01 (-O3) | 0.587 to 0.794 (-O2), 0.032 to 0.136 (-O3) | 2.51 to 2.54 (-O2), 4.24 to 4.26 (-O3) | 1.03 to 1.09 (-O2), 0.98 to 1.09 (-O3) |
+| `half`, 1 limb, N = 7 | 0.62 to 0.72 (-O2), -0.28 to 1.01 (-O3) | 0.552 to 0.902 (-O2), 0.236 to 0.342 (-O3) | 2.74 to 2.78 (-O2), 4.3 to 4.32 (-O3) | 0.47 to 0.55 (-O2), 0.34 to 0.47 (-O3) |
+| `half`, 1 limb, N = 13 | -1.13 to -0.83 (-O2), -0.33 to 1.29 (-O3) | 0.453 to 0.947 (-O2), 0.532 to 0.542 (-O3) | 2.35 to 2.46 (-O2), 4.54 to 4.67 (-O3) | -0.08 to -0.03 (-O2), -0.06 to 0.42 (-O3) |
+| `half`, 1 limb, N = 18 | -0.65 to -0.38 (-O2), 0.07 to 0.34 (-O3) | 0.41 to 0.984 (-O2), 0.145 to 0.275 (-O3) | 2.28 to 2.92 (-O2), 4.52 to 4.63 (-O3) | -0.9 to -0.66 (-O2), -1.06 to -0.98 (-O3) |
+| `half`, 1 limb, N = 80 | 0.42 to 1 (-O2), -0.11 to 0.1 (-O3) | -1.06 to 1.14 (-O2), -0.3 to 0.41 (-O3) | 3.81 to 4.21 (-O2), 4.75 to 5.18 (-O3) | 5.88 to 6.28 (-O2), 5.66 to 6.07 (-O3) |
+| `half`, 2 limbs, N = 3 | 1.15 to 1.5 (-O2), 0.73 to 1.84 (-O3) | 1.09 to 1.46 (-O2), 1.24 to 1.32 (-O3) | 2.27 to 2.46 (-O2), -2.36 to 0.22 (-O3) | 0.6 to 0.61 (-O2), 0.22 to 0.52 (-O3) |
+| `half`, 2 limbs, N = 7 | -0.41 to 0.02 (-O2), -0.25 to 1.2 (-O3) | 0.422 to 0.843 (-O2), 1.01 to 1.06 (-O3) | 1.09 to 1.15 (-O2), 1.27 to 1.33 (-O3) | 2.18 to 2.24 |
+| `half`, 2 limbs, N = 13 | 0.06 to 0.25 (-O2), -0.39 to 1.23 (-O3) | 0.01 to 0.78 (-O2), 0.97 to 1.06 (-O3) | 1.82 to 1.94 (-O2), 1.15 to 1.19 (-O3) | 2.47 to 2.61 (-O2), 2.41 to 2.51 (-O3) |
+| `half`, 2 limbs, N = 18 | 0 to 0.28 (-O2), 0.08 to 0.35 (-O3) | 0.48 to 1.09 (-O2), 1.18 to 1.46 (-O3) | 0.94 to 1.13 (-O2), 0.49 to 1.64 (-O3) | 2.4 to 2.58 (-O2), 2.53 to 2.55 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.16 to 0.48 (-O2), -0.73 to 0.55 (-O3) | 0.8 to 1.76 (-O2), -1.44 to 1.12 (-O3) | 4.03 to 4.17 (-O2), 4.06 to 4.47 (-O3) | 6.35 to 6.71 (-O2), 6.14 to 6.55 (-O3) |
+| the constructor, 1 limb, N = 3 | 4.4 to 6.32 (-O2), 3.83 to 4.82 (-O3) | -1.75 to -1.22 (-O2), -2.07 to -1.98 (-O3) | 2.69 to 2.94 (-O2), 4.85 to 5.14 (-O3) | 19.6 to 19.8 |
+| the constructor, 1 limb, N = 7 | 11.2 to 12.1 (-O2), 10.1 to 10.8 (-O3) | -7.29 to -6.7 (-O2), 3.03 to 3.45 (-O3) | 4.41 to 4.52 (-O2), 7.53 to 7.95 (-O3) | 17 to 18.8 (-O2), 17 to 18.1 (-O3) |
+| the constructor, 1 limb, N = 13 | 13.1 to 14.3 (-O2), 14.1 to 14.6 (-O3) | -0.77 to 0.48 (-O2), 12.2 to 12.3 (-O3) | 2.75 to 2.77 (-O2), 8.7 to 8.79 (-O3) | 12.6 to 12.9 (-O2), 12 to 12.1 (-O3) |
+| the constructor, 1 limb, N = 18 | -0.24 to -0.09 (-O2), -2.55 to 0.91 (-O3) | -0.83 to 0.7 (-O2), 1.1 to 1.8 (-O3) | 2.47 to 2.63 (-O2), 5.9 to 6.29 (-O3) | -0.28 to 0.42 (-O2), -1.92 to 0 (-O3) |
+| the constructor, 1 limb, N = 80 | -1.95 to -1.13 (-O2), -0.85 to 0.63 (-O3) | -8.3 to 9.1 (-O2), 0.8 to 7.6 (-O3) | 1 to 1.1 (-O2), 4.1 to 5.8 (-O3) | 1.72 to 15.3 (-O2), 1.14 to 22.6 (-O3) |
+| the constructor, 2 limbs, N = 3 | 8.2 to 9.79 (-O2), 8.38 to 9.08 (-O3) | -0.859 to -0.448 (-O2), 0.058 to 0.466 (-O3) | 5.43 to 5.74 (-O2), 5.87 to 7.2 (-O3) | 16.2 to 17.4 (-O2), 16.5 to 17.5 (-O3) |
+| the constructor, 2 limbs, N = 7 | 9.63 to 10.5 (-O2), 4.9 to 8.76 (-O3) | -0.77 to 0.32 (-O2), 6.83 to 7.12 (-O3) | 2.24 to 2.61 (-O2), 8.48 to 9.59 (-O3) | 8.11 to 9.43 (-O2), 8.8 to 15.7 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.76 to 0.79 (-O2), -0.38 to 0.26 (-O3) | -1.47 to 0.64 (-O2), 14.2 (-O3) | 1.12 to 1.52 (-O2), 9.88 to 9.99 (-O3) | -2.41 to 0.37 (-O2), -1.24 to 0.36 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.15 to 0.35 (-O2), 0.26 to 1.38 (-O3) | -3.22 to 1.28 (-O2), -0.17 to 0.15 (-O3) | 7.46 to 7.56 (-O2), -13.1 to -12.8 (-O3) | -1.41 to 7.12 (-O2), -4.3 to 7.8 (-O3) |
+| the constructor, 2 limbs, N = 80 | -0.32 to 0.06 (-O2), -0.36 to 0.14 (-O3) | -13.2 to 19.5 (-O2), -0.2 to 0 (-O3) | 23.6 to 25.1 (-O2), -1.4 to 3 (-O3) | -3.9 to 1.3 (-O2), -3 to 5.4 (-O3) |
 
 | Short ball vectors, 2026-11-23, every size in one unit, a dependent chain: the header of 2026-11-23 over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
-| `add(x, y, z)`, 1 limb, N = 3 | 0.95 to 1.00 | 1.22 to 1.30 (-O2), 1.04 to 1.22 (-O3) | 0.98 to 1.02 | 1.00 to 1.02 |
-| `add(x, y, z)`, 1 limb, N = 7 | 0.97 to 1.01 | 1.01 to 1.04 (-O2), 0.93 to 0.99 (-O3) | 1.00 to 1.01 | 1.00 to 1.27 (-O2), 0.79 to 1.01 (-O3) |
-| `add(x, y, z)`, 1 limb, N = 13 | 1.57 to 1.61 | 1.02 to 1.04 (-O2), 0.93 to 0.99 (-O3) | 0.97 to 1.01 | 0.98 to 0.99 |
-| `add(x, y, z)`, 1 limb, N = 18 | 0.96 to 1.00 | 0.98 (-O2), 0.89 to 0.91 (-O3) | 0.99 to 1.09 (-O2), 0.99 to 1.01 (-O3) | 0.99 to 1.01 |
-| `add(x, y, z)`, 1 limb, N = 80 | 0.99 to 1.02 | 0.96 to 1.02 (-O2), 0.97 to 1.02 (-O3) | 1.01 | 1.00 to 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 3 | 0.98 to 1.01 | 0.92 to 1.00 (-O2), 0.88 to 0.91 (-O3) | 0.99 to 1.01 | 1.01 (-O2), 1.01 to 1.13 (-O3) |
-| `add(x, y, z)`, 2 limbs, N = 7 | 0.96 to 0.99 (-O2), 0.95 to 1.01 (-O3) | 0.98 to 1.02 (-O2), 1.08 to 1.10 (-O3) | 0.99 to 1.00 | 1.01 to 1.04 |
-| `add(x, y, z)`, 2 limbs, N = 13 | 0.99 to 1.02 | 0.99 to 1.00 (-O2), 0.88 to 0.90 (-O3) | 0.99 to 1.02 | 1.00 to 1.01 |
-| `add(x, y, z)`, 2 limbs, N = 18 | 0.96 to 0.99 (-O2), 1.00 to 1.02 (-O3) | 0.97 to 0.99 | 0.96 to 1.00 (-O2), 0.99 to 1.03 (-O3) | 1.01 to 1.02 |
-| `add(x, y, z)`, 2 limbs, N = 80 | 0.98 to 1.00 | 0.97 to 1.00 | 0.99 to 1.00 | 1.00 |
-| `z = x + y`, 1 limb, N = 3 | 0.94 to 0.99 (-O2), 1.01 to 1.07 (-O3) | 0.99 to 1.01 (-O2), 0.91 to 0.96 (-O3) | 0.99 to 1.01 | 1.00 |
-| `z = x + y`, 1 limb, N = 7 | 0.96 to 1.05 (-O2), 0.95 to 1.00 (-O3) | 0.94 to 1.00 (-O2), 1.01 to 1.04 (-O3) | 0.89 to 1.03 (-O2), 1.00 to 1.01 (-O3) | 0.99 to 1.00 |
-| `z = x + y`, 1 limb, N = 13 | 0.97 to 1.04 (-O2), 0.95 to 1.03 (-O3) | 0.92 to 0.95 (-O2), 1.00 to 1.04 (-O3) | 1.01 (-O2), 0.65 to 0.99 (-O3) | 1.00 |
-| `z = x + y`, 1 limb, N = 18 | 1.00 to 1.07 (-O2), 0.94 to 0.97 (-O3) | 0.97 to 1.00 | 0.86 to 1.18 (-O2), 0.81 to 0.98 (-O3) | 0.99 to 1.00 |
-| `z = x + y`, 1 limb, N = 80 | 1.00 to 1.02 (-O2), 0.97 to 1.04 (-O3) | 0.98 to 1.02 | 0.99 to 1.26 (-O2), 1.04 (-O3) | 1.00 to 1.04 (-O2), 0.92 to 1.03 (-O3) |
-| `z = x + y`, 2 limbs, N = 3 | 0.96 to 0.98 (-O2), 0.96 to 1.01 (-O3) | 0.97 to 1.00 | 0.91 to 1.00 (-O2), 1.01 to 1.15 (-O3) | 0.95 to 1.05 (-O2), 0.95 to 1.11 (-O3) |
-| `z = x + y`, 2 limbs, N = 7 | 0.96 to 1.00 | 0.97 to 1.02 | 1.01 to 1.21 (-O2), 0.94 to 1.08 (-O3) | 1.00 to 1.34 (-O2), 0.98 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 13 | 0.99 to 1.02 | 1.05 to 1.08 (-O2), 1.01 to 1.04 (-O3) | 0.97 to 1.01 | 0.90 to 1.16 (-O2), 0.73 to 1.09 (-O3) |
-| `z = x + y`, 2 limbs, N = 18 | 0.97 to 1.00 | 0.96 to 0.99 (-O2), 1.00 to 1.03 (-O3) | 0.99 to 1.01 | 0.95 to 1.06 (-O2), 0.94 to 1.01 (-O3) |
-| `z = x + y`, 2 limbs, N = 80 | 1.00 to 1.02 | 0.96 to 1.02 (-O2), 0.98 to 1.00 (-O3) | 0.98 to 1.02 | 0.97 to 1.01 |
-| `sub`, 1 limb, N = 3 | 0.98 to 1.00 | 1.22 to 1.30 (-O2), 1.77 to 1.98 (-O3) | 0.99 (-O2), 0.94 (-O3) | 1.00 to 1.02 |
-| `sub`, 1 limb, N = 7 | 0.96 to 1.01 (-O2), 1.00 to 1.02 (-O3) | 1.02 to 1.07 (-O2), 1.73 to 1.76 (-O3) | 0.98 to 1.01 | 1.00 to 1.27 (-O2), 0.79 to 1.00 (-O3) |
-| `sub`, 1 limb, N = 13 | 1.41 to 1.51 (-O2), 1.30 to 1.53 (-O3) | 1.03 to 1.04 (-O2), 1.34 to 1.42 (-O3) | 0.97 to 1.00 | 0.99 |
-| `sub`, 1 limb, N = 18 | 0.95 to 1.01 (-O2), 0.95 to 1.09 (-O3) | 0.98 to 1.00 (-O2), 0.68 to 0.69 (-O3) | 0.99 to 1.09 (-O2), 0.99 to 1.00 (-O3) | 1.01 |
-| `sub`, 1 limb, N = 80 | 0.97 to 1.01 (-O2), 1.00 to 1.05 (-O3) | 0.99 to 1.02 (-O2), 0.89 to 0.93 (-O3) | 0.98 to 1.01 | 1.00 to 1.02 |
-| `sub`, 2 limbs, N = 3 | 0.97 to 1.00 (-O2), 0.99 to 1.03 (-O3) | 0.89 to 0.99 (-O2), 0.93 to 1.02 (-O3) | 0.98 to 1.00 | 1.00 to 1.01 (-O2), 1.01 to 1.08 (-O3) |
-| `sub`, 2 limbs, N = 7 | 0.97 to 1.01 (-O2), 0.92 to 0.97 (-O3) | 1.00 to 1.01 | 0.99 to 1.00 | 1.01 to 1.03 |
-| `sub`, 2 limbs, N = 13 | 0.99 to 1.02 | 0.95 to 0.98 | 0.98 to 1.01 | 1.03 to 1.04 |
-| `sub`, 2 limbs, N = 18 | 0.99 to 1.02 | 0.97 to 1.01 | 0.97 to 1.01 | 1.01 to 1.03 |
-| `sub`, 2 limbs, N = 80 | 1.00 to 1.01 (-O2), 0.94 to 1.00 (-O3) | 1.00 to 1.03 (-O2), 0.97 to 1.00 (-O3) | 0.98 to 1.00 | 1.00 to 1.01 |
-| `scale`, 1 limb, N = 3 | 0.98 to 1.01 | 0.75 to 1.25 (-O2), 1.13 to 1.29 (-O3) | 1.00 to 1.01 (-O2), 0.67 to 0.68 (-O3) | 0.99 to 1.00 |
-| `scale`, 1 limb, N = 7 | 0.97 to 0.99 (-O2), 0.93 to 0.95 (-O3) | 0.83 to 0.95 (-O2), 1.13 to 1.17 (-O3) | 0.99 (-O2), 0.68 to 0.70 (-O3) | 0.98 to 1.30 (-O2), 0.76 to 0.98 (-O3) |
-| `scale`, 1 limb, N = 13 | 0.99 to 1.09 (-O2), 1.09 (-O3) | 0.81 to 0.83 (-O2), 1.00 to 1.02 (-O3) | 0.97 to 1.01 (-O2), 0.66 to 0.67 (-O3) | 0.98 to 0.99 |
-| `scale`, 1 limb, N = 18 | 0.96 to 1.00 | 0.77 to 0.79 (-O2), 0.94 to 0.97 (-O3) | 0.99 to 1.05 (-O2), 0.69 to 0.70 (-O3) | 1.00 to 1.02 |
-| `scale`, 1 limb, N = 80 | 0.98 to 1.01 | 0.92 to 0.96 (-O2), 0.95 to 0.98 (-O3) | 1.02 to 1.03 (-O2), 0.83 to 0.84 (-O3) | 1.00 to 1.01 (-O2), 0.92 to 1.63 (-O3) |
-| `scale`, 2 limbs, N = 3 | 1.00 to 1.04 | 1.06 to 1.22 (-O2), 0.82 to 0.86 (-O3) | 0.93 to 0.99 (-O2), 0.91 (-O3) | 0.98 to 0.99 (-O2), 0.99 to 1.37 (-O3) |
-| `scale`, 2 limbs, N = 7 | 1.48 to 1.70 (-O2), 1.63 to 1.70 (-O3) | 1.01 to 1.03 (-O2), 0.94 to 0.96 (-O3) | 0.99 to 1.03 | 0.84 to 1.90 (-O2), 0.84 (-O3) |
-| `scale`, 2 limbs, N = 13 | 1.02 to 1.06 (-O2), 0.99 to 1.00 (-O3) | 0.96 to 1.00 | 0.95 to 1.00 | 1.02 (-O2), 1.02 to 1.19 (-O3) |
-| `scale`, 2 limbs, N = 18 | 1.03 to 1.04 (-O2), 0.98 to 1.00 (-O3) | 0.99 to 1.02 | 1.05 to 1.08 (-O2), 0.99 to 1.02 (-O3) | 1.01 (-O2), 0.87 to 1.01 (-O3) |
-| `scale`, 2 limbs, N = 80 | 0.97 to 1.00 | 0.98 to 1.01 | 1.00 | 1.00 |
-| `half`, 1 limb, N = 3 | 0.96 to 1.00 | 0.84 to 0.86 (-O2), 0.95 to 0.98 (-O3) | 0.99 to 1.00 (-O2), 0.91 (-O3) | 0.96 to 0.97 |
-| `half`, 1 limb, N = 7 | 1.01 to 1.04 | 0.86 to 0.88 (-O2), 0.94 to 0.96 (-O3) | 0.98 (-O2), 0.92 to 0.93 (-O3) | 0.97 to 0.99 |
-| `half`, 1 limb, N = 13 | 1.00 to 1.06 (-O2), 0.95 to 0.98 (-O3) | 0.90 to 0.93 | 0.99 to 1.01 (-O2), 0.90 to 0.91 (-O3) | 0.98 to 1.00 |
-| `half`, 1 limb, N = 18 | 1.08 to 1.09 (-O2), 1.06 to 1.14 (-O3) | 0.91 to 0.93 (-O2), 0.95 to 0.99 (-O3) | 0.99 to 1.00 (-O2), 0.93 to 0.94 (-O3) | 0.99 (-O2), 0.61 to 1.04 (-O3) |
-| `half`, 1 limb, N = 80 | 0.96 to 0.98 (-O2), 0.98 to 1.01 (-O3) | 0.97 to 1.01 | 0.96 to 1.00 | 0.98 to 0.99 |
-| `half`, 2 limbs, N = 3 | 1.00 to 1.05 | 0.85 to 0.90 (-O2), 0.79 to 0.80 (-O3) | 0.98 to 1.00 | 0.99 to 1.00 (-O2), 1.01 to 1.07 (-O3) |
-| `half`, 2 limbs, N = 7 | 1.02 to 1.10 (-O2), 0.94 to 0.98 (-O3) | 0.86 to 0.89 | 1.00 to 1.01 | 1.00 to 1.01 |
-| `half`, 2 limbs, N = 13 | 0.95 to 0.99 (-O2), 0.99 to 1.03 (-O3) | 0.93 to 0.96 (-O2), 0.87 to 0.89 (-O3) | 0.97 to 1.01 | 0.96 to 1.00 |
-| `half`, 2 limbs, N = 18 | 0.97 to 1.02 (-O2), 1.00 to 1.05 (-O3) | 0.95 to 0.97 (-O2), 0.87 to 0.89 (-O3) | 0.99 to 1.03 | 0.99 to 1.01 |
-| `half`, 2 limbs, N = 80 | 0.99 to 1.02 (-O2), 0.96 to 0.99 (-O3) | 0.98 to 1.01 (-O2), 0.95 to 0.97 (-O3) | 0.97 to 1.01 | 1.00 to 1.02 |
-| the constructor, 1 limb, N = 3 | 0.54 to 0.60 (-O2), 0.54 to 0.59 (-O3) | 1.10 to 1.16 (-O2), 1.46 to 1.49 (-O3) | 0.95 to 1.05 (-O2), 0.89 to 0.97 (-O3) | 0.38 |
-| the constructor, 1 limb, N = 7 | 0.44 to 0.48 | 1.17 to 1.20 (-O2), 0.65 to 0.66 (-O3) | 0.99 to 1.01 (-O2), 0.85 to 0.91 (-O3) | 0.42 to 0.45 |
-| the constructor, 1 limb, N = 13 | 0.54 to 0.57 | 1.00 to 1.01 (-O2), 0.35 (-O3) | 0.99 to 1.00 (-O2), 0.82 to 0.83 (-O3) | 0.63 to 0.65 |
-| the constructor, 1 limb, N = 18 | 1.00 to 1.03 (-O2), 0.74 to 0.75 (-O3) | 0.97 to 1.03 (-O2), 0.92 to 0.94 (-O3) | 0.99 to 1.01 (-O2), 0.89 to 0.91 (-O3) | 0.84 to 0.89 |
-| the constructor, 1 limb, N = 80 | 1.01 to 1.04 (-O2), 0.90 to 0.93 (-O3) | 0.96 to 1.02 (-O2), 0.98 to 1.00 (-O3) | 0.99 to 1.01 | 0.92 to 0.98 (-O2), 0.92 to 0.96 (-O3) |
-| the constructor, 2 limbs, N = 3 | 0.49 to 0.51 | 1.12 to 1.17 (-O2), 1.01 to 1.02 (-O3) | 0.98 to 1.03 (-O2), 1.00 to 1.12 (-O3) | 0.40 to 0.49 (-O2), 0.40 to 0.42 (-O3) |
-| the constructor, 2 limbs, N = 7 | 0.58 to 0.60 (-O2), 0.61 to 0.81 (-O3) | 0.98 to 1.00 (-O2), 0.44 to 0.45 (-O3) | 0.98 to 1.03 (-O2), 0.87 to 0.91 (-O3) | 0.73 to 0.83 (-O2), 0.73 to 0.76 (-O3) |
-| the constructor, 2 limbs, N = 13 | 0.92 (-O2), 1.07 to 1.10 (-O3) | 0.97 to 1.01 (-O2), 0.40 to 0.41 (-O3) | 1.00 to 1.02 (-O2), 0.87 to 0.89 (-O3) | 0.89 to 0.98 (-O2), 1.17 to 1.23 (-O3) |
-| the constructor, 2 limbs, N = 18 | 0.97 to 0.99 (-O2), 1.19 to 1.21 (-O3) | 0.86 to 0.89 (-O2), 0.98 to 1.00 (-O3) | 0.97 to 1.00 | 0.94 to 1.03 (-O2), 1.34 to 1.44 (-O3) |
-| the constructor, 2 limbs, N = 80 | 0.98 to 1.01 | 0.96 to 1.00 | 0.90 to 0.91 (-O2), 1.00 to 1.01 (-O3) | 0.98 to 1.02 |
+| `add(x, y, z)`, 1 limb, N = 3 | 0.97 to 1.00 | 1.20 to 1.27 (-O2), 1.07 to 1.20 (-O3) | 0.98 to 1.01 | 1.00 to 1.01 |
+| `add(x, y, z)`, 1 limb, N = 7 | 1.00 to 1.02 | 1.01 to 1.08 (-O2), 0.97 (-O3) | 0.99 to 1.02 | 0.99 to 1.01 |
+| `add(x, y, z)`, 1 limb, N = 13 | 1.60 to 1.65 | 1.02 to 1.04 (-O2), 0.94 to 0.95 (-O3) | 1.00 (-O2), 1.00 to 1.20 (-O3) | 0.99 to 1.01 |
+| `add(x, y, z)`, 1 limb, N = 18 | 0.92 to 0.97 (-O2), 0.95 to 1.01 (-O3) | 0.98 to 1.04 (-O2), 0.91 to 0.92 (-O3) | 0.99 to 1.00 | 0.98 to 1.01 |
+| `add(x, y, z)`, 1 limb, N = 80 | 0.98 to 1.02 | 0.98 to 1.02 | 0.99 to 1.01 | 0.99 to 1.00 (-O2), 1.03 to 1.05 (-O3) |
+| `add(x, y, z)`, 2 limbs, N = 3 | 0.98 to 1.00 | 0.98 to 1.06 (-O2), 0.91 to 0.92 (-O3) | 0.99 to 1.00 | 1.00 to 1.02 |
+| `add(x, y, z)`, 2 limbs, N = 7 | 0.99 to 1.02 | 0.98 to 1.05 (-O2), 1.00 (-O3) | 0.99 | 1.02 to 1.03 |
+| `add(x, y, z)`, 2 limbs, N = 13 | 1.00 to 1.03 | 0.99 to 1.04 (-O2), 0.98 to 0.99 (-O3) | 0.98 to 1.01 | 0.99 to 1.01 |
+| `add(x, y, z)`, 2 limbs, N = 18 | 0.98 to 1.01 | 1.00 to 1.04 (-O2), 0.97 to 0.98 (-O3) | 0.97 to 1.01 | 1.00 to 1.01 |
+| `add(x, y, z)`, 2 limbs, N = 80 | 0.97 to 1.00 | 0.99 to 1.05 (-O2), 1.00 to 1.06 (-O3) | 0.99 to 1.00 | 1.01 |
+| `z = x + y`, 1 limb, N = 3 | 0.99 to 1.01 (-O2), 0.96 to 1.08 (-O3) | 0.98 to 1.04 (-O2), 0.90 to 0.91 (-O3) | 1.00 to 1.02 | 1.00 |
+| `z = x + y`, 1 limb, N = 7 | 0.95 to 1.06 (-O2), 0.85 to 1.00 (-O3) | 0.96 to 1.03 (-O2), 1.06 to 1.08 (-O3) | 1.00 to 1.02 | 0.99 to 1.00 |
+| `z = x + y`, 1 limb, N = 13 | 0.96 to 0.99 (-O2), 0.96 to 1.04 (-O3) | 0.92 to 0.95 (-O2), 1.01 (-O3) | 0.99 to 1.02 (-O2), 0.99 to 1.28 (-O3) | 1.00 to 1.01 |
+| `z = x + y`, 1 limb, N = 18 | 0.98 to 1.00 (-O2), 0.95 to 0.98 (-O3) | 0.98 to 1.04 (-O2), 0.99 (-O3) | 1.00 to 1.19 (-O2), 0.97 to 1.11 (-O3) | 0.98 to 1.01 |
+| `z = x + y`, 1 limb, N = 80 | 0.98 to 1.01 | 0.99 to 1.04 | 0.99 to 1.00 | 1.00 to 1.11 (-O2), 0.78 to 1.07 (-O3) |
+| `z = x + y`, 2 limbs, N = 3 | 0.95 to 1.06 (-O2), 0.95 to 1.06 (-O3) | 0.99 to 1.04 (-O2), 1.00 (-O3) | 1.00 to 1.01 (-O2), 1.13 to 1.14 (-O3) | 0.99 to 1.06 (-O2), 0.99 to 1.04 (-O3) |
+| `z = x + y`, 2 limbs, N = 7 | 0.97 to 1.00 | 0.97 to 1.04 (-O2), 1.00 to 1.03 (-O3) | 1.00 to 1.05 (-O2), 1.01 to 1.16 (-O3) | 0.99 to 1.07 (-O2), 0.83 to 1.13 (-O3) |
+| `z = x + y`, 2 limbs, N = 13 | 1.00 to 1.03 | 1.02 to 1.04 (-O2), 0.94 to 0.97 (-O3) | 0.99 to 1.02 | 1.00 to 1.18 (-O2), 1.00 to 1.10 (-O3) |
+| `z = x + y`, 2 limbs, N = 18 | 0.99 to 1.02 | 0.99 to 1.04 (-O2), 1.02 to 1.03 (-O3) | 1.00 to 1.01 | 1.01 to 1.07 (-O2), 0.98 to 1.07 (-O3) |
+| `z = x + y`, 2 limbs, N = 80 | 0.99 to 1.01 | 0.98 to 1.04 (-O2), 1.00 to 1.02 (-O3) | 0.96 to 1.00 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.03 (-O2), 0.96 to 1.02 (-O3) |
+| `sub`, 1 limb, N = 3 | 0.94 to 1.00 (-O2), 0.94 to 1.07 (-O3) | 1.25 to 1.36 (-O2), 1.07 (-O3) | 1.00 (-O2), 0.94 (-O3) | 1.01 to 1.02 |
+| `sub`, 1 limb, N = 7 | 1.00 to 1.01 (-O2), 0.93 to 1.00 (-O3) | 1.01 to 1.08 (-O2), 0.99 to 1.00 (-O3) | 0.98 to 1.01 | 0.99 to 1.01 |
+| `sub`, 1 limb, N = 13 | 1.40 to 1.58 (-O2), 1.38 to 1.60 (-O3) | 1.01 to 1.05 (-O2), 0.97 to 1.00 (-O3) | 0.99 to 1.00 (-O2), 0.99 to 1.27 (-O3) | 0.99 to 1.00 |
+| `sub`, 1 limb, N = 18 | 0.95 to 1.09 (-O2), 0.89 to 1.09 (-O3) | 0.98 to 1.04 (-O2), 0.91 to 0.92 (-O3) | 1.21 to 1.22 (-O2), 0.99 (-O3) | 0.98 to 1.01 |
+| `sub`, 1 limb, N = 80 | 0.98 to 1.01 | 0.98 to 1.01 | 1.16 (-O2), 0.99 (-O3) | 0.99 to 1.00 (-O2), 1.03 to 1.05 (-O3) |
+| `sub`, 2 limbs, N = 3 | 0.98 to 1.06 (-O2), 0.92 to 0.99 (-O3) | 0.97 to 1.04 (-O2), 1.02 to 1.04 (-O3) | 0.99 to 1.02 | 0.98 to 1.01 |
+| `sub`, 2 limbs, N = 7 | 1.00 to 1.02 (-O2), 0.94 to 0.99 (-O3) | 0.97 to 1.04 (-O2), 1.00 to 1.01 (-O3) | 1.00 | 0.99 to 1.02 |
+| `sub`, 2 limbs, N = 13 | 1.00 to 1.01 | 0.94 to 0.99 (-O2), 0.98 to 0.99 (-O3) | 0.98 to 1.01 | 1.03 to 1.04 |
+| `sub`, 2 limbs, N = 18 | 0.97 to 1.01 | 1.00 to 1.06 (-O2), 0.98 to 0.99 (-O3) | 0.98 to 1.02 | 1.01 to 1.02 |
+| `sub`, 2 limbs, N = 80 | 1.00 to 1.02 | 1.01 to 1.07 (-O2), 1.00 to 1.02 (-O3) | 0.98 to 1.00 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 3 | 0.98 to 1.00 (-O2), 0.94 to 1.05 (-O3) | 0.99 to 1.18 (-O2), 1.16 to 1.20 (-O3) | 0.97 to 1.01 | 0.99 to 1.00 |
+| `scale`, 1 limb, N = 7 | 0.94 to 0.97 (-O2), 0.88 to 1.02 (-O3) | 0.82 to 0.94 (-O2), 1.15 to 1.17 (-O3) | 0.98 to 0.99 | 1.00 |
+| `scale`, 1 limb, N = 13 | 1.09 to 1.13 (-O2), 1.02 to 1.09 (-O3) | 0.80 to 0.86 (-O2), 1.02 to 1.03 (-O3) | 1.01 (-O2), 0.99 to 1.12 (-O3) | 1.04 (-O2), 0.98 to 1.04 (-O3) |
+| `scale`, 1 limb, N = 18 | 1.00 to 1.02 | 0.77 to 0.82 (-O2), 0.96 to 0.97 (-O3) | 0.99 to 1.00 | 0.73 to 1.00 (-O2), 0.99 to 1.00 (-O3) |
+| `scale`, 1 limb, N = 80 | 1.00 to 1.03 | 0.92 to 0.97 (-O2), 0.97 to 0.98 (-O3) | 0.99 to 1.03 | 1.00 to 1.01 (-O2), 0.65 to 1.81 (-O3) |
+| `scale`, 2 limbs, N = 3 | 1.01 to 1.09 (-O2), 0.97 to 1.10 (-O3) | 1.06 to 1.13 (-O2), 0.83 to 0.86 (-O3) | 0.99 (-O2), 0.92 to 1.28 (-O3) | 1.00 to 1.02 |
+| `scale`, 2 limbs, N = 7 | 1.70 (-O2), 1.59 to 1.70 (-O3) | 0.98 to 1.03 (-O2), 0.94 to 0.96 (-O3) | 1.00 to 1.02 | 0.84 to 0.85 (-O2), 0.75 to 0.85 (-O3) |
+| `scale`, 2 limbs, N = 13 | 1.04 to 1.07 (-O2), 0.91 to 1.00 (-O3) | 0.97 to 1.03 (-O2), 0.98 to 0.99 (-O3) | 0.98 to 1.01 | 1.00 to 1.02 |
+| `scale`, 2 limbs, N = 18 | 1.02 (-O2), 0.97 to 1.04 (-O3) | 0.99 to 1.04 | 0.99 to 1.01 | 1.01 to 1.12 (-O2), 1.01 (-O3) |
+| `scale`, 2 limbs, N = 80 | 0.99 to 1.01 | 0.98 to 1.04 (-O2), 0.99 to 1.00 (-O3) | 0.99 to 1.01 | 1.00 |
+| `half`, 1 limb, N = 3 | 0.97 to 1.02 (-O2), 0.92 to 1.04 (-O3) | 0.85 to 0.90 (-O2), 0.92 (-O3) | 0.99 (-O2), 0.91 (-O3) | 0.95 to 0.96 |
+| `half`, 1 limb, N = 7 | 1.03 to 1.04 (-O2), 0.96 to 1.09 (-O3) | 0.86 to 0.92 (-O2), 1.00 to 1.01 (-O3) | 0.97 (-O2), 0.91 to 0.92 (-O3) | 0.99 to 1.01 |
+| `half`, 1 limb, N = 13 | 1.05 to 1.10 (-O2), 0.96 to 1.01 (-O3) | 0.90 to 0.96 (-O2), 0.95 (-O3) | 0.99 to 1.00 (-O2), 1.02 to 1.10 (-O3) | 0.98 to 0.99 |
+| `half`, 1 limb, N = 18 | 1.08 to 1.11 (-O2), 1.02 to 1.07 (-O3) | 0.90 to 0.96 (-O2), 0.97 (-O3) | 1.00 (-O2), 0.91 to 0.93 (-O3) | 0.98 to 1.00 |
+| `half`, 1 limb, N = 80 | 0.99 to 1.00 | 0.97 to 1.03 (-O2), 0.96 (-O3) | 0.96 to 1.00 | 0.99 to 1.00 |
+| `half`, 2 limbs, N = 3 | 1.02 to 1.07 (-O2), 1.01 to 1.10 (-O3) | 0.90 to 0.97 (-O2), 0.82 (-O3) | 0.98 to 0.99 | 1.00 to 1.02 |
+| `half`, 2 limbs, N = 7 | 0.99 to 1.04 (-O2), 0.96 to 1.00 (-O3) | 0.88 to 0.93 (-O2), 0.88 (-O3) | 0.99 to 1.02 | 1.01 to 1.03 |
+| `half`, 2 limbs, N = 13 | 0.95 to 0.98 (-O2), 0.97 to 1.02 (-O3) | 0.92 to 0.98 (-O2), 0.92 to 0.93 (-O3) | 0.98 to 1.00 | 1.00 |
+| `half`, 2 limbs, N = 18 | 0.98 to 1.00 (-O2), 1.00 to 1.06 (-O3) | 0.93 to 0.99 (-O2), 0.90 (-O3) | 0.98 to 1.01 | 0.99 to 1.06 (-O2), 0.99 to 1.00 (-O3) |
+| `half`, 2 limbs, N = 80 | 0.99 to 1.00 | 0.97 to 1.03 (-O2), 0.96 to 0.97 (-O3) | 0.99 to 1.00 | 0.98 to 1.00 |
+| the constructor, 1 limb, N = 3 | 0.55 to 0.63 (-O2), 0.56 to 0.65 (-O3) | 1.11 to 1.20 (-O2), 1.45 to 1.49 (-O3) | 1.00 to 1.05 (-O2), 0.89 to 0.97 (-O3) | 0.38 |
+| the constructor, 1 limb, N = 7 | 0.46 to 0.48 | 1.11 to 1.23 (-O2), 0.61 to 0.65 (-O3) | 1.00 to 1.01 (-O2), 0.86 to 0.91 (-O3) | 0.42 to 0.45 |
+| the constructor, 1 limb, N = 13 | 0.58 to 0.60 (-O2), 0.55 to 0.58 (-O3) | 0.98 to 1.04 (-O2), 0.37 (-O3) | 1.00 (-O2), 0.83 (-O3) | 0.64 to 0.66 |
+| the constructor, 1 limb, N = 18 | 1.00 to 1.01 (-O2), 0.98 to 1.07 (-O3) | 0.98 to 1.03 (-O2), 0.93 to 0.94 (-O3) | 1.00 to 1.01 (-O2), 0.89 to 0.90 (-O3) | 0.95 to 0.97 (-O2), 1.00 to 1.09 (-O3) |
+| the constructor, 1 limb, N = 80 | 0.99 to 1.03 | 0.98 to 1.01 (-O2), 1.00 to 1.03 (-O3) | 0.99 to 1.02 | 0.96 to 0.99 (-O2), 0.79 to 1.02 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.49 to 0.53 (-O2), 0.48 to 0.52 (-O3) | 1.08 to 1.14 (-O2), 0.98 to 1.02 (-O3) | 0.98 to 1.00 (-O2), 1.04 to 1.10 (-O3) | 0.40 to 0.42 |
+| the constructor, 2 limbs, N = 7 | 0.59 to 0.62 (-O2), 0.64 to 0.81 (-O3) | 0.98 to 1.04 (-O2), 0.43 to 0.45 (-O3) | 1.00 to 1.03 (-O2), 0.89 to 0.93 (-O3) | 0.71 to 0.74 (-O2), 0.60 to 0.74 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.09 to 1.12 (-O2), 0.99 to 1.02 (-O3) | 0.98 to 1.06 (-O2), 0.41 (-O3) | 1.00 to 1.02 (-O2), 0.88 to 0.90 (-O3) | 0.97 to 1.06 (-O2), 0.98 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 0.96 to 1.00 | 1.00 to 1.10 (-O2), 0.89 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.03 | 0.98 to 1.05 (-O2), 0.98 to 1.00 (-O3) | 0.91 to 0.92 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.03 (-O2), 0.98 to 1.02 (-O3) |
 
 | The check at entry, 2026-11-23, is under 5%; 1% of the call from n = | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
 |---|---|---|---|---|
@@ -8314,6 +8675,281 @@ before, the share of the check, and the runs.
 | `sum`, two limbs, dependent | 16; 64 (-O2), 1024; 1024 (-O3) | 1; 1024 (-O2), 1; 64 (-O3) | 1; 4 (-O2), 1; 4 (-O3) | 2; 4 (-O2), 1; 4 (-O3) |
 | `dot`, one limb, dependent | 4; > 1024 (-O2), 4; > 1024 (-O3) | 4; 1024 (-O2), 1024; > 1024 (-O3) | 1; 1024 (-O2), 1; 8 (-O3) | 1; 64 (-O2), 1; 64 (-O3) |
 | `dot`, two limbs, dependent | 1; 1024 (-O2), 1; > 1024 (-O3) | 1; 1024 (-O2), 1; 1024 (-O3) | 2; 16 (-O2), 1; 1 (-O3) | 1; 4 (-O2), 1; 8 (-O3) |
+
+
+| The bound, every size in one unit, many vectors: the constructor forced for every size over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.33 to 0.50 (-O2), 0.34 to 0.89 (-O3) | 0.78 to 0.82 (-O2), 0.51 to 0.53 (-O3) | 0.98 (-O2), 0.93 to 0.97 (-O3) | 0.37 |
+| the constructor, 1 limb, N = 7 | 0.46 to 0.49 (-O2), 0.42 to 0.46 (-O3) | 0.71 to 0.75 (-O2), 0.38 to 0.39 (-O3) | 1.01 (-O2), 0.86 (-O3) | 0.43 to 0.45 |
+| the constructor, 1 limb, N = 13 | 0.62 to 0.64 (-O2), 0.60 to 0.66 (-O3) | 0.98 to 1.00 (-O2), 0.37 (-O3) | 1.01 (-O2), 0.89 (-O3) | 0.63 to 0.65 (-O2), 0.54 to 0.64 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.08 (-O2), 0.79 to 0.81 (-O3) | 0.98 to 1.03 (-O2), 0.91 to 0.93 (-O3) | 0.99 to 1.00 (-O2), 0.87 to 0.88 (-O3) | 0.91 to 0.99 (-O2), 0.81 to 0.86 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.02 to 1.03 (-O2), 0.97 (-O3) | 0.98 to 1.04 (-O2), 1.00 to 1.02 (-O3) | 1.01 (-O2), 1.05 to 1.07 (-O3) | 0.85 to 0.97 (-O2), 0.88 to 0.97 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.43 to 0.44 (-O2), 0.47 to 0.50 (-O3) | 0.99 to 1.04 (-O2), 0.48 to 0.51 (-O3) | 0.97 to 0.98 (-O2), 1.08 to 1.15 (-O3) | 0.41 to 0.49 (-O2), 0.42 to 0.49 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.69 to 0.72 | 0.98 to 1.01 (-O2), 0.43 to 0.45 (-O3) | 0.99 (-O2), 0.87 to 0.88 (-O3) | 0.70 to 0.79 (-O2), 0.72 to 0.79 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.97 to 0.98 (-O2), 1.37 to 1.40 (-O3) | 1.00 to 1.04 (-O2), 0.39 to 0.40 (-O3) | 1.01 to 1.02 (-O2), 0.88 to 0.89 (-O3) | 0.97 to 1.03 (-O2), 1.10 to 1.12 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.97 (-O2), 1.29 (-O3) | 1.00 to 1.02 | 1.08 to 1.09 (-O2), 0.94 to 0.95 (-O3) | 0.90 to 0.99 (-O2), 1.02 to 1.35 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.99 to 1.00 | 0.98 to 1.02 | 1.09 to 1.11 (-O2), 1.00 to 1.02 (-O3) | 0.99 to 1.04 (-O2), 0.98 to 0.99 (-O3) |
+
+| The bound, every size in one unit, many vectors: the constructor forced for none over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.39 to 0.99 (-O2), 0.77 to 2.42 (-O3) | 0.76 to 0.80 (-O2), 0.50 to 0.51 (-O3) | 0.98 to 1.04 (-O2), 0.99 to 1.03 (-O3) | 0.99 to 1.00 (-O2), 0.64 to 0.78 (-O3) |
+| the constructor, 1 limb, N = 7 | 0.99 to 1.19 (-O2), 0.94 to 1.08 (-O3) | 0.70 to 0.72 (-O2), 0.39 (-O3) | 1.00 to 1.02 (-O2), 0.90 (-O3) | 0.95 to 1.00 (-O2), 0.96 to 1.06 (-O3) |
+| the constructor, 1 limb, N = 13 | 0.99 to 1.05 (-O2), 0.99 to 1.04 (-O3) | 0.98 to 1.00 (-O2), 0.37 (-O3) | 1.01 (-O2), 0.88 to 0.89 (-O3) | 0.99 to 1.01 (-O2), 0.84 to 0.99 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.04 to 1.06 (-O2), 0.97 to 1.02 (-O3) | 0.98 to 1.00 (-O2), 0.93 (-O3) | 0.99 to 1.00 (-O2), 0.88 to 0.89 (-O3) | 0.95 to 1.02 (-O2), 0.94 to 1.05 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.01 to 1.04 | 0.98 to 1.02 | 0.98 to 0.99 (-O2), 1.04 to 1.06 (-O3) | 0.91 to 0.97 (-O2), 0.88 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.93 to 0.94 (-O2), 1.00 to 1.08 (-O3) | 0.99 to 1.02 (-O2), 0.48 (-O3) | 0.95 to 0.97 (-O2), 1.01 to 1.08 (-O3) | 0.97 to 1.00 (-O2), 0.85 to 1.16 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.93 to 1.12 (-O2), 1.03 to 1.06 (-O3) | 0.98 to 1.00 (-O2), 0.41 to 0.42 (-O3) | 0.98 to 1.02 (-O2), 0.89 to 0.90 (-O3) | 0.96 to 1.00 (-O2), 0.91 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.98 to 1.00 (-O2), 1.00 to 1.04 (-O3) | 1.00 to 1.01 (-O2), 0.39 (-O3) | 1.01 to 1.02 (-O2), 0.88 to 0.89 (-O3) | 0.96 to 1.00 |
+| the constructor, 2 limbs, N = 18 | 1.00 | 0.88 to 0.89 (-O2), 1.00 to 1.02 (-O3) | 1.00 to 1.01 (-O2), 0.94 to 0.95 (-O3) | 0.92 to 1.02 (-O2), 0.76 to 1.13 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.99 to 1.01 | 0.98 to 1.02 (-O2), 1.00 to 1.03 (-O3) | 0.99 to 1.01 | 1.00 to 1.04 (-O2), 0.99 to 1.00 (-O3) |
+
+| The bound, every size in one unit, many vectors: the constructor with the bound of the tree over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.33 to 0.51 (-O2), 0.35 to 0.89 (-O3) | 0.78 to 0.83 (-O2), 0.50 to 0.51 (-O3) | 0.98 to 1.04 (-O2), 0.96 to 1.04 (-O3) | 0.37 |
+| the constructor, 1 limb, N = 7 | 0.46 to 0.50 (-O2), 0.43 to 0.47 (-O3) | 0.72 to 0.76 (-O2), 0.38 to 0.39 (-O3) | 1.01 (-O2), 0.86 to 0.90 (-O3) | 0.43 to 0.46 |
+| the constructor, 1 limb, N = 13 | 0.63 to 0.65 (-O2), 0.60 to 0.65 (-O3) | 0.98 to 1.02 (-O2), 0.37 (-O3) | 1.00 to 1.01 (-O2), 0.89 (-O3) | 0.64 to 0.65 (-O2), 0.54 to 0.64 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.02 to 1.04 (-O2), 0.95 to 1.02 (-O3) | 0.98 to 1.04 (-O2), 0.93 (-O3) | 0.99 to 1.00 (-O2), 0.88 to 0.89 (-O3) | 0.93 to 1.01 (-O2), 1.00 to 1.08 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.00 to 1.04 | 0.98 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 0.98 to 0.99 (-O2), 1.04 to 1.06 (-O3) | 0.97 to 1.00 (-O2), 0.79 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.43 to 0.44 (-O2), 0.47 to 0.49 (-O3) | 0.99 to 1.05 (-O2), 0.48 (-O3) | 0.94 to 0.97 (-O2), 1.01 to 1.15 (-O3) | 0.41 to 0.49 (-O2), 0.42 to 0.49 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.68 to 0.72 | 0.98 to 1.05 (-O2), 0.40 to 0.42 (-O3) | 0.99 to 1.02 (-O2), 0.88 to 0.90 (-O3) | 0.70 to 0.79 (-O2), 0.72 to 0.79 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.10 to 1.12 (-O2), 1.04 to 1.09 (-O3) | 1.00 to 1.04 (-O2), 0.39 (-O3) | 1.01 to 1.02 (-O2), 0.88 to 0.89 (-O3) | 0.98 to 1.04 (-O2), 0.99 to 1.07 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 to 1.02 | 1.00 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 1.00 to 1.01 (-O2), 0.94 to 0.95 (-O3) | 1.00 to 1.02 (-O2), 0.87 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.97 to 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.06 (-O3) | 0.99 to 1.01 | 1.01 to 1.03 (-O2), 0.98 to 1.00 (-O3) |
+
+| The bound, every size in one unit, a dependent chain: the constructor forced for every size over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.55 to 0.63 (-O2), 0.61 to 0.65 (-O3) | 1.06 to 1.10 (-O2), 1.49 to 1.52 (-O3) | 1.00 (-O2), 0.89 (-O3) | 0.38 |
+| the constructor, 1 limb, N = 7 | 0.45 to 0.48 | 1.17 to 1.22 (-O2), 0.66 to 0.68 (-O3) | 1.00 to 1.01 (-O2), 0.86 (-O3) | 0.41 to 0.44 |
+| the constructor, 1 limb, N = 13 | 0.57 to 0.60 (-O2), 0.53 to 0.56 (-O3) | 0.98 to 1.04 (-O2), 0.35 to 0.36 (-O3) | 1.00 (-O2), 0.83 (-O3) | 0.64 |
+| the constructor, 1 limb, N = 18 | 1.01 to 1.03 (-O2), 0.74 to 0.76 (-O3) | 0.98 to 1.03 (-O2), 0.89 to 0.96 (-O3) | 1.00 (-O2), 0.89 to 0.90 (-O3) | 0.86 to 0.89 (-O2), 0.86 to 0.92 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.01 to 1.02 (-O2), 0.94 (-O3) | 0.94 to 1.02 (-O2), 0.98 to 1.02 (-O3) | 0.98 to 1.02 | 0.82 to 0.99 (-O2), 0.87 to 0.99 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.50 to 0.53 | 1.09 to 1.18 (-O2), 1.02 to 1.04 (-O3) | 1.00 to 1.01 (-O2), 1.06 to 1.11 (-O3) | 0.40 to 0.42 |
+| the constructor, 2 limbs, N = 7 | 0.58 to 0.63 (-O2), 0.64 to 0.81 (-O3) | 0.98 to 1.02 (-O2), 0.45 to 0.46 (-O3) | 1.00 (-O2), 0.88 to 0.92 (-O3) | 0.71 to 0.74 (-O2), 0.60 to 0.74 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.94 to 0.96 (-O2), 1.07 to 1.08 (-O3) | 0.99 to 1.01 (-O2), 0.41 to 0.42 (-O3) | 1.01 (-O2), 0.88 to 0.89 (-O3) | 0.83 to 0.91 (-O2), 1.20 to 1.25 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.97 to 0.98 (-O2), 1.12 to 1.19 (-O3) | 0.98 to 1.03 (-O2), 0.93 to 1.03 (-O3) | 0.96 to 1.00 | 0.82 to 1.00 (-O2), 1.15 to 1.53 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.02 (-O3) | 0.91 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.04 (-O2), 0.97 to 1.03 (-O3) |
+
+| The bound, every size in one unit, a dependent chain: the constructor forced for none over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 1.06 to 1.34 (-O2), 1.22 to 1.36 (-O3) | 1.05 to 1.13 (-O2), 1.41 to 1.49 (-O3) | 1.00 to 1.05 (-O2), 0.96 to 0.97 (-O3) | 1.00 (-O2), 0.67 to 0.77 (-O3) |
+| the constructor, 1 limb, N = 7 | 0.94 to 1.02 (-O2), 0.94 to 1.09 (-O3) | 1.13 to 1.20 (-O2), 0.61 to 0.62 (-O3) | 1.00 to 1.01 (-O2), 0.91 (-O3) | 0.94 to 1.00 (-O2), 0.96 to 1.04 (-O3) |
+| the constructor, 1 limb, N = 13 | 0.99 to 1.03 (-O2), 0.94 to 0.99 (-O3) | 0.98 to 1.00 (-O2), 0.36 to 0.37 (-O3) | 1.00 (-O2), 0.82 to 0.83 (-O3) | 0.98 to 1.00 |
+| the constructor, 1 limb, N = 18 | 0.98 to 1.03 | 0.98 to 1.02 (-O2), 0.93 to 0.94 (-O3) | 1.00 to 1.01 (-O2), 0.89 to 0.90 (-O3) | 0.96 to 0.99 (-O2), 0.94 to 1.05 (-O3) |
+| the constructor, 1 limb, N = 80 | 0.99 to 1.03 | 0.98 to 1.02 | 0.98 to 1.02 | 0.94 to 0.96 (-O2), 0.76 to 1.02 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.98 to 1.06 (-O2), 0.98 to 1.06 (-O3) | 1.08 to 1.12 (-O2), 0.98 to 1.03 (-O3) | 0.99 to 1.00 (-O2), 0.99 to 1.12 (-O3) | 0.82 to 1.00 (-O2), 0.85 to 0.97 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.66 to 0.78 (-O2), 0.78 to 1.11 (-O3) | 0.99 to 1.02 (-O2), 0.45 (-O3) | 1.00 to 1.03 (-O2), 0.89 to 0.93 (-O3) | 0.88 to 1.00 (-O2), 0.82 to 0.97 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.99 (-O2), 0.92 to 1.01 (-O3) | 0.98 to 1.02 (-O2), 0.39 to 0.41 (-O3) | 1.00 to 1.02 (-O2), 0.89 to 0.90 (-O3) | 0.96 to 1.00 (-O2), 0.95 to 1.03 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 to 1.01 | 0.86 to 0.90 (-O2), 0.95 to 1.00 (-O3) | 0.95 to 0.99 | 0.91 to 1.02 (-O2), 0.75 to 1.16 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.03 | 0.98 to 1.02 (-O2), 0.96 to 1.00 (-O3) | 0.91 to 0.92 (-O2), 0.98 to 0.99 (-O3) | 1.00 to 1.02 (-O2), 0.94 to 1.03 (-O3) |
+
+| The bound, every size in one unit, a dependent chain: the constructor with the bound of the tree over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.55 to 0.63 (-O2), 0.56 to 0.65 (-O3) | 1.11 to 1.20 (-O2), 1.45 to 1.49 (-O3) | 1.00 to 1.05 (-O2), 0.89 to 0.97 (-O3) | 0.38 |
+| the constructor, 1 limb, N = 7 | 0.46 to 0.48 | 1.11 to 1.23 (-O2), 0.61 to 0.65 (-O3) | 1.00 to 1.01 (-O2), 0.86 to 0.91 (-O3) | 0.42 to 0.45 |
+| the constructor, 1 limb, N = 13 | 0.58 to 0.60 (-O2), 0.55 to 0.58 (-O3) | 0.98 to 1.04 (-O2), 0.37 (-O3) | 1.00 (-O2), 0.83 (-O3) | 0.64 to 0.66 |
+| the constructor, 1 limb, N = 18 | 1.00 to 1.01 (-O2), 0.98 to 1.07 (-O3) | 0.98 to 1.03 (-O2), 0.93 to 0.94 (-O3) | 1.00 to 1.01 (-O2), 0.89 to 0.90 (-O3) | 0.95 to 0.97 (-O2), 1.00 to 1.09 (-O3) |
+| the constructor, 1 limb, N = 80 | 0.99 to 1.03 | 0.98 to 1.01 (-O2), 1.00 to 1.03 (-O3) | 0.99 to 1.02 | 0.96 to 0.99 (-O2), 0.79 to 1.02 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.49 to 0.53 (-O2), 0.48 to 0.52 (-O3) | 1.08 to 1.14 (-O2), 0.98 to 1.02 (-O3) | 0.98 to 1.00 (-O2), 1.04 to 1.10 (-O3) | 0.40 to 0.42 |
+| the constructor, 2 limbs, N = 7 | 0.59 to 0.62 (-O2), 0.64 to 0.81 (-O3) | 0.98 to 1.04 (-O2), 0.43 to 0.45 (-O3) | 1.00 to 1.03 (-O2), 0.89 to 0.93 (-O3) | 0.71 to 0.74 (-O2), 0.60 to 0.74 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.09 to 1.12 (-O2), 0.99 to 1.02 (-O3) | 0.98 to 1.06 (-O2), 0.41 (-O3) | 1.00 to 1.02 (-O2), 0.88 to 0.90 (-O3) | 0.97 to 1.06 (-O2), 0.98 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.07 (-O3) | 0.96 to 1.00 | 1.00 to 1.10 (-O2), 0.89 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.03 | 0.98 to 1.05 (-O2), 0.98 to 1.00 (-O3) | 0.91 to 0.92 (-O2), 0.98 to 1.00 (-O3) | 1.00 to 1.03 (-O2), 0.98 to 1.02 (-O3) |
+
+| The bound, one operation per unit, many vectors: the constructor forced for every size over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.32 to 0.88 (-O2), 0.29 to 0.62 (-O3) | 0.79 to 0.82 (-O2), 0.83 to 0.87 (-O3) | 0.95 to 0.99 | 0.36 to 0.37 |
+| the constructor, 1 limb, N = 7 | 0.42 to 0.46 | 0.79 to 0.85 (-O2), 0.77 to 0.80 (-O3) | 1.00 to 1.03 | 0.42 to 0.44 |
+| the constructor, 1 limb, N = 13 | 0.60 to 0.62 (-O2), 0.56 to 0.63 (-O3) | 0.99 to 1.00 (-O2), 0.89 to 0.93 (-O3) | 0.99 to 1.04 | 0.63 to 0.64 (-O2), 0.54 to 0.64 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.09 to 1.10 (-O2), 0.73 to 0.74 (-O3) | 0.97 to 1.03 (-O2), 0.93 to 1.02 (-O3) | 0.99 to 1.01 | 0.92 to 0.99 (-O2), 0.81 to 0.87 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.04 to 1.06 (-O2), 0.96 to 0.97 (-O3) | 0.98 to 1.08 (-O2), 0.98 to 1.02 (-O3) | 1.02 | 0.86 to 0.97 (-O2), 0.88 to 0.98 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.43 to 0.47 | 0.98 to 1.04 (-O2), 0.73 to 0.75 (-O3) | 0.97 (-O2), 1.29 to 1.35 (-O3) | 0.41 to 0.49 (-O2), 0.42 to 0.49 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.74 to 0.76 (-O2), 0.69 to 0.70 (-O3) | 0.98 to 1.02 (-O2), 0.72 to 0.74 (-O3) | 0.98 to 0.99 (-O2), 0.93 to 0.95 (-O3) | 0.70 to 0.80 (-O2), 0.72 to 0.79 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.96 (-O2), 1.37 to 1.40 (-O3) | 0.99 to 1.03 (-O2), 0.68 to 0.73 (-O3) | 1.01 (-O2), 0.92 to 0.93 (-O3) | 0.97 to 1.03 (-O2), 1.10 to 1.12 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.98 to 1.00 (-O2), 1.26 to 1.27 (-O3) | 0.98 to 1.03 (-O2), 1.00 to 1.04 (-O3) | 1.08 to 1.09 (-O2), 1.00 to 1.01 (-O3) | 0.89 to 0.99 (-O2), 1.03 to 1.36 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.02 | 1.00 to 1.05 | 0.98 to 1.00 | 0.99 to 1.03 (-O2), 0.97 to 0.99 (-O3) |
+
+| The bound, one operation per unit, many vectors: the constructor forced for none over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.64 to 2.17 (-O2), 0.38 to 1.72 (-O3) | 0.77 to 0.81 (-O2), 0.84 to 0.85 (-O3) | 0.99 to 1.05 (-O2), 1.01 to 1.05 (-O3) | 1.00 (-O2), 0.63 to 0.77 (-O3) |
+| the constructor, 1 limb, N = 7 | 0.93 to 1.08 (-O2), 0.90 to 1.04 (-O3) | 0.76 to 0.81 | 1.00 to 1.02 (-O2), 1.06 to 1.07 (-O3) | 0.95 to 1.01 (-O2), 0.97 to 1.04 (-O3) |
+| the constructor, 1 limb, N = 13 | 1.02 to 1.06 (-O2), 0.93 to 1.04 (-O3) | 0.99 to 1.01 (-O2), 0.90 to 0.91 (-O3) | 1.00 to 1.04 | 0.99 to 1.01 (-O2), 0.84 to 1.00 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.03 to 1.04 (-O2), 0.97 to 1.00 (-O3) | 0.97 to 1.00 | 1.00 to 1.02 | 0.96 to 1.02 (-O2), 0.94 to 1.05 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.00 to 1.04 | 0.98 to 1.08 (-O2), 1.00 (-O3) | 1.01 to 1.04 | 0.92 to 0.97 (-O2), 0.88 to 1.00 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.95 to 1.00 (-O2), 0.98 to 1.03 (-O3) | 0.98 to 1.01 (-O2), 0.73 (-O3) | 0.94 to 0.97 (-O2), 1.21 to 1.26 (-O3) | 0.97 to 1.00 (-O2), 0.85 to 1.16 (-O3) |
+| the constructor, 2 limbs, N = 7 | 1.09 to 1.13 | 0.98 to 1.02 (-O2), 0.72 (-O3) | 0.98 to 1.02 (-O2), 0.96 to 0.97 (-O3) | 0.96 to 1.00 (-O2), 0.91 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.99 to 1.00 (-O2), 1.05 to 1.08 (-O3) | 0.98 to 1.02 (-O2), 0.73 (-O3) | 1.02 to 1.03 (-O2), 0.92 to 0.93 (-O3) | 0.97 to 1.01 |
+| the constructor, 2 limbs, N = 18 | 1.01 | 0.86 to 0.89 (-O2), 1.00 to 1.02 (-O3) | 0.99 to 1.01 | 0.91 to 1.02 (-O2), 0.76 to 1.14 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.01 | 1.00 to 1.04 | 1.08 to 1.09 (-O2), 1.00 (-O3) | 1.01 to 1.04 (-O2), 0.98 to 1.00 (-O3) |
+
+| The bound, one operation per unit, many vectors: the constructor with the bound of the tree over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.33 to 0.90 (-O2), 0.30 to 0.62 (-O3) | 0.77 to 0.83 (-O2), 0.82 to 0.85 (-O3) | 0.99 to 1.04 (-O2), 0.98 to 1.06 (-O3) | 0.36 to 0.37 |
+| the constructor, 1 limb, N = 7 | 0.42 to 0.46 | 0.76 to 0.84 (-O2), 0.76 to 0.79 (-O3) | 0.99 to 1.02 (-O2), 1.03 to 1.07 (-O3) | 0.42 to 0.44 |
+| the constructor, 1 limb, N = 13 | 0.61 to 0.64 (-O2), 0.58 to 0.65 (-O3) | 0.98 to 1.04 (-O2), 0.89 to 0.90 (-O3) | 0.99 to 1.04 | 0.63 to 0.65 (-O2), 0.54 to 0.64 (-O3) |
+| the constructor, 1 limb, N = 18 | 1.02 to 1.04 (-O2), 0.91 to 1.01 (-O3) | 0.97 to 1.03 (-O2), 0.99 to 1.00 (-O3) | 1.00 to 1.03 | 0.94 to 1.01 (-O2), 1.00 to 1.08 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.00 to 1.04 | 0.98 to 1.11 (-O2), 0.99 to 1.00 (-O3) | 1.02 to 1.03 | 0.96 to 1.00 (-O2), 0.80 to 1.00 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.43 to 0.47 | 0.97 to 1.04 (-O2), 0.73 (-O3) | 0.94 to 0.97 (-O2), 1.21 to 1.35 (-O3) | 0.41 to 0.49 (-O2), 0.42 to 0.49 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.74 to 0.75 (-O2), 0.69 to 0.70 (-O3) | 0.98 to 1.04 (-O2), 0.72 (-O3) | 0.99 to 1.02 (-O2), 0.94 to 0.97 (-O3) | 0.70 to 0.79 (-O2), 0.70 to 0.79 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.12 to 1.13 (-O2), 1.00 to 1.09 (-O3) | 0.98 to 1.04 (-O2), 0.71 to 0.73 (-O3) | 1.02 to 1.03 (-O2), 0.91 to 0.93 (-O3) | 0.98 to 1.04 (-O2), 1.00 to 1.07 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.99 to 1.00 | 0.98 to 1.04 (-O2), 1.00 to 1.09 (-O3) | 1.00 to 1.01 | 1.00 to 1.02 (-O2), 0.87 to 1.08 (-O3) |
+| the constructor, 2 limbs, N = 80 | 0.97 to 1.01 | 1.00 to 1.04 | 1.08 to 1.11 (-O2), 0.99 to 1.00 (-O3) | 1.01 to 1.03 (-O2), 0.97 to 1.01 (-O3) |
+
+| The bound, one operation per unit, a dependent chain: the constructor forced for every size over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.52 to 0.75 (-O2), 0.60 to 0.75 (-O3) | 1.02 to 1.14 (-O2), 0.92 to 1.06 (-O3) | 1.00 | 0.38 |
+| the constructor, 1 limb, N = 7 | 0.51 to 0.57 (-O2), 0.47 to 0.56 (-O3) | 1.12 to 1.21 (-O2), 0.95 to 1.06 (-O3) | 0.96 to 1.01 | 0.41 to 0.44 |
+| the constructor, 1 limb, N = 13 | 0.55 to 0.59 | 1.00 to 1.03 (-O2), 0.93 to 1.00 (-O3) | 1.00 to 1.01 | 0.64 to 0.65 |
+| the constructor, 1 limb, N = 18 | 0.99 to 1.02 (-O2), 0.70 to 0.72 (-O3) | 0.98 to 1.02 | 0.99 to 1.00 | 0.86 to 0.88 (-O2), 0.86 to 0.92 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.02 (-O2), 1.51 (-O3) | 0.98 to 1.06 (-O2), 1.00 to 1.03 (-O3) | 1.00 to 1.02 | 0.84 to 0.99 (-O2), 0.86 to 0.98 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.51 to 0.55 (-O2), 0.50 to 0.55 (-O3) | 0.92 to 1.00 (-O2), 1.00 to 1.19 (-O3) | 0.97 to 0.99 | 0.40 to 0.42 |
+| the constructor, 2 limbs, N = 7 | 0.60 to 0.65 | 1.00 to 1.03 (-O2), 0.93 to 1.00 (-O3) | 0.96 to 1.00 | 0.71 to 0.74 (-O2), 0.60 to 0.74 (-O3) |
+| the constructor, 2 limbs, N = 13 | 0.97 to 0.99 (-O2), 1.06 to 1.09 (-O3) | 0.98 to 1.03 (-O2), 0.74 to 0.79 (-O3) | 0.99 (-O2), 0.93 (-O3) | 0.83 to 0.91 (-O2), 1.18 to 1.25 (-O3) |
+| the constructor, 2 limbs, N = 18 | 0.98 to 0.99 (-O2), 1.20 to 1.21 (-O3) | 0.98 to 1.00 (-O2), 1.00 to 1.03 (-O3) | 1.00 to 1.01 | 0.79 to 0.93 (-O2), 1.16 to 1.59 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.01 | 0.98 to 1.00 (-O2), 0.97 to 1.02 (-O3) | 0.98 to 1.00 | 0.97 to 1.01 |
+
+| The bound, one operation per unit, a dependent chain: the constructor forced for none over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 1.05 to 1.32 (-O2), 1.11 to 1.25 (-O3) | 1.02 to 1.09 (-O2), 0.97 to 1.00 (-O3) | 1.00 to 1.05 (-O2), 1.08 (-O3) | 1.00 (-O2), 0.67 to 0.77 (-O3) |
+| the constructor, 1 limb, N = 7 | 1.01 to 1.08 (-O2), 0.90 to 1.08 (-O3) | 1.16 to 1.19 (-O2), 0.94 to 1.12 (-O3) | 1.01 to 1.02 | 0.94 to 1.00 (-O2), 0.97 to 1.04 (-O3) |
+| the constructor, 1 limb, N = 13 | 1.04 to 1.06 (-O2), 0.93 to 1.06 (-O3) | 1.00 to 1.01 (-O2), 0.90 to 0.97 (-O3) | 1.00 to 1.01 | 0.98 to 1.00 |
+| the constructor, 1 limb, N = 18 | 1.00 to 1.02 (-O2), 1.02 to 1.08 (-O3) | 0.98 to 1.02 (-O2), 0.99 to 1.07 (-O3) | 0.99 to 1.01 | 0.95 to 0.99 (-O2), 0.94 to 1.05 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.00 to 1.04 | 0.98 to 1.06 (-O2), 1.00 (-O3) | 1.00 to 1.02 | 0.93 to 0.96 (-O2), 0.77 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.90 to 1.00 (-O2), 0.97 to 1.11 (-O3) | 0.89 to 0.97 (-O2), 0.96 to 1.16 (-O3) | 0.98 to 0.99 (-O2), 0.91 (-O3) | 0.82 to 1.00 (-O2), 0.85 to 0.97 (-O3) |
+| the constructor, 2 limbs, N = 7 | 0.72 to 1.07 (-O2), 0.86 to 1.13 (-O3) | 1.00 to 1.02 (-O2), 0.92 to 0.97 (-O3) | 1.00 to 1.03 (-O2), 0.97 to 1.01 (-O3) | 0.88 to 1.01 (-O2), 0.82 to 0.97 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.00 to 1.02 | 0.98 to 1.02 (-O2), 0.74 to 0.77 (-O3) | 0.99 (-O2), 0.93 to 0.94 (-O3) | 0.97 to 1.00 (-O2), 0.94 to 1.02 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 to 1.01 | 0.86 to 0.89 (-O2), 1.00 to 1.01 (-O3) | 1.00 to 1.01 | 0.88 to 1.04 (-O2), 0.77 to 1.19 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.04 | 0.97 to 1.02 | 0.93 to 0.94 (-O2), 1.00 (-O3) | 1.00 (-O2), 0.96 to 1.02 (-O3) |
+
+| The bound, one operation per unit, a dependent chain: the constructor with the bound of the tree over the header before | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the constructor, 1 limb, N = 3 | 0.60 to 0.75 (-O2), 0.65 to 0.67 (-O3) | 1.00 to 1.04 (-O2), 0.94 to 1.04 (-O3) | 1.00 to 1.05 (-O2), 1.00 to 1.09 (-O3) | 0.38 |
+| the constructor, 1 limb, N = 7 | 0.49 to 0.54 (-O2), 0.44 to 0.56 (-O3) | 1.15 to 1.25 (-O2), 0.87 to 1.16 (-O3) | 1.00 to 1.02 (-O2), 0.96 to 1.02 (-O3) | 0.41 to 0.44 |
+| the constructor, 1 limb, N = 13 | 0.55 to 0.58 | 0.99 to 1.04 (-O2), 0.90 to 0.95 (-O3) | 1.00 to 1.01 | 0.64 to 0.67 |
+| the constructor, 1 limb, N = 18 | 0.98 to 1.02 | 0.98 to 1.04 (-O2), 0.99 to 1.03 (-O3) | 0.99 to 1.01 | 0.95 to 0.98 (-O2), 1.00 to 1.08 (-O3) |
+| the constructor, 1 limb, N = 80 | 1.62 to 1.64 (-O2), 1.00 to 1.01 (-O3) | 0.92 to 1.06 (-O2), 1.00 (-O3) | 1.00 to 1.02 | 0.98 to 0.99 (-O2), 0.79 to 1.01 (-O3) |
+| the constructor, 2 limbs, N = 3 | 0.49 to 0.55 (-O2), 0.53 to 0.58 (-O3) | 0.92 to 0.96 (-O2), 0.96 to 1.16 (-O3) | 0.98 to 0.99 (-O2), 0.91 to 0.98 (-O3) | 0.40 to 0.42 |
+| the constructor, 2 limbs, N = 7 | 0.59 to 0.64 | 1.00 to 1.05 (-O2), 0.91 to 0.97 (-O3) | 1.00 to 1.03 (-O2), 0.97 to 1.05 (-O3) | 0.71 to 0.74 (-O2), 0.60 to 0.74 (-O3) |
+| the constructor, 2 limbs, N = 13 | 1.11 (-O2), 0.97 to 1.04 (-O3) | 0.98 to 1.03 (-O2), 0.74 to 0.77 (-O3) | 0.99 to 1.00 (-O2), 0.92 to 0.94 (-O3) | 0.98 to 1.07 (-O2), 0.98 to 1.09 (-O3) |
+| the constructor, 2 limbs, N = 18 | 1.00 (-O2), 0.95 to 0.97 (-O3) | 0.98 to 1.03 (-O2), 0.98 to 1.09 (-O3) | 0.99 to 1.01 | 1.00 to 1.08 (-O2), 0.89 to 1.13 (-O3) |
+| the constructor, 2 limbs, N = 80 | 1.00 to 1.05 | 0.95 to 1.00 | 0.93 (-O2), 0.99 to 1.01 (-O3) | 0.98 to 1.02 |
+
+| The bound, M3, Apple clang: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 (forced in the tree) | 4.42 to 4.47 | 5.2 to 8.69 | 8.77 to 13.5 | 0; 4 (make tp m2y 0.50) | 4.42 to 4.43 | 9.2 to 12.2 | 5 to 12.9 | 0; 4 (make tp m2x 0.48) |
+| 1 limb, N = 7 (forced in the tree) | 8.69 to 8.85 | 18.7 to 21.5 | 18.1 to 19 | 0; 4 (make tp m2x 0.47) | 8.62 to 8.69 | 18.8 to 20.2 | 18.7 to 20.5 | 0; 4 (make tp m2x 0.46) |
+| 1 limb, N = 13 (forced in the tree) | 14.4 to 14.5 | 22.8 to 23.9 | 22.8 to 23.6 | 0; 5 (make lat m2y 0.57) | 14.7 to 14.8 | 23.4 to 24.1 | 22.4 to 24.4 | 0; 4 (make lat m2x 0.59) |
+| 1 limb, N = 18 | 19.7 to 20.1 | 18.9 to 19.7 | 18.2 to 18.6 | 0; 0 | 19.2 | 23.3 to 24.7 | 23.8 to 24.3 | 0; 4 (make lat m2y 0.69) |
+| 1 limb, N = 80 | 70.7 to 71.1 | 70.8 to 71.2 | 68.3 to 69.7 | 0; 0 | 70.1 to 70.2 | 73 to 73.1 | 72.2 to 72.5 | 1 (make lat m2y 1.50); 1 (make lat m2x 0.94) |
+| 2 limbs, N = 3 (forced in the tree) | 6.53 to 6.68 | 13.9 to 14.2 | 14.9 to 15.2 | 0; 4 (make tp m2x 0.48) | 6.69 to 6.71 | 14.1 to 14.6 | 13.3 to 14.1 | 0; 4 (make tp m2y 0.47) |
+| 2 limbs, N = 7 (forced in the tree) | 13.2 | 17.2 to 21.6 | 18.4 to 19.3 | 0; 4 (make tp m2y 0.69) | 13.1 | 18.7 to 19.9 | 18.2 to 18.9 | 0; 4 (make tp m2y 0.65) |
+| 2 limbs, N = 13 | 19.5 to 19.9 | 19.9 to 20 | 19.9 to 20.4 | 0; 0 | 26.5 to 26.9 | 19.3 to 20.1 | 19.3 to 19.4 | 3 (make tp m2x 1.32); 0 |
+| 2 limbs, N = 18 | 31.8 to 32.1 | 33 | 32.9 to 33 | 0; 0 | 33.9 | 26.2 to 26.3 | 26.3 | 4 (make tp m2x 1.29); 0 |
+| 2 limbs, N = 80 | 92 to 93.8 | 92.5 to 94.3 | 93.1 to 93.5 | 0; 0 | 91.8 | 92.2 to 92.3 | 92 | 0; 0 |
+
+| The bound, M3, GCC 16: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 | 3.36 to 3.49 | 3.31 to 3.4 | 4.25 to 4.34 | 0; 0 | 2.4 to 2.57 | 2.39 to 2.45 | 4.74 to 4.84 | 1 (sub lat m2x 1.56); 1 (sub tp m2x 0.59) |
+| 1 limb, N = 7 | 8.05 to 8.53 | 8.04 to 8.24 | 11.3 to 11.5 | 0; 1 (sub lat m2y 0.94) | 3.5 to 3.65 | 3.52 to 3.58 | 9.09 to 9.28 | 2 (sub lat m2x 1.63); 1 (sub tp m2x 0.61) |
+| 1 limb, N = 13 | 17.4 to 17.5 | 17.4 to 17.5 | 17.4 to 17.8 | 0; 0 | 6.59 to 6.81 | 6.59 to 6.72 | 17.9 to 18.2 | 1 (sub lat m2x 1.38); 1 (sub tp m2x 0.68) |
+| 1 limb, N = 18 | 24.2 to 25.2 | 24.3 | 24.4 to 24.8 | 0; 0 | 23.7 to 24.8 | 24.2 to 24.8 | 26.1 to 26.7 | 0; 2 (sub tp m2x 0.72) |
+| 1 limb, N = 80 | 207 to 216 | 207 to 211 | 208 to 212 | 0; 0 | 197 to 218 | 197 to 213 | 195 to 212 | 0; 1 (sub tp m2x 0.96) |
+| 2 limbs, N = 3 | 4.64 to 4.84 | 4.65 to 4.74 | 4.63 to 4.72 | 0; 0 | 2.97 to 3.22 | 2.95 to 3.03 | 6.15 to 6.28 | 0; 0 |
+| 2 limbs, N = 7 | 17.6 to 17.8 | 17.6 | 17.6 to 18 | 0; 0 | 5.23 to 5.5 | 4.97 to 5.07 | 11.9 to 12.3 | 1 (add lat m2x 1.08); 0 |
+| 2 limbs, N = 13 | 29.2 to 30.4 | 29.1 to 29.7 | 29.2 to 29.3 | 0; 0 | 10 to 10.5 | 10 to 10.2 | 25.6 to 26.1 | 0; 0 |
+| 2 limbs, N = 18 | 66 to 67.2 | 57.8 to 59 | 65.9 to 66.1 | 4 (make lat m2y 1.12); 0 | 37.5 to 39.1 | 37.3 to 38.2 | 36.6 to 38.4 | 0; 0 |
+| 2 limbs, N = 80 | 289 to 292 | 289 to 295 | 290 to 296 | 0; 0 | 254 to 282 | 260 to 283 | 253 to 275 | 0; 0 |
+
+| The bound, Zen 2, GCC 13: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 | 16.5 to 16.6 | 16.5 to 17.4 | 16.8 | 0; 1 (scale lat m2y 0.97) | 16.5 | 17.7 | 17.1 to 17.8 | 3 (addop tp m2y 1.05); 5 (scale tp m2x 0.64) |
+| 1 limb, N = 7 | 19.2 to 19.3 | 19.1 to 19.3 | 19 to 19.1 | 0; 0 | 18.1 | 18.9 | 20.9 to 21.1 | 2 (addop tp m2y 1.05); 6 (scale tp m2x 0.72) |
+| 1 limb, N = 13 | 24 to 24.1 | 24 to 24.1 | 23.9 | 0; 0 | 22.8 to 22.9 | 22.7 to 22.8 | 25.6 to 25.7 | 0; 3 (scale tp m2x 0.70) |
+| 1 limb, N = 18 | 29 to 29.1 | 29 to 29.3 | 29.1 to 29.3 | 0; 1 (sub lat m2x 0.82) | 28.9 to 29.1 | 29.2 to 29.3 | 32.9 to 33.4 | 1 (addop tp m2y 1.02); 3 (scale lat m2x 0.71) |
+| 1 limb, N = 80 | 152 | 148 to 149 | 150 to 151 | 0; 1 (sub lat m2x 0.87) | 150 | 149 | 141 to 143 | 4 (addop lat m2x 1.03); 1 (scale lat m2x 0.84) |
+| 2 limbs, N = 3 | 18.9 to 19 | 18.4 to 18.9 | 19.4 to 19.5 | 0; 0 | 22.2 | 20.7 to 20.8 | 19.3 to 20.5 | 3 (make tp m2y 1.07); 0 |
+| 2 limbs, N = 7 | 22.5 to 22.6 | 22.5 to 23.4 | 22.8 to 22.9 | 0; 0 | 20.5 | 21 to 21.1 | 23.3 to 23.6 | 0; 2 (make tp m2x 0.98) |
+| 2 limbs, N = 13 | 46.4 to 46.5 | 46.3 to 46.8 | 45.7 to 45.8 | 0; 0 | 29 | 28.9 to 29.1 | 32.6 to 32.8 | 1 (scale lat m2x 1.02); 0 |
+| 2 limbs, N = 18 | 63.8 to 64.3 | 58.7 to 59.3 | 58.8 to 58.9 | 3 (make tp m2y 1.08); 0 | 35.5 | 35.5 | 37.4 to 37.8 | 0; 0 |
+| 2 limbs, N = 80 | 248 to 254 | 226 to 230 | 227 to 228 | 2 (make tp m2x 1.08); 1 (make tp m2y 0.91) | 195 to 200 | 197 to 199 | 195 to 196 | 0; 0 |
+
+| The bound, Zen 2, Clang 18: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |
+|---|---|---|---|---|---|---|---|---|
+| 1 limb, N = 3 (forced in the tree) | 8.98 to 8.99 | 24.2 to 24.4 | 24.3 to 24.5 | 0; 4 (make tp m2y 0.37) | 8.99 to 9.01 | 15.6 to 18.9 | 24.1 to 24.4 | 0; 4 (make lat m2x 0.57) |
+| 1 limb, N = 7 (forced in the tree) | 12.1 to 12.2 | 26.8 to 28.1 | 26.8 to 28.3 | 0; 4 (make lat m2y 0.44) | 12.1 to 12.2 | 26.8 to 28.2 | 26.7 to 28.1 | 0; 4 (make lat m2y 0.44) |
+| 1 limb, N = 13 (forced in the tree) | 21.1 | 32.8 to 33 | 32.6 to 33.2 | 1 (scale lat m2x 1.06); 4 (make tp m2y 0.64) | 21 to 21.1 | 32.8 to 32.9 | 33 to 39 | 0; 4 (make tp m2y 0.64) |
+| 1 limb, N = 18 | 23.9 to 24.1 | 24.2 to 24.9 | 24.4 to 26.2 | 0; 4 (make lat m2y 0.91) | 29.2 to 29.3 | 33.9 to 35.7 | 33.9 to 36 | 2 (add lat m2x 1.01); 4 (make tp m2x 0.86) |
+| 1 limb, N = 80 | 69.1 to 69.7 | 65.9 to 78.2 | 71.2 to 82 | 0; 1 (add tp m2x 0.99) | 68.8 to 79.3 | 71.5 to 78.7 | 71.2 to 89.7 | 0; 0 |
+| 2 limbs, N = 3 (forced in the tree) | 10.8 | 21.9 to 25.4 | 21.9 to 26.2 | 0; 4 (make lat m2x 0.49) | 10.8 | 21.9 to 25.5 | 21.9 to 25.8 | 0; 4 (make lat m2y 0.49) |
+| 2 limbs, N = 7 (forced in the tree) | 22.1 | 27.9 to 30.4 | 27.8 to 31.7 | 0; 4 (make tp m2x 0.79) | 22 to 22.1 | 28 to 30.5 | 28 to 30.9 | 0; 4 (make tp m2x 0.79) |
+| 2 limbs, N = 13 | 33.6 to 33.8 | 32.8 to 33.6 | 32.7 to 34.7 | 0; 2 (make lat m2y 0.91) | 39.7 | 34.9 to 35.5 | 35.4 to 36.2 | 4 (make lat m2y 1.22); 0 |
+| 2 limbs, N = 18 | 46.1 to 46.4 | 47.4 to 47.9 | 46.6 to 51.8 | 1 (addop lat m2y 1.01); 4 (make lat m2y 0.90) | 50.5 to 50.6 | 37.7 to 42.3 | 37.4 to 49.3 | 4 (make lat m2y 1.34); 0 |
+| 2 limbs, N = 80 | 147 to 148 | 148 to 150 | 143 to 149 | 0; 0 | 146 to 148 | 147 to 150 | 148 to 152 | 0; 0 |
+
+| The bound: what placement alone does, |X / before - 1| of the controls at the 90th percentile (the floor of the noise) | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| the generated loops of the short ball vectors, called directly | 3.3% (-O2), 4.1% (-O3) | 4.3% (-O2), 4.0% (-O3) | 2.4% (-O2), 1.3% (-O3) | 1.0% (-O2), 0.9% (-O3) |
+
+| The bound, forced for every size, over the header before: functions slower; faster (of 24 per size), and the largest of each | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1 limb, N = 3 | 0; 13 (make tp m2x 0.51) (-O2), 0; 12 (make tp m2y 0.62) (-O3) | 2 (sub lat m2x 1.27); 8 (sub tp m2y 0.79) (-O2), 4 (sub lat m2x 1.67); 10 (make tp m2x 0.54) (-O3) | 0; 0 (-O2), 1 (add lat m2x 1.02); 12 (scale tp m2x 0.62) (-O3) | 1 (sub lat m2x 1.01); 8 (make tp m2y 0.37) (-O2), 2 (sub lat m2y 1.01); 8 (make tp m2y 0.37) (-O3) |
+| 1 limb, N = 7 | 0; 5 (make tp m2y 0.46) (-O2), 0; 6 (make tp m2y 0.45) (-O3) | 3 (make lat m2x 1.16); 7 (make tp m2x 0.75) (-O2), 3 (sub lat m2x 1.63); 9 (make tp m2x 0.40) (-O3) | 0; 1 (scale lat m2y 0.97) (-O2), 2 (make tp m2y 1.03); 12 (scale tp m2x 0.71) (-O3) | 0; 5 (make lat m2y 0.44) (-O2), 0; 4 (make lat m2x 0.44) (-O3) |
+| 1 limb, N = 13 | 7 (add lat m2x 1.60); 10 (make lat m2y 0.60) (-O2), 4 (add lat m2x 1.61); 10 (make lat m2x 0.56) (-O3) | 0; 4 (scale lat m2x 0.85) (-O2), 1 (sub lat m2x 1.36); 7 (make lat m2x 0.37) (-O3) | 0; 0 (-O2), 1 (make tp m2y 1.04); 13 (scale tp m2x 0.70) (-O3) | 1 (scale lat m2x 1.04); 4 (make lat m2x 0.64) (-O2), 0; 4 (make tp m2y 0.64) (-O3) |
+| 1 limb, N = 18 | 4 (half lat m2x 1.08); 1 (add lat m2x 0.94) (-O2), 0; 6 (make lat m2y 0.72) (-O3) | 0; 5 (scale lat m2x 0.80) (-O2), 0; 6 (sub tp m2x 0.70) (-O3) | 0; 0 (-O2), 0; 11 (scale lat m2x 0.71) (-O3) | 0; 9 (make lat m2y 0.88) (-O2), 0; 8 (make tp m2x 0.86) (-O3) |
+| 1 limb, N = 80 | 1 (make tp m2y 1.03); 0 (-O2), 1 (make lat m2y 1.51); 1 (make lat m2x 0.94) (-O3) | 0; 1 (scale tp m2x 0.94) (-O2), 0; 2 (sub tp m2x 0.93) (-O3) | 0; 2 (add tp m2x 0.97) (-O2), 7 (scale tp m2y 1.10); 3 (scale lat m2x 0.84) (-O3) | 0; 2 (make tp m2y 0.97) (-O2), 4 (add lat m2x 1.03); 1 (scale tp m2y 0.94) (-O3) |
+| 2 limbs, N = 3 | 1 (half lat m2x 1.05); 5 (make tp m2x 0.45) (-O2), 0; 5 (make tp m2y 0.46) (-O3) | 2 (make lat m2x 1.09); 1 (half lat m2x 0.90) (-O2), 0; 7 (make tp m2x 0.52) (-O3) | 0; 1 (make tp m2y 0.98) (-O2), 3 (make tp m2y 1.29); 9 (scale tp m2y 0.91) (-O3) | 3 (add tp m2x 1.01); 5 (make lat m2x 0.42) (-O2), 3 (add lat m2y 1.01); 8 (make lat m2y 0.41) (-O3) |
+| 2 limbs, N = 7 | 2 (scale lat m2x 1.63); 6 (make lat m2y 0.62) (-O2), 2 (scale lat m2x 1.68); 6 (make lat m2y 0.65) (-O3) | 0; 1 (half lat m2x 0.91) (-O2), 1 (add lat m2x 1.08); 5 (make tp m2x 0.46) (-O3) | 0; 0 (-O2), 1 (addop lat m2y 1.02); 5 (make tp m2x 0.88) (-O3) | 4 (add tp m2x 1.02); 6 (make lat m2y 0.74) (-O2), 5 (sub lat m2y 1.02); 8 (make lat m2y 0.74) (-O3) |
+| 2 limbs, N = 13 | 1 (scale lat m2x 1.06); 1 (make lat m2x 0.96) (-O2), 4 (make tp m2y 1.37); 2 (scale lat m2x 0.91) (-O3) | 0; 0 (-O2), 0; 7 (make tp m2x 0.41) (-O3) | 0; 0 (-O2), 0; 14 (make tp m2x 0.89) (-O3) | 8 (sub lat m2x 1.03); 2 (make lat m2y 0.91) (-O2), 13 (make lat m2x 1.19); 1 (add tp m2y 0.99) (-O3) |
+| 2 limbs, N = 18 | 0; 0 (-O2), 4 (make tp m2x 1.29); 0 (-O3) | 0; 0 (-O2), 0; 1 (half lat m2x 0.93) (-O3) | 3 (make tp m2x 1.08); 0 (-O2), 0; 4 (make tp m2x 0.95) (-O3) | 1 (sub lat m2y 1.01); 1 (make lat m2y 0.93) (-O2), 9 (make lat m2y 1.16); 0 (-O3) |
+| 2 limbs, N = 80 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 1 (half tp m2x 0.91) (-O3) | 1 (make tp m2x 1.09); 1 (make lat m2x 0.91) (-O2), 0; 2 (add tp m2x 0.98) (-O3) | 0; 0 (-O2), 0; 0 (-O3) |
+
+| The bound, forced for none, over the header before: functions slower; faster (of 24 per size), and the largest of each | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1 limb, N = 3 | 2 (make lat m2x 1.06); 7 (sub tp m2x 0.91) (-O2), 1 (make lat m2x 1.22); 8 (sub tp m2x 0.91) (-O3) | 4 (sub lat m2x 1.25); 10 (add tp m2y 0.80) (-O2), 2 (make lat m2x 1.38); 9 (make tp m2x 0.52) (-O3) | 0; 3 (add lat m2y 0.96) (-O2), 2 (make lat m2y 1.08); 17 (half lat m2x 0.91) (-O3) | 0; 4 (half tp m2x 0.92) (-O2), 2 (sub lat m2y 1.01); 8 (make lat m2x 0.77) (-O3) |
+| 1 limb, N = 7 | 0; 0 (-O2), 0; 2 (half tp m2x 0.96) (-O3) | 2 (make lat m2y 1.16); 8 (make tp m2x 0.73) (-O2), 2 (scale lat m2x 1.15); 9 (make tp m2x 0.39) (-O3) | 0; 1 (half lat m2x 0.97) (-O2), 2 (make tp m2y 1.06); 9 (make tp m2x 0.90) (-O3) | 0; 1 (half tp m2x 0.97) (-O2), 0; 2 (half tp m2x 0.99) (-O3) |
+| 1 limb, N = 13 | 6 (add lat m2x 1.58); 5 (addop tp m2x 0.73) (-O2), 4 (add lat m2x 1.61); 6 (addop tp m2x 0.74) (-O3) | 0; 5 (scale lat m2x 0.82) (-O2), 0; 7 (make lat m2x 0.37) (-O3) | 0; 0 (-O2), 1 (make tp m2y 1.03); 10 (make lat m2x 0.83) (-O3) | 0; 2 (scale lat m2x 0.99) (-O2), 0; 1 (scale lat m2x 0.99) (-O3) |
+| 1 limb, N = 18 | 4 (addop tp m2y 1.07); 1 (half tp m2x 0.96) (-O2), 3 (sub tp m2x 1.07); 0 (-O3) | 0; 5 (scale lat m2x 0.80) (-O2), 0; 6 (scale tp m2y 0.93) (-O3) | 1 (sub lat m2x 1.21); 0 (-O2), 0; 11 (make tp m2x 0.89) (-O3) | 0; 3 (make lat m2x 0.99) (-O2), 0; 7 (add tp m2y 0.98) (-O3) |
+| 1 limb, N = 80 | 1 (make tp m2y 1.04); 0 (-O2), 0; 0 (-O3) | 0; 2 (scale tp m2x 0.93) (-O2), 0; 0 (-O3) | 3 (sub lat m2x 1.16); 2 (add tp m2x 0.97) (-O2), 4 (scale tp m2y 1.10); 2 (half lat m2x 0.97) (-O3) | 2 (sub tp m2x 1.01); 0 (-O2), 4 (add lat m2x 1.04); 0 (-O3) |
+| 2 limbs, N = 3 | 0; 1 (make tp m2x 0.95) (-O2), 0; 0 (-O3) | 2 (make lat m2x 1.08); 1 (half lat m2x 0.94) (-O2), 0; 8 (make tp m2x 0.49) (-O3) | 0; 2 (make tp m2y 0.97) (-O2), 1 (make tp m2y 1.21); 8 (scale tp m2y 0.91) (-O3) | 2 (add tp m2x 1.01); 0 (-O2), 5 (half lat m2x 1.01); 1 (half tp m2x 0.99) (-O3) |
+| 2 limbs, N = 7 | 3 (scale lat m2x 1.66); 3 (make lat m2x 0.81) (-O2), 3 (scale lat m2x 1.62); 2 (scale tp m2x 0.91) (-O3) | 0; 1 (half lat m2x 0.92) (-O2), 0; 6 (make tp m2x 0.42) (-O3) | 0; 0 (-O2), 2 (addop lat m2y 1.02); 7 (make tp m2x 0.90) (-O3) | 4 (sub lat m2y 1.02); 4 (scale lat m2y 0.84) (-O2), 6 (sub lat m2y 1.02); 4 (scale lat m2y 0.84) (-O3) |
+| 2 limbs, N = 13 | 1 (scale lat m2x 1.04); 0 (-O2), 1 (make tp m2y 1.04); 2 (scale lat m2x 0.93) (-O3) | 0; 1 (half lat m2x 0.95) (-O2), 0; 6 (make tp m2x 0.40) (-O3) | 0; 2 (half tp m2y 0.98) (-O2), 0; 12 (make tp m2x 0.89) (-O3) | 6 (sub lat m2y 1.03); 0 (-O2), 9 (sub lat m2y 1.03); 1 (add tp m2y 0.99) (-O3) |
+| 2 limbs, N = 18 | 0; 0 (-O2), 0; 0 (-O3) | 0; 4 (make lat m2y 0.89) (-O2), 0; 2 (half lat m2x 0.92) (-O3) | 0; 0 (-O2), 0; 4 (make tp m2x 0.95) (-O3) | 1 (sub lat m2y 1.01); 0 (-O2), 4 (sub tp m2y 1.02); 0 (-O3) |
+| 2 limbs, N = 80 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 1 (half tp m2x 0.91) (-O3) | 1 (make tp m2y 1.08); 2 (make lat m2x 0.92) (-O2), 0; 1 (addop tp m2x 0.99) (-O3) | 1 (sub tp m2x 1.01); 0 (-O2), 0; 0 (-O3) |
+
+| The bound, with the bound of the tree, over the header before: functions slower; faster (of 24 per size), and the largest of each | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1 limb, N = 3 | 0; 14 (make tp m2x 0.51) (-O2), 0; 13 (make tp m2y 0.62) (-O3) | 3 (sub lat m2x 1.25); 7 (add tp m2y 0.81) (-O2), 4 (make lat m2x 1.41); 10 (make tp m2x 0.52) (-O3) | 0; 2 (add lat m2y 0.96) (-O2), 0; 12 (half lat m2x 0.91) (-O3) | 0; 8 (make tp m2y 0.37) (-O2), 1 (sub lat m2x 1.02); 8 (make tp m2y 0.37) (-O3) |
+| 1 limb, N = 7 | 0; 6 (make lat m2x 0.47) (-O2), 0; 6 (make tp m2y 0.45) (-O3) | 2 (make lat m2y 1.15); 7 (make tp m2x 0.76) (-O2), 3 (scale lat m2x 1.15); 9 (make tp m2x 0.39) (-O3) | 0; 2 (scale lat m2y 0.97) (-O2), 1 (make tp m2y 1.03); 11 (make tp m2x 0.91) (-O3) | 0; 5 (make tp m2y 0.44) (-O2), 0; 4 (make lat m2y 0.44) (-O3) |
+| 1 limb, N = 13 | 7 (add lat m2x 1.60); 9 (make lat m2y 0.59) (-O2), 4 (add lat m2x 1.61); 10 (make lat m2x 0.58) (-O3) | 0; 2 (scale lat m2x 0.86) (-O2), 0; 7 (make tp m2x 0.37) (-O3) | 0; 0 (-O2), 2 (make tp m2y 1.04); 10 (make lat m2x 0.83) (-O3) | 1 (scale lat m2x 1.04); 4 (make lat m2x 0.64) (-O2), 0; 6 (make tp m2y 0.64) (-O3) |
+| 1 limb, N = 18 | 3 (half lat m2x 1.08); 2 (half tp m2y 0.94) (-O2), 0; 1 (half tp m2x 0.95) (-O3) | 0; 4 (scale lat m2x 0.82) (-O2), 0; 6 (addop tp m2y 0.92) (-O3) | 1 (sub lat m2x 1.21); 0 (-O2), 0; 8 (make tp m2x 0.89) (-O3) | 0; 4 (make lat m2x 0.97) (-O2), 0; 5 (addop tp m2y 0.98) (-O3) |
+| 1 limb, N = 80 | 2 (make lat m2y 1.62); 0 (-O2), 0; 0 (-O3) | 0; 1 (scale tp m2x 0.95) (-O2), 0; 0 (-O3) | 2 (sub lat m2x 1.16); 1 (scale tp m2x 0.97) (-O2), 4 (scale tp m2y 1.10); 2 (half lat m2x 0.97) (-O3) | 0; 0 (-O2), 4 (add lat m2x 1.03); 1 (scale tp m2y 0.99) (-O3) |
+| 2 limbs, N = 3 | 0; 6 (make tp m2x 0.44) (-O2), 0; 4 (make tp m2y 0.46) (-O3) | 2 (make lat m2x 1.08); 0 (-O2), 0; 9 (make tp m2x 0.49) (-O3) | 0; 2 (make tp m2y 0.97) (-O2), 2 (make tp m2y 1.21); 9 (scale tp m2y 0.91) (-O3) | 4 (add lat m2x 1.01); 5 (make lat m2y 0.42) (-O2), 5 (add lat m2y 1.02); 5 (make lat m2y 0.41) (-O3) |
+| 2 limbs, N = 7 | 2 (scale lat m2x 1.70); 6 (make lat m2y 0.61) (-O2), 2 (scale lat m2x 1.59); 6 (make lat m2y 0.64) (-O3) | 0; 1 (half lat m2x 0.93) (-O2), 0; 6 (make tp m2x 0.42) (-O3) | 0; 0 (-O2), 1 (addop lat m2y 1.02); 7 (make tp m2x 0.90) (-O3) | 4 (sub lat m2x 1.02); 7 (make lat m2y 0.74) (-O2), 3 (add lat m2x 1.02); 8 (make lat m2y 0.74) (-O3) |
+| 2 limbs, N = 13 | 5 (make lat m2y 1.11); 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 6 (make tp m2x 0.40) (-O3) | 0; 2 (half tp m2x 0.97) (-O2), 0; 13 (make tp m2x 0.89) (-O3) | 8 (sub lat m2x 1.03); 0 (-O2), 7 (sub lat m2y 1.03); 1 (add tp m2y 0.99) (-O3) |
+| 2 limbs, N = 18 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 2 (half lat m2x 0.92) (-O3) | 0; 0 (-O2), 0; 4 (make tp m2x 0.95) (-O3) | 0; 0 (-O2), 5 (sub tp m2y 1.02); 0 (-O3) |
+| 2 limbs, N = 80 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 1 (half tp m2x 0.91) (-O3) | 1 (make tp m2y 1.08); 2 (make lat m2x 0.92) (-O2), 0; 2 (add tp m2x 0.98) (-O3) | 0; 0 (-O2), 0; 0 (-O3) |
+
+| The bound, forced for every size, over forced for none: functions slower; faster (of 24 per size), and the largest of each | M3, Apple clang | M3, GCC 16 | Zen 2, GCC 13 | Zen 2, Clang 18 |
+|---|---|---|---|---|
+| 1 limb, N = 3 | 0; 4 (make tp m2y 0.50) (-O2), 0; 4 (make tp m2x 0.48) (-O3) | 0; 0 (-O2), 1 (sub lat m2x 1.56); 1 (sub tp m2x 0.59) (-O3) | 0; 1 (scale lat m2y 0.97) (-O2), 3 (addop tp m2y 1.05); 5 (scale tp m2x 0.64) (-O3) | 0; 4 (make tp m2y 0.37) (-O2), 0; 4 (make lat m2x 0.57) (-O3) |
+| 1 limb, N = 7 | 0; 4 (make tp m2x 0.47) (-O2), 0; 4 (make tp m2x 0.46) (-O3) | 0; 1 (sub lat m2y 0.94) (-O2), 2 (sub lat m2x 1.63); 1 (sub tp m2x 0.61) (-O3) | 0; 0 (-O2), 2 (addop tp m2y 1.05); 6 (scale tp m2x 0.72) (-O3) | 0; 4 (make lat m2y 0.44) (-O2), 0; 4 (make lat m2y 0.44) (-O3) |
+| 1 limb, N = 13 | 0; 5 (make lat m2y 0.57) (-O2), 0; 4 (make lat m2x 0.59) (-O3) | 0; 0 (-O2), 1 (sub lat m2x 1.38); 1 (sub tp m2x 0.68) (-O3) | 0; 0 (-O2), 0; 3 (scale tp m2x 0.70) (-O3) | 1 (scale lat m2x 1.06); 4 (make tp m2y 0.64) (-O2), 0; 4 (make tp m2y 0.64) (-O3) |
+| 1 limb, N = 18 | 0; 0 (-O2), 0; 4 (make lat m2y 0.69) (-O3) | 0; 0 (-O2), 0; 2 (sub tp m2x 0.72) (-O3) | 0; 1 (sub lat m2x 0.82) (-O2), 1 (addop tp m2y 1.02); 3 (scale lat m2x 0.71) (-O3) | 0; 4 (make lat m2y 0.91) (-O2), 2 (add lat m2x 1.01); 4 (make tp m2x 0.86) (-O3) |
+| 1 limb, N = 80 | 0; 0 (-O2), 1 (make lat m2y 1.50); 1 (make lat m2x 0.94) (-O3) | 0; 0 (-O2), 0; 1 (sub tp m2x 0.96) (-O3) | 0; 1 (sub lat m2x 0.87) (-O2), 4 (addop lat m2x 1.03); 1 (scale lat m2x 0.84) (-O3) | 0; 1 (add tp m2x 0.99) (-O2), 0; 0 (-O3) |
+| 2 limbs, N = 3 | 0; 4 (make tp m2x 0.48) (-O2), 0; 4 (make tp m2y 0.47) (-O3) | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 3 (make tp m2y 1.07); 0 (-O3) | 0; 4 (make lat m2x 0.49) (-O2), 0; 4 (make lat m2y 0.49) (-O3) |
+| 2 limbs, N = 7 | 0; 4 (make tp m2y 0.69) (-O2), 0; 4 (make tp m2y 0.65) (-O3) | 0; 0 (-O2), 1 (add lat m2x 1.08); 0 (-O3) | 0; 0 (-O2), 0; 2 (make tp m2x 0.98) (-O3) | 0; 4 (make tp m2x 0.79) (-O2), 0; 4 (make tp m2x 0.79) (-O3) |
+| 2 limbs, N = 13 | 0; 0 (-O2), 3 (make tp m2x 1.32); 0 (-O3) | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 1 (scale lat m2x 1.02); 0 (-O3) | 0; 2 (make lat m2y 0.91) (-O2), 4 (make lat m2y 1.22); 0 (-O3) |
+| 2 limbs, N = 18 | 0; 0 (-O2), 4 (make tp m2x 1.29); 0 (-O3) | 4 (make lat m2y 1.12); 0 (-O2), 0; 0 (-O3) | 3 (make tp m2y 1.08); 0 (-O2), 0; 0 (-O3) | 1 (addop lat m2y 1.01); 4 (make lat m2y 0.90) (-O2), 4 (make lat m2y 1.34); 0 (-O3) |
+| 2 limbs, N = 80 | 0; 0 (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 0 (-O3) | 2 (make tp m2x 1.08); 1 (make tp m2y 0.91) (-O2), 0; 0 (-O3) | 0; 0 (-O2), 0; 0 (-O3) |
+
+| The constructor of `BallVector<double, 2, 3>`, GCC 13 at -O3, Zen 2: ns per operation | 2 limbs, N = 3, one operation per unit | its control | 2 limbs, N = 3, every size in one unit | the same in a chain | 1 limb, N = 3, one operation per unit | 1 limb, N = 3, every size in one unit |
+|---|---|---|---|---|---|---|
+| the header before | 16.4 to 17.1 | 6.19 to 6.21 | 19.3 to 20.5 | 24 | 16.8 to 17.4 | 17.1 to 17.8 |
+| the header of the tree | 20.7 to 22.1 | 6.14 to 6.15 | 20.7 to 22.2 | 21.9 to 23.6 | 16.5 to 17.7 | 16.6 to 17.8 |
+| the tree, forced for no size | 20.7 to 22.1 | 6.14 to 6.17 | 20.7 to 22.1 | 21.9 to 23.4 | 16.6 to 17.7 | 16.6 to 17.8 |
+| the header before, code aligned (-falign-functions=64 -falign-loops=64) | 16.5 to 17.1 | 6.14 | 19.3 to 20.4 | 24 | 16.8 to 17.4 | 17.2 to 17.8 |
+| the tree, code aligned | 20.7 to 20.8 | 6.14 to 6.15 | 20.7 to 20.8 | 21.9 | 17.7 | 17.7 to 17.8 |
+| the header before, BallVector aligned to 32 bytes | 16.4 to 16.9 | 6.14 to 6.16 | 19.5 to 20.4 | 23.4 to 23.7 | 16.8 | 17.1 |
+| the tree, BallVector aligned to 32 bytes | 19.9 to 20.2 | 6.18 to 6.2 | 19.8 to 20.1 | 21.6 to 23.1 | 16.5 | 16.5 |
 
 #### Question 15: the guards
 
