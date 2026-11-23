@@ -12001,6 +12001,97 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(float c0, float c1, float r, fl
     }
 }
 
+// ball_make_2_entry(c = (c0, c1), r) -> cw = (cw0, cw1), rw
+// ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23). Status: proved (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 3> ball_make_2_entry(double g0, double g1, double g, bool ok, bool f) noexcept {
+    const double k0 = f ? g0 : 0.0;
+    const double k1 = f ? g1 : 0.0;
+    const double s = f ? g : std::numeric_limits<double>::infinity();
+    const double cw0 = ok ? k0 : std::numeric_limits<double>::quiet_NaN();
+    const double cw1 = ok ? k1 : std::numeric_limits<double>::quiet_NaN();
+    const double rw = ok ? s : std::numeric_limits<double>::quiet_NaN();
+    return {{cw0, cw1, rw}};
+}
+KAIRN_GEN_COLD constexpr result<float, 3> ball_make_2_entry(float g0, float g1, float g, bool ok, bool f) noexcept {
+    const float k0 = f ? g0 : 0.0f;
+    const float k1 = f ? g1 : 0.0f;
+    const float s = f ? g : std::numeric_limits<float>::infinity();
+    const float cw0 = ok ? k0 : std::numeric_limits<float>::quiet_NaN();
+    const float cw1 = ok ? k1 : std::numeric_limits<float>::quiet_NaN();
+    const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();
+    return {{cw0, cw1, rw}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void ball_make_2_entry(double c0, double c1, double r, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
+    const double g0 = __builtin_is_constant_evaluated() ? c0 : c0 + 0.0;
+    const double g1 = __builtin_is_constant_evaluated() ? c1 : c1 + 0.0;
+    const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
+    const bool n = 0.0 > g;
+    const bool ok = !n;
+    const double a = abs_bits(g0);
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > g;
+    const bool f = f1 & f2;
+    if (ok & f) [[likely]] {
+        cw0_out = g0;
+        cw1_out = g1;
+        rw_out = g;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 3> fixed_ = fixup::ball_make_2_entry(g0, g1, g, ok, f);
+        cw0_out = fixed_.limb[0];
+        cw1_out = fixed_.limb[1];
+        rw_out = fixed_.limb[2];
+#else
+        const double k0 = f ? g0 : 0.0;
+        const double k1 = f ? g1 : 0.0;
+        const double s = f ? g : std::numeric_limits<double>::infinity();
+        const double cw0 = ok ? k0 : std::numeric_limits<double>::quiet_NaN();
+        const double cw1 = ok ? k1 : std::numeric_limits<double>::quiet_NaN();
+        const double rw = ok ? s : std::numeric_limits<double>::quiet_NaN();
+        cw0_out = cw0;
+        cw1_out = cw1;
+        rw_out = rw;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_make_2_entry(float c0, float c1, float r, float& cw0_out, float& cw1_out, float& rw_out) noexcept {
+    const float g0 = __builtin_is_constant_evaluated() ? c0 : c0 + 0.0f;
+    const float g1 = __builtin_is_constant_evaluated() ? c1 : c1 + 0.0f;
+    const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
+    const bool n = 0.0f > g;
+    const bool ok = !n;
+    const float a = abs_bits(g0);
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > g;
+    const bool f = f1 & f2;
+    if (ok & f) [[likely]] {
+        cw0_out = g0;
+        cw1_out = g1;
+        rw_out = g;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 3> fixed_ = fixup::ball_make_2_entry(g0, g1, g, ok, f);
+        cw0_out = fixed_.limb[0];
+        cw1_out = fixed_.limb[1];
+        rw_out = fixed_.limb[2];
+#else
+        const float k0 = f ? g0 : 0.0f;
+        const float k1 = f ? g1 : 0.0f;
+        const float s = f ? g : std::numeric_limits<float>::infinity();
+        const float cw0 = ok ? k0 : std::numeric_limits<float>::quiet_NaN();
+        const float cw1 = ok ? k1 : std::numeric_limits<float>::quiet_NaN();
+        const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();
+        cw0_out = cw0;
+        cw1_out = cw1;
+        rw_out = rw;
+#endif
+    }
+}
+
 // ball_mul_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
 // midpoint-radius product (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
@@ -14346,6 +14437,139 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_make_2(float lo0, float lo1, float
         const float zl1 = v ? lo1 : 0.0f;
         const float zu0 = v ? hi0 : eu;
         const float zu1 = v ? hi1 : 0.0f;
+        zl0_out = zl0;
+        zl1_out = zl1;
+        zu0_out = zu0;
+        zu1_out = zu1;
+#endif
+    }
+}
+
+// interval_make_2_entry(lo = (lo0, lo1), hi = (hi0, hi1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
+// interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry). Status: proved (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 4> interval_make_2_entry(double gl0, double gl1, double gu0, double gu1, double mi, bool v) noexcept {
+    // (rv) = lt_2_2(gu0, gu1, gl0, gl1)
+    const bool rv_h = gl0 > gu0;
+    const bool rv_e = gu0 == gl0;
+    const bool rv_l = gl1 > gu1;
+    const bool rv_t = rv_e & rv_l;
+    const bool rv = rv_h | rv_t;
+    const double el = rv ? std::numeric_limits<double>::infinity() : mi;
+    const double eu = rv ? mi : std::numeric_limits<double>::infinity();
+    const double zl0 = v ? gl0 : el;
+    const double zl1 = v ? gl1 : 0.0;
+    const double zu0 = v ? gu0 : eu;
+    const double zu1 = v ? gu1 : 0.0;
+    return {{zl0, zl1, zu0, zu1}};
+}
+KAIRN_GEN_COLD constexpr result<float, 4> interval_make_2_entry(float gl0, float gl1, float gu0, float gu1, float mi, bool v) noexcept {
+    // (rv) = lt_2_2(gu0, gu1, gl0, gl1)
+    const bool rv_h = gl0 > gu0;
+    const bool rv_e = gu0 == gl0;
+    const bool rv_l = gl1 > gu1;
+    const bool rv_t = rv_e & rv_l;
+    const bool rv = rv_h | rv_t;
+    const float el = rv ? std::numeric_limits<float>::infinity() : mi;
+    const float eu = rv ? mi : std::numeric_limits<float>::infinity();
+    const float zl0 = v ? gl0 : el;
+    const float zl1 = v ? gl1 : 0.0f;
+    const float zu0 = v ? gu0 : eu;
+    const float zu1 = v ? gu1 : 0.0f;
+    return {{zl0, zl1, zu0, zu1}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void interval_make_2_entry(double lo0, double lo1, double hi0, double hi1, double& zl0_out, double& zl1_out, double& zu0_out, double& zu1_out) noexcept {
+    const double gl0 = __builtin_is_constant_evaluated() ? lo0 : lo0 + 0.0;
+    const double gl1 = __builtin_is_constant_evaluated() ? lo1 : lo1 + 0.0;
+    const double gu0 = __builtin_is_constant_evaluated() ? hi0 : hi0 + 0.0;
+    const double gu1 = __builtin_is_constant_evaluated() ? hi1 : hi1 + 0.0;
+    // (ok) = le_2_2(gl0, gl1, gu0, gu1)
+    const bool ok_h = gu0 > gl0;
+    const bool ok_e = gl0 == gu0;
+    const bool ok_l = gu1 >= gl1;
+    const bool ok_t = ok_e & ok_l;
+    const bool ok = ok_h | ok_t;
+    const bool nl = std::numeric_limits<double>::infinity() > gl0;
+    const double mi = -std::numeric_limits<double>::infinity();
+    const bool nu = gu0 > mi;
+    const bool va = ok & nl;
+    const bool v = va & nu;
+    if (v) [[likely]] {
+        zl0_out = gl0;
+        zl1_out = gl1;
+        zu0_out = gu0;
+        zu1_out = gu1;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 4> fixed_ = fixup::interval_make_2_entry(gl0, gl1, gu0, gu1, mi, v);
+        zl0_out = fixed_.limb[0];
+        zl1_out = fixed_.limb[1];
+        zu0_out = fixed_.limb[2];
+        zu1_out = fixed_.limb[3];
+#else
+        // (rv) = lt_2_2(gu0, gu1, gl0, gl1)
+        const bool rv_h = gl0 > gu0;
+        const bool rv_e = gu0 == gl0;
+        const bool rv_l = gl1 > gu1;
+        const bool rv_t = rv_e & rv_l;
+        const bool rv = rv_h | rv_t;
+        const double el = rv ? std::numeric_limits<double>::infinity() : mi;
+        const double eu = rv ? mi : std::numeric_limits<double>::infinity();
+        const double zl0 = v ? gl0 : el;
+        const double zl1 = v ? gl1 : 0.0;
+        const double zu0 = v ? gu0 : eu;
+        const double zu1 = v ? gu1 : 0.0;
+        zl0_out = zl0;
+        zl1_out = zl1;
+        zu0_out = zu0;
+        zu1_out = zu1;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void interval_make_2_entry(float lo0, float lo1, float hi0, float hi1, float& zl0_out, float& zl1_out, float& zu0_out, float& zu1_out) noexcept {
+    const float gl0 = __builtin_is_constant_evaluated() ? lo0 : lo0 + 0.0f;
+    const float gl1 = __builtin_is_constant_evaluated() ? lo1 : lo1 + 0.0f;
+    const float gu0 = __builtin_is_constant_evaluated() ? hi0 : hi0 + 0.0f;
+    const float gu1 = __builtin_is_constant_evaluated() ? hi1 : hi1 + 0.0f;
+    // (ok) = le_2_2(gl0, gl1, gu0, gu1)
+    const bool ok_h = gu0 > gl0;
+    const bool ok_e = gl0 == gu0;
+    const bool ok_l = gu1 >= gl1;
+    const bool ok_t = ok_e & ok_l;
+    const bool ok = ok_h | ok_t;
+    const bool nl = std::numeric_limits<float>::infinity() > gl0;
+    const float mi = -std::numeric_limits<float>::infinity();
+    const bool nu = gu0 > mi;
+    const bool va = ok & nl;
+    const bool v = va & nu;
+    if (v) [[likely]] {
+        zl0_out = gl0;
+        zl1_out = gl1;
+        zu0_out = gu0;
+        zu1_out = gu1;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 4> fixed_ = fixup::interval_make_2_entry(gl0, gl1, gu0, gu1, mi, v);
+        zl0_out = fixed_.limb[0];
+        zl1_out = fixed_.limb[1];
+        zu0_out = fixed_.limb[2];
+        zu1_out = fixed_.limb[3];
+#else
+        // (rv) = lt_2_2(gu0, gu1, gl0, gl1)
+        const bool rv_h = gl0 > gu0;
+        const bool rv_e = gu0 == gl0;
+        const bool rv_l = gl1 > gu1;
+        const bool rv_t = rv_e & rv_l;
+        const bool rv = rv_h | rv_t;
+        const float el = rv ? std::numeric_limits<float>::infinity() : mi;
+        const float eu = rv ? mi : std::numeric_limits<float>::infinity();
+        const float zl0 = v ? gl0 : el;
+        const float zl1 = v ? gl1 : 0.0f;
+        const float zu0 = v ? gu0 : eu;
+        const float zu1 = v ? gu1 : 0.0f;
         zl0_out = zl0;
         zl1_out = zl1;
         zu0_out = zu0;

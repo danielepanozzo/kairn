@@ -436,7 +436,7 @@ set(KAIRN_CROSSCHECK_CASES 20000 CACHE STRING
 set(KAIRN_CROSSCHECK_QUICK_CASES 6000 CACHE STRING
   "Random cases in each cross-check of the compiled runners of the quick tier")
 set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-checks")
-# The interval kernels of Milestone 2 (the 33 below, their building blocks among them) have fewer
+# The interval kernels of Milestone 2 (the 34 below, their building blocks among them) have fewer
 # cases in the quick tier, to keep its time on the hosted runners:
 # 2000, the first of the full tier's 20 000, on which their guards still see every class
 # (docs/developer/testing.md, "Time").
@@ -447,7 +447,7 @@ set(_interval_kernels
   interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
   ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
-  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
+  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1 interval_make_2_entry)
 # The kernels of the enclosure interface of stage B2 (architecture.md, "Claims of the enclosure
 # interface: predicates and comparisons", "... the set operations of a ball", "... the conversions
 # of two limbs"): the same KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES in the quick tier, on which their
@@ -545,7 +545,7 @@ set(_toy_2_r_2_r_product fp:4:-5:1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0,
 #            must be a number of the format)
 #   2 1      add_2_1_full, sub_2_1_full, mul_2_1_full, fp:4:-5:0     113 316
 #            mul_2_1_full_entry, comparisons,
-#            ball_make_2
+#            ball_make_2, ball_make_2_entry
 #   1 2      sub_1_2_full, comparisons                fp:4:-5:0      113 316
 #   2 c      mul_pow2_2_full                          fp:5:-7:0       84 888
 #   2 2      add_2_2_full, add_fast_2_2_full,         fp:3:-4:1      181 476
@@ -672,8 +672,8 @@ set(_toy_kernel_conv_radius fp:3:-4:4 "ma.in=0x0p+0/0x1p-4/0x1p-1/0x1p+0/0x1.8p+
 # the empty set, and every pair l <= h of bounds with l a number or -inf and h a number or +inf.
 # The shapes of the other kernels of the interval work are those above: ext 1 1 (interval_make_1,
 # ball_from_interval_2, fp:5:-7:0, 84 100 pairs of any values; mul_dir_1, the same format, 83 521
-# without NaN), ext 2 2 (interval_make_2 fp:3:-4:1, 181 476; mul_ext_2_2 fp:4:-4:-1, 62 001
-# without NaN), ext b1 (ball_lower_as_1, ball_upper_as_1, ball_to_interval_1, fp:5:-9:2, 86 322),
+# without NaN), ext 2 2 (interval_make_2 and interval_make_2_entry fp:3:-4:1, 181 476; mul_ext_2_2
+# fp:4:-4:-1, 62 001 without NaN), ext b1 (ball_lower_as_1, ball_upper_as_1, ball_to_interval_1, fp:5:-9:2, 86 322),
 # ext b2 (ball_lower_as_2, ball_upper_as_2, ball_narrow_2_1, fp:4:-6:1, 198 074), and the finite
 # 2 2 (add_ball_2_2 and the bounds of two-limb sums at fp:3:-3:2, 178 929; mul_ball_2_2 and
 # mul_dir_2_2 at fp:4:-7:-3, 245 025). Where a sampled format is named (_toy_sampled...), the full

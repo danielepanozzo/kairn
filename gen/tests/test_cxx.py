@@ -92,6 +92,11 @@ NONFINITE_CE_CASES = [
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, -1.0]),
     ('ball_make_2', 'float', [math.inf, 0.0, 0.5]),
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, math.inf]),
+    # Its guarded form (rule R3): in constant evaluation the guards return their operands, so a limb
+    # -0 keeps its sign there.
+    ('ball_make_2_entry', 'double', [1.0, -0.0, 0.5]),
+    ('ball_make_2_entry', 'float', [math.nan, math.nan, 1.0]),
+    ('ball_make_2_entry', 'double', [1.0, 2.0 ** -60, -1.0]),
     # The finishes of the folds: a finite state as it is with the flag true, the canonical NaN with
     # the flag false otherwise.
     ('fold_finish_1', 'double', [-2.0 ** -1074]),
@@ -156,6 +161,10 @@ NONFINITE_CE_CASES = [
     ('interval_make_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0]),
     ('interval_make_2', 'float', [math.nan, math.nan, 1.0, 0.0]),
     ('interval_make_2', 'double', [2.0, 0.0, 1.0, 2.0 ** -60]),
+    # Its guarded form (rule R3), a limb -0 kept in constant evaluation.
+    ('interval_make_2_entry', 'double', [1.0, -0.0, 2.0, 0.0]),
+    ('interval_make_2_entry', 'float', [math.nan, math.nan, 1.0, 0.0]),
+    ('interval_make_2_entry', 'double', [2.0, 0.0, 1.0, 2.0 ** -60]),
     ('interval_hull_1', 'double', [1.0, 2.0, -3.0, -2.5]),
     ('interval_hull_1', 'float', [math.inf, -math.inf, 1.0, 2.0]),
     ('interval_intersection_1', 'double', [1.0, 3.0, 2.0, 4.0]),

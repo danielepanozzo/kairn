@@ -30,7 +30,7 @@ Each operation that changes the state is one generated, proved kernel:
 | `merge(other)` | [`acc_merge_1`](acc_merge_1.md), [`acc_merge_2`](acc_merge_2.md) | $s \leftarrow s + s'$, $a \leftarrow \mathrm{RN}(a + a')$, $n \leftarrow n + n'$ |
 | `error_bound()` | [`bound_dot_1`](bound_dot_1.md), [`bound_dot_2`](bound_dot_2.md), then [`acc_radius_1`](acc_radius_1.md), [`acc_radius_2`](acc_radius_2.md) | the radius $r$ from $a$ and the count |
 | `sum()` | [`fold_finish_1`](fold_finish_1.md), [`fold_finish_2`](fold_finish_2.md) | $s$, or the canonical NaN, with whether it is finite |
-| `ball()` | `Ball(s, r)` ([`ball_make_1`](ball_make_1.md), [`ball_make_2`](ball_make_2.md)) | center $s$, radius $r$; the whole line where $r$ is $+\infty$ |
+| `ball()` | `Ball(s, r)` ([`ball_make_1`](ball_make_1.md)); for two limbs [`ball_make_2`](ball_make_2.md), with the checks of `Ball(s, r)`: $s$ is the kernels' output, whose limbs are not guarded again | center $s$, radius $r$; the whole line where $r$ is $+\infty$ |
 
 A value `add` takes passes through the guard first ([rule R3](../developer/architecture.md#the-kernel-ir)),
 so a product the program computes and adds, `acc.add(a * b)`, is the product rounded; the factors
@@ -90,13 +90,21 @@ need not be canonical; `sum()` is the canonical form), `magnitudes()` and `count
 and `Accumulator::from_state(s, a, n)` makes an accumulator of a state, so that a program can move
 accumulators through its own storage (a buffer of a device, a message between processes) and merge
 them there. The guarantee of `error_bound()` is that of the history of the accumulator the state
-was read from: a state that no history produced has none. The values of `T` it is given, the
-magnitudes and the limb of a running sum of one limb, pass through the guard $a + 0$ first (the
-leading limb of [`make_2`](make_2.md), as the limbs of `Ball::from_limbs` do), since the kernels of
-`add`, `add_product` and `merge` add to them: a product the program passes in is the product rounded
-(without the guard, GCC 13 at its default setting, Clang 18 and Apple clang 21 with
-`-ffp-contract=fast` were measured fusing it into the next `add`). With `KAIRN_CHECKS`, `from_state`
-requires a canonical sum and magnitudes that are not negative.
+was read from: a state that no history produced has none. Everything it is given passes through
+the guard $a + 0$ first, since the kernels of `add`, `add_product` and `merge` add to it, as the
+limbs of `Ball::from_limbs` do: the magnitudes and the limb of a running sum of one limb through
+[`make_2`](make_2.md), of which it keeps the leading limb, and a running sum of two limbs through
+[`make_2_limbs`](make_2_limbs.md) (since 0.3.1; 0.3.0 copied it as it was, the limbs of an
+`Expansion<T, 2>` being public, which a program can write). That the state is the one given is
+argued from the claims of those two kernels, not machine-checked as one statement. A product the
+program passes in is the product rounded (without the guard, GCC 13 at its default setting, Clang 18
+and Apple clang 21 with `-ffp-contract=fast` were measured fusing one given as the magnitudes or as
+a running sum of one limb into the next `add`; none was seen to fuse one written into a limb of a
+running sum of two limbs, `api.boundary.arrays.*`). A state saved and restored keeps its values: every
+limb comes back bit for bit but a $-0$, which comes back $+0$ (the guard computes $-0 + 0$, $+0$
+when rounding to nearest), and a NaN, which comes back a NaN; in constant evaluation the guard is not
+applied, and every limb comes back bit for bit. With `KAIRN_CHECKS`, `from_state` requires a
+canonical sum and magnitudes that are not negative.
 
 ## A product by a factor the compiler knows to be 1
 

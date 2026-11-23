@@ -1,0 +1,43 @@
+# The constructor Ball(Expansion<T, 2>, r) and the balls of a point or a constant of two limbs
+# (milestone1.md, "Values that enter from the program"; the owner's decision of 2026-11-23): the
+# center is an Expansion<T, 2> whose limbs the program may have written, so each limb passes
+# through guard (rule R3), as those of a ball vector's centers do (bv_center_entry_2); then the
+# listing of ball_make_2 on the guarded limbs. The radius is guarded by that listing (g = guard(r)):
+# R3 asks it, since the radius is an output (rw is a select of g). The listing is written out, not
+# called, so that the printer puts its fix-up behind a branch as for ball_make_2 (cpp.branch takes a
+# kernel's own selects; ball_scale_2_full_entry says why). Its claims are those of ball_make_2 read
+# as values: the guard is the identity on a canonical pair as a value (a zero limb made +0, an
+# infinity or a NaN staying what it is), so the center of a finite ball has the values of the limbs
+# given, where ball_make_2 returns the limbs themselves. Two additions more than ball_make_2.
+kernel:        ball_make_2_entry
+input:         supplied c = c0 c1
+input:         r
+output:        cw = cw0 cw1
+output:        rw
+requires:      canonical c
+ensures:       makes_ball cw rw from=c,r
+min_precision: 1
+source:        ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23)
+license:       algorithm and proof: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMakeEntry.v ball_make_2_entry_correct
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the center and the radius (ok, f); makes_ball states what comes out
+
+g0  = guard(c0)
+g1  = guard(c1)
+g   = guard(r)
+n   = lt(g, 0)
+ok  = not(n)
+a   = abs(g0)
+f1  = lt(a, const inf)
+f2  = lt(g, const inf)
+f   = and(f1, f2)
+k0  = select(f, g0, 0)
+k1  = select(f, g1, 0)
+s   = select(f, g, const inf)
+cw0 = select(ok, k0, const nan)
+cw1 = select(ok, k1, const nan)
+rw  = select(ok, s, const nan)

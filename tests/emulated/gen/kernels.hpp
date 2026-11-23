@@ -6327,6 +6327,55 @@ KAIRN_GEN_FORCEINLINE void ball_make_2(kairn::emulated::Number c0, kairn::emulat
     }
 }
 
+// ball_make_2_entry(c = (c0, c1), r) -> cw = (cw0, cw1), rw
+// ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23). Status: proved (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD result<kairn::emulated::Number, 3> ball_make_2_entry(kairn::emulated::Number g0, kairn::emulated::Number g1, kairn::emulated::Number g, bool ok, bool f) noexcept {
+    const kairn::emulated::Number k0 = f ? g0 : kairn::emulated::constant(0);
+    const kairn::emulated::Number k1 = f ? g1 : kairn::emulated::constant(0);
+    const kairn::emulated::Number s = f ? g : std::numeric_limits<kairn::emulated::Number>::infinity();
+    const kairn::emulated::Number cw0 = ok ? k0 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    const kairn::emulated::Number cw1 = ok ? k1 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    const kairn::emulated::Number rw = ok ? s : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+    return {{cw0, cw1, rw}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE void ball_make_2_entry(kairn::emulated::Number c0, kairn::emulated::Number c1, kairn::emulated::Number r, kairn::emulated::Number& cw0_out, kairn::emulated::Number& cw1_out, kairn::emulated::Number& rw_out) noexcept {
+    const kairn::emulated::Number g0 = kairn::emulated::constant_evaluation() ? c0 : c0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number g1 = kairn::emulated::constant_evaluation() ? c1 : c1 + kairn::emulated::constant(0);
+    const kairn::emulated::Number g = kairn::emulated::constant_evaluation() ? r : r + kairn::emulated::constant(0);
+    const bool n = kairn::emulated::constant(0) > g;
+    const bool ok = !n;
+    const kairn::emulated::Number a = abs_bits(g0);
+    const bool f1 = std::numeric_limits<kairn::emulated::Number>::infinity() > a;
+    const bool f2 = std::numeric_limits<kairn::emulated::Number>::infinity() > g;
+    const bool f = f1 & f2;
+    if (ok & f) [[likely]] {
+        cw0_out = g0;
+        cw1_out = g1;
+        rw_out = g;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<kairn::emulated::Number, 3> fixed_ = fixup::ball_make_2_entry(g0, g1, g, ok, f);
+        cw0_out = fixed_.limb[0];
+        cw1_out = fixed_.limb[1];
+        rw_out = fixed_.limb[2];
+#else
+        const kairn::emulated::Number k0 = f ? g0 : kairn::emulated::constant(0);
+        const kairn::emulated::Number k1 = f ? g1 : kairn::emulated::constant(0);
+        const kairn::emulated::Number s = f ? g : std::numeric_limits<kairn::emulated::Number>::infinity();
+        const kairn::emulated::Number cw0 = ok ? k0 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+        const kairn::emulated::Number cw1 = ok ? k1 : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+        const kairn::emulated::Number rw = ok ? s : std::numeric_limits<kairn::emulated::Number>::quiet_NaN();
+        cw0_out = cw0;
+        cw1_out = cw1;
+        rw_out = rw;
+#endif
+    }
+}
+
 // ball_mul_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
 // midpoint-radius product (Milestone 1 listing, second radius design). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_2(kairn::emulated::Number cx0, kairn::emulated::Number cx1, kairn::emulated::Number rx, kairn::emulated::Number cy0, kairn::emulated::Number cy1, kairn::emulated::Number ry, kairn::emulated::Number& cz0_out, kairn::emulated::Number& cz1_out, kairn::emulated::Number& rz_out) noexcept {
@@ -7566,6 +7615,76 @@ KAIRN_GEN_FORCEINLINE void interval_make_2(kairn::emulated::Number lo0, kairn::e
         const kairn::emulated::Number zl1 = v ? lo1 : kairn::emulated::constant(0);
         const kairn::emulated::Number zu0 = v ? hi0 : eu;
         const kairn::emulated::Number zu1 = v ? hi1 : kairn::emulated::constant(0);
+        zl0_out = zl0;
+        zl1_out = zl1;
+        zu0_out = zu0;
+        zu1_out = zu1;
+#endif
+    }
+}
+
+// interval_make_2_entry(lo = (lo0, lo1), hi = (hi0, hi1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
+// interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry). Status: proved (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD result<kairn::emulated::Number, 4> interval_make_2_entry(kairn::emulated::Number gl0, kairn::emulated::Number gl1, kairn::emulated::Number gu0, kairn::emulated::Number gu1, kairn::emulated::Number mi, bool v) noexcept {
+    // (rv) = lt_2_2(gu0, gu1, gl0, gl1)
+    const bool rv_h = gl0 > gu0;
+    const bool rv_e = gu0 == gl0;
+    const bool rv_l = gl1 > gu1;
+    const bool rv_t = rv_e & rv_l;
+    const bool rv = rv_h | rv_t;
+    const kairn::emulated::Number el = rv ? std::numeric_limits<kairn::emulated::Number>::infinity() : mi;
+    const kairn::emulated::Number eu = rv ? mi : std::numeric_limits<kairn::emulated::Number>::infinity();
+    const kairn::emulated::Number zl0 = v ? gl0 : el;
+    const kairn::emulated::Number zl1 = v ? gl1 : kairn::emulated::constant(0);
+    const kairn::emulated::Number zu0 = v ? gu0 : eu;
+    const kairn::emulated::Number zu1 = v ? gu1 : kairn::emulated::constant(0);
+    return {{zl0, zl1, zu0, zu1}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE void interval_make_2_entry(kairn::emulated::Number lo0, kairn::emulated::Number lo1, kairn::emulated::Number hi0, kairn::emulated::Number hi1, kairn::emulated::Number& zl0_out, kairn::emulated::Number& zl1_out, kairn::emulated::Number& zu0_out, kairn::emulated::Number& zu1_out) noexcept {
+    const kairn::emulated::Number gl0 = kairn::emulated::constant_evaluation() ? lo0 : lo0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gl1 = kairn::emulated::constant_evaluation() ? lo1 : lo1 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gu0 = kairn::emulated::constant_evaluation() ? hi0 : hi0 + kairn::emulated::constant(0);
+    const kairn::emulated::Number gu1 = kairn::emulated::constant_evaluation() ? hi1 : hi1 + kairn::emulated::constant(0);
+    // (ok) = le_2_2(gl0, gl1, gu0, gu1)
+    const bool ok_h = gu0 > gl0;
+    const bool ok_e = gl0 == gu0;
+    const bool ok_l = gu1 >= gl1;
+    const bool ok_t = ok_e & ok_l;
+    const bool ok = ok_h | ok_t;
+    const bool nl = std::numeric_limits<kairn::emulated::Number>::infinity() > gl0;
+    const kairn::emulated::Number mi = -std::numeric_limits<kairn::emulated::Number>::infinity();
+    const bool nu = gu0 > mi;
+    const bool va = ok & nl;
+    const bool v = va & nu;
+    if (v) [[likely]] {
+        zl0_out = gl0;
+        zl1_out = gl1;
+        zu0_out = gu0;
+        zu1_out = gu1;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<kairn::emulated::Number, 4> fixed_ = fixup::interval_make_2_entry(gl0, gl1, gu0, gu1, mi, v);
+        zl0_out = fixed_.limb[0];
+        zl1_out = fixed_.limb[1];
+        zu0_out = fixed_.limb[2];
+        zu1_out = fixed_.limb[3];
+#else
+        // (rv) = lt_2_2(gu0, gu1, gl0, gl1)
+        const bool rv_h = gl0 > gu0;
+        const bool rv_e = gu0 == gl0;
+        const bool rv_l = gl1 > gu1;
+        const bool rv_t = rv_e & rv_l;
+        const bool rv = rv_h | rv_t;
+        const kairn::emulated::Number el = rv ? std::numeric_limits<kairn::emulated::Number>::infinity() : mi;
+        const kairn::emulated::Number eu = rv ? mi : std::numeric_limits<kairn::emulated::Number>::infinity();
+        const kairn::emulated::Number zl0 = v ? gl0 : el;
+        const kairn::emulated::Number zl1 = v ? gl1 : kairn::emulated::constant(0);
+        const kairn::emulated::Number zu0 = v ? gu0 : eu;
+        const kairn::emulated::Number zu1 = v ? gu1 : kairn::emulated::constant(0);
         zl0_out = zl0;
         zl1_out = zl1;
         zu0_out = zu0;

@@ -118,6 +118,30 @@ PAIR(ball2_from_limbs_center, B2, (B2 y, double a, double b), double l[3]; l[0] 
      return B2::from_limbs(l) + y)
 PAIR(ball2_from_limbs_radius, B2, (B2 y, double a, double b), double l[3]; l[0] = 0.75; l[1] = 0.0; l[2] = a * b;
      return B2::from_limbs(l) + y, double l[3]; l[0] = 0.75; l[1] = 0.0; l[2] = a; return B2::from_limbs(l) + y)
+// A product of the program written into a limb of a number of two limbs, which is then given to the
+// constructor of a ball (its center, the point, a constant, a point operand of an operation) or of
+// an interval (its bounds, the point, from_bounds): the limbs of an Expansion are public, and these
+// constructors guard each limb (ball_make_2_entry, interval_make_2_entry; the owner's decision of
+// 2026-11-23 for the ball). Built without the guard, the limb would be the product as the program
+// wrote it, which the first addition of the operation could fuse.
+#define LIMB(c, v)       \
+    E2 c;                \
+    c.limb[0] = (v);     \
+    c.limb[1] = 0.0
+PAIR(ball2_center_limb, B2, (B2 y, double a, double b), LIMB(c, a * b); return B2(c, 0x1p-40) + y,
+     LIMB(c, a); return B2(c, 0x1p-40) + y)
+PAIR(ball2_point_limb, B2, (B2 y, double a, double b), LIMB(c, a * b); return B2(c) + y, LIMB(c, a); return B2(c) + y)
+PAIR(ball2_constant_limb, B2, (B2 y, double a, double b), LIMB(c, a * b);
+     return B2(kairn::Constant<E2>{c, 0x1p-40, false}) + y, LIMB(c, a);
+     return B2(kairn::Constant<E2>{c, 0x1p-40, false}) + y)
+PAIR(ball2_plus_limb, B2, (B2 y, double a, double b), LIMB(c, a * b); return y + c, LIMB(c, a); return y + c)
+PAIR(interval2_bounds_limb, I2, (I2 x, double a, double b), LIMB(c, a * b); return I2(c, c) + x, LIMB(c, a);
+     return I2(c, c) + x)
+PAIR(interval2_point_limb, I2, (I2 x, double a, double b), LIMB(c, a * b); return I2(c) + x, LIMB(c, a);
+     return I2(c) + x)
+PAIR(interval2_from_bounds_limb, I2, (I2 x, double a, double b), LIMB(c, a * b); return I2::from_bounds(c, c) + x,
+     LIMB(c, a); return I2::from_bounds(c, c) + x)
+#undef LIMB
 // Multiplicands: no guard, and none needed.
 PAIR(times, E2, (E2 x, double a, double b), return x * (a * b), return x * a)
 PAIR(ball2_scale, B2, (B2 y, double a, double b), return y * (a * b), return y * a)
@@ -293,7 +317,7 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "usage: boundary --expect none|some|report --factor none|some|report\n");
         return 2;
     }
-    enum { n_forms = 40 };
+    enum { n_forms = 47 };
     const char* names[n_forms] = {"x + a*b", "a*b + x", "x - a*b", "a*b - x", "x += a*b", "x -= a*b", "E2(a*b) + x",
                                   "from_limbs({a*b, 0}) + x", "E2(E1(a) * E1(b)) + x", "Ball2(a*b) + Y",
                                   "Ball2(E2(a*b), r) + Y", "Ball2(c, a*b) + Y", "Ball1(a*b) + Y",
@@ -305,8 +329,11 @@ int main(int argc, char** argv) {
                                   "Interval2::from_bounds(a*b, a*b) + X", "Interval1::from_limbs({a*b, a*b}) + X",
                                   "Interval2::from_limbs({a*b, 0, a*b, 0}) + X", "Ball1::from_limbs({a*b, r}) + Y",
                                   "Ball1::from_limbs({c, a*b}) + Y", "Ball2::from_limbs({a*b, 0, r}) + Y",
-                                  "Ball2::from_limbs({c, 0, a*b}) + Y", "x * (a*b)", "Ball2 * (a*b)", "Ball1 * (a*b)",
-                                  "Interval1.contains(a*b)", "Interval2.contains(a*b)"};
+                                  "Ball2::from_limbs({c, 0, a*b}) + Y", "Ball2({a*b, 0}, r) + Y",
+                                  "Ball2({a*b, 0}) + Y", "Ball2(Constant{{a*b, 0}, r}) + Y", "Y + {a*b, 0} (Ball2)",
+                                  "Interval2({a*b, 0}, {a*b, 0}) + X", "Interval2({a*b, 0}) + X",
+                                  "Interval2::from_bounds({a*b, 0}, {a*b, 0}) + X", "x * (a*b)", "Ball2 * (a*b)",
+                                  "Ball1 * (a*b)", "Interval1.contains(a*b)", "Interval2.contains(a*b)"};
     bool multiplicand[n_forms] = {};
     for (int f = n_forms - 5; f < n_forms; ++f) multiplicand[f] = true;
     long differ[n_forms] = {};
@@ -362,6 +389,13 @@ int main(int argc, char** argv) {
         differ[f++] += !same(ball1_from_limbs_radius_inline(r1, a, b), ball1_from_limbs_radius_ref(r1, p, 1.0));
         differ[f++] += !same(ball2_from_limbs_center_inline(y2, a, b), ball2_from_limbs_center_ref(y2, p, 1.0));
         differ[f++] += !same(ball2_from_limbs_radius_inline(r2, a, b), ball2_from_limbs_radius_ref(r2, p, 1.0));
+        differ[f++] += !same(ball2_center_limb_inline(y2, a, b), ball2_center_limb_ref(y2, p, 1.0));
+        differ[f++] += !same(ball2_point_limb_inline(y2, a, b), ball2_point_limb_ref(y2, p, 1.0));
+        differ[f++] += !same(ball2_constant_limb_inline(y2, a, b), ball2_constant_limb_ref(y2, p, 1.0));
+        differ[f++] += !same(ball2_plus_limb_inline(y2, a, b), ball2_plus_limb_ref(y2, p, 1.0));
+        differ[f++] += !same(interval2_bounds_limb_inline(xi2, a, b), interval2_bounds_limb_ref(xi2, p, 1.0));
+        differ[f++] += !same(interval2_point_limb_inline(xi2, a, b), interval2_point_limb_ref(xi2, p, 1.0));
+        differ[f++] += !same(interval2_from_bounds_limb_inline(xi2, a, b), interval2_from_bounds_limb_ref(xi2, p, 1.0));
         differ[f++] += !same(times_inline(xm, a, b), times_ref(xm, p, 1.0));
         differ[f++] += !same(ball2_scale_inline(y2, a, b), ball2_scale_ref(y2, p, 1.0));
         differ[f++] += !same(ball1_scale_inline(y1, a, b), ball1_scale_ref(y1, p, 1.0));

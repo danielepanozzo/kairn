@@ -242,7 +242,7 @@ with its contract.
   [`make_2`](make_2.md), of which `from_limbs` keeps the leading limb, the value given by its
   claim (a canonical pair of value $a$ has $a$ as its leading limb, and a NaN gives two NaN); a
   number of two limbs through [`make_2_limbs`](make_2_limbs.md), whose claim is the same limbs for a
-  canonical pair. Not through `ball_make_1` or `ball_make_2`, the kernels of `Ball(c, r)`, which
+  canonical pair. Not through `ball_make_1` or `ball_make_2_entry`, the kernels of `Ball(c, r)`, which
   guard the same limbs but make a NaN radius the whole line: the empty set would not come back.
   That the result is the set given is argued from these claims, not machine-checked as one
   statement. Nothing else is computed.

@@ -2,7 +2,9 @@
 # interval"): the listing of interval_make_1 on the comparisons of two limbs, le_2_2 and lt_2_2 for
 # the order of the bounds and the leading limbs for the tests against infinity (a canonical NaN is
 # all NaN, and a comparison with it is false). The values are limbs of objects, already canonical,
-# so nothing is guarded. The whole line when a bound is a NaN, whatever the other bound is, and when
+# so nothing is guarded: the library calls it on bounds make_2 wrote (the interval of a point of T,
+# from_bounds of two values of T); the constructors of bounds of two limbs the program gives call
+# interval_make_2_entry, this listing on the limbs guarded. The whole line when a bound is a NaN, whatever the other bound is, and when
 # both bounds are the same infinity (decided on 2026-11-20, as for interval_make_1); otherwise the
 # empty set when lo > hi (rv); otherwise [lo, hi], an infinite bound returned as (+-inf, 0). For
 # every precision.

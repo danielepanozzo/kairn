@@ -2610,6 +2610,20 @@ Definition ball_make_2_spec : Prop :=
    ball_finite_2 cw0 cw1 rw /\ cw0 = c0 /\ cw1 = c1 /\ val rw = val r) /\
   (nan r \/ r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c0) -> ball_whole_2 cw0 cw1 rw).
 
+(* ball_make_2_entry: ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23). IEEE-model status: proved. *)
+Definition ball_make_2_entry_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall c0 c1 r : binary_float prec emax,
+  canonical_2 c0 c1 ->
+  let '(cw0, cw1, rw) := IeeeModel.ball_make_2_entry prec emax nan_plus nan_abs nan_const c0 c1 r in
+  ball_2 cw0 cw1 rw /\
+  (r = infinity prec emax true \/ (finite r /\ val r < 0) -> ball_empty_2 cw0 cw1 rw) /\
+  (finite r -> 0 <= val r -> finite c0 ->
+   ball_finite_2 cw0 cw1 rw /\ val cw0 = val c0 /\ val cw1 = val c1 /\ val rw = val r) /\
+  (nan r \/ r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c0) -> ball_whole_2 cw0 cw1 rw).
+
 (* ball_mul_2_full: ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing). IEEE-model status: proved. *)
 Definition ball_mul_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -3138,6 +3152,21 @@ Definition interval_make_2_spec : Prop :=
   canonical_2 lo0 lo1 ->
   canonical_2 hi0 hi1 ->
   let '(zl0, zl1, zu0, zu1) := IeeeModel.interval_make_2 prec emax nan_opp lo0 lo1 hi0 hi1 in
+  interval_2 zl0 zl1 zu0 zu1 /\
+  (xnonempty (xval_2 lo0 lo1) (xval_2 hi0 hi1) -> xval_2 zl0 zl1 = xval_2 lo0 lo1 /\ xval_2 zu0 zu1 = xval_2 hi0 hi1) /\
+  (nan lo0 \/ nan hi0 \/ (exists s : bool, xval_2 lo0 lo1 = XInf s /\ xval_2 hi0 hi1 = XInf s) ->
+   zl0 = infinity prec emax true /\ zu0 = infinity prec emax false /\ zero zl1 /\ zero zu1) /\
+  (xlt (xval_2 hi0 hi1) (xval_2 lo0 lo1) = true -> interval_empty_2 zl0 zl1 zu0 zu1).
+
+(* interval_make_2_entry: interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry). IEEE-model status: proved. *)
+Definition interval_make_2_entry_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_opp : nan1 prec emax),
+  forall lo0 lo1 hi0 hi1 : binary_float prec emax,
+  canonical_2 lo0 lo1 ->
+  canonical_2 hi0 hi1 ->
+  let '(zl0, zl1, zu0, zu1) := IeeeModel.interval_make_2_entry prec emax nan_plus nan_opp lo0 lo1 hi0 hi1 in
   interval_2 zl0 zl1 zu0 zu1 /\
   (xnonempty (xval_2 lo0 lo1) (xval_2 hi0 hi1) -> xval_2 zl0 zl1 = xval_2 lo0 lo1 /\ xval_2 zu0 zu1 = xval_2 hi0 hi1) /\
   (nan lo0 \/ nan hi0 \/ (exists s : bool, xval_2 lo0 lo1 = XInf s /\ xval_2 hi0 hi1 = XInf s) ->

@@ -31,7 +31,13 @@ The value types default-construct to zero: `Expansion()` is 0, `Ball()` the poin
 interval $[0, 0]$, `BallVector()` the point 0 of $N$ entries, `Accumulator()` the empty sum. The
 limbs of a number are public (`x.limb[i]`); a program that writes them must write a canonical pair,
 and `Expansion<T, 2>::from_limbs(p)` builds a number from computed limbs with the guard and, in a
-build with checks, the check ([Numbers of several limbs](expansions.md#normalized-numbers)).
+build with checks, the check ([Numbers of several limbs](expansions.md#normalized-numbers)). A
+number of two limbs given to the constructor of a set passes through the guard there, limb by
+limb: the center of `Ball<T, 2>(c, r)`, `Ball<T, 2>(c)` and of the ball of a constant, the bounds
+of `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)` and `from_bounds`, the centers of a
+`BallVector<T, 2, N>`. Each limb keeps its value, and a limb $-0$ comes back $+0$ (the guard
+computes $-0 + 0$, which is $+0$ when rounding to nearest); in constant evaluation the guard is
+not applied, and every limb comes back bit for bit (`api.constexpr` checks both).
 
 **A set is rebuilt from the limbs read out of it with `from_limbs`**, for a program that keeps the
 limbs in storage of its own:
@@ -72,7 +78,9 @@ The constructor is not the way back for a ball: `Ball<T, k>(c, r)` of the NaN ce
 the empty set makes the whole line, as it makes of every center that is not finite and every NaN
 radius ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)), and the
 program above shows it. An accumulator is rebuilt with `Accumulator<T, k>::from_state(s, a, n)`,
-whose bound is that of the history its state was read from.
+whose bound is that of the history its state was read from; it guards every limb it is given, so
+the state comes back with the same values, a $-0$ limb as $+0$ (since 0.3.1 for a running sum of
+two limbs, which 0.3.0 copied as it was).
 
 ## Threads
 

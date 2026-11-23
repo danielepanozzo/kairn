@@ -674,6 +674,10 @@ class Claims(unittest.TestCase):
         milestone2 |= {'ball_hull_1', 'ball_intersection_1', 'ball_split_1', 'ball_split_2'}
         milestone2 |= {'interval_mid_rad_2', 'interval_to_ball_2', 'ball_to_interval_2', 'interval_split_2',
                        'ball_from_interval_1', 'ball_hull_2', 'ball_intersection_2'}
+        # The constructors of two limbs on the limbs the program gives, each guarded (rule R3; the
+        # owner's decision of 2026-11-23 for the ball): their cores' listings on the guarded limbs.
+        constructors |= {'ball_make_2_entry'}
+        milestone2 |= {'interval_make_2_entry'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
                          full | full_ball | constructors | finishes | milestone2)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))

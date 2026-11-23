@@ -33,8 +33,8 @@
      claims say, the error of a rounded product and the sign of the error term of
      two_prod, what mul_dir_1 returns beside its generated statements, the rectangle
      lemma of the product of intervals, the two executions of a product, and the lemmas
-     of the two executions of the 63 kernels whose C++ computes an operation otherwise in
-     constant evaluation (the thirty whose only fused operations are products, and 33
+     of the two executions of the 66 kernels whose C++ computes an operation otherwise in
+     constant evaluation (the thirty whose only fused operations are products, and 36
      without a product that compute a guard or times_inf: the operations of constant
      evaluation against those of run time, the listings of proofs/gen/IeeeWith.v against the
      generated kernels, and in lockstep), whose theorems proofs/gen/IeeeAudit.v checks
@@ -587,7 +587,10 @@ Print Assumptions add_2_2_full_with_prod.
 Print Assumptions add_entry_step_2_with_prod.
 Print Assumptions add_fast_2_2_full_with_prod.
 Print Assumptions ball_make_2_with_prod.
+Print Assumptions ball_make_2_entry_with_prod.
+Print Assumptions interval_make_2_entry_with_prod.
 Print Assumptions make_2_limbs_with_prod.
+Print Assumptions bv_center_entry_2_with_prod.
 Print Assumptions sub_1_2_with_prod.
 Print Assumptions sub_1_2_full_with_prod.
 Print Assumptions sub_2_1_with_prod.
@@ -611,6 +614,7 @@ Print Assumptions ball_to_interval_1_same.
 Print Assumptions interval_hull_1_same.
 Print Assumptions add_2_2_same.
 Print Assumptions lt_2_2_same.
+Print Assumptions le_2_2_same.
 Print Assumptions abs_2_same.
 Print Assumptions le_2_1_same.
 Print Assumptions radd_same.
@@ -675,7 +679,10 @@ Print Assumptions add_2_2_full_same.
 Print Assumptions add_entry_step_2_same.
 Print Assumptions add_fast_2_2_full_same.
 Print Assumptions ball_make_2_same.
+Print Assumptions ball_make_2_entry_same.
+Print Assumptions interval_make_2_entry_same.
 Print Assumptions make_2_limbs_same.
+Print Assumptions bv_center_entry_2_same.
 Print Assumptions sub_1_2_same.
 Print Assumptions sub_1_2_full_same.
 Print Assumptions sub_2_1_same.

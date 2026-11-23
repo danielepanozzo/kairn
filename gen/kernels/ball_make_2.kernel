@@ -1,5 +1,8 @@
-# A ball from a canonical 2-limb center (an object, so its limbs are stored) and a radius from the
-# program, guarded (rule R3): the empty set when the radius is negative, -infinity included (n
+# A ball from a canonical 2-limb center that a kernel wrote (an object, so its limbs are stored) and
+# a radius from the program, guarded (rule R3): what the library calls on make_2's center in the
+# point of a T and on the running sum of an accumulator; the constructors of a center the program
+# gives, whose limbs it may have written, call ball_make_2_entry, this listing on the limbs guarded
+# (the owner's decision of 2026-11-23). The empty set when the radius is negative, -infinity included (n
 # true); otherwise the whole line when the center is not finite or the radius is +infinity or a
 # NaN (f false: lt(g, const inf) is false for a NaN), as a NaN bound given to an interval is (the
 # owner's decision of 2026-11-20); and otherwise the ball itself (milestone1.md, "Values that enter

@@ -169,6 +169,14 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    itself. The limbs of a multi-limb operand and the `stored` inputs need no guard: they are
    outputs of kernels (R2) or were guarded when the object was constructed, by the constructor
    kernels of [Milestone 1 statements](design/milestone1.md#values-that-enter-from-the-program).
+   The constructor of a set guards every limb of a number of two limbs it is given, since a
+   program can write the limbs of an `Expansion<T, 2>`: the center of a ball (`ball_make_2_entry`:
+   the owner's decision of 2026-11-23, so that one rule holds for every constructor), the bounds
+   of an interval (`interval_make_2_entry`, closed the same way by a choice of the authors) and
+   the centers of a ball vector (`bv_center_entry_2`), each
+   declared `supplied` and guarded limb by limb before the listing of the kernel without the
+   guards (`ball_make_2`, `interval_make_2`, `bv_center_2`), which the library calls on limbs a
+   kernel wrote only (the point of a `T`, after `make_2`; the running sum of an accumulator).
    One-limb arithmetic (`Expansion<T, 1>`) is outside this rule by decision
    [D6](design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang): it behaves like `T`,
    contraction included.
@@ -290,11 +298,11 @@ of `bv_mul_pow2_k`; and of Milestone 2, `ball_from_interval_2`, `interval_mid_ra
 kernels that call it, `interval_to_ball_1` and `interval_split_1`, which halve with `prod`, and of
 stage B2, through `interval_to_ball_1`, `ball_hull_1`, `ball_intersection_1` and
 `ball_from_interval_1`, and `interval_split_2`, whose midpoint halves the bounds with `mul_pow2_2`.
-Thirty-four kernels that are `constexpr` without any product compute a `guard` or a `times_inf`,
+Thirty-six kernels that are `constexpr` without any product compute a `guard` or a `times_inf`,
 and so compute it otherwise in constant evaluation too: the entry kernels and constructors that
 guard their operands (among them the public constructors and the sums and differences of
 `Expansion` that take a `T`), and the full sums and differences, whose fix-ups use `times_inf`.
-They are in `IeeeWith.v` too, with the same theorem: 64 kernels in all, every kernel `constexpr`
+They are in `IeeeWith.v` too, with the same theorem: 66 kernels in all, every kernel `constexpr`
 without a variant whose C++ dispatches on constant evaluation, so that none computes otherwise
 in constant evaluation without a proof that the values are the same. The two kernels that
 dispatch and are not among them are `two_prod` and its entry form `two_prod_entry` (rule R3, the
@@ -339,8 +347,10 @@ the two forms are in [Milestone 1 statements](design/milestone1.md#ieee-like-res
 "Emission". Packed code keeps every select, as a blend. Each path computes operations of the
 listing and nothing else, so R1 holds of it as it holds of the listing; an output on the first
 path is the first arm of a select of the listing, the result of an addition, a subtraction, a
-fused operation or a guard, or in `ball_make_2` a limb of the center it was given, which R3
-already counts as safe to add.
+fused operation or a guard, or in `ball_make_2` and `interval_make_2` a limb of the center or of a
+bound they were given, which R3 counts as safe to add: the library calls them on limbs a kernel
+wrote only, and on limbs the program gives their guarded forms, `ball_make_2_entry` and
+`interval_make_2_entry`, whose first path returns the guarded limbs.
 
 **A limb type of a format chosen at run time.** The scalar printer writes every kernel and fold
 for one more limb type, used by the tests only: `kairn::emulated::Number`
@@ -1936,8 +1946,8 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
 - `IeeeWith.v`: the kernels whose C++ computes an operation otherwise in constant evaluation than
   at run time (`ieee.with_kernels`): every kernel `constexpr` without a variant that computes, in
   its listing or a callee's, an operation whose spelling dispatches on constant evaluation; the
-  thirty that `build` lists as `constexpr` by the rule of the product and 34 without a product,
-  64 in all. They are in the IEEE model with the operations that constant evaluation runs
+  thirty that `build` lists as `constexpr` by the rule of the product and 36 without a product,
+  66 in all. They are in the IEEE model with the operations that constant evaluation runs
   differently as arguments. These
   are the operations whose C++ in a kernel `constexpr` without a variant dispatches on
   `__builtin_is_constant_evaluated()` (`cpp.SPELL_PLAIN`): `prod`, `guard` and `times_inf`
@@ -2229,7 +2239,7 @@ Two more kinds serve the constructors
 | Kind | Fields | Meaning |
 |---|---|---|
 | `represents` | `of` | the output is canonical and is `value` exactly: a finite `value` gives a finite normalized output of that value, $\pm\infty$ gives $(\pm\infty, 0)$, a NaN gives all NaN |
-| `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is negative, $-\infty$ included; otherwise the whole line when the given radius is a NaN or $+\infty$ or the given center is not finite; otherwise the given center and radius, exactly. (A NaN radius gave the empty set until the owner's decision of 2026-11-20, which made it the whole line, as a NaN bound given to an interval is.) |
+| `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is negative, $-\infty$ included; otherwise the whole line when the given radius is a NaN or $+\infty$ or the given center is not finite; otherwise the given center and radius, exactly. (A NaN radius gave the empty set until the owner's decision of 2026-11-20, which made it the whole line, as a NaN bound given to an interval is.) In the IEEE model the center of that ball is the limbs given themselves (`cw0 = c0 /\ cw1 = c1`) when the center is a stored input (`ball_make_2`), and of their values (`val cw0 = val c0 /\ val cw1 = val c1`, a zero limb coming out $+0$) when the program supplies it and the kernel guards it (`ball_make_1`, `ball_make_2_entry`); the radius is of the value given in both. |
 
 `value` may be an expression there too: `neg_2` and `abs_2` carry `represents` next to their
 `normalized` and `error` entries, with the values `-x` and `abs(x)`, and that entry is what says

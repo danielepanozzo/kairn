@@ -274,12 +274,17 @@ FORM(acc_add1, kairn::Accumulator<T, 1> acc; for (int i = 0; i < N / 2; ++i) { a
 FORM(acc_add2, kairn::Accumulator<T, 2> acc; for (int i = 0; i < N / 2; ++i) { acc.add(M::one(a, b, i)); acc.add(c[i]); }
      put_acc(out, acc);)
 // from_state: a product as the running sum (one limb) and as the sum of magnitudes, which the
-// accumulator's kernels then add to (rule R3: from_state guards them, the leading limb of make_2).
+// accumulator's kernels then add to (rule R3: from_state guards them, the leading limb of make_2);
+// and a product written into the leading limb of a running sum of two limbs, which from_state
+// guards through make_2_limbs (since 0.3.1; 0.3.0 copied it as it was).
 FORM(acc_from_state1, kairn::Accumulator<T, 1> acc =
          kairn::Accumulator<T, 1>::from_state(kairn::Expansion<T, 1>(M::one(a, b, 0)), M::one(a, b, 1), 1);
      acc.add(c[0]); acc.add(c[1]); put_acc(out, acc);)
 FORM(acc_from_state2, kairn::Accumulator<T, 2> acc =
          kairn::Accumulator<T, 2>::from_state(kairn::Expansion<T, 2>(T(0.75)), M::one(a, b, 0), 1);
+     acc.add(c[0]); acc.add(c[1]); put_acc(out, acc);)
+FORM(acc_from_state2_sum, kairn::Expansion<T, 2> s; s.limb[0] = M::one(a, b, 0); s.limb[1] = T(0);
+     kairn::Accumulator<T, 2> acc = kairn::Accumulator<T, 2>::from_state(s, T(1), 1);
      acc.add(c[0]); acc.add(c[1]); put_acc(out, acc);)
 FORM(acc_product1, kairn::Accumulator<T, 1> acc; const T one = run_time_one<T>();
      for (int i = 0; i < N / 2; ++i) { acc.add_product(M::one(a, b, i), one); acc.add(c[i]); } put_acc(out, acc);)
@@ -397,6 +402,7 @@ void run(const char* type, long rounds, Totals& totals) {
         ROW(acc_add2, "acc.add(a*b), 2 limbs", true),
         ROW(acc_from_state1, "Accumulator<T, 1>::from_state(a*b, c*d, 1), then add", true),
         ROW(acc_from_state2, "Accumulator<T, 2>::from_state(s, a*b, 1), then add", true),
+        ROW(acc_from_state2_sum, "Accumulator<T, 2>::from_state({a*b, 0}, 1, 1), then add", true),
         ROW(dot1, "dot({a*b, c, ...}, {1})", false),
         ROW(dot1_seq, "dot(sequential, {a*b, c, ...}, {1})", false),
         ROW(dot2, "dot({a*b, c, ...}, {1}), 2 limbs", false),

@@ -5,7 +5,9 @@
 /// "Interval").
 ///
 /// Each operation forwards to one generated kernel: the constructor kernels interval_make_1 and
-/// interval_make_2, the negations, sums, differences and products interval_neg_k, interval_add_k,
+/// interval_make_2_entry (interval_make_2 on the limbs of the bounds guarded, rule R3; the interval
+/// of a point of T of two limbs, whose bounds make_2 wrote, calls interval_make_2 itself), the
+/// negations, sums, differences and products interval_neg_k, interval_add_k,
 /// interval_sub_k and interval_mul_k, the hull and the intersection interval_hull_k and
 /// interval_intersection_k, the midpoint and radius interval_mid_rad_k, the split interval_split_k,
 /// the conversions interval_to_ball_k (in ball.hpp) and ball_to_interval_k, for the bounds of two
@@ -38,12 +40,16 @@ namespace kairn {
 
 namespace detail {
 
-// The kernels of the Interval operations, by number of limbs of the bounds.
+// The kernels of the Interval operations, by number of limbs of the bounds. make is the
+// constructor kernel of bounds the program gives; make_kernel that of bounds a kernel wrote (the
+// interval of a point or of two values of T, made by make_2 first), which for two limbs needs no
+// guard of their limbs (rule R3).
 template <class T, int K>
 struct interval_kernels;
 template <class T>
 struct interval_kernels<T, 1> {
     using make = gen::bounds::interval_make_1<T>;
+    using make_kernel = gen::bounds::interval_make_1<T>;
     using neg = gen::bounds::interval_neg_1<T>;
     using add = gen::bounds::interval_add_1<T>;
     using sub = gen::bounds::interval_sub_1<T>;
@@ -69,7 +75,8 @@ struct interval_kernels<T, 1> {
 };
 template <class T>
 struct interval_kernels<T, 2> {
-    using make = gen::bounds::interval_make_2<T>;
+    using make = gen::bounds::interval_make_2_entry<T>;
+    using make_kernel = gen::bounds::interval_make_2<T>;
     using neg = gen::bounds::interval_neg_2<T>;
     using add = gen::bounds::interval_add_2<T>;
     using sub = gen::bounds::interval_sub_2<T>;
@@ -98,7 +105,7 @@ struct interval_kernels<T, 2> {
 /// make_2 and interval_make_2.
 template <class T, int K>
 concept interval_point_proved =
-    proof_checked<typename interval_kernels<T, K>::make> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
+    proof_checked<typename interval_kernels<T, K>::make_kernel> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
 /// Whether the kernels of the member test of a point of T are proved: interval_contains_1, or
 /// make_2 and interval_contains_2.
 template <class T, int K>
@@ -156,22 +163,26 @@ KAIRN_FORCEINLINE constexpr void check_interval_exact([[maybe_unused]] const Int
 // The constructors, without their markers and constraints. One limb (interval_make_1): its only
 // rounded operations are the guards of the bounds, lo + 0 and hi + 0, whose values are the bounds
 // under every rounding mode, and every pair of values of T is accepted, so only the environment
-// without the rounding mode is checked. Two limbs (interval_make_2): comparisons and selects,
-// which do not round, on bounds that must be canonical, tested when the rounding mode is to
-// nearest (check_exact). The interval of a point of T of two limbs: make_2, whose result is
-// canonical by its proof, then interval_make_2; only the environment without the rounding mode is
-// checked.
+// without the rounding mode is checked. Two limbs from numbers of two limbs the program gives
+// (interval_make_2_entry): the guards of the four limbs, whose values are the limbs under every
+// rounding mode, then comparisons and selects, which do not round, on bounds that must be
+// canonical, tested when the rounding mode is to nearest (check_exact). The interval of a point
+// or of two values of T of two limbs: make_2, whose result is canonical by its proof and is a
+// kernel's output, which rule R3 does not ask to guard again, then interval_make_2
+// (make_interval_kernel); only the environment without the rounding mode is checked.
 template <class T>
 KAIRN_FORCEINLINE constexpr Interval<T, 1> make_interval(std::type_identity_t<T> lo, std::type_identity_t<T> hi) noexcept;
 template <class T>
 KAIRN_FORCEINLINE constexpr Interval<T, 2> make_interval_kernel(const Expansion<T, 2>& lo, const Expansion<T, 2>& hi) noexcept;
+template <class T>
+KAIRN_FORCEINLINE constexpr Interval<T, 2> make_interval_entry(const Expansion<T, 2>& lo, const Expansion<T, 2>& hi) noexcept;
 template <class T, int K>
 KAIRN_FORCEINLINE constexpr Interval<T, K> make_interval(const Expansion<T, K>& lo, const Expansion<T, K>& hi) noexcept {
     if constexpr (K == 1) {
         return make_interval<T>(lo.limb[0], hi.limb[0]);
     } else {
         check_exact(lo, hi);
-        return make_interval_kernel(lo, hi);
+        return make_interval_entry(lo, hi);
     }
 }
 template <class T, int K>
@@ -264,19 +275,24 @@ public:
         : Interval(detail::make_interval_point<T, K>(a)) {}
     /// The same with a marked operand: see kairn::Unverified.
     explicit constexpr Interval(Unverified<T> a) noexcept : Interval(detail::make_interval_point<T, K>(a.value)) {}
-    /// The interval [a, a] of a number of K limbs (kernel interval_make_1 or interval_make_2), with
-    /// the same cases as the constructor from a T: [a, a] for a finite a, the whole line otherwise.
-    /// Does not round (comparisons and selects, and for one limb the guards): not preceded by the
-    /// debug build's check of the rounding mode (config.hpp); a two-limb a must be canonical, which
-    /// is checked when the rounding mode is to nearest.
+    /// The interval [a, a] of a number of K limbs (kernel interval_make_1 or
+    /// interval_make_2_entry, every limb of a guarded as in the constructor below), with the same
+    /// cases as the constructor from a T: [a, a] for a finite a, the whole line otherwise. Does
+    /// not round but in the guards, whose values are the limbs under every rounding mode
+    /// (comparisons and selects): not preceded by the debug build's check of the rounding mode
+    /// (config.hpp); a two-limb a must be canonical, which is checked when the rounding mode is to
+    /// nearest.
     constexpr Interval(const Expansion<T, K>& a) noexcept
         requires detail::proof_checked<typename detail::interval_kernels<T, K>::make>
         : Interval(detail::make_interval(a, a)) {}
     /// The same with a marked operand.
     explicit constexpr Interval(const Unverified<Expansion<T, K>>& a) noexcept
         : Interval(detail::make_interval(a.value, a.value)) {}
-    /// The interval of two bounds (kernel interval_make_1 or interval_make_2); two values of T are
-    /// first converted to K limbs, exactly. Proved, in the IEEE model, for any two values of T, or
+    /// The interval of two bounds (kernel interval_make_1 or interval_make_2_entry); two values of
+    /// T are first converted to K limbs, exactly. Every limb of the bounds passes through a guard
+    /// (rule R3: a product the program computed and wrote into a limb of a bound is rounded before
+    /// any operation of the interval adds it, as every value that enters an interval, a ball or a
+    /// ball vector from the program is). Proved, in the IEEE model, for any two values of T, or
     /// any two canonical numbers of two limbs: the result is canonical, and it is, by the first case
     /// that applies,
     /// - the whole line when a bound is a NaN, whatever the other bound is, and when both bounds are
@@ -288,11 +304,15 @@ public:
     ///   finite hi among them. Reversed bounds are not reported by a debug build: they describe no
     ///   value, and the empty set is what they mean. Interval::empty() is the empty set;
     /// - otherwise [lo, hi], the same extended real numbers: lo <= hi, lo < +inf and hi > -inf,
-    ///   [-inf, +inf], [lo, +inf] and [-inf, hi] included.
-    /// Does not round (comparisons and selects; for one limb the guards of the bounds, whose values
-    /// are the bounds under every rounding mode): not preceded by the debug build's check of the
-    /// rounding mode (config.hpp); two-limb bounds must be canonical, which is checked when the
-    /// rounding mode is to nearest.
+    ///   [-inf, +inf], [lo, +inf] and [-inf, hi] included. A limb -0 of a bound comes back +0
+    ///   (the guard computes -0 + 0, +0 under rounding to nearest; in constant evaluation the
+    ///   guard is not applied, and it keeps its sign): the sign of a zero bound is not specified.
+    ///   For bounds of two limbs the guards are since 0.3.1: 0.3.0 (interval_make_2) kept their
+    ///   limbs as given, bit for bit.
+    /// Does not round but in the guards of the limbs of the bounds, whose values are the limbs
+    /// under every rounding mode (comparisons and selects): not preceded by the debug build's check
+    /// of the rounding mode (config.hpp); two-limb bounds must be canonical, which is checked when
+    /// the rounding mode is to nearest.
     constexpr Interval(const Expansion<T, K>& lo, const Expansion<T, K>& hi) noexcept
         requires detail::proof_checked<typename detail::interval_kernels<T, K>::make>
         : Interval(detail::make_interval(lo, hi)) {}
@@ -325,13 +345,14 @@ public:
         return detail::make_interval_pair<T, K>(lo.value, hi);
     }
     /// The interval of two bounds of K limbs: the same set as Interval(lo, hi) of two numbers
-    /// (kernel interval_make_1 or interval_make_2), with its statement: the whole line when a bound
-    /// is a NaN or both are the same infinity, the empty set when lo > hi, otherwise [lo, hi].
-    /// Does not round (comparisons and selects; for one limb the guards): not preceded by the debug
-    /// build's check of the rounding mode (config.hpp); two-limb bounds must be canonical, which is
-    /// checked when the rounding mode is to nearest. constexpr. Ball<T, 1>::from_bounds takes
-    /// numbers of one limb too; Ball<T, 2>::from_bounds takes no numbers of two limbs, no kernel
-    /// making a ball of two such bounds (Ball<T, 2>(Interval<T, 2>(lo, hi)) is the composition).
+    /// (kernel interval_make_1 or interval_make_2_entry, every limb guarded), with its statement:
+    /// the whole line when a bound is a NaN or both are the same infinity, the empty set when
+    /// lo > hi, otherwise [lo, hi]. Does not round but in the guards (comparisons and selects): not
+    /// preceded by the debug build's check of the rounding mode (config.hpp); two-limb bounds must
+    /// be canonical, which is checked when the rounding mode is to nearest. constexpr.
+    /// Ball<T, 1>::from_bounds takes numbers of one limb too; Ball<T, 2>::from_bounds takes no
+    /// numbers of two limbs, no kernel making a ball of two such bounds
+    /// (Ball<T, 2>(Interval<T, 2>(lo, hi)) is the composition).
     [[nodiscard]] static constexpr Interval from_bounds(const Expansion<T, K>& lo, const Expansion<T, K>& hi) noexcept
         requires detail::proof_checked<typename detail::interval_kernels<T, K>::make>
     {
@@ -811,6 +832,13 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Interval<T, 2> make_interval_kernel(const Expansion<T, 2>& lo, const Expansion<T, 2>& hi) noexcept {
     Expansion<T, 2> l, h;
     gen::interval_make_2(lo.limb[0], lo.limb[1], hi.limb[0], hi.limb[1], l.limb[0], l.limb[1], h.limb[0], h.limb[1]);
+    return Interval<T, 2>(kernel_result, l, h);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Interval<T, 2> make_interval_entry(const Expansion<T, 2>& lo, const Expansion<T, 2>& hi) noexcept {
+    Expansion<T, 2> l, h;
+    gen::interval_make_2_entry(lo.limb[0], lo.limb[1], hi.limb[0], hi.limb[1], l.limb[0], l.limb[1], h.limb[0],
+                               h.limb[1]);
     return Interval<T, 2>(kernel_result, l, h);
 }
 template <class T>

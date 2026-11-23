@@ -187,6 +187,11 @@ NOT_CONSTEXPR_INTERVAL = "rounds; not `constexpr`: its code is where `KAIRN_ENCL
 EXACT_INTERVAL = "`constexpr`; does not round"
 ROUNDS_CONSTEXPR = "`constexpr`; rounds, and is preceded by the debug build's check of the rounding mode"
 TO_TWO_LIMBS = "each value of `T` converted to `Expansion<T, 2>` first, exactly (`make_2`)"
+# The constructors of two limbs from numbers of two limbs the program gives, which guard every limb
+# (ball_make_2_entry, interval_make_2_entry: rule R3, the owner's decision of 2026-11-23 for the ball).
+LIMBS_GUARDED = ("every limb guarded ([rule R3](../developer/architecture.md#the-kernel-ir)): of the values "
+                 "given, a limb $-0$ coming back $+0$, but in constant evaluation, where the guard is not "
+                 "applied; since 0.3.1 (0.3.0 kept the limbs as given, bit for bit)")
 CORE = "the finite core: no fix-up of infinities and NaN"
 # The scaling of a two-limb number by a power of two in constant evaluation: its kernels compute only
 # opaque products, which constant evaluation computes as plain products with the same values.
@@ -266,11 +271,17 @@ KERNELS = {
                   "`constexpr`; does not round"),
     ),
     "ball_make_2": page(
-        "construction", "A ball from a two-limb center and a radius",
-        form("Ball<T, 2>(c, r)", E2, T, result=B2),
-        form("Ball<T, 2>(c)", E2, result=B2, note="implicit: the point $c$, radius 0"),
+        "construction", "A ball from a two-limb center that a kernel wrote, and a radius",
         form("Ball<T, 2>(a)", T, result=B2,
-             note="implicit: the point $a$, radius 0, with the center made by `make_2` first"),
+             note="implicit: the point $a$, radius 0, with the center made by `make_2` first, whose limbs are "
+                  "not guarded again; also `A.ball()` of an accumulator of two limbs, on its running sum"),
+    ),
+    "ball_make_2_entry": page(
+        "construction", "A ball from a two-limb center that the program gives, each limb guarded, and a radius",
+        form("Ball<T, 2>(c, r)", E2, T, result=B2, note=LIMBS_GUARDED),
+        form("Ball<T, 2>(c, r)", T, T, result=B2,
+             note="the center converted to `Expansion<T, 2>` first (`make_2`), then " + LIMBS_GUARDED),
+        form("Ball<T, 2>(c)", E2, result=B2, note="implicit: the point $c$, radius 0; " + LIMBS_GUARDED),
         form("Ball<T, 2>(q)", "Constant<Expansion<T, 2>>", result=B2,
              note="explicit: center `q.value`, radius `q.error`, for `q` a result of `rational` or `integer`: "
                   "how to multiply a ball by $1/s$, `X * Ball<T, 2>(rational<Expansion<T, 2>>(1, s))`, until "
@@ -783,14 +794,22 @@ KERNELS = {
         form("X -= Y", I2, I2, result=I2, note=NOT_CONSTEXPR_INTERVAL),
     ),
     "interval_make_2": page(
-        "intervals", "An interval from two two-limb numbers",
-        form("Interval<T, 2>(lo, hi)", E2, E2, result=I2, note="implicit for one operand; " + EXACT_INTERVAL),
-        form("Interval<T, 2>(lo, hi)", T, T, result=I2, note=TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
-        form("Interval<T, 2>(a)", T, result=I2, note="implicit; $l_o = h_i = a$, " + TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
-        form("Interval<T, 2>(a)", E2, result=I2, note="implicit; $l_o = h_i = a$; " + EXACT_INTERVAL),
-        form("from_bounds(lo, hi)", E2, E2, result=I2, note=FROM_BOUNDS_INTERVAL % "2" + "; " + EXACT_INTERVAL),
+        "intervals", "An interval from two two-limb numbers that a kernel wrote",
+        form("Interval<T, 2>(a)", T, result=I2, note="implicit; $l_o = h_i = a$, " + TO_TWO_LIMBS + ", not guarded "
+             "again; " + EXACT_INTERVAL),
         form("from_bounds(lo, hi)", T, T, result=I2,
-             note=FROM_BOUNDS_INTERVAL % "2" + "; " + TO_TWO_LIMBS + "; " + EXACT_INTERVAL),
+             note=FROM_BOUNDS_INTERVAL % "2" + "; " + TO_TWO_LIMBS + ", not guarded again; " + EXACT_INTERVAL),
+    ),
+    "interval_make_2_entry": page(
+        "intervals", "An interval from two two-limb numbers that the program gives, each limb guarded",
+        form("Interval<T, 2>(lo, hi)", E2, E2, result=I2,
+             note="implicit for one operand; " + LIMBS_GUARDED + "; " + EXACT_INTERVAL),
+        form("Interval<T, 2>(lo, hi)", T, T, result=I2,
+             note=TO_TWO_LIMBS + ", then " + LIMBS_GUARDED + "; " + EXACT_INTERVAL),
+        form("Interval<T, 2>(a)", E2, result=I2, note="implicit; $l_o = h_i = a$; " + LIMBS_GUARDED + "; " +
+             EXACT_INTERVAL),
+        form("from_bounds(lo, hi)", E2, E2, result=I2,
+             note=FROM_BOUNDS_INTERVAL % "2" + "; " + LIMBS_GUARDED + "; " + EXACT_INTERVAL),
     ),
     "interval_mul_2": page(
         "intervals", "Product of intervals, two-limb bounds",

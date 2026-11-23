@@ -10615,6 +10615,62 @@
       }
     },
     {
+      "name": "ball_make_2_entry",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "canonical(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "makes_ball",
+          "center": "cw",
+          "radius": "rw",
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMakeEntry.v",
+        "name": "ball_make_2_entry_correct"
+      },
+      "source": {
+        "cite": "ball_make_2 on the guarded limbs of the center (rule R3; the owner's decision of 2026-11-23)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_mul_2",
       "inputs": [
         {
@@ -13017,6 +13073,63 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_make_2_entry",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "lo",
+          "limbs": 2
+        },
+        {
+          "name": "hi",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "canonical(lo)",
+        "canonical(hi)"
+      ],
+      "ensures": [
+        {
+          "kind": "makes_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "from": {
+            "lower": "lo",
+            "upper": "hi"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMakeEntry.v",
+        "name": "interval_make_2_entry_correct"
+      },
+      "source": {
+        "cite": "interval_make_2 on the guarded limbs of the bounds (rule R3, as ball_make_2_entry)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 4,
       "instances": {
         "binary64": [],
         "binary32": []

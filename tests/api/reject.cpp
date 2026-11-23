@@ -13,6 +13,11 @@
 //          conversion to another kernel (x + a through x + Expansion(a) and add_2_2_full, a ball
 //          times a T through a point ball and ball_mul_2_full, a comparison with a limb through a
 //          two-limb one); the control marks the operand
+//   117-118 one constructor kernel of two limbs UNVERIFIED and every other proved (ball_make_2_entry,
+//          interval_make_2_entry, which guard the limbs the program gives, rule R3): the ball and
+//          the interval of numbers of two limbs must not compile, though ball_make_2 and
+//          interval_make_2, the same listings without the guards, are proved; the control marks the
+//          operand
 //   11     a pair that is not canonical given to from_limbs in a constant expression, with
 //          KAIRN_CHECKS (the control turns KAIRN_CHECKS off)
 //   111-112 the same for Interval::from_limbs given reversed bounds and Ball::from_limbs given a
@@ -198,6 +203,10 @@ int main() {
     sink = (p + MARK(s)).radius();
 #elif KAIRN_TEST_CASE == 26
     sink = x < MARK(s);
+#elif KAIRN_TEST_CASE == 117
+    sink = B2(MARK(x), 0.5).radius();
+#elif KAIRN_TEST_CASE == 118
+    sink = I2(MARK(x), y).lower().limb[0];
 #elif KAIRN_TEST_CASE == 11
     static constexpr double limbs[2] = {1.0, 0x1p-52};
     constexpr E2 z = E2::from_limbs(limbs);

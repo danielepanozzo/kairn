@@ -237,16 +237,24 @@ public:
         return ok_r && detail::finite(r) ? r : inf;
     }
 
-    /// The ball of center the running sum and radius error_bound() (kernel ball_make_1 or
-    /// ball_make_2, the constructor Ball(c, r)): it contains the exact sum of what was added. The
-    /// whole line when error_bound() is +infinity or the running sum is not finite: never a finite
-    /// ball that the theorem does not give. Rounds; not constexpr.
+    /// The ball of center the running sum and radius error_bound() (kernel ball_make_1, the
+    /// constructor Ball(c, r), or ball_make_2, with the checks of Ball(c, r)): it contains the exact
+    /// sum of what was added. The whole line when error_bound() is +infinity or the running sum is
+    /// not finite: never a finite ball that the theorem does not give. A running sum of two limbs
+    /// is the output of the accumulator's kernels, which rule R3 does not ask to guard again, so
+    /// its limbs are not (ball_make_2, not ball_make_2_entry, which the constructor calls on a
+    /// center the program gives). Rounds; not constexpr.
     Ball<T, K> ball() const noexcept
-        requires detail::acc_radius_proved<T, K> && detail::make_proved<T, K>
+        requires detail::acc_radius_proved<T, K> && detail::make_kernel_proved<T, K>
     {
         const T r = error_bound();
         if (r == std::numeric_limits<T>::infinity()) return Ball<T, K>::whole();
-        return Ball<T, K>(s_, r);
+        if constexpr (K == 1) {
+            return Ball<T, 1>(s_, r);
+        } else {
+            detail::check_make_ball(s_, r);
+            return detail::make_ball_kernel(s_, r);
+        }
     }
 
     /// The number of terms added: +1 per add and add_product, the sum on a merge; 2^64 - 1 means
@@ -265,25 +273,35 @@ public:
     /// count(): a program moves accumulators through its own storage (a buffer of a device, a
     /// message) and back. Unchecked but for KAIRN_CHECKS: the guarantee of error_bound() is that of
     /// the history of the accumulator the state was read from, and holds only for such a state. With
-    /// KAIRN_CHECKS, s must be canonical and a not negative. The values of T given, a and the limb of
-    /// a running sum of one limb, come from the program, and the kernels of add, add_product and
-    /// merge add to them: each passes through a guard first (rule R3), as the limbs of
-    /// Ball::from_limbs do, the leading limb of make_2, whose claim makes it the value given (a NaN
-    /// stays a NaN, a -0 may become +0); so a product the program passes in is the product rounded
-    /// (measured to be fused otherwise: GCC 13 at its default setting, Clang 18 and Apple clang 21
-    /// under -ffp-contract=fast). A running sum of two limbs is an Expansion<T, 2>, whose limbs its
-    /// constructors and from_limbs guarded already. Its only rounded operations are the guards,
-    /// a + 0, whose value is a under every rounding mode (only the sign of a zero depends on the
-    /// mode): not preceded by the debug build's check of the rounding mode. constexpr.
+    /// KAIRN_CHECKS, s must be canonical and a not negative. The values given, a and every limb of
+    /// the running sum, come from the program (the limbs of an Expansion are public, so a program
+    /// can write them), and the kernels of add, add_product and merge add to them: each passes
+    /// through a guard first (rule R3), as the limbs of Ball::from_limbs do. a and the limb of a
+    /// running sum of one limb through make_2, of which this keeps the leading limb, the value given
+    /// by make_2's claim (a NaN stays a NaN); a running sum of two limbs through make_2_limbs, whose
+    /// claim, for a canonical pair, is a canonical pair of limbs of the same values (since 0.3.1:
+    /// 0.3.0 copied it as it is). That the state is the one given is argued from those claims, not
+    /// machine-checked as one statement; a running sum whose leading limb is not finite and that is
+    /// not canonical, which running_sum() may return after an overflow, is outside the claim of
+    /// make_2_limbs: each limb's guard keeps it an infinity or a NaN, so the sum stays not finite.
+    /// So a product the program passes in is the product rounded (for a and one limb, measured to
+    /// be fused otherwise: GCC 13 at its default setting, Clang 18 and Apple clang 21 under
+    /// -ffp-contract=fast). A state saved with running_sum(), magnitudes() and count() and restored
+    /// keeps its values: every limb comes back bit for bit but that a -0 comes back +0 (the guard
+    /// -0 + 0 is +0 under rounding to nearest) and a NaN comes back a NaN; in constant evaluation the
+    /// guard is not applied, and every limb comes back bit for bit. Its only rounded operations are
+    /// the guards, a + 0, whose value is a under every rounding mode (only the sign of a zero depends
+    /// on the mode): not preceded by the debug build's check of the rounding mode. constexpr.
     static constexpr Accumulator from_state(const Expansion<T, K>& s, T a, std::uint64_t n) noexcept
-        requires detail::proof_checked<gen::bounds::make_2<T>>
+        requires detail::proof_checked<gen::bounds::make_2<T>> &&
+                 (K == 1 || detail::proof_checked<gen::bounds::make_2_limbs<T>>)
     {
         detail::check_acc_state(s, a);
         Accumulator acc;
         if constexpr (K == 1) {
             acc.s_.limb[0] = detail::make<T>(s.limb[0]).limb[0];
         } else {
-            acc.s_ = s;
+            acc.s_ = detail::make_limbs<T>(s.limb[0], s.limb[1]);
         }
         acc.a_ = detail::make<T>(a).limb[0];
         acc.n_ = n;
