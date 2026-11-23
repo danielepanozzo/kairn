@@ -27,9 +27,10 @@ Inputs, and nothing else:
   Proofs workflow, where the audit's output is kept, and never lists them per theorem;
 - results/*/brute/*.json and results/*/brute/supplementary/*.json: the stored summaries of the
   brute-force runs, campaign by campaign; and results/brute-code.json, the fingerprints of the
-  code of every kernel at the commits those runs name (docs/tools/brute_code.py), which a page
-  compares with those of include/kairn/gen/scalar.hpp, avx2.hpp, neon.hpp and prelude.hpp: a run
-  counts on a kernel's page only if it ran the code the kernel has now;
+  code and of the claims of every kernel at the commits those runs name (docs/tools/brute_code.py),
+  which a page compares with those of include/kairn/gen/scalar.hpp, avx2.hpp, neon.hpp and
+  prelude.hpp and of gen/claims.json: a run counts on a kernel's page only if it ran the code the
+  kernel has now, and the page says when it judged other claims;
 - docs/tools/reference_operations.py: which public operation calls which kernel (hand-written).
 
 Every number, status and formula on a page is printed from these. A claim whose kind, field,
@@ -1340,25 +1341,11 @@ class Kernel:
         return out
 
     def label(self, e):
-        """The oracle's label of an ensures entry, as the brute-force summaries print it."""
-        kind = e["kind"]
-        if kind == "error":
-            return "error(%s) form %s, c=%s, k=%s, t=%s%s" % (
-                e["of"], e["form"], e["c"], e["k"], e["t"], ", when %s" % e["when"] if e["when"] else "")
-        if kind in ("normalized", "leading_rounded", "represents"):
-            return "%s(%s)" % (kind, e["of"])
-        if kind == "rounded":
-            return "rounded(%s) %s" % (e["of"], e["mode"])
-        if kind == "upper" and "value" in e:
-            return "upper(%s) %s%s" % (e["of"], e["value"], " if %s" % e["if"] if "if" in e else "")
-        if kind == "upper":
-            return "upper(%s) gaps=%s" % (e["of"], e["gaps"])
-        if kind == "predicate":
-            return "predicate(%s) %s(%s)" % (e["of"], e["rel"], ", ".join(e["args"]))
-        if kind == "encloses":
-            return "encloses(%s, %s) %s over %s" % (e["center"], e["radius"], e["set"], ", ".join(
-                "%s=[%s +- %s]" % (b, cr["center"], cr["radius"]) for b, cr in e["balls"].items()))
-        return "%s(%s)" % (kind, e.get("of", ""))
+        """The oracle's label of an ensures entry, as the brute-force summaries print it, for the
+        kinds of LABELLED_KINDS (oracle/kairn_oracle/claims.py, Entry._label; bvec.py,
+        label_suffix and label; intervals.py and enclosure.py, label); for another kind, its kind
+        and outputs only, which the oracle's label starts with."""
+        return entry_label(e)
 
 
 def renamed_core(core, full):
@@ -1456,6 +1443,161 @@ def power_tex(e):
 
 # --- Brute-force results --------------------------------------------------------------------------
 
+# The kinds whose oracle label entry_label prints, from the fields of the claims alone. The labels of
+# the others (ball_of_interval, encloses_interval, interval_of_ball, makes_ball from an interval,
+# neighbor) carry what the oracle derives from them, such as the text of its constants; for those
+# entry_label prints the kind and the outputs, which the oracle's label starts with.
+LABELLED_KINDS = {"error", "normalized", "leading_rounded", "represents", "rounded", "upper", "holds",
+                  "maximum", "predicate", "encloses", "outward", "extends", "finite_or_nan", "bound",
+                  "certain", "trit", "set_bound", "interval_set", "ball_set", "splits", "ball_splits",
+                  "makes_interval", "makes_ball"}
+
+
+def _of(e):
+    of = e.get("of", "")
+    return "+".join(of) if isinstance(of, list) else of
+
+
+def _finite_when_text(fw):
+    """oracle/kairn_oracle/claims.py, _fw_text."""
+    if not fw:
+        return "nothing (no condition claimed)"
+    return " and ".join("|%s| <= 2^(qmax+p%+d)" % (c["abs_le"], c["exp"]) if c.get("exp") else
+                        "|%s| <= 2^(qmax+p)" % c["abs_le"] for c in fw)
+
+
+def _condition_text(c):
+    """A condition of exact_when: oracle/kairn_oracle/intervals.py, condition_text."""
+    if "zero" in c:
+        return "%s = 0" % c["zero"]
+    op = "zero_or_abs_gt" if "zero_or_abs_gt" in c else "zero_or_abs_ge"
+    return "%s = 0 or |%s| %s %s" % (c[op], c[op], ">" if op == "zero_or_abs_gt" else ">=", c["than"])
+
+
+def _exact_when_text(ew):
+    return " and ".join("(%s)" % _condition_text(c) for c in ew)
+
+
+def _suffix(e):
+    """What the fields of the ball vectors add to an entry: oracle/kairn_oracle/bvec.py, label_suffix."""
+    s = ""
+    if e.get("exact_flag"):
+        s += ", exact_flag %s" % e["exact_flag"]
+    if e.get("nonneg"):
+        s += ", not below zero"
+    if e.get("if_all"):
+        s += " if all of %s" % ", ".join(e["if_all"])
+    if e["kind"] == "rounded" and "value" in e:
+        s += " of %s" % e["value"].strip()
+    return s
+
+
+def _sets_text(e):
+    if "intervals" in e:
+        return ", ".join("%s=[%s, %s]" % (n, s["lower"], s["upper"]) for n, s in e["intervals"].items())
+    return ", ".join("%s=[%s +- %s]" % (n, s["center"], s["radius"]) for n, s in e["balls"].items())
+
+
+def entry_label(e):
+    """The oracle's label of a claim (see Kernel.label)."""
+    kind, of = e["kind"], _of(e)
+    if kind == "error":
+        s = "error(%s) form %s, c=%s, k=%s, t=%s" % (of, e["form"], e["c"], e["k"], e["t"])
+        if e.get("when"):
+            s += ", when %s" % e["when"]
+        if "exact_when" in e:
+            s += ", exact when %s" % _exact_when_text(e["exact_when"])
+        return s + _suffix(e)
+    if kind in ("normalized", "leading_rounded", "represents"):
+        return "%s(%s)" % (kind, of)
+    # A zero factor (the interval kernels): oracle/kairn_oracle/intervals.py, read_zero_factor.
+    zero = ", a zero factor gives zero" if e.get("zero_factor") else ""
+    if kind == "rounded":
+        if e.get("when"):
+            return "rounded(%s) %s, when %s" % (of, e["mode"], e["when"]) + zero
+        return "rounded(%s) %s" % (of, e["mode"]) + _suffix(e) + zero
+    if kind == "upper" and "if" in e:
+        return "upper(%s) >= %s if %s" % (of, str(e["value"]).strip(), e["if"])
+    if kind == "upper" and "value" in e:
+        s = "upper(%s) >= %s" % (of, str(e["value"]).strip())
+        if "unless" in e:
+            s += " unless %s" % e["unless"]
+        if "exact_when" in e:
+            s += ", exactly when %s" % " and ".join(
+                "%s true" % c["mask"] if "mask" in c else "(%s)" % _condition_text(c) for c in e["exact_when"])
+        return s
+    if kind == "upper":
+        return "upper(%s) gaps=%s" % (of, e["gaps"])
+    if kind == "holds":
+        return "holds %s(%s, %s) if %s" % (e["rel"], e["args"][0].strip(), e["args"][1].strip(), e["if"])
+    if kind == "maximum":
+        return "maximum(%s) of %s, %s" % (of, e["args"][0].strip(), e["args"][1].strip())
+    if kind == "predicate":
+        return "predicate(%s) %s(%s)" % (of, e["rel"], ", ".join(e["args"]))
+    if kind == "encloses":
+        s = "encloses(%s, %s) %s over %s" % (e["center"], e["radius"], e["set"].strip(), _sets_text(e))
+        if "finite_when" in e:
+            s += ", B1-B4, finite when %s" % _finite_when_text(e["finite_when"])
+        if "exact_when" in e:
+            s += ", exactly the set when %s" % _exact_when_text(e["exact_when"])
+        return s
+    if kind == "outward":
+        s = "outward(%s) %s" % (of, e["side"])
+        if e.get("exact_when"):
+            s += ", exact when %s" % _exact_when_text(e["exact_when"])
+        return s + zero
+    if kind == "extends":
+        return "extends(%s) F1-F5, core %s, lead %s, finite when %s" % (
+            of, e["core"], e["lead"], _finite_when_text(e.get("finite_when", [])))
+    if kind == "finite_or_nan":
+        s = "finite_or_nan(%s) flag %s" % (of, e["flag"])
+        if "if" in e:
+            s += " if %s" % e["if"]
+        if e.get("steps"):
+            s += ", stepped up %d" % e["steps"]
+        return s + _suffix(e)
+    if kind == "bound":
+        return "bound(%s) %s, steps=%d" % (of, e["side"], e["steps"]) + zero
+    if kind in ("certain", "trit"):
+        out = of if kind == "certain" else "yes %s, no %s" % (e["yes"], e["no"])
+        s = "%s(%s) %s(%s) over %s" % (kind, out, e["rel"], ", ".join(e["args"]), _sets_text(e))
+        if e.get("exact"):
+            s += ", exact"
+        if e.get("exact_when"):
+            s += ", exact when %s" % " and ".join("|%s| <= Omega" % c["abs_le"] for c in e["exact_when"])
+        return s
+    if kind == "set_bound":
+        s = "set_bound(%s) %s %s over %s" % (of, e["side"], e["set"].strip(), _sets_text(e))
+        if e.get("tight"):
+            s += ", tight rounded" + (", steps %d" % e["tight"]["steps"] if e["tight"].get("steps") else "")
+        return s
+    if kind == "interval_set":
+        return "interval_set(%s, %s) %s of %s" % (e["lower"], e["upper"], e["set"], _sets_text(e))
+    if kind == "ball_set":
+        return "ball_set(%s, %s) %s of %s" % (e["center"], e["radius"], e["set"], _sets_text(e))
+    if kind == "splits":
+        a, b = e["parts"]
+        return "splits [%s, %s], [%s, %s] of [%s, %s]" % (a["lower"], a["upper"], b["lower"], b["upper"],
+                                                          e["from"]["lower"], e["from"]["upper"])
+    if kind == "ball_splits":
+        a, b = e["parts"]
+        return "ball_splits [%s +- %s], [%s +- %s] of [%s +- %s]" % (
+            a["center"], a["radius"], b["center"], b["radius"], e["from"]["center"], e["from"]["radius"])
+    if kind == "makes_interval":
+        return "makes_interval(%s, %s) from lower %s, upper %s" % (
+            e["lower"], e["upper"], e["from"]["lower"], e["from"]["upper"])
+    if kind == "makes_ball" and "center" in e["from"]:
+        return "makes_ball(%s, %s) from center %s, radius %s" % (
+            e["center"], e["radius"], e["from"]["center"], e["from"]["radius"])
+    outputs = of or ", ".join(e[f] for f in ("center", "radius", "lower", "upper") if f in e)
+    return "%s(%s)" % (kind, outputs)
+
+
+def labelled(e):
+    """Whether entry_label prints the oracle's whole label of e."""
+    return e["kind"] in LABELLED_KINDS and not (e["kind"] == "makes_ball" and "center" not in e["from"])
+
+
 def headline_field(kind):
     """(field, name, sign) of the statistic that says how close a claim came, or None."""
     return {"error": ("max_ratio", None, 1),
@@ -1513,26 +1655,34 @@ def short_commits(docs):
     return sorted({c[:7] for d in docs for c in d.get("commit", [])})
 
 
-def brute_of(name, campaign, docs):
+def brute_of(name, campaign, docs, same_claims):
     """What the summaries docs of one campaign say about one kernel, merged over machines and
-    runners; then the rows of its supplementary runs, apart (they may judge a later form of its
-    claims). docs are the summaries of the campaign whose runs count for the kernel."""
-    main = brute_rows(name, [d for d in docs if d["_part"] == "main"], "")
-    sup_docs = [d for d in docs if d["_part"] == "supplementary"]
-    sup = brute_rows(name, sup_docs, ", supplementary run")
-    if main is None and sup is None:
+    runners; then the rows of its supplementary runs, apart. docs are the summaries of the campaign
+    whose runs count for the kernel; same_claims(doc) says whether a summary judged the claims the
+    kernel has now. When some did and some did not, the rows of those that did not are apart too,
+    marked "other claims"."""
+    docs = [d for d in docs if judged_by(d, name)]
+    mixed = len({same_claims(d) for d in docs}) > 1
+    rows, findings, extended = [], [], False
+    for part, suffix in (("main", ""), ("supplementary", ", supplementary run")):
+        for same in (True, False):
+            group = [d for d in docs if d["_part"] == part and same_claims(d) == same]
+            b = brute_rows(name, group, suffix + (", other claims" if mixed and not same else "")) if group else None
+            if b is None:
+                continue
+            for r in b["rows"]:
+                r["supplementary"] = part == "supplementary"
+                r["same_claims"] = same
+            rows += b["rows"]
+            findings += b["findings"]
+            extended = extended or b["extended"]
+    if not rows and not findings:
         return None
-    out = main or {"rows": [], "findings": [], "extended": False}
-    out["main"] = short_commits([d for d in docs if d["_part"] == "main"]) if main else []
-    out["supplementary"] = []
-    if sup:
-        for r in sup["rows"]:
-            r["supplementary"] = True
-        out["rows"] += sup["rows"]
-        out["findings"] += sup["findings"]
-        out["extended"] = out["extended"] or sup["extended"]
-        out["supplementary"] = short_commits(d for d in sup_docs if judged_by(d, name))
-    return out
+    return {"rows": rows, "findings": findings, "extended": extended,
+            "main": short_commits(d for d in docs if d["_part"] == "main"),
+            "supplementary": short_commits(d for d in docs if d["_part"] == "supplementary"),
+            "same": short_commits(d for d in docs if same_claims(d)),
+            "other": short_commits(d for d in docs if not same_claims(d))}
 
 
 def brute_rows(name, docs, suffix):
@@ -1633,6 +1783,8 @@ class Site:
                 self.models.append((f, set(re.findall(r"^Definition (\w+) ", read(path), re.M))))
         self.kernels = {}
         entries = load_claims(root, claims)
+        # The claims of each kernel as a run judges them (docs/tools/brute_code.py, NOT_JUDGED).
+        self.claims_now = {e["name"]: BRUTE_CODE.claims_fingerprint(e) for e in entries}
         self.all_names = {e["name"] for e in entries}
         KERNEL_CLAIMS.clear()
         KERNEL_CLAIMS.update({e["name"]: e for e in entries})
@@ -1693,7 +1845,14 @@ class Site:
         """Whether the runs of a stored summary ran the code that the kernel has now: the
         fingerprint of its code at every commit the summary names is that of the tree."""
         now = self.code_now.get(name)
-        return now is not None and all(self.code_then[c].get(name) == now for c in doc["commit"])
+        return now is not None and all(self.code_then[c]["code"].get(name) == now for c in doc["commit"])
+
+    def same_claims(self, doc, name):
+        """Whether the runs of a stored summary judged the claims that the kernel has now: the
+        fingerprint of its claims at every commit the summary names, the code it ran, claims
+        included (tests/brute/brute.py, CODE_PATHS), is that of the claims now."""
+        now = self.claims_now.get(name)
+        return now is not None and all(self.code_then[c]["claims"].get(name) == now for c in doc["commit"])
 
     def link(self, name, frm=""):
         if name in self.kernels:
@@ -3211,27 +3370,6 @@ class Site:
                          "its proof is checked.")
         return lines
 
-    def other_claims(self, k, entries, extended):
-        """Whether runs that judged the oracle's entries `entries` (those of one row, or of the
-        first row of a campaign) judged other claims than the kernel's now: other entries, or the
-        claim of a full Ball kernel before it had its condition B4 (the oracle labels an entry
-        without one "finite when nothing")."""
-        if entries is None:
-            return False
-        if k.extended and extended:
-            # The oracle's entries: the kernel's own, in the order of its claims, then those of the
-            # core of an `extends` entry, labelled "F2, core K: ..." (oracle/kairn_oracle/extended.py).
-            # An entry's oracle label starts with the claim's own label and may add the classes it
-            # judges.
-            own = k.entry["ensures"]
-            return ([x["kind"] for x in entries[:len(own)]] != [e["kind"] for e in own]
-                    or any(e["kind"] in ("error", "upper", "encloses", "rounded", "predicate", "normalized")
-                           and not x["label"].startswith(k.label(e)) for x, e in zip(entries, own))
-                    or any(e.get("finite_when") and "finite when nothing" in x["label"]
-                           for x, e in zip(entries, own)))
-        judged = k.finite_entries if k.finite_reading else k.entry["ensures"]
-        return [x["label"] for x in entries] != [k.label(x) for x in judged]
-
     def campaign_title(self, c):
         m = re.fullmatch(r"milestone(\d+)", c["name"])
         return "Milestone %s" % m.group(1) if m else "`%s`" % c["name"]
@@ -3248,7 +3386,7 @@ class Site:
             same = [d for d in judged if self.same_code(d, k.name)]
             if len(same) < len(judged):
                 other.append((c, short_commits(d for d in judged if not any(d is s for s in same))))
-            b = brute_of(k.name, c, same) if same else None
+            b = brute_of(k.name, c, same, lambda d: self.same_claims(d, k.name)) if same else None
             if b is not None:
                 shown.append((c, b))
         not_counted = " and ".join("of %s, at commit%s %s," % (
@@ -3298,7 +3436,7 @@ class Site:
         total, left_out = {}, False
         for c, b in shown:
             for r in b["rows"]:
-                if self.other_claims(k, r["entries"], b["extended"]):
+                if not r["same_claims"]:
                     left_out = True
                     continue
                 t = total.setdefault(r["key"], {"judged": 0, "failed": 0, "ok": True, "campaigns": [],
@@ -3342,6 +3480,48 @@ class Site:
         w("")
         return out
 
+    def other_claims_note(self, k, b):
+        """The note on the runs of a campaign that judged other claims than the kernel's now, which
+        the fingerprints of the claims of the commit each run names decide (results/brute-code.json):
+        nothing when every run judged the claims now; otherwise what they judged, by the oracle's
+        labels, and whether that is every row or the rows marked "other claims"."""
+        other = [r for r in b["rows"] if not r["same_claims"]]
+        if not other:
+            return []
+        commits = lambda cs: "commit%s %s" % ("s" if len(cs) > 1 else "", " and ".join("`%s`" % x for x in cs))
+        then = next((r["entries"] for r in other if r["entries"]), None)
+        if k.extended and b["extended"]:
+            now = [k.label(e) for e in k.entry["ensures"]]
+            shown = [x["label"] for x in then[:len(now)]] if then else None
+        else:
+            now = [k.label(x) for x in (k.finite_entries if k.finite_reading else k.entry["ensures"])]
+            shown = [x["label"] for x in then] if then else None
+        if shown is None or shown == now:
+            # The claims differ where the oracle's labels do not show it.
+            judged = ("the claims of %s, which differ from the claims now in what their labels do not show: "
+                      "the requirements, the inputs and outputs, the smallest precision or the constants per "
+                      "format" % commits(b["other"]))
+        else:
+            judged = "; ".join("`%s`" % x["label"] for x in then)
+        now = "; ".join("`%s`" % x for x in now)
+        # A condition finite_when (B4: finite operands under it give a finite ball) that the claims
+        # gained after a run: the oracle labels an entry without one "finite when nothing".
+        b4 = then is not None and k.extended and b["extended"] and any(
+            e.get("finite_when") and "finite when nothing" in x["label"] for x, e in zip(then, k.entry["ensures"]))
+        if len(other) == len(b["rows"]):
+            text = ("**These runs judged other claims.** They judged %s; the kernel now claims %s. Their numbers "
+                    "are not about the statement above." % (judged, now))
+        elif b4:
+            text = ("**The condition of this claim was not judged by every run.** The claims gained it (B4: finite "
+                    "operands under the condition give a finite ball) after the runs of %s, which judged the kernel "
+                    "without it, with no condition claimed (the rows marked other claims); the runs of %s judged "
+                    "it, on the cases of their rows below." % (commits(b["other"]), commits(b["same"])))
+        else:
+            text = ("**Not every run below judged the claims above.** The rows marked other claims are of the runs "
+                    "of %s, which judged %s; the kernel now claims %s. Their numbers are not about the statement "
+                    "above." % (commits(b["other"]), judged, now))
+        return [text, ""]
+
     def campaign(self, k, c, b):
         """The lines of one campaign's runs of the kernel's code, and the columns of its table."""
         out = []
@@ -3361,7 +3541,9 @@ class Site:
             runs = "the supplementary run%s of %s" % ("s" if len(sup) > 1 else "", commits(sup))
         w("**%s**: %s, from %s." % (self.campaign_title(c), runs, where))
         rows = b["rows"]
-        judged_labels = next((r["entries"] for r in rows if r["entries"]), None)
+        # The oracle's entries of the runs that judged the claims now, if any did: the columns.
+        judged_labels = next((r["entries"] for r in sorted(rows, key=lambda r: not r["same_claims"])
+                              if r["entries"]), None)
         if k.extended and b["extended"]:
             cores = sorted({m.group(1) for x in judged_labels or []
                             for m in [re.match(r"^F2, core (\w+): ", x["label"])] if m})
@@ -3375,35 +3557,11 @@ class Site:
             w("They judged the statement on finite operands; the stored summaries hold no measurement of the "
               "statement on infinite and NaN operands.")
         w("")
+        out.extend(self.other_claims_note(k, b))
         cols = []
         if k.extended and b["extended"]:
             # The oracle's entries: the kernel's own, in the order of its claims, then those of the core
-            # of an `extends` entry, labelled "F2, core K: ..." (oracle/kairn_oracle/extended.py). An
-            # entry's oracle label starts with the claim's own label and may add the classes it judges.
-            own = k.entry["ensures"]
-            if judged_labels is not None and (
-                    [x["kind"] for x in judged_labels[:len(own)]] != [e["kind"] for e in own]
-                    or any(e["kind"] in ("error", "upper", "encloses", "rounded", "predicate", "normalized")
-                           and not x["label"].startswith(k.label(e)) for x, e in zip(judged_labels, own))):
-                w("**These runs judged other claims.** They judged %s; the kernel now claims %s. Their numbers "
-                  "are not about the statement above." % (
-                      "; ".join("`%s`" % x["label"] for x in judged_labels),
-                      "; ".join("`%s`" % k.label(e) for e in own)))
-                w("")
-            # A condition finite_when (B4: finite operands under it give a finite ball) that the
-            # claims gained after the runs: the oracle labels an entry without one "finite when
-            # nothing".
-            no_b4 = judged_labels is not None and any(
-                e.get("finite_when") and "finite when nothing" in x["label"] for x, e in zip(judged_labels, own))
-            if no_b4:
-                sup = b.get("supplementary")
-                w("**The condition of this claim was not judged by every run.** The claims gained it (B4: finite "
-                  "operands under the condition give a finite ball) after the main runs, which judged the "
-                  "kernel without it, with no condition claimed%s." % (
-                      "; the supplementary run%s at commit %s judged it, on the cases of its rows below" % (
-                          "s" if len(sup) > 1 else "", ", ".join("`%s`" % c for c in sup)) if sup else
-                      "; no stored run judged it"))
-                w("")
+            # of an `extends` entry, labelled "F2, core K: ..." (oracle/kairn_oracle/extended.py).
             n_err = sum(x["kind"] == "error" for x in judged_labels or [])
             for j, x in enumerate(judged_labels or []):
                 core = re.match(r"^F2, core (\w+): ", x["label"])
@@ -3419,12 +3577,6 @@ class Site:
         else:
             # The runs judged the statement on finite operands where there is one: its entries.
             judged = k.finite_entries if k.finite_reading else k.entry["ensures"]
-            current = [k.label(x) for x in judged]
-            if judged_labels is not None and [x["label"] for x in judged_labels] != current:
-                w("**These runs judged other claims.** They judged %s; the kernel now claims %s. Their numbers "
-                  "are not about the statement above." % (
-                      "; ".join("`%s`" % x["label"] for x in judged_labels), "; ".join("`%s`" % c for c in current)))
-                w("")
             for j, x in enumerate(judged):
                 kind = x["kind"]
                 if kind == "error":

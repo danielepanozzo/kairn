@@ -102,8 +102,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb`, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#bv_mul_pow2_step_1)).
 
-**These runs judged other claims.** They judged `rounded(z) nearest`; `error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| > eta/(2*u)), exact_flag e`; the kernel now claims `rounded(z) nearest`; `error(z) form R, c=0, k=1, t=1/2`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed | largest error / bound | Bound attained |
 |---|---|---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 96 796 926 | 0 | 1 | yes |

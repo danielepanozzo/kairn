@@ -102,8 +102,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb`, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#ball_mul_pow2_1)).
 
-**These runs judged other claims.** They judged `encloses(cz, rz) x*c over x=[cx +- rx], exactly the set when (cx*c = 0 or |cx*c| > eta/(2*u)) and (rx*c = 0 or |rx*c| > eta/(2*u))`; the kernel now claims `encloses(cz, rz) x*c over x=[cx +- rx]`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed | smallest slack of the radius, in gaps |
 |---|---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 93 043 386 | 0 | 0 |

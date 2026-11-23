@@ -90,8 +90,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb`, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#bv_scale_radius_1)).
 
-**These runs judged other claims.** They judged `upper(rz) >= abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1))`; the kernel now claims `upper(rz) abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1))`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed | largest excess, in gaps | Bound attained |
 |---|---|---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 7 200 000 | 0 | - | - |

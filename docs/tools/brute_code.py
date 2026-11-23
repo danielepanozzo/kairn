@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""brute_code.py [--check]: which code each stored brute-force run exercised, kernel by kernel and
-loop by loop, written to results/brute-code.json so that docs/tools/reference.py can tell, without
-the repository's history, whether a stored run is of the code a kernel has now. Python 3 standard
+"""brute_code.py [--check]: which code each stored brute-force run exercised and which claims it
+judged, kernel by kernel and loop by loop, written to results/brute-code.json so that
+docs/tools/reference.py can tell, without the repository's history, whether a stored run is of
+the code a kernel has now, and whether it judged the claims the kernel has now. Python 3 standard
 library only.
 
   python3 docs/tools/brute_code.py           write results/brute-code.json from the history
@@ -22,10 +23,13 @@ the end of a line, blank lines and the indentation are not code and are left out
 The fingerprint is the SHA-256 of that text, header by header and function by function.
 
 For every commit that a stored summary (results/*/brute/**/*.json) names as the code of its runs,
-the file holds the fingerprint of every kernel and loop of gen/claims.json at that commit, read
-with `git show`. reference.py compares them with the fingerprints of the tree it runs in: a
-stored run counts on a page only when they are equal. Run this script after storing a summary of
-a commit that the file does not have yet; reference.py refuses to run until then.
+the file holds the fingerprint of the code of every kernel and loop of gen/claims.json at that
+commit, read with `git show`, and that of its claims: its entry of gen/claims.json without the
+fields of NOT_JUDGED (below), which is what the runs judged. reference.py compares them with the
+fingerprints of the tree it runs in: a stored run counts on a page only when the code is the same,
+and the page says that it judged other claims when the claims are not. Run this script after
+storing a summary of a commit that the file does not have yet; reference.py refuses to run until
+then.
 """
 import argparse
 import hashlib
@@ -231,6 +235,30 @@ def objects(claims_text, where):
     return [k["name"] for k in data["kernels"]], [f["name"] for f in data.get("folds", [])]
 
 
+# --- The claims -----------------------------------------------------------------------------------
+#
+# What a run judged is the claims of the commit it names as its code (tests/brute/brute.py:
+# CODE_PATHS, which include gen/): the entry of gen/claims.json of each kernel and loop. The fields
+# of an entry that say where its algorithm comes from, which theorem proves it, whether that is
+# proved, and how many operations its code has are not judged; every other field is: what it
+# computes and requires, what it ensures, its domain, its smallest precision, the exact constants
+# per format.
+NOT_JUDGED = ("source", "theorem", "ieee_theorem", "status", "ieee_status", "flops")
+
+
+def claims_fingerprint(entry):
+    """The SHA-256 of a claims entry without the fields of NOT_JUDGED."""
+    kept = {k: v for k, v in entry.items() if k not in NOT_JUDGED}
+    return hashlib.sha256(json.dumps(kept, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def claims_fingerprints(claims_text, where):
+    """{name: fingerprint of its claims} for every kernel and loop of a gen/claims.json."""
+    data = json.loads(claims_text)
+    objects(claims_text, where)
+    return {e["name"]: claims_fingerprint(e) for e in data["kernels"] + data.get("folds", [])}
+
+
 def read(path):
     with open(path, encoding="utf-8", newline="") as f:
         return f.read().replace("\r\n", "\n")   # a checkout with CRLF line ends has the same code
@@ -262,15 +290,18 @@ def files_at(root, commit=None):
             fail("cannot read %s at commit %s" % (rel, commit))
         return text
     where = "" if commit is None else "%s:" % commit[:7]
-    kernels, loops = objects(show("gen/claims.json"), where + "gen/claims.json")
-    return {h: show(header_path(h)) for h in (PRELUDE,) + HEADERS}, kernels, loops, where
+    files = {h: show(header_path(h)) for h in (PRELUDE,) + HEADERS}
+    files["claims"] = show("gen/claims.json")
+    kernels, loops = objects(files["claims"], where + "gen/claims.json")
+    return files, kernels, loops, where
 
 
 def commit_fingerprints(root, commit=None):
-    """The fingerprints of every kernel and loop of gen/claims.json at a commit, from the history,
-    or of the tree (commit None)."""
+    """(code, claims): the fingerprints of the code and of the claims of every kernel and loop of
+    gen/claims.json at a commit, from the history, or of the tree (commit None)."""
     files, kernels, loops, where = files_at(root, commit)
-    return fingerprints(files, kernels, loops, where)
+    return (fingerprints(files, kernels, loops, where),
+            claims_fingerprints(files["claims"], where + "gen/claims.json"))
 
 
 def summary_commits(root):
@@ -304,27 +335,33 @@ def manifest(root):
              "history (a shallow clone has none)" % ("s" if len(missing) > 1 else "", ", ".join(missing),
                                                        ", ".join(commits[missing[0]])))
     data = {"kairn_brute_code": SCHEMA,
-            "about": ("The SHA-256 of the code of every kernel and loop of gen/claims.json at each commit "
-                      "that a stored brute-force summary names as the code of its runs, with those "
-                      "summaries. Written from the history by docs/tools/brute_code.py, which says what "
-                      "the code is; read by docs/tools/reference.py."),
+            "about": ("The SHA-256 of the code (code) and of the claims (claims) of every kernel and loop "
+                      "of gen/claims.json at each commit that a stored brute-force summary names as the "
+                      "code of its runs, with those summaries. Written from the history by "
+                      "docs/tools/brute_code.py, which says what the code and the claims are; read by "
+                      "docs/tools/reference.py."),
             "commits": {}}
     for c in sorted(commits):
-        prints = commit_fingerprints(root, c)
+        code, claims = commit_fingerprints(root, c)
         data["commits"][c] = {"summaries": commits[c],
-                              "code": {n: prints[n] for n in sorted(prints) if prints[n] is not None}}
+                              "code": {n: code[n] for n in sorted(code) if code[n] is not None},
+                              "claims": {n: claims[n] for n in sorted(claims)}}
     return json.dumps(data, indent=1) + "\n"
 
 
 def load(root):
-    """{commit: {name: fingerprint}} of results/brute-code.json, or {} if there is none."""
+    """{commit: {"code": {name: fingerprint}, "claims": {name: fingerprint}}} of
+    results/brute-code.json, or {} if there is none."""
     path = os.path.join(root, *MANIFEST.split("/"))
     if not os.path.exists(path):
         return {}
     data = json.loads(read(path))
     if data.get("kairn_brute_code") != SCHEMA:
         fail("%s is not of version %d" % (MANIFEST, SCHEMA))
-    return {c: entry["code"] for c, entry in data["commits"].items()}
+    for c, entry in data["commits"].items():
+        if "code" not in entry or "claims" not in entry:
+            fail("%s: commit %s has no fingerprints of the code and the claims" % (MANIFEST, c[:7]))
+    return {c: {"code": entry["code"], "claims": entry["claims"]} for c, entry in data["commits"].items()}
 
 
 def main(argv):

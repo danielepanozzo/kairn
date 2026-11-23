@@ -15,9 +15,10 @@ is an input of the library, of the generator, or of the proofs.
   exhaustive tier on emulated formats) and `lengths/` (`tests/brute/lengths.py`), which the
   reference pages do not show.
 - `brute-code.json`: for every commit that a summary under `*/brute/` names as the code of its
-  runs, the SHA-256 of the code of every kernel and loop at that commit, written from the
-  repository's history by `docs/tools/brute_code.py`. A kernel's reference page shows the stored
-  runs of every campaign whose fingerprint at the run's commit is that of the kernel's code now,
-  and no other. After storing the summary of a run of a new commit, run
+  runs, the SHA-256 of the code and of the claims of every kernel and loop at that commit, written
+  from the repository's history by `docs/tools/brute_code.py`. A kernel's reference page shows the
+  stored runs of every campaign whose fingerprint at the run's commit is that of the kernel's code
+  now, and no other, and marks those whose claims were not the claims now. After storing the
+  summary of a run of a new commit, run
   `python3 docs/tools/brute_code.py` and commit what it writes: `docs/tools/reference.py` refuses a
   summary whose commit the file does not have.

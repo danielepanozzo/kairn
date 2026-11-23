@@ -137,8 +137,12 @@ A kernel's page shows every stored brute-force run of its code as it is now, cam
 (`results/NAME/brute/` and its `supplementary/`), with their total. Whether a run is of that code
 is decided without the repository's history, which the CI's shallow checkout does not have:
 `results/brute-code.json` holds, for every commit that a stored summary names, the SHA-256 of the
-code of every kernel and loop at that commit, and the script compares it with the code of the
-tree. `docs/tools/brute_code.py` writes that file from the history and says what the code is: a
+code of every kernel and loop at that commit and that of its claims (its entry of
+`gen/claims.json`, without `source`, `theorem`, `ieee_theorem`, `status`, `ieee_status` and
+`flops`), and the script compares them with those of the tree: a run of the same code whose claims
+differ is shown, marked as having judged other claims, and left out of the total. The summaries
+record the commit and the oracle's label of every entry it judged, not the entry; the tests check
+that those labels are what the page prints for the claims wherever the claims are the same. `docs/tools/brute_code.py` writes that file from the history and says what the code is: a
 kernel's definitions in the generated headers of the scalar, AVX2 and NEON code, into which the
 generator inlines every kernel it calls, with the functions of the generated headers that they
 call, comments, blank lines and indentation left out. `--check` fails if the file is not what the

@@ -129,8 +129,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb` and the supplementary run of the same commit, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#acc_radius_1)).
 
-**These runs judged other claims.** They judged `upper(r) >= g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if ok`; `holds le(m*u, 1/2) if ok`; the kernel now claims `upper(r) g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if ok`; `holds()`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed | largest excess, in gaps | Bound attained |
 |---|---|---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 7 200 000 | 0 | - | - |

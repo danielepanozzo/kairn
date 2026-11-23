@@ -89,13 +89,13 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 **Milestone 1**: the runs of commit `6f89054` and the supplementary run of commit `f7e0b6d`, from the stored summaries in [`results/milestone1/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone1/brute) ([the report](../developer/results/brute-milestone1.md#ball_scale_1_full)).
 They judged the kernel in the extended domain, infinite and NaN operands included, as the oracle reads its statement in the IEEE model ([Claims of the non-finite layer](../developer/architecture.md#claims-of-the-non-finite-layer)).
 
-**The condition of this claim was not judged by every run.** The claims gained it (B4: finite operands under the condition give a finite ball) after the main runs, which judged the kernel without it, with no condition claimed; the supplementary run at commit `f7e0b6d` judged it, on the cases of its rows below.
+**The condition of this claim was not judged by every run.** The claims gained it (B4: finite operands under the condition give a finite ball) after the runs of commit `6f89054`, which judged the kernel without it, with no condition claimed (the rows marked other claims); the runs of commit `f7e0b6d` judged it, on the cases of their rows below.
 
 | Run | Cases judged | Failed | smallest slack of the radius, in gaps |
 |---|---|---|---|
-| `binary64` (`double`), compiled: 60 runners on 3 machines | 117 600 000 | 0 | 1.00000 |
-| `binary32` (`float`), compiled: 60 runners on 3 machines | 117 600 000 | 0 | 1.000000119 |
-| toy formats, every operand: 5 domains of 5 formats | 1 313 988 | 0 | 1 (`fp:3:-6:3`) |
+| `binary64` (`double`), compiled, other claims: 60 runners on 3 machines | 117 600 000 | 0 | 1.00000 |
+| `binary32` (`float`), compiled, other claims: 60 runners on 3 machines | 117 600 000 | 0 | 1.000000119 |
+| toy formats, every operand, other claims: 5 domains of 5 formats | 1 313 988 | 0 | 1 (`fp:3:-6:3`) |
 | `binary64` (`double`), compiled, supplementary run: 60 runners on 3 machines | 141 600 000 | 0 | 1.00000 |
 | `binary32` (`float`), compiled, supplementary run: 60 runners on 3 machines | 141 600 000 | 0 | 1.000000119 |
 | toy formats, every operand, supplementary run: 5 domains of 5 formats | 1 313 988 | 0 | 1 (`fp:3:-6:3`) |

@@ -110,8 +110,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb`, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#bv_mul_pow2_step_2)).
 
-**These runs judged other claims.** They judged `normalized(z)`; `error(z) form R, c=0, k=2, t=1, exact when (x[0]*c = 0 or |x[0]*c| > eta/(2*u)) and (x[1]*c = 0 or |x[1]*c| > eta/(2*u)), exact_flag e`; the kernel now claims `normalized(z)`; `error(z) form R, c=0, k=2, t=1`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed | largest error / bound | Bound attained |
 |---|---|---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 6 740 856 | 0 | 0.664108 | no |

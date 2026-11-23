@@ -104,8 +104,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb`, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#mul_dir_2_2)).
 
-**These runs judged other claims.** They judged `normalized(l)`; `normalized(h)`; `outward(l) below`; `outward(h) above`; the kernel now claims `normalized(l)`; `normalized(h)`; `outward(l)`; `outward(h)`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed |
 |---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 6 641 298 | 0 |

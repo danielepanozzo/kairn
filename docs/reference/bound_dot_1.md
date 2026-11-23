@@ -107,8 +107,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb`, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#bound_dot_1)).
 
-**These runs judged other claims.** They judged `holds le(m*unit(mul_1_1), 1/2) if ok`; `upper(g) >= m*unit(mul_1_1)/(1-m*unit(mul_1_1)) if ok`; `upper(t) >= m*tiny(mul_1_1)*(1+g) if ok`; the kernel now claims `holds()`; `upper(g) m*unit(mul_1_1)/(1-m*unit(mul_1_1)) if ok`; `upper(t) m*tiny(mul_1_1)*(1+g) if ok`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed | largest excess, in gaps | largest excess, in gaps | Bound attained |
 |---|---|---|---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 7 200 000 | 0 | - | - | - |

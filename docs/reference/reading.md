@@ -166,7 +166,10 @@ written from the repository's history by `docs/tools/brute_code.py`; the page co
 code of the tree it is written from. A kernel whose code changed shows only the runs of its new code
 and names those it does not count; one whose code no stored run ran says so. A change of the claims
 alone does not change the code: such a run is shown, the page says that it judged other claims, and
-the total leaves it out. The total adds the random cases of the compiled runs; an enumeration of a
+the total leaves it out. Which claims a run judged is decided the same way: the same file keeps the
+SHA-256 of the kernel's entry of `gen/claims.json` at the run's commit, without the fields that say
+where a claim comes from, which theorem proves it, whether that is proved and how many operations the
+code has. The total adds the random cases of the compiled runs; an enumeration of a
 toy domain (a format, and the operands it is restricted to) that an earlier run of the same code
 enumerated judged the same operands again, and counts once.
 

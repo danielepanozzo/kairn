@@ -104,8 +104,6 @@ The stored brute-force runs of this kernel's code: the oracle judged, in exact a
 
 **Milestone 2**: the runs of commit `5f597fb`, from the stored summaries in [`results/milestone2/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/brute) ([the report](../developer/results/brute-milestone2.md#acc_mul_2)).
 
-**These runs judged other claims.** They judged `normalized(t)`; `error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2`; `rounded(b) nearest of a+abs(x[0])*abs(y[0])`; the kernel now claims `normalized(t)`; `error(t) form T, c=3*(1+4*u*u)/(1-4*u)+4, k=2, t=2`; `rounded(b) nearest`. Their numbers are not about the statement above.
-
 | Run | Cases judged | Failed | largest error / bound | Bound attained |
 |---|---|---|---|---|
 | `binary64` (`double`), compiled: 90 runners on 3 machines | 5 751 810 | 0 | 0.395971 | no |

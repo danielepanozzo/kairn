@@ -24,8 +24,14 @@
   leaves out the runs that judged other claims and counts a toy domain once; a summary of a commit
   that results/brute-code.json does not have fails.
 - docs/tools/brute_code.py, on headers written for the test: what a definition is, which changes
-  are of code, what it refuses to read; results/brute-code.json has every commit of the stored
-  runs, and is what the history gives (where the history is in the clone: a shallow one skips it).
+  are of code, what it refuses to read, which fields of a claims entry are claims;
+  results/brute-code.json has every commit of the stored runs, and is what the history gives
+  (where the history is in the clone: a shallow one skips it).
+- Claims, on the tree: for every kernel and every stored summary of its code, the page says that the
+  runs judged other claims exactly where the claims of the summary's commit are not the claims
+  now, and the oracle's recorded label of every entry is the one the page prints for that claim
+  wherever they are the same (the old printing of the Milestone 2 kinds fails it); a change of the
+  claims that the labels do not show is said as such.
 
 Python 3 standard library only; no network, no compiler.
 """
@@ -906,6 +912,41 @@ class Tool(unittest.TestCase):
         self.copy.set_claims(data)
         page = reference.plan(self.copy.root)["docs/reference/mul_2_2.md"]
         self.assertIn("These runs judged other claims", page)
+        self.assertIn("They judged `normalized(z)`; `error(z) form R, c=4, k=2, t=3/2`; the kernel now claims "
+                      "`normalized(z)`; `error(z) form R, c=5, k=2, t=3/2`.", page)
+        self.assertNotIn("**In all**", page)   # no run of either campaign judged the claims now
+
+    def test_claims_changed_where_the_labels_do_not_show(self):
+        # A smallest precision changed: the oracle's labels of the entries are the same, the claims
+        # are not, and the page says so rather than call them the same.
+        self.change("add_1_1", lambda k: k.update(min_precision=k["min_precision"] + 1))
+        m = self.page("add_1_1")
+        self.assertEqual(m.count("**These runs judged other claims.**"), 2)
+        self.assertIn("They judged the claims of commits `6f89054` and `f7e0b6d`, which differ from the claims now "
+                      "in what their labels do not show", m)
+        # A text field is not a claim.
+        self.change("add_2_2", lambda k: k.update(source={"cite": "elsewhere", "license": "MIT"}))
+        self.assertNotIn("other claims", self.page("add_2_2"))
+
+    def test_labels_of_the_kinds_of_milestone_2(self):
+        # The oracle's labels of the kinds the summaries of Milestone 2 hold, from the claims alone.
+        label = reference.entry_label
+        self.assertEqual(label({"kind": "rounded", "of": "b", "mode": "nearest", "value": "a+abs(x[0])"}),
+                         "rounded(b) nearest of a+abs(x[0])")
+        self.assertEqual(label({"kind": "maximum", "of": "r", "args": ["m", "abs(x)"]}), "maximum(r) of m, abs(x)")
+        self.assertEqual(label({"kind": "holds", "rel": "le", "args": ["m*u", "1/2"], "if": "ok"}),
+                         "holds le(m*u, 1/2) if ok")
+        self.assertEqual(label({"kind": "upper", "of": "r", "value": "g+t", "if": "ok"}), "upper(r) >= g+t if ok")
+        self.assertEqual(label({"kind": "upper", "of": "rz", "value": "rx*c", "exact_when": [
+            {"mask": "ex"}, {"zero_or_abs_gt": "rx*c", "than": "eta/(2*u)"}]}),
+            "upper(rz) >= rx*c, exactly when ex true and (rx*c = 0 or |rx*c| > eta/(2*u))")
+        self.assertEqual(label({"kind": "upper", "of": "rz", "value": "rx*c+eta", "unless": "ex"}),
+                         "upper(rz) >= rx*c+eta unless ex")
+        self.assertEqual(label({"kind": "outward", "of": "l", "side": "below", "rel": "u", "abs": "eta",
+                                "exact_when": [{"zero": "x+y"}]}), "outward(l) below, exact when (x+y = 0)")
+        self.assertEqual(label({"kind": "error", "of": "z", "form": "R", "c": "0", "k": 1, "t": "1/2", "when": None,
+                                "exact_when": [{"zero_or_abs_gt": "x*c", "than": "eta/(2*u)"}], "exact_flag": "e"}),
+                         "error(z) form R, c=0, k=1, t=1/2, exact when (x*c = 0 or |x*c| > eta/(2*u)), exact_flag e")
 
     def test_runs_in_the_extended_domain_are_read_as_such(self):
         # The stored summaries record each series' domain: a full kernel's page says that the runs
@@ -1229,6 +1270,21 @@ class BruteCode(unittest.TestCase):
         for commit, summaries in reference.BRUTE_CODE.summary_commits(ROOT).items():
             self.assertIn(commit, code, "%s, of %s" % (commit, summaries))
 
+    def test_the_claims_a_run_judges(self):
+        # The fingerprint of a kernel's claims leaves out where they come from, which theorem proves
+        # them, whether it is proved, and the operation count; anything else is a claim.
+        entry = json.loads(reference.read(os.path.join(ROOT, "gen", "claims.json")))["kernels"][0]
+        fp = reference.BRUTE_CODE.claims_fingerprint
+        for field in reference.BRUTE_CODE.NOT_JUDGED:
+            changed = dict(entry)
+            changed[field] = "something else"
+            self.assertEqual(fp(changed), fp(entry), field)
+        for field, value in (("min_precision", 99), ("requires", ["something"]), ("ensures", []),
+                             ("inputs", []), ("domain", "other")):
+            changed = dict(entry)
+            changed[field] = value
+            self.assertNotEqual(fp(changed), fp(entry), field)
+
     def test_the_fingerprints_are_what_the_history_gives(self):
         # Needs the commits of the stored runs: a shallow clone (the CI's checkout) has none.
         commits = reference.BRUTE_CODE.summary_commits(ROOT)
@@ -1237,6 +1293,112 @@ class BruteCode(unittest.TestCase):
                           "python3 docs/tools/brute_code.py --check needs them")
         self.assertEqual(reference.BRUTE_CODE.manifest(ROOT),
                          reference.read(os.path.join(ROOT, *reference.BRUTE_CODE.MANIFEST.split("/"))))
+
+
+LEAD = re.compile(r"^\*\*(Milestone \d+|`[^`]+`)\*\*: ", re.M)
+
+
+class Claims(unittest.TestCase):
+    """Whether a stored run judged the claims a kernel has now, against the claims themselves. The
+    claims a run judged are those of the commit its summary names as the code under test (the
+    kernels and their claims: CODE_PATHS of tests/brute/brute.py include gen/), whose entry of
+    gen/claims.json results/brute-code.json keeps as a fingerprint (brute_code.NOT_JUDGED left out),
+    written from the history and checked against it above. The summaries themselves record the
+    oracle's label and kind of every entry it judged, not the entry."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.site = reference.Site(ROOT)
+        cls.files = reference.plan(ROOT)
+        cls.code = reference.BRUTE_CODE.load(ROOT)
+        cls.now = {e["name"]: e for e in json.loads(reference.read(os.path.join(ROOT, "gen", "claims.json")))["kernels"]}
+
+    def judged_now(self, d, name):
+        fp = reference.BRUTE_CODE.claims_fingerprint(self.now[name])
+        return all(self.code[c]["claims"].get(name) == fp for c in d["commit"])
+
+    def runs(self, name):
+        """[(campaign, [the summaries of the campaign that judged the kernel's code])]."""
+        out = []
+        for c in self.site.brute:
+            docs = [d for d in c["docs"] + c["supplementary"]
+                    if reference.judged_by(d, name) and self.site.same_code(d, name)]
+            if docs:
+                out.append((c, docs))
+        return out
+
+    def test_every_run_is_marked_by_the_claims_of_its_commit(self):
+        # A page says that runs judged other claims exactly where the claims of their commit are not
+        # the claims now: of every run of a campaign (the note), of some (the note and the rows marked
+        # "other claims"), or of none (no word of it).
+        blocks = mixed = other = 0
+        for name in self.site.kernels:
+            page = self.files["docs/reference/%s.md" % name]
+            measured = page[page.index("## Measured"):page.index("## Not claimed")]
+            leads = list(LEAD.finditer(measured))
+            for c, docs in self.runs(name):
+                title = self.site.campaign_title(c)
+                i = [m.group(1) for m in leads].index(title)
+                end = leads[i + 1].start() if i + 1 < len(leads) else len(measured)
+                block = measured[leads[i].start():end].split("**In all**")[0]
+                same = [self.judged_now(d, name) for d in docs]
+                where = "%s, %s" % (name, title)
+                if all(same):
+                    self.assertNotIn("other claims", block, where)
+                elif not any(same):
+                    other += 1
+                    self.assertIn("**These runs judged other claims.**", block, where)
+                    self.assertNotIn("other claims:", block, where)
+                else:
+                    mixed += 1
+                    self.assertIn("other claims:", block, where)
+                    self.assertTrue("**The condition of this claim was not judged by every run.**" in block
+                                    or "**Not every run below judged the claims above.**" in block, where)
+                    for d, s in zip(docs, same):
+                        self.assertIn("`%s`" % d["commit"][0][:7], block, where)
+                blocks += 1
+        # Milestone 1's main runs of the eight full Ball kernels judged their claims before B4 had its
+        # condition, at the same code; every other run of the code now judged the claims now.
+        self.assertGreaterEqual(blocks, 288)
+        self.assertEqual((mixed, other), (8, 0))
+
+    def test_the_oracle_labels_are_those_of_the_claims(self):
+        # Where a run judged the claims now, the oracle's label of each entry is the one the page
+        # prints for that claim (the whole label for the kinds of reference.LABELLED_KINDS, its start
+        # for the others), and those of the core of a full kernel follow; where a run judged other
+        # claims, the labels differ, or the page says that the claims differ where labels do not show.
+        checked = 0
+        for name, k in self.site.kernels.items():
+            page = self.files["docs/reference/%s.md" % name]
+            for c, docs in self.runs(name):
+                for d in docs:
+                    b = reference.brute_rows(name, [d], "")
+                    for r in b["rows"]:
+                        if not r["entries"]:
+                            continue
+                        ext = k.extended and b["extended"]
+                        own = k.entry["ensures"] if ext else (k.finite_entries if k.finite_reading
+                                                              else k.entry["ensures"])
+                        got = [x["label"] for x in r["entries"]]
+                        want = [k.label(e) for e in own]
+                        where = "%s, %s, %s" % (name, d["_path"], r["key"])
+                        if not self.judged_now(d, name):
+                            self.assertTrue(got[:len(want)] != want or "what their labels do not show" in page, where)
+                            continue
+                        self.assertEqual([x["kind"] for x in r["entries"][:len(own)]], [e["kind"] for e in own], where)
+                        for x, e in zip(r["entries"], own):
+                            if reference.labelled(e):
+                                self.assertEqual(x["label"], k.label(e), where)
+                            else:
+                                self.assertTrue(x["label"].startswith(k.label(e)), where)
+                        core = next((e["core"] for e in own if e["kind"] == "extends"), None)
+                        if ext and core:
+                            self.assertEqual(got[len(own):], ["F2, core %s: %s" % (core, reference.entry_label(e))
+                                                              for e in self.site.kernels[core].entry["ensures"]], where)
+                        elif not ext:
+                            self.assertEqual(len(got), len(own), where)
+                        checked += 1
+        self.assertGreater(checked, 1500)
 
 
 class Numbers(unittest.TestCase):
