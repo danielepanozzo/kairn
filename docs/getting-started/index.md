@@ -774,8 +774,11 @@ these functions says "Does not round".
   `alternate floating-point behavior is on (FPCR.AH is set)` or
   `subnormal operands are read as zero (FPCR.FIZ is set)` on AArch64. Restore the environment as
   above. A program that would rather log it can define `KAIRN_ENVIRONMENT_FAILURE` before
-  including Kairn; the operation then goes on without checking its operands (in that environment
-  the check could refuse a canonical one), with no guarantee for its result:
+  including Kairn, the same way in every file of the program (the report is one function of the
+  program, which the linker keeps once: with two definitions, every file gets one of them; a
+  function it calls is declared before Kairn is included and defined once, as below); the
+  operation then goes on without checking its operands (in that environment the check could
+  refuse a canonical one), with no guarantee for its result:
 
   ```cpp
   --8<-- "docs/examples/cpp/troubleshooting.cpp:handler"

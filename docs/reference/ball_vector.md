@@ -246,14 +246,21 @@ the operators that call them. Before its loop each reads the floating-point envi
 (`kairn: the floating-point environment: the rounding mode is not to nearest ...`, or flush to
 zero), which by default stops the program: the default environment is the precondition of each,
 checked. The negation, a change of sign and a copy of the radius, leaves the rounding mode out;
-every other operation reads it, the constructors of one limb among them (below). One read of the
-control register per call: measured on ball vectors of 3 to 18 entries, most operations lose the
-read or less to it (5 to 6 ns on an AMD Zen 2, about half a nanosecond on an Apple M3; `x + y` of
-two limbs takes 1.01 to 1.26 times as long), and a constructor more where the compiler no longer
-inlines it with the check: 18 to 20 ns more for `BallVector<double, 1, 3>` with Clang 18, 6 to 14 ns
-with GCC 13 at `-O3` in a file of many operations; on the M3 a chain of short operations of one limb,
-each on the result of the one before, 3 to 7 ns per operation
-([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry)).
+every other operation reads it, the constructors of one limb among them (below). Per call: one
+read of the control register, one test of a mask and a branch; the message and the call of
+`KAIRN_ENVIRONMENT_FAILURE` are in a function of their own, never inlined, so that the check does
+not keep the compiler from inlining a short operation. The constructors from centers and a radius,
+and the member that makes the ball vector, are forced inline. Measured on 2026-11-23 on ball vectors
+of 3 to 18 entries: on an AMD Zen 2 an operation loses 2.5 ns to the check at the median, up to 7 ns
+(reading MXCSR is slow there); a constructor of up to 7 entries 1 to 3 ns with Clang 18, which
+before 2026-11-23 stopped inlining it with the check and lost 11 to 19 ns there (18.2 to 18.8 for
+`BallVector<double, 1, 3>`), and 5 to 10 ns with GCC 13, about the read, as before; on an Apple M3 an operation 0.1 ns at the
+median and a constructor of up to 7 entries at most 3.2 ns (with the header before 1.9 to 16 where
+the compilers stopped inlining it), but a chain of short operations of one limb, each on the result
+of the one before, 4.5 to 6.6 ns per operation. Forced inline, the
+constructors of two limbs and 13 or 18 entries take 1.04 to 1.45 times as long as before with Clang
+18 and Apple clang at `-O3`, whose unrolled loop no longer fits the registers
+([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#the-check-measured-again-on-2026-11-23)).
 
 With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](../developer/testing.md#the-checks-of-a-debug-build)), after the environment:
 
@@ -274,7 +281,10 @@ With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](.
   (without the checks, such an `axpy` returns the whole space; such a product is not told).
 
 With `KAIRN_CHECKS` 0 nothing but the environment is checked. The accessors, the whole space, the
-views and the copy of a view, which copy limbs, check nothing.
+views and the copy of a view, which copy limbs, check nothing. A program that defines
+`KAIRN_ENVIRONMENT_FAILURE` defines it the same way in every file
+([config.hpp](https://github.com/danielepanozzo/kairn/blob/main/include/kairn/config.hpp)): every
+check reports through one function of the program, which the linker keeps once.
 
 ## Regular type
 
@@ -285,7 +295,9 @@ not the constructors from centers nor any operation, since the generated loops a
 (`api.reject.ball_vector.not_constexpr`). No operation needs the marker `kairn::unverified`: every
 loop this header calls is proved. The operations are ordinary inline functions in every setting of
 `KAIRN_ENCLOSURE_CODE`: each calls one loop, itself an ordinary inline function whose end (the
-radius and the finish) is never inlined.
+radius and the finish) is never inlined. The constructors of a `BallVector` from centers and a
+radius are forced inline (since 2026-11-23), and the loop they call is then the compiler's to inline
+or not ([Checks](#checks)).
 
 ## Compile time
 

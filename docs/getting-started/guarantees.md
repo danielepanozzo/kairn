@@ -631,12 +631,14 @@ constructors from centers and a radius among them) reads the register once befor
 `KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build, which by default prints it and
 stops the program. `norm_upper` of an array and the negation of a ball vector, which compute no
 sum, leave the rounding mode out (flush to zero still changes their comparisons); every other batch
-entry reads it. Measured, the check costs about half a nanosecond a call on an Apple M3 and 5 to 6
-nanoseconds on an AMD Zen 2, where reading MXCSR is slow: most of a call on a few elements of one
-limb there (64 to 82% of a `sum` or `dot` of up to 8 elements), 7 to 29% at 64 elements, under 5%
-from 1 024 elements of one limb or from 4 to 16 of two; and a constructor or an operation of a short
-ball vector can lose more than the read, where the compiler no longer inlines it
-([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry)).
+entry reads it. The check is one read of the register, one test and a branch at the place of the
+call; the report is a function of its own, never inlined. Measured on 2026-11-23, it costs about 5
+nanoseconds a call on an AMD Zen 2, where reading MXCSR is slow: most of a call on a few elements of
+one limb there (62 to 82% of a `sum` or `dot` of up to 8 elements), 7 to 27% at 64 elements, under 5%
+from 1 024 elements of one limb or from 2 to 16 of two; on an Apple M3 at most 0.35 ns a call up to 16 elements of one limb (up to 0.7 with the header before); an operation or a constructor of a
+short ball vector loses about the read (before 2026-11-23, when the report was compiled at the place
+of the check, a constructor could lose 11 to 19 ns more, where the compiler stopped inlining it)
+([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#the-check-measured-again-on-2026-11-23)).
 The scalar operations, `Packed` and the accumulator, whose operations take one term at a time,
 check the environment in a debug build only, as below. In a build without `NDEBUG`
 (or with `KAIRN_CHECKS` defined to 1), every operation checks the environment, then its operands:

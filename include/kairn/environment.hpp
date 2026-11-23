@@ -111,10 +111,12 @@ KAIRN_DETAIL_COLD inline void report_environment(std::uint64_t b) noexcept {
 // test of the bits of environment_mask(rounding); when one of them is set, the report, and false.
 // As GCC 13 and 16, Clang 18 and Apple clang 21 compile it at -O2 and -O3: on x86-64, (v)stmxcsr
 // into memory and a load, an and of 0xE040 (0x8040 without the rounding mode), which sets the flags
-// and keeps the bits for the report, and a branch; on AArch64, mrs of FPCR, an ands with
-// 0x1C00003 (0x1000003), which is no immediate of a logical instruction there and is put in a
-// register by a mov and a movk (outside a loop, where a register is free for it), and a branch. On
-// another target, a call of std::fegetround() and a comparison (nothing without the rounding mode).
+// and keeps the bits for the report, and a branch; on AArch64, mrs of FPCR and a test of
+// 0x1C00003 (0x1000003), which is no immediate of a logical instruction there: Apple clang puts it
+// in a register by a mov and a movk (outside a loop, where a register is free for it) for one ands,
+// GCC 16 makes it two ands of immediates (0x1ffffff, then 0xffffffffffc00003 or 0xffffffffff000003),
+// and a branch. On another target, a call of std::fegetround() and a comparison (nothing without the
+// rounding mode).
 KAIRN_FORCEINLINE bool environment_checked(bool rounding) noexcept {
     if (const std::uint64_t differs = environment_state() & environment_mask(rounding)) [[unlikely]] {
         report_environment(differs);

@@ -228,7 +228,10 @@ difference, a scaling or an `axpy` of a `BallVector` of 16 entries is 2 to 4 tim
 same on 16 balls on an AMD Zen 2 (AVX2, four lanes) and 1.6 to 2.7 times on an Apple M3 (two lanes),
 of 64 entries 3.3 to 6.2 and 1.7 to 2.6 times, in 0.53 to 0.75 of the bytes; at 4 entries it is no
 faster, the check of the environment at entry and the operations of the radius being then a large
-part of the call. The width is the price: where every entry has the same radius nothing is lost,
+part of the call (measured on 2026-11-22; on 2026-11-23 the report of the check moved out of line,
+and what the check costs a short ball vector was measured again:
+[question 14](../developer/results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry)).
+The width is the price: where every entry has the same radius nothing is lost,
 and where the radii differ the one radius is the widest entry's, 1 to 2 times the largest radius the
 balls would have after a sum, 2.4 to 118 times after a product of polynomials, and up to
 $2 \times 10^6$ times the median one
