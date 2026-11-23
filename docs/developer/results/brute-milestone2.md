@@ -21,17 +21,24 @@ changed for the four) and pass; the driver's faults are fixed, each with its tes
 1 290 enumerations are complete and passed the guards.
 
 **The aim of $10^8$** results per kernel and format, for the kernels new or changed since
-Milestone 1, where the budget allowed it: the 116 of them that are the cheapest to judge
-reached $10^8$ cases on each of their 232 kernel and format pairs (100.8 to 103.5 million,
-summed over the machines and their runners), and 176 of the pairs $10^8$ judged results (the
-others, finite-domain kernels whose non-finite results are not judged, 82.9 million or more).
-**The other 75 new or changed kernels and the 42 unchanged ones have their share of phase A
-only: 7.2 million cases per kernel and format; the 47 loops 42 000 to 72 000 arrays judged per
-loop and format** (about 5 000 distinct arrays of up to 4 096 elements, beside their
-enumerations, 80 000 arrays each of the emulated tier and 5 000 of `lengths.py`)
+Milestone 1, where the budget allowed it: the 116 kernels chosen as the cheapest to judge, 115
+of them new or changed and one, `to_nearest_2`, unchanged, reached $10^8$ cases on each of their
+232 kernel and format pairs (100.8 to 103.5 million, summed over the machines and their
+runners), and 176 of the pairs $10^8$ judged results (the others, finite-domain kernels whose
+non-finite results are not judged, 82.9 million or more). **The other 75 new or changed kernels
+and the other 42 unchanged ones have their share of phase A only: 7.2 million cases per kernel
+and format; the 47 loops 42 000 to 72 000 arrays judged per loop and format** (about 5 000
+distinct arrays of up to 4 096 elements, beside their enumerations, 80 000 arrays each of the
+emulated tier and 5 000 of `lengths.py`)
 ([below](#the-aim-a-hundred-million-results-per-kernel-and-format)). The Linux machine ran 9.4
 hours (64 of its 128 hardware threads, 80 busy processes), the Mac and the Windows machine 5.9
-each.
+each. (Corrected on 2026-11-23: this page said 191 kernels new or changed, 21 of them changed,
+and 42 unchanged, because the comparison made for the campaign took the loops printed after
+`to_nearest_2`, the last kernel of each generated header, as its code; `to_nearest_2` is
+unchanged in code and claims, and was run to $10^8$ with the changed kernels. By that comparison,
+done right, 190 kernels are new or changed, 170 new and 20 changed, and 43 unchanged; by the code
+alone, the rule of the reference pages since that day, 182 and 51, the eight full Ball kernels
+having changed their claims only, with the condition B4.)
 
 **How close the bounds came**, for the kernels and loops of this milestone
 ([tables](#how-close-the-claims-came)). **Attained exactly** (a case on the bound itself): the
@@ -131,21 +138,26 @@ minutes); a second one, of the loops, found a fault of the driver
   (both with their enumerations), on the Windows machine after 3.0 (the sums of the drivers'
   wall times over the restarts, in the stored summaries).
 - **Phase B, the aim of $10^8$ results per kernel and format**, for the new and changed kernels
-  only: of the 191 kernels that are new or changed since the code of Milestone 1's runs (commit
+  only: of the kernels taken as new or changed since the code of Milestone 1's runs (commit
   `6f89054`), the 116 cheapest to judge, chosen from the costs phase A measured, so that each of
   their 232 kernel and format pairs reaches $10^8$ results judged, summed over the machines and
-  their runners, within up to 10 hours on the Linux machine and 6 on each of the others. The
-  other 75 new or changed kernels, the 42 kernels unchanged since Milestone 1 and the 47 loops
-  have their share of phase A only ([below](#the-aim-a-hundred-million-results-per-kernel-and-format)).
+  their runners, within up to 10 hours on the Linux machine and 6 on each of the others; 115 of
+  them are new or changed, and `to_nearest_2` is not (below). The other 75 new or changed
+  kernels, the other 42 kernels unchanged since Milestone 1 and the 47 loops have their share of
+  phase A only ([below](#the-aim-a-hundred-million-results-per-kernel-and-format)).
 
 "New or changed" was decided from the generated code and the claims, not from names: a kernel
 is new when `gen/claims.json` of `6f89054` has no entry of its name (170), changed when its claims
 entry (without its description) or its definition in any of the generated headers of the scalar,
-AVX2 and NEON kernels (comment lines left out) differs (21: the constant-evaluation branch of
+AVX2 and NEON kernels (comment lines left out) differs (20: the constant-evaluation branch of
 `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2` and its full kernel; `next_up_bits` in
-`radd`, `rmul`, `abs_upper_2` and the conversions `to_*_2`; the constructors `ball_make_k`; the
-condition B4 in the claims of the eight full Ball kernels), and unchanged otherwise (42). Every
-loop is new.
+`radd`, `rmul`, `abs_upper_2` and the conversions `to_up_2` and `to_down_2`; the constructors
+`ball_make_k`; the condition B4 in the claims of the eight full Ball kernels), and unchanged
+otherwise (43). Every loop is new. The comparison made for the campaign counted 21 changed and 42
+unchanged: it read a kernel's definition from its comment to the next kernel's, and so took the
+loops, printed after `to_nearest_2`, the last kernel of each header, as that kernel's code; the
+code and the claims of `to_nearest_2` are those of Milestone 1, and it was run to $10^8$ in
+phase B (corrected on 2026-11-23, as the top of this page says).
 
 **The interpreter's enumerations**: every operand of the 1 296 toy-format domains of the plan
 (`brute.py plan --bins 20`: 2 637 978 164 indices), shared between the Linux machine (bins 0 to
@@ -269,14 +281,14 @@ Per kernel and format, summed over the machines and their runners (the counts of
 
 | Group | Kernel and format pairs | Cases (least, median, most) | Judged results (least, median, most) | Pairs at $10^8$ cases | Pairs at $10^8$ judged |
 |---|---|---|---|---|---|
-| Phase B: the 116 new or changed kernels of the aim | 232 | 100 800 000, 103 500 000, 103 500 000 | 82 871 478, 103 500 000, 103 500 000 | 232 | 176 |
+| Phase B: the 116 kernels of the aim, 115 new or changed and `to_nearest_2` | 232 | 100 800 000, 103 500 000, 103 500 000 | 82 871 478, 103 500 000, 103 500 000 | 232 | 176 |
 | The other 75 new or changed kernels (phase A) | 150 | 7 200 000, 7 200 000, 7 200 000 | 5 751 810, 7 200 000, 7 200 000 | 0 | 0 |
-| The 42 kernels unchanged since Milestone 1 (phase A) | 84 | 7 200 000, 7 200 000, 7 200 000 | 5 430 024, 7 200 000, 7 200 000 | 0 | 0 |
+| The other 42 kernels unchanged since Milestone 1 (phase A) | 84 | 7 200 000, 7 200 000, 7 200 000 | 5 430 024, 7 200 000, 7 200 000 | 0 | 0 |
 | The 47 loops over arrays, in arrays (phase A) | 94 | 42 000, 63 000, 72 000 | 42 000, 63 000, 72 000 | 0 | 0 |
 
 Of the 232 pairs of phase B, 232 reach $10^8$ cases and 176 reach $10^8$ judged results; below it in judged results (a finite-domain kernel whose result is not finite is not judged): `acc_mul_entry_1` `binary64` 82 871 478, `acc_mul_1` `binary64` 82 896 210, `scale_step_1` `binary64` 82 983 672, `mul_1_1` `binary64` 82 997 496, `scale_step_1` `binary32` 83 600 208, `mul_1_1` `binary32` 83 643 858, `two_prod_dekker` `binary32` 86 976 072, `acc_mul_1` `binary32` 88 923 600, `acc_mul_entry_1` `binary32` 88 929 864, `split` `binary32` 89 555 598, `split` `binary64` 91 605 546, `two_prod_dekker` `binary64` 92 547 774, `ball_mul_pow2_1` `binary64` 93 043 386, `ball_mul_pow2_1` `binary32` 93 098 520, `mul_pow2_step_2` `binary64` 94 342 464, `mul_pow2_step_2` `binary32` 94 642 362, `dot_step_1` `binary64` 95 261 706, `dot_entry_step_1` `binary64` 95 282 190, `dot_step_1` `binary32` 95 441 796, `dot_entry_step_1` `binary32` 95 448 006, `axpy_entry_step_1` `binary64` 95 962 122, `axpy_step_1` `binary64` 95 965 758, `mul_pow2_2` `binary64` 96 052 896, `axpy_entry_step_1` `binary32` 96 111 594, `axpy_step_1` `binary32` 96 114 312, `mul_pow2_2` `binary32` 96 303 888, `scale_step_2` `binary32` 96 415 236, `scale_entry_step_2` `binary32` 96 421 788, `scale_step_2` `binary64` 96 503 688, `scale_entry_step_2` `binary64` 96 516 720, `bv_mul_pow2_step_1` `binary64` 96 796 926, `mul_pow2_step_1` `binary64` 96 815 808, `mul_pow2_step_1` `binary32` 97 117 092, `bv_mul_pow2_step_1` `binary32` 97 149 546, `sum_entry_step_1` `binary64` 97 199 838, `sub_1_1` `binary64` 97 203 456, `add_entry_step_1` `binary64` 97 209 720, `sub_1_1` `binary32` 97 210 782, `sub_entry_step_1` `binary32` 97 214 940, `add_entry_step_1` `binary32` 97 215 228, `sum_entry_step_1` `binary32` 97 220 088, `sub_entry_step_1` `binary64` 97 237 800, `acc_merge_1` `binary32` 98 123 778, `acc_merge_1` `binary64` 98 125 272, `mul_2_1_entry` `binary32` 98 134 362, `mul_2_1_entry` `binary64` 98 246 034, `two_prod_entry` `binary32` 98 308 530, `two_prod_entry` `binary64` 98 321 652, `sum_entry_step_2` `binary32` 98 768 880, `sub_entry_step_2` `binary32` 98 778 618, `sum_fast_entry_step_2` `binary32` 98 785 170, `sum_entry_step_2` `binary64` 98 795 970, `sum_fast_entry_step_2` `binary64` 98 813 088, `sub_entry_step_2` `binary64` 98 814 924, `two_sum_entry` `binary64` 99 977 130, `two_sum_entry` `binary32` 99 984 024.
 
-The 116 kernels of phase B: `abs_upper_2`, `acc_add_1`, `acc_merge_1`, `acc_mul_1`, `acc_mul_entry_1`, `add_down_1`, `add_down_entry`, `add_entry_step_1`, `add_entry_step_2`, `add_up_1`, `add_up_entry`, `axpy_entry_step_1`, `axpy_step_1`, `ball_contains_ball_1`, `ball_contains_point_1`, `ball_contains_point_2`, `ball_equal_1`, `ball_equal_2`, `ball_from_interval_1`, `ball_from_interval_2`, `ball_less_1`, `ball_less_equal_1`, `ball_lower_as_1`, `ball_make_1`, `ball_make_2`, `ball_mul_pow2_1`, `ball_narrow_2_1`, `ball_negative_1`, `ball_negative_2`, `ball_positive_1`, `ball_positive_2`, `ball_scale_1_full`, `ball_split_1`, `ball_to_interval_1`, `ball_upper_as_1`, `ball_zero_1`, `ball_zero_2`, `bv_center_2`, `bv_center_entry_1`, `bv_conv_finish`, `bv_make_finish`, `bv_make_radius`, `bv_mul_pow2_step_1`, `bv_neg_radius`, `dot_entry_step_1`, `dot_step_1`, `fast_two_sum_entry`, `fold_finish_1`, `fold_finish_2`, `interval_contains_1`, `interval_empty_1`, `interval_empty_2`, `interval_entire_1`, `interval_entire_2`, `interval_equal_1`, `interval_intersection_1`, `interval_less_1`, `interval_less_equal_1`, `interval_make_1`, `interval_mid_rad_1`, `interval_neg_1`, `interval_negative_1`, `interval_negative_2`, `interval_positive_1`, `interval_positive_2`, `interval_rel_disjoint_1`, `interval_rel_equal_1`, `interval_rel_interior_1`, `interval_split_1`, `interval_subset_1`, `interval_to_ball_1`, `interval_zero_1`, `interval_zero_2`, `mul_1_1`, `mul_2_1_entry`, `mul_dir_1`, `mul_down_1`, `mul_down_entry`, `mul_pow2_2`, `mul_pow2_2_full`, `mul_pow2_step_1`, `mul_pow2_step_2`, `mul_up_1`, `mul_up_entry`, `neg_1`, `next_down`, `next_up`, `norm_combine`, `norm_finish_1`, `norm_finish_2`, `norm_step_1`, `norm_step_2`, `radd`, `radd_entry`, `rmul`, `scale_entry_step_2`, `scale_step_1`, `scale_step_2`, `split`, `sub_1_1`, `sub_down_1`, `sub_down_entry`, `sub_entry_step_1`, `sub_entry_step_2`, `sub_up_1`, `sub_up_entry`, `sum_entry_step_1`, `sum_entry_step_2`, `sum_fast_entry_step_2`, `to_down_2`, `to_nearest_2`, `to_up_2`, `two_prod_dekker`, `two_prod_entry`, `two_sum_entry`, `two_sum_ord`.
+The 116 kernels of phase B, `to_nearest_2` among them, unchanged since Milestone 1 (above): `abs_upper_2`, `acc_add_1`, `acc_merge_1`, `acc_mul_1`, `acc_mul_entry_1`, `add_down_1`, `add_down_entry`, `add_entry_step_1`, `add_entry_step_2`, `add_up_1`, `add_up_entry`, `axpy_entry_step_1`, `axpy_step_1`, `ball_contains_ball_1`, `ball_contains_point_1`, `ball_contains_point_2`, `ball_equal_1`, `ball_equal_2`, `ball_from_interval_1`, `ball_from_interval_2`, `ball_less_1`, `ball_less_equal_1`, `ball_lower_as_1`, `ball_make_1`, `ball_make_2`, `ball_mul_pow2_1`, `ball_narrow_2_1`, `ball_negative_1`, `ball_negative_2`, `ball_positive_1`, `ball_positive_2`, `ball_scale_1_full`, `ball_split_1`, `ball_to_interval_1`, `ball_upper_as_1`, `ball_zero_1`, `ball_zero_2`, `bv_center_2`, `bv_center_entry_1`, `bv_conv_finish`, `bv_make_finish`, `bv_make_radius`, `bv_mul_pow2_step_1`, `bv_neg_radius`, `dot_entry_step_1`, `dot_step_1`, `fast_two_sum_entry`, `fold_finish_1`, `fold_finish_2`, `interval_contains_1`, `interval_empty_1`, `interval_empty_2`, `interval_entire_1`, `interval_entire_2`, `interval_equal_1`, `interval_intersection_1`, `interval_less_1`, `interval_less_equal_1`, `interval_make_1`, `interval_mid_rad_1`, `interval_neg_1`, `interval_negative_1`, `interval_negative_2`, `interval_positive_1`, `interval_positive_2`, `interval_rel_disjoint_1`, `interval_rel_equal_1`, `interval_rel_interior_1`, `interval_split_1`, `interval_subset_1`, `interval_to_ball_1`, `interval_zero_1`, `interval_zero_2`, `mul_1_1`, `mul_2_1_entry`, `mul_dir_1`, `mul_down_1`, `mul_down_entry`, `mul_pow2_2`, `mul_pow2_2_full`, `mul_pow2_step_1`, `mul_pow2_step_2`, `mul_up_1`, `mul_up_entry`, `neg_1`, `next_down`, `next_up`, `norm_combine`, `norm_finish_1`, `norm_finish_2`, `norm_step_1`, `norm_step_2`, `radd`, `radd_entry`, `rmul`, `scale_entry_step_2`, `scale_step_1`, `scale_step_2`, `split`, `sub_1_1`, `sub_down_1`, `sub_down_entry`, `sub_entry_step_1`, `sub_entry_step_2`, `sub_up_1`, `sub_up_entry`, `sum_entry_step_1`, `sum_entry_step_2`, `sum_fast_entry_step_2`, `to_down_2`, `to_nearest_2`, `to_up_2`, `two_prod_dekker`, `two_prod_entry`, `two_sum_entry`, `two_sum_ord`.
 
 The other 75 new or changed kernels, which have their share of phase A only: `acc_add_2`, `acc_merge_2`, `acc_mul_2`, `acc_mul_entry_2`, `acc_radius_1`, `acc_radius_2`, `add_ball_2_2`, `add_down_2_2`, `add_up_2_2`, `axpy_entry_step_2`, `axpy_entry_step_2_1`, `axpy_step_2`, `axpy_step_2_1`, `ball_add_1_full`, `ball_add_2_full`, `ball_contains_ball_2`, `ball_hull_1`, `ball_hull_2`, `ball_intersection_1`, `ball_intersection_2`, `ball_less_2`, `ball_less_equal_2`, `ball_lower_as_2`, `ball_mul_1_full`, `ball_mul_2_full`, `ball_mul_pow2_1_full`, `ball_mul_pow2_2`, `ball_mul_pow2_2_full`, `ball_scale_2_full`, `ball_scale_2_full_entry`, `ball_split_2`, `ball_sub_1_full`, `ball_sub_2_full`, `ball_to_interval_2`, `ball_upper_as_2`, `bound_dot_1`, `bound_dot_2`, `bound_sum_1`, `bound_sum_2`, `bv_add_radius_1`, `bv_add_radius_2`, `bv_mul_pow2_radius`, `bv_mul_pow2_step_2`, `bv_scale_radius_1`, `bv_scale_radius_2`, `conv_radius`, `dot_step_2`, `interval_add_1`, `interval_add_2`, `interval_contains_2`, `interval_equal_2`, `interval_hull_1`, `interval_hull_2`, `interval_intersection_2`, `interval_less_2`, `interval_less_equal_2`, `interval_make_2`, `interval_mid_rad_2`, `interval_mul_1`, `interval_mul_2`, `interval_neg_2`, `interval_rel_disjoint_2`, `interval_rel_equal_2`, `interval_rel_interior_2`, `interval_split_2`, `interval_sub_1`, `interval_sub_2`, `interval_subset_2`, `interval_to_ball_2`, `mul_2_1_full_entry`, `mul_ball_2_2`, `mul_dir_2_2`, `mul_ext_2_2`, `sub_down_2_2`, `sub_up_2_2`.
 
@@ -1006,7 +1018,7 @@ exempt in every tier, in any run
 ([`results/milestone2/search/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone2/search),
 the best line of every quantity with its value).
 
-The search takes 77 kernels of this milestone (of the 191 new or changed and the four that the
+The search takes 77 kernels of this milestone (of the 190 new or changed and the four that the
 close of rule R3 added); the claims it climbs of six of them are all exact (`bv_center_2`,
 `bv_center_entry_2`, `fast_two_sum_entry`, `split`, `two_sum_entry`, `two_sum_ord`: an error
 of zero, which every case of both searches met). The table compares, for the other 71, the
@@ -7489,8 +7501,9 @@ Distinct random cases per stratum, summed over the machines (each judged by ever
 ## What was not run, and why
 
 - **$10^8$ results for every kernel and loop.** Only the 116 kernels of phase B were run to the
-  aim; the 75 other new or changed kernels, the 42 kernels unchanged since Milestone 1 (which
-  reached the aim in [its runs](brute-milestone1.md#the-aim-a-hundred-million-cases-per-kernel-and-format),
+  aim; the 75 other new or changed kernels, the other 42 kernels unchanged since Milestone 1
+  (`to_nearest_2`, the 43rd, is among the 116; they reached the aim in
+  [Milestone 1's runs](brute-milestone1.md#the-aim-a-hundred-million-cases-per-kernel-and-format),
   at another commit) and the 47 loops have their share of phase A, the counts of each group are
   [above](#the-aim-a-hundred-million-results-per-kernel-and-format). The 75 are the most costly to
   judge: the interval kernels of two limbs, the radii of the ball vectors and of the convolution,
