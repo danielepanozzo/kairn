@@ -893,6 +893,23 @@ _kairn_api_program(kairn-api-checks-handler-off checks_handler.cpp)
 target_compile_definitions(kairn-api-checks-handler-off PRIVATE KAIRN_CHECKS=0 KAIRN_TEST_CHECKS_OFF)
 add_test(NAME api.checks.handler.off COMMAND kairn-api-checks-handler-off)
 set_tests_properties(api.checks.handler.off PROPERTIES TIMEOUT 120 LABELS "api;checks")
+# A program of two translation units with the same handler (api.checks.handler.units, KAIRN_CHECKS 1,
+# and .off, 0; checks_units.hpp): in each unit a function on arrays, operations on ball vectors and
+# x + y reach the one report of the program, kairn::detail::report_environment, under each state, and
+# go on.
+foreach(_units_checks 1 0)
+  set(_units_target kairn-api-checks-units)
+  set(_units_test api.checks.handler.units)
+  if(_units_checks EQUAL 0)
+    string(APPEND _units_target -off)
+    string(APPEND _units_test .off)
+  endif()
+  _kairn_api_program(${_units_target} checks_units_a.cpp)
+  target_sources(${_units_target} PRIVATE checks_units_b.cpp)
+  target_compile_definitions(${_units_target} PRIVATE KAIRN_CHECKS=${_units_checks})
+  add_test(NAME ${_units_test} COMMAND ${_units_target})
+  set_tests_properties(${_units_test} PROPERTIES TIMEOUT 120 LABELS "api;checks")
+endforeach()
 # The same programs, with the build's own flags and KAIRN_CHECKS 1, in the other settings of
 # KAIRN_ENCLOSURE_CODE (include/kairn/config.hpp), where the checks of the operations of Ball are in
 # functions of their own: outlined, and external, whose definitions are those of definitions.cpp

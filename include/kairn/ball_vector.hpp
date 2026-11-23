@@ -487,15 +487,18 @@ public:
     /// are the guards, c + 0 and r + 0, and the loop's m - m, whose values are the same under every
     /// rounding mode, but the sign of whose zeros is not). Then, when KAIRN_CHECKS is 1, a negative
     /// r is reported (it is almost surely a mistake) and, for two limbs, a center that is not
-    /// canonical. Not constexpr.
-    BallVector(const std::array<center_type, N>& c, T r) noexcept {
+    /// canonical. Not constexpr. Forced inline, with the private member that makes the ball vector:
+    /// a few copies and one call of the loop, which a compiler otherwise calls rather than inlines
+    /// in a unit of many operations (docs/reference/ball_vector.md, "Checks").
+    KAIRN_FORCEINLINE BallVector(const std::array<center_type, N>& c, T r) noexcept {
         for (int j = 0; j < K; ++j)
             for (std::size_t i = 0; i < N; ++i) c_[j][i] = c[i].limb[j];
         make(r);
     }
     /// The same from the arrays of a view of N centers, c.size() == N (checked with KAIRN_CHECKS, not
-    /// otherwise): the centers are copied in, then made a ball vector of radius r as above.
-    BallVector(SoAView<const T, K> c, T r) noexcept {
+    /// otherwise): the centers are copied in, then made a ball vector of radius r as above. Forced
+    /// inline, as the constructor above.
+    KAIRN_FORCEINLINE BallVector(SoAView<const T, K> c, T r) noexcept {
         detail::check_lengths(c.size() == N);
         for (int j = 0; j < K; ++j)
             for (std::size_t i = 0; i < N; ++i) c_[j][i] = c.limb(j)[i];
@@ -568,8 +571,10 @@ public:
     constexpr operator BallVectorView<const T, K>() const noexcept { return view(); }
 
 private:
-    // The centers in c_ and the radius r made a ball vector, in place.
-    void make(T r) noexcept {
+    // The centers in c_ and the radius r made a ball vector, in place. Forced inline, as the
+    // constructors that call it: otherwise Clang 18 and Apple clang call it for a short vector, and
+    // the centers go through memory around the call.
+    KAIRN_FORCEINLINE void make(T r) noexcept {
         const T* in[K];
         T* out[K];
         for (int j = 0; j < K; ++j) {

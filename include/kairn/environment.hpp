@@ -32,54 +32,108 @@ namespace kairn {
 
 namespace detail {
 
-// What in the control register differs from the default environment, in words, or nullptr. With
-// rounding false the rounding mode is left out, and what is left is flush to zero (and on AArch64
-// alternate handling): what can change the result even of a function that does not round, since
-// a comparison reads a subnormal operand as zero there.
-inline const char* environment_problem(bool rounding = true) noexcept {
+// The state of the environment as one read gives it: the control register, MXCSR on x86-64 (32
+// bits) and FPCR on AArch64; on another target, 1 when the rounding mode that the C library
+// reports is not to nearest, and 0 when it is (no register read is written there).
+KAIRN_FORCEINLINE std::uint64_t environment_state() noexcept {
 #if defined(KAIRN_DETAIL_MXCSR)
-    // MXCSR: rounding control in bits 13-14, flush-to-zero in bit 15, denormals-are-zero in bit 6.
-    const unsigned csr = _mm_getcsr();
-    if (rounding && (csr & 0x6000u)) return "the rounding mode is not to nearest (MXCSR.RC is not zero)";
-    if (csr & 0x8000u) return "results below the normal range are flushed to zero (MXCSR.FTZ is set)";
-    if (csr & 0x0040u) return "subnormal operands are read as zero (MXCSR.DAZ is set)";
-    return nullptr;
+    return _mm_getcsr();
 #elif defined(KAIRN_DETAIL_FPCR)
-    // FPCR: rounding mode in bits 22-23, flush-to-zero in bit 24, and where FEAT_AFP is
-    // implemented, alternate handling in bit 1 and flush of inputs in bit 0 (otherwise both read
-    // as zero).
 #if defined(__clang__)
-    const std::uint64_t fpcr = __builtin_arm_rsr64("fpcr");
+    return __builtin_arm_rsr64("fpcr");
 #else
-    const std::uint64_t fpcr = __builtin_aarch64_get_fpcr64();
+    return __builtin_aarch64_get_fpcr64();
 #endif
-    if (rounding && (fpcr & (std::uint64_t{3} << 22)))
-        return "the rounding mode is not to nearest (FPCR.RMode is not zero)";
-    if (fpcr & (std::uint64_t{1} << 24)) return "subnormal numbers are flushed to zero (FPCR.FZ is set)";
-    if (fpcr & std::uint64_t{2}) return "alternate floating-point behavior is on (FPCR.AH is set)";
-    if (fpcr & std::uint64_t{1}) return "subnormal operands are read as zero (FPCR.FIZ is set)";
+#else
+    return std::fegetround() == FE_TONEAREST ? 0 : 1;
+#endif
+}
+
+// The bits of environment_state() that are all zero in the default environment and that a check
+// reads. With rounding false the rounding mode is left out, and what is left is flush to zero (and
+// on AArch64 alternate handling): what can change the result even of a function that does not
+// round, since a comparison reads a subnormal operand as zero there.
+// - MXCSR: rounding control in bits 13-14 (0x6000), flush-to-zero in bit 15 (0x8000),
+//   denormals-are-zero in bit 6 (0x0040): 0xE040, and 0x8040 without the rounding mode.
+// - FPCR: rounding mode in bits 22-23 (0xC00000), flush-to-zero in bit 24 (0x1000000), and where
+//   FEAT_AFP is implemented, alternate handling in bit 1 and flush of inputs in bit 0 (otherwise
+//   both read as zero): 0x1C00003, and 0x1000003 without the rounding mode.
+// - Another target: 1, and 0 without the rounding mode (nothing else is checked there).
+constexpr std::uint64_t environment_mask(bool rounding) noexcept {
+#if defined(KAIRN_DETAIL_MXCSR)
+    return rounding ? 0xE040u : 0x8040u;
+#elif defined(KAIRN_DETAIL_FPCR)
+    return (rounding ? (std::uint64_t{3} << 22) : std::uint64_t{0}) | (std::uint64_t{1} << 24) | std::uint64_t{3};
+#else
+    return rounding ? 1 : 0;
+#endif
+}
+
+// What the bits b of a state differ in from the default environment, in words (the first, in the
+// order rounding mode, flush to zero, the rest), or nullptr when b is zero; b is a state masked
+// by environment_mask.
+inline const char* environment_message(std::uint64_t b) noexcept {
+#if defined(KAIRN_DETAIL_MXCSR)
+    if (b & 0x6000u) return "the rounding mode is not to nearest (MXCSR.RC is not zero)";
+    if (b & 0x8000u) return "results below the normal range are flushed to zero (MXCSR.FTZ is set)";
+    if (b & 0x0040u) return "subnormal operands are read as zero (MXCSR.DAZ is set)";
+#elif defined(KAIRN_DETAIL_FPCR)
+    if (b & (std::uint64_t{3} << 22)) return "the rounding mode is not to nearest (FPCR.RMode is not zero)";
+    if (b & (std::uint64_t{1} << 24)) return "subnormal numbers are flushed to zero (FPCR.FZ is set)";
+    if (b & std::uint64_t{2}) return "alternate floating-point behavior is on (FPCR.AH is set)";
+    if (b & std::uint64_t{1}) return "subnormal operands are read as zero (FPCR.FIZ is set)";
+#else
+    if (b) return "the rounding mode is not to nearest";
+#endif
     return nullptr;
-#else
-    // No register read is written for this target: only the rounding mode, as the C library
-    // reports it, is checked.
-    return !rounding || std::fegetround() == FE_TONEAREST ? nullptr : "the rounding mode is not to nearest";
-#endif
+}
+
+// What in the control register differs from the default environment, in words, or nullptr; with
+// rounding false the rounding mode is left out (environment_mask).
+inline const char* environment_problem(bool rounding = true) noexcept {
+    return environment_message(environment_state() & environment_mask(rounding));
+}
+
+// The report of a check of the environment that failed, the only place where Kairn expands
+// KAIRN_ENVIRONMENT_FAILURE (config.hpp): the message of the bits b (a masked state that is not
+// zero), given to the macro. A function of its own that the compiler is asked never to inline,
+// and to place with the code that rarely runs (KAIRN_DETAIL_COLD), so that a check costs its
+// caller one read and one test, and a call on the path that is not taken: the message, the two
+// addresses of strings, and the program's statement are not compiled into every check, and do not
+// count against the compiler's budget for inlining the caller. An inline function, of which the
+// linker keeps one copy for the whole program: the reason why a program defines the macro the same
+// way in every translation unit (config.hpp).
+KAIRN_DETAIL_COLD inline void report_environment(std::uint64_t b) noexcept {
+    KAIRN_ENVIRONMENT_FAILURE(environment_message(b));
+}
+
+// The check itself, at run time: one read of the control register (environment_state) and one
+// test of the bits of environment_mask(rounding); when one of them is set, the report, and false.
+// As GCC 13 and 16, Clang 18 and Apple clang 21 compile it at -O2 and -O3: on x86-64, (v)stmxcsr
+// into memory and a load, an and of 0xE040 (0x8040 without the rounding mode), which sets the flags
+// and keeps the bits for the report, and a branch; on AArch64, mrs of FPCR, an ands with
+// 0x1C00003 (0x1000003), which is no immediate of a logical instruction there and is put in a
+// register by a mov and a movk (outside a loop, where a register is free for it), and a branch. On
+// another target, a call of std::fegetround() and a comparison (nothing without the rounding mode).
+KAIRN_FORCEINLINE bool environment_checked(bool rounding) noexcept {
+    const std::uint64_t b = environment_state() & environment_mask(rounding);
+    if (b != 0) [[unlikely]] {
+        report_environment(b);
+        return false;
+    }
+    return true;
 }
 
 // The environment check of KAIRN_CHECKS, first in every check of an operation: whether the checks
 // of its operands may follow. False when the environment is not the default one and
 // KAIRN_ENVIRONMENT_FAILURE returned: the operation then goes on without them, since they
 // compute in that environment (x0 + x1 == x0 under a directed rounding mode can be false for a
-// canonical pair). Always true in constant evaluation, which has its own fixed rounding.
+// canonical pair). Always true in constant evaluation, which has its own fixed rounding. The same
+// read, test and report as check_batch_environment.
 KAIRN_FORCEINLINE constexpr bool check_environment() noexcept {
     bool ok = true;
 #if KAIRN_CHECKS
-    if (!__builtin_is_constant_evaluated()) {
-        if (const char* problem = environment_problem()) {
-            ok = false;
-            KAIRN_ENVIRONMENT_FAILURE(problem);
-        }
-    }
+    if (!__builtin_is_constant_evaluated()) ok = environment_checked(true);
 #endif
     return ok;
 }
@@ -92,12 +146,7 @@ KAIRN_FORCEINLINE constexpr bool check_environment() noexcept {
 KAIRN_FORCEINLINE constexpr bool check_environment_except_rounding() noexcept {
     bool ok = true;
 #if KAIRN_CHECKS
-    if (!__builtin_is_constant_evaluated()) {
-        if (const char* problem = environment_problem(false)) {
-            ok = false;
-            KAIRN_ENVIRONMENT_FAILURE(problem);
-        }
-    }
+    if (!__builtin_is_constant_evaluated()) ok = environment_checked(false);
 #endif
     return ok;
 }
@@ -113,30 +162,27 @@ KAIRN_FORCEINLINE constexpr bool check_environment_except_rounding() noexcept {
 // then the checks of the operands of a debug build do not follow. With rounding false, for a
 // function whose result the rounding mode cannot change, the rounding mode is left out, as
 // check_environment_except_rounding() leaves it out. True in constant evaluation, which has no
-// environment to read (no batch entry is constexpr today). One read of the register and two tests
-// per call, whatever the length of the arrays. Its result must not initialize a const local
+// environment to read (no batch entry is constexpr today). Per call, whatever the length of the
+// arrays: one read of the register and one test of a mask (environment_checked), the report out of
+// line (report_environment). Its result must not initialize a const local
 // variable (`const bool ok = check_batch_environment();`): the initializer of a const variable of
 // integral type is tried as a constant expression first, where this function returns true without
 // reading anything, and the check would never run (seen with Apple clang 21, at -O0 as at -O2); an
 // assignment, a non-const variable or the condition of an if is evaluated at run time.
 KAIRN_FORCEINLINE constexpr bool check_batch_environment(bool rounding = true) noexcept {
     bool ok = true;
-    if (!__builtin_is_constant_evaluated()) {
-        if (const char* problem = environment_problem(rounding)) {
-            ok = false;
-            KAIRN_ENVIRONMENT_FAILURE(problem);
-        }
-    }
+    if (!__builtin_is_constant_evaluated()) ok = environment_checked(rounding);
     return ok;
 }
 
-// Whether the rounding mode is to nearest, without a report: the checks of the operands of a
-// function that does not round are made only then, when they round themselves (x0 + x1 == x0
-// under a directed rounding mode can be false for a canonical pair). True in constant evaluation.
+// Whether the environment is the default one, the rounding mode to nearest among it, without a
+// report: the checks of the operands of a function that does not round are made only then, when
+// they round themselves (x0 + x1 == x0 under a directed rounding mode can be false for a
+// canonical pair). True in constant evaluation.
 KAIRN_FORCEINLINE constexpr bool rounding_to_nearest() noexcept {
     bool ok = true;
 #if KAIRN_CHECKS
-    if (!__builtin_is_constant_evaluated()) ok = environment_problem() == nullptr;
+    if (!__builtin_is_constant_evaluated()) ok = (environment_state() & environment_mask(true)) == 0;
 #endif
     return ok;
 }
@@ -161,7 +207,7 @@ KAIRN_FORCEINLINE constexpr bool rounding_to_nearest() noexcept {
 /// not compile yet), only the rounding mode is checked, through std::fegetround().
 /// Not usable in constant evaluation.
 inline bool environment_ok() noexcept {
-    return detail::environment_problem() == nullptr;
+    return (detail::environment_state() & detail::environment_mask(true)) == 0;
 }
 
 /// The result of kairn::self_test().

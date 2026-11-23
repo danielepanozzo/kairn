@@ -171,6 +171,16 @@
 /// (or the constructor) continues without checking its operands, since those checks compute in
 /// the environment that failed (under a directed rounding mode x0 + x1 == x0 can be false for a
 /// canonical pair), and its result has no guarantee.
+///
+/// Define it the same way in every translation unit of a program, or in none, as KAIRN_CHECKS. Kairn
+/// expands it in one function, the report of every check of the environment
+/// (environment.hpp, detail::report_environment), which the compiler is asked never to inline: an
+/// inline function, of which the linker keeps one copy for the whole program, and whose
+/// definitions the language requires to be the same in every unit. A program whose units define
+/// the macro differently gets the statement of one of them in every unit, with no diagnostic. The
+/// statement is compiled in that function, not at the place of the check: a name it uses must be
+/// declared before Kairn is included and, in a program of several units, refer to the same entity
+/// in every unit (a function of the program with external linkage, defined once).
 #if !defined(KAIRN_ENVIRONMENT_FAILURE)
 #define KAIRN_ENVIRONMENT_FAILURE(reason) ::kairn::detail::fail("the floating-point environment", reason)
 #endif
@@ -263,6 +273,15 @@
 #define KAIRN_DETAIL_NOINLINE __declspec(noinline)
 #else
 #define KAIRN_DETAIL_NOINLINE __attribute__((noinline))
+#endif
+// KAIRN_DETAIL_COLD asks the compiler not to inline a function and to place it with the code that
+// rarely runs, which also makes a branch to its call the unlikely one (GCC and Clang: cold); MSVC
+// has no such attribute, and gets noinline alone. For the report of a check of the environment
+// (environment.hpp, detail::report_environment).
+#if defined(_MSC_VER) && !defined(__clang__)
+#define KAIRN_DETAIL_COLD __declspec(noinline)
+#else
+#define KAIRN_DETAIL_COLD __attribute__((noinline, cold))
 #endif
 #if KAIRN_ENCLOSURE_CODE == KAIRN_ENCLOSURE_CODE_INLINE
 #define KAIRN_DETAIL_ENCLOSURE KAIRN_FORCEINLINE
