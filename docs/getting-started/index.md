@@ -662,8 +662,9 @@ flag from the files that include it.
 
 `kairn::self_test()` computes, with the flags of the file that calls it, results that IEEE 754
 fixes exactly, then runs every kernel on fixed operands. It returns a `kairn::Status`: `ok()` and
-`message()`, the first check that failed, and for a failed kernel `kernel`, its name and limb type.
-Print both:
+`message()`, the first check that failed, and for a failed kernel `kernel`, its name and limb type;
+and `limitation`, with `limited()`, a limitation of the build that is not an error (below). Print
+them:
 
 ```cpp
 --8<-- "docs/examples/cpp/troubleshooting.cpp:report"
@@ -701,6 +702,17 @@ For the messages that name a flag, remove it from the files that include Kairn. 
 sees a flag only through a result it changes: with Apple clang 21, `-freciprocal-math` alone and
 `-fno-signed-zeros` alone changed none, and the self-test passed. Kairn does not support those
 flags either way.
+
+One more message is not a failure, and comes in `limitation` with `ok()` true:
+`a square passed straight into an operation is not rounded first: the compiler fused it into the
+operation's first addition (Clang under -ffp-contract=fast); pass kairn::two_prod(a, a).product,
+or compile the files that call Kairn under another contraction setting`. The file that calls the
+self-test is compiled with Clang under `-ffp-contract=fast` (measured with Apple clang 21 and
+Clang 18 at `-O1` to `-O3`), where a square passed straight into an operation is not rounded first
+([The exception: a square](guarantees.md#the-exception-a-square)). A program that never passes a
+square straight in may ignore it; one that does rounds the square first, as the message says.
+Under `-fno-signed-zeros -ffp-contract=fast`, a combination Kairn does not support, the same
+message comes for a wider loss: every product's guard.
 
 `kairn::environment_ok()` reads the control register (MXCSR on x86-64, FPCR on AArch64) and says
 whether the rounding mode and flush to zero are as Kairn assumes. Kairn never changes them; a

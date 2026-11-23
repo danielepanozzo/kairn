@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 1218 tests. The full tier, 2036 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 1253 tests. The full tier, 2064 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -85,6 +85,8 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.arrays.exact.bounds` | `kairn::traits<X>::sum(n)` and `dot(n)` for `float` and `double`, one and two limbs, at the lengths where the count is converted to `T` exactly and where it is rounded up (around $2^{24}$ and $2^{53}$ and a few multiples), at every power of two and its neighbors, near the largest `std::size_t` and at 400 random lengths, checked in exact rational arithmetic (`tests/api/arrays_exact.py`, Python's `fractions`) against $\gamma$ of the proved statements and their underflow terms, and $+\infty$ for `unit` and `tiny` exactly where no bound is given ([below](#the-functions-on-arrays)). |
 | `api.boundary.arrays.FORM.S`, `api.boundary.arrays.unguarded.FORM.S` | An array the program fills with products in the same function, passed into a sum, a map or `axpy`, gives the result of the same function on the rounded products, at `-O3` under each contraction setting, in each form; the control, against the copy of the headers without the guard, must differ where the compiler was measured to fuse ([below](#the-functions-on-arrays), `tests/api/boundary_batch.cpp`); and every function that takes an array or a value as a factor, with the other factor a constant the compiler sees (`--factor`). |
 | `api.ball_vector.FORM`, `api.boundary.ball_vector.S`, `api.boundary.ball_vector.unguarded.S` | `BallVector` and its views in each form of `Packed`, and the products of the program passed into them under each contraction setting, with the third kind of form of `api.boundary.S` (`--factor`: the scalings and `axpy` with a product of the program beside a factor the compiler sees, 1, -1 or 2, which must agree with the guards and which the copy without them reports) ([Ball vectors](#ball-vectors)). |
+| `api.boundary.square.FORM.S` | The exception of a square, pinned as the pages state it ([below](#the-exception-of-a-square)): the squares passed straight into nine operations must not differ, but with Clang under `-ffp-contract=fast`, where they are printed; the three ways the page gives to round a square first, and eleven products that are not squares, must not differ in any build (`tests/api/boundary_square.cpp`). |
+| `api.square_probe.S`, `api.square_probe.contract-fast.O1`, `.O3` | The probe of `kairn::self_test()` ([below](#the-exception-of-a-square)): `Status::limitation` is set exactly where the fusion happens, `ok()` stays true (`tests/api/square_probe.cpp`). |
 
 The cases of `api.reject.*`: `tests/api/reject.cpp` is compiled once per test with
 `KAIRN_TEST_CASE` set to the test's case (and once more as its control), and each case has one
@@ -1465,6 +1467,56 @@ evaluation in that mode, for the comparison of lines; then a runner option and a
 the mode. Nothing of the format tables, the printer or the runner's protocol
 changes: the format stays `(p, qmin, qmax)` and the mode is chosen on the command line, as the
 path of constant evaluation is.
+
+## The exception of a square
+
+A square that the program passes straight in loses its guard with Clang under
+`-ffp-contract=fast` ([The exception: a square](../getting-started/guarantees.md#the-exception-a-square)),
+a limitation documented and not repaired. Two tests pin what the pages say of it, so that a
+compiler that changes its behavior fails one of them.
+
+- **The squares and the recipe** (`api.boundary.square.FORM.S`, `tests/api/boundary_square.cpp`,
+  at `-O2` with `NDEBUG`, in each form of `Packed`, under each contraction setting). Each form is an
+  operation computed with the value written in the call and with it rounded first, on 2 000 cases
+  per form and type (half chosen so that the operation cancels, half of either sign), compared bit
+  for bit. The operations: `two_sum(c, x)`, `Expansion<T, 2>(c) + x`, the sum of `Packed<T, 1>`
+  (broadcast and loaded), `Accumulator<T, 1>` and `Accumulator<T, 2>` (`add(x)`, `add(c)`, `ball()`),
+  and `sum`, `add` and `axpy` over an array the program filled in the same function. Three kinds of
+  value, in `double` and `float` (294 rows): the squares `a * a`, `pow(a, 2)` and
+  `(a - b) * (a - b)` must not differ (`--square none`) with GCC, with Clang under `off`, `on` and
+  its default, with MSVC under `/fp:precise` and `/fp:strict`; they are printed without a verdict
+  (`--square report`) with Clang and clang-cl under `-ffp-contract=fast`, and with MSVC under
+  `/fp:contract`, where Kairn's operations were not measured with a square. The ways the page gives
+  to round a square first, `kairn::two_prod(a, a).product` and a `volatile`, against the rounded
+  square, and the exact square `Expansion<T, 2>(a) * a` through `Expansion<T, 2>(c) + q`,
+  `Accumulator<T, 2>` and a sum of two limbs, against its limbs passed through `volatile`s, must not
+  differ in any build: a difference means the page is wrong. And eleven products that are not
+  squares, the list of `experiments/milestone2/square/` (`a * b`; of two absolute values; under
+  `a, b > 0`; a positive constant times an absolute value, and times a value under `a > 0`; of
+  two conversions from unsigned and from signed integers; of two square roots; of two squares; of
+  a square and a value of unknown sign; of two exponentials), must not differ in any build.
+  Measured on 2026-11-23 (Apple clang 21 and GCC 16 on AArch64, GCC 13 and Clang 18 on x86-64 with
+  `-mfma` and with `-mavx2 -mfma`, at `-O2`, and at `-O1` and `-O3` under `=fast`): no way of the
+  recipe and no product that is not a square differed anywhere; the squares differed only with
+  Clang under `=fast`. Apple clang 21 at `-O2` fused them into `two_sum`, the two-limb sum, the sum
+  of `Packed<T, 1>` and both accumulators (36 rows in the NEON form), and in the scalar form into
+  `sum`, `add` and `axpy` too (54); Clang 18 on x86-64 into the sum of `Packed<T, 1>`, `add` and
+  `axpy` (in the AVX2 form for `float` only, whose four elements go through the scalar loop that
+  finishes an array) and, in the scalar form, `sum` (18 rows with AVX2, 30 without).
+- **The probe** (`api.square_probe.S` at `-O2` under each setting, and
+  `api.square_probe.contract-fast.O1` and `.O3`, `tests/api/square_probe.cpp`). `kairn::self_test()`
+  must stay `ok()`, and its `Status::limitation` must be set exactly where the fusion happens. The
+  test computes the probe's own form, the square passed into the guarded sum of `Packed<T, 1>`'s
+  scalar form, in the same translation unit on 4 000 cancelling cases (the direct form), and
+  prints `two_sum(c, a * a)` and `Expansion<T, 2>(c) + a * a` for information. `--expect none`:
+  no limitation and no difference (GCC, MSVC, Clang under `off`, `on` and its default);
+  `--expect limitation`: both (Apple clang at `-O1` and `-O2`, Clang 18 on x86-64, under `=fast`:
+  measured); `--expect consistent` elsewhere under `=fast` (Apple clang at `-O3`, another Clang on
+  x86-64, Clang on another target, clang-cl): the limitation exactly when the direct form differs,
+  and the test prints which it saw. Measured on 2026-11-23: the probe reports the limitation with
+  Apple clang 21 and Clang 18 (`-mfma`, `-mavx2 -mfma`) at `-O1`, `-O2` and `-O3` under `=fast`, in
+  agreement with the direct form every time, and nothing in every other build, GCC 13 and 16 under
+  every setting included.
 
 ## Contraction
 

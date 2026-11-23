@@ -218,13 +218,22 @@ struct Status {
     /// For a failure of a generated kernel, which kernel and limb type, such as "mul_2_2 (float)";
     /// otherwise nullptr.
     const char* kernel = nullptr;
+    /// A limitation of this translation unit's build that is not an error, in words; nullptr when
+    /// the self-test saw none. One is known: a square that the program passes straight into an
+    /// operation is not rounded first, because the compiler fused it into the operation's first
+    /// addition (Clang under -ffp-contract=fast; docs/getting-started/guarantees.md, "The exception:
+    /// a square"). A program within the guarantees despite it (one that never passes a square
+    /// straight in) is not in error, so ok() does not depend on it.
+    const char* limitation = nullptr;
 
-    /// Whether every check passed.
+    /// Whether every check passed. A limitation does not count.
     constexpr bool ok() const noexcept { return failure == nullptr; }
     /// Whether every check passed.
     constexpr explicit operator bool() const noexcept { return ok(); }
     /// "ok", or the failure.
     constexpr const char* message() const noexcept { return failure ? failure : "ok"; }
+    /// Whether the self-test saw a limitation (limitation is not nullptr).
+    constexpr bool limited() const noexcept { return limitation != nullptr; }
 };
 
 namespace detail {
@@ -310,6 +319,32 @@ inline const char* self_test_limb() noexcept {
     return nullptr;
 }
 
+// The probe of the exception of a square (docs/getting-started/guarantees.md, "The exception: a
+// square"): the square of a passed straight into add_entry_step_1, the guarded sum of the scalar
+// form of Packed<T, 1>, whose packed forms caught every configuration where any operation was
+// measured to fuse a square (Apple clang 21 and Clang 18 under -ffp-contract=fast, -O1 to -O3, the
+// scalar and the packed forms) and none with GCC 13 or 16 (experiments/milestone2/square/). c is
+// -RN(a a), so the sum is 0 when the square is rounded first, and exactly a a + c, the rounding
+// error of the square, -0x1.898208143bbaep-55, when the compiler dropped the guard and fused a a
+// into the addition: that value, which is exact in every rounding mode, and no other, is reported
+// (under a directed rounding mode, which the checks report as a failure, the unfused sum is 0 or
+// +-2^-53: no false report). The operands are read from volatile objects, as the other
+// cases read theirs. What it sees is the flags and the optimization of the copy of self_test that
+// the linker kept (an inline function, one copy per program), on this one form: not other files,
+// not other forms.
+inline const char* square_probe() noexcept {
+    volatile double v_a = 0x1.6a09e667f3bcdp-1, v_c = -0x1.0000000000001p-1;
+    const double a = v_a;
+    double z = 0;
+    gen::add_entry_step_1(v_c, a * a, z);
+    return !bits_equal(z, -0x1.898208143bbaep-55)
+               ? nullptr
+               : "a square passed straight into an operation is not rounded first: the compiler fused it into "
+                 "the operation's first addition (Clang under -ffp-contract=fast); pass "
+                 "kairn::two_prod(a, a).product, or compile the files that call Kairn under another "
+                 "contraction setting";
+}
+
 }  // namespace detail
 
 /// Checks, at run time, that this translation unit was compiled and runs as Kairn's guarantees
@@ -329,12 +364,24 @@ inline const char* self_test_limb() noexcept {
 /// alone changed none), a changed rounding mode or flush-to-zero at the moment it runs, and a
 /// compiler that changes a kernel's result on the operands tried. What it does not prove: the flags of other translation units, nor the result
 /// of every operand. Returns at the first failure; never aborts; only reads.
+///
+/// It also reports, in Status::limitation and without failing, the one known limitation of a build
+/// that is not an error: whether a square passed straight into an operation is rounded first
+/// (docs/getting-started/guarantees.md, "The exception: a square"). A probe passes the square of a
+/// fixed operand, read from a volatile object, straight into the guarded sum of the scalar form of
+/// Packed<T, 1> and compares with the sum of the rounded square; measured to report it with Apple
+/// clang 21 and Clang 18 on x86-64 at -O1 to -O3 under -ffp-contract=fast, and nothing under the
+/// other settings, at -O0, or with GCC 13 and 16. Its limits, chosen by the authors for a check
+/// that costs one more case: like the rest of this inline function it sees the flags and the
+/// optimization of the one copy the linker kept, and it tries that one form only.
 inline Status self_test() noexcept {
-    if (const char* failure = detail::self_test_limb<double>()) return {failure, nullptr};
-    if (const char* failure = detail::self_test_limb<float>()) return {failure, nullptr};
+    const char* limitation = detail::square_probe();
+    if (const char* failure = detail::self_test_limb<double>()) return {failure, nullptr, limitation};
+    if (const char* failure = detail::self_test_limb<float>()) return {failure, nullptr, limitation};
     if (const char* kernel = gen::selftest::run())
-        return {"a generated kernel computed a result other than the exact one on fixed operands", kernel};
-    return {};
+        return {"a generated kernel computed a result other than the exact one on fixed operands", kernel,
+                limitation};
+    return {nullptr, nullptr, limitation};
 }
 
 }  // namespace kairn

@@ -451,13 +451,36 @@ contraction setting (Clang's default is not affected), or the square is rounded 
 compiler cannot fuse it: `kairn::two_prod(a, a).product` is the rounded square and was measured
 not to be fused (Apple clang 21, with and without link-time optimization), and a `volatile`
 variable does it by the rules of the language; or the square is kept exact, as
-`Expansion<T, 2>(a) * a`. `kairn::self_test()` does not report this limitation.
+`Expansion<T, 2>(a) * a`. The test `api.boundary.square.*` checks those three ways under every
+contraction setting of every compiler it is built with: the first two through `two_sum`, a
+two-limb number plus a `T`, the sum of `Packed<T, 1>`, both accumulators and `sum`, `add` and `axpy`
+over an array, the exact square through the sum of two two-limb numbers, `Accumulator<T, 2>` and
+a sum of two limbs; it also checks that the squares do not differ where the page says they do not,
+and that eleven products that are not squares never do.
+
+*What `kairn::self_test()` says.* It reports the limitation, and does not fail: a program
+compiled with Clang under `-ffp-contract=fast` that never passes a square straight in is within
+the guarantees, so `ok()` stays true. Its `Status` has a third member, `limitation`, the
+limitation in words or `nullptr`, and `limited()`; they are set when a probe sees the fusion: the
+square of a fixed operand, read from a `volatile` object as the other checks read theirs, passed
+straight into the guarded sum of `Packed<T, 1>`'s scalar form, the form that caught every
+configuration where any operation was measured to fuse a square. Measured on 2026-11-23: it
+reports the limitation with Apple clang 21 and with Clang 18 on x86-64 at `-O1`, `-O2` and `-O3`
+under `-ffp-contract=fast`, and nothing under `off`, `on` or the default, nothing at `-O0`, and
+nothing with GCC 13 or 16 under any setting. What it does not see: `self_test` is an inline
+function, so it sees the flags and the optimization level of the one copy that the linker kept,
+not those of the other files of the program; and it tries one form, so a compiler that fused a
+square only into another operation would pass it unseen. Those are the limits the authors chose
+for a check that costs one more case of the self-test.
 
 *Related.* `-fno-signed-zeros`, which Kairn supports with no compiler
 ([Environment](../concepts/environment.md)), is accepted by Clang without a macro that the
 headers could refuse; with `-ffp-contract=fast` it then drops the guard of every product, not
-only of a square. `kairn::self_test()` reports that combination with Apple clang and was measured
-not to report it with Clang 18.
+only of a square. `kairn::self_test()` fails on that combination with Apple clang 21 at `-O1` and
+`-O2` (the kernel `split (double)`), and passes with Apple clang 21 at `-O3` and with Clang 18 on
+x86-64 at `-O1` to `-O3`; in all of those builds its probe reports the limitation of a square, which
+under that flag is wider than its message says: every product loses its guard (measured on
+2026-11-23).
 
 The probes, their results, and three repairs that were built and measured and not made (a
 barrier in the generated guard, a barrier in the public headers, a guard that reads its zero

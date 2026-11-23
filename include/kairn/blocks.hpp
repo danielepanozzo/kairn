@@ -17,7 +17,8 @@
 /// two_sum(a * b, c), is not fused into the block's first addition by a compiler that contracts.
 /// One exception, documented and not repaired: a square, two_sum(a * a, c), with Clang under
 /// -ffp-contract=fast, which proves a square is never -0, removes the guard and fuses it
-/// (docs/getting-started/guarantees.md, "The exception: a square").
+/// (docs/getting-started/guarantees.md, "The exception: a square"); kairn::self_test() reports it
+/// in Status::limitation, for the translation unit that calls it.
 /// The guard has the value of its operand; only the sign of a zero result can change, and the sign
 /// of a zero is not part of any statement.
 ///
