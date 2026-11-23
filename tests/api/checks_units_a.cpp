@@ -42,11 +42,13 @@ namespace {
 constexpr bool checks_on = KAIRN_CHECKS != 0;
 
 int failures = 0;
+// A string to print, never a null pointer (GCC 13 at -O3 cannot tell that none of these is null).
+const char* text(const char* s) { return s ? s : "?"; }
 void expect(bool ok, const char* what, const char* unit = nullptr, const char* state = nullptr) {
     if (unit) {
-        std::printf("%s: %s, under %s: %s\n", ok ? "ok" : "FAILED", unit, state, what);
+        std::printf("%s: %s, under %s: %s\n", ok ? "ok" : "FAILED", text(unit), text(state), text(what));
     } else {
-        std::printf("%s: %s\n", ok ? "ok" : "FAILED", what);
+        std::printf("%s: %s\n", ok ? "ok" : "FAILED", text(what));
     }
     std::fflush(stdout);
     if (!ok) ++failures;
@@ -159,7 +161,7 @@ int main() {
                 const int want = state.rounding ? f.under_rounding : f.under_flush;
                 const int before = calls;
                 last_reason = nullptr;
-                std::printf("calling %s in %s under %s\n", f.name, u.name, state.name);
+                std::printf("calling %s in %s under %s\n", text(f.name), text(u.name), text(state.name));
                 std::fflush(stdout);
                 state.set();
                 const double r = (u.*f.run)();
@@ -167,12 +169,12 @@ int main() {
                 sink = r;
                 const int made = calls - before;
                 char what[256];
-                std::snprintf(what, sizeof what, "%s calls the handler %d time%s (%d), and goes on", f.name, want,
+                std::snprintf(what, sizeof what, "%s calls the handler %d time%s (%d), and goes on", text(f.name), want,
                               want == 1 ? "" : "s", made);
                 expect(made == want, what, u.name, state.name);
                 if (want > 0) {
                     ++checked;
-                    std::snprintf(what, sizeof what, "%s gives the handler the reason (%s)", f.name,
+                    std::snprintf(what, sizeof what, "%s gives the handler the reason (%s)", text(f.name),
                                   last_reason ? last_reason : "none");
                     expect(last_reason && std::strstr(last_reason, state.reason), what, u.name, state.name);
                 }
