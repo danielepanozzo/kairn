@@ -21,7 +21,8 @@ one test of a mask on the hot path, the message and the call of KAIRN_ENVIRONMEN
 function of their own, never inlined and cold (detail::report_environment). The variant is gone; the
 header itself is what `check` verifies. `inline DEST LIMBS` copies include/kairn with the check kept
 and the bound of the forced inlining of the short constructors of BallVector (ball_vector.hpp,
-detail::bv_inline_limbs) set to LIMBS: 0 forces none, a large number every size; kairn-bench-m2-NAME-LEVEL
+detail::bv_inline_limbs, 14 limbs with Clang and 0 with other compilers) set to LIMBS for every
+compiler: 0 forces none, a large number every size; kairn-bench-m2-NAME-LEVEL
 is the harness built against such a copy (-DKAIRN_BENCH_EXTRA_INCLUDES=NAME=DEST). `before DEST` writes DEST/kairn from include/kairn of an
 earlier commit (by default 25ebe3d6, the last with the report inline at every check), read with
 `git archive` from this repository: -DKAIRN_BENCH_BEFORE_INCLUDE=DEST builds kairn-bench-m2-before-LEVEL
@@ -59,8 +60,10 @@ REPORT = '''KAIRN_DETAIL_COLD inline void report_environment(std::uint64_t b) no
 
 BEFORE = '25ebe3d6'
 
-# The bound of forced inlining (ball_vector.hpp), which `inline` replaces in its copy.
-BOUND = re.compile(r'^inline constexpr std::size_t bv_inline_limbs = \d+;$', re.M)
+# The bound of forced inlining (ball_vector.hpp: 14 limbs with Clang, 0 with any other compiler, in one
+# block), which `inline` replaces in its copy by one definition for every compiler.
+BOUND = re.compile(r'^#if defined\(__clang__\)\ninline constexpr std::size_t bv_inline_limbs = \d+;\n#else\n'
+                   r'inline constexpr std::size_t bv_inline_limbs = \d+;\n#endif$', re.M)
 
 
 def header():
@@ -103,7 +106,7 @@ def inline(dest, limbs):
     if len(BOUND.findall(text)) != 1:
         sys.exit('detail::bv_inline_limbs in include/kairn/ball_vector.hpp is not the expected one: update bench/entry_check.py')
     open(path, 'w').write(BOUND.sub('inline constexpr std::size_t bv_inline_limbs = %d;' % limbs, text))
-    print('wrote %s (detail::bv_inline_limbs = %d in the copy of ball_vector.hpp)' % (out, limbs))
+    print('wrote %s (detail::bv_inline_limbs = %d for every compiler in the copy of ball_vector.hpp)' % (out, limbs))
 
 
 def before(dest, commit):
