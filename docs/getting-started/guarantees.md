@@ -370,14 +370,16 @@ their full kernels) on its limb operand, the constructors `make_2`, `make_2_limb
 (`ball_from_interval_1`, `ball_from_interval_2`, which `from_interval` and `from_bounds` call) on what
 they are given, and the entry forms of the building blocks
 that add their operands (`two_sum_entry`, `fast_two_sum_entry`, `radd_entry` and the four directed
-sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb operand that is a
+sums), on both: `two_sum(a * b, c)` would otherwise not be error-free; and the steps of one limb that
+`x + y` and `x - y` of `Packed<T, 1>` call (`add_entry_step_1`, `sub_entry_step_1`), on both. A limb operand that is a
 factor of a fused operation is guarded too, because a compiler that sees the other factor to be 1
 rewrites `fma(x, 1, s)` as `x + s` and fuses the program's product into it: `x * a`, `a * x`,
 `x *= a` and `finite::mul(x, a)` of two limbs and of `Packed`, the scaling `X * a` of a ball of two
 limbs, `two_prod`, `mul_down` and `mul_up` call entry forms that guard it (`mul_2_1_full_entry`,
 `mul_2_1_entry`, `ball_scale_2_full_entry`, `two_prod_entry`, `mul_down_entry`, `mul_up_entry`). A
 limb operand that a kernel only rounds as a product alone, compares or steps needs none
-(comparisons, the scaling of a ball of one limb, `ldexp`, `rmul`, `next_up` and `next_down`). Limbs
+(comparisons, the scaling of a ball of one limb, `ldexp`, `rmul`, `next_up` and `next_down`, and
+`x * y` of `Packed<T, 1>`, `scale_step_1`). Limbs
 written directly into `limb[]` are not guarded: a limb written that way must not be a product the
 compiler can see being computed; `from_limbs` is the way to build a number from computed values,
 and `Interval<T, k>::from_limbs` and `Ball<T, k>::from_limbs` the way to build a set from limbs
@@ -397,9 +399,30 @@ guard of the packed kernels taken out of the copy as well
 ([Testing](../developer/testing.md#packed-and-the-containers)). A guarded $-0$
 enters as $+0$; Kairn leaves the sign of a zero unspecified anyway.
 
+**Except a square, with Clang under `-ffp-contract=fast` (a finding of 2026-11-23, not
+repaired).** The guard rests on the compiler's keeping `a + 0`, which differs from `a` for
+$a = -0$ only. A compiler that proves a value is never $-0$ may drop the addition, and a square
+`a * a` is never $-0$: Clang under `-ffp-contract=fast` drops the guard of a square the program
+passes straight in and fuses the square into the kernel's first addition, so that the operation
+computes with the exact square. Measured with Apple clang 21 on AArch64: `kairn::two_sum(c, a * a)`
+at `-O2` (the sum and the error term come out equal, neither the claimed one), `x + a * a` of
+`Packed<T, 2>` and `Packed<T, 1>`, and `kairn::sum` of an array that holds squares, in the scalar
+form; with Clang 18 on x86-64: `x + a * a` of `Packed<T, 1>`, in the AVX2 and the scalar forms,
+`Accumulator<T, 1>::add(a * a)` (six rounds in ten) and `kairn::sum` in the scalar form at `-O3`.
+Not with GCC 13 or 16, not under the other contraction settings, and not for a product of two
+factors that the compiler cannot see to be equal. `api.boundary.packed.*` prints the forms `x + a*a`
+and does not fail on them. A guard that no compiler drops would repair it in every kernel at once;
+which one is not decided.
+
 One-limb values themselves are not guarded: they behave like `T`, contraction included, so an
 expression such as `p * q + r` on `Expansion<double, 1>` may be evaluated with one rounding where
-the compiler contracts, exactly as for `double`.
+the compiler contracts, exactly as for `double`. `Packed<T, 1>` is the exception: its sum and
+difference guard both operands (`add_entry_step_1`, `sub_entry_step_1`) and its product is the
+opaque product (`scale_step_1`), so `p * q + r` on `Packed<double, 1>` is two roundings under every
+contraction setting, and a product the program computes and passes to its `+` or `-` is rounded
+first (but a square, above); `api.boundary.packed.*` checks both, and that the copy without the guard does fuse the
+program's product where the compilers above contract ([Packed, One
+limb](../reference/packed.md#one-limb)).
 
 The flag `-fno-signed-zeros` lets a compiler remove the guard and fold the opaque products of the
 kernels back into plain ones. GCC rejects it at compile time (`config.hpp`); Clang defines no
@@ -499,9 +522,11 @@ vectorizes the loop over `double`.
 
 `Packed<T, k>` ([reference](../reference/packed.md)) holds $W$ numbers in registers ($W$ = 4 for
 `double` and 8 for `float` with AVX2, 2 and 4 on AArch64, 1 elsewhere). **Each of its operations
-has, in each lane, the statement of the operation of `Expansion` of the same name, which is
-proved**: it is the packed form of that operation's kernel, which the generator writes from the
-same description as the scalar kernel and tests lane by lane against it, bit for bit. The oracle
+has, in each lane, the statement of its kernel, which is proved**: for two limbs and for the
+operations of one limb that do not round, the kernel of the operation of `Expansion` of the same
+name; for `+`, `-` and `*` of one limb, a step of the maps of one limb, whose statement is that of
+`Expansion<T, 1>`'s operator. It is the packed form of the kernel, which the generator writes from
+the same description as the scalar kernel and tests lane by lane against it, bit for bit. The oracle
 also judges every packed operation through the public interface, one oracle case per lane, beside
 the other lanes, in the quick and the full tier, and a test compares every operation with the
 scalar one on every pair of a corpus of special values. Nothing is stated across lanes, and
@@ -510,11 +535,17 @@ wrote, which depends on $W$, so that the same loop can give different bits on di
 each within its own bound ([A vector loop](../tutorials/vector-loop.md)).
 
 The operations are those of two limbs, and of one limb those that do not round (negation, `abs`,
-the comparisons, the conversions): `Packed<T, 1>` has no arithmetic, because the kernels of the
-arithmetic of one limb are not entry kernels, the only kernels a public header may call
-([Packed](../reference/packed.md#the-operations)). One composition is written by hand, as for
-`Expansion`: `ldexp` and `half` beyond the powers of two of `T` (argued and tested, not
-machine-checked, [above](#overflow-and-non-finite-values)).
+the comparisons, the conversions) and `+`, `-` and `*` with their compound forms. These call entry
+kernels, the only kernels a public header may call: `add_entry_step_1` and `sub_entry_step_1`,
+`add_1_1` and `sub_1_1` on both operands guarded, and `scale_step_1`, the opaque product. In each
+lane the value is that of `Expansion<T, 1>`'s operator, which is `T`'s: proved for finite operands
+with a finite result, and the result is proved finite only if both operands are; which infinity or
+NaN comes out is tested. Unlike `T`'s operators, a product the program passes in is rounded before
+the sum (but a square, [above](#products-the-program-passes-in)), and `x * y + z` on `Packed<T, 1>` is two roundings under every contraction setting,
+and a sum of two zeros or an exact zero product is $+0$ where `T` gives $-0$
+([Packed, One limb](../reference/packed.md#one-limb), which has every difference and its test).
+One composition is written by hand, as for `Expansion`: `ldexp` and `half` beyond the powers of
+two of `T` (argued and tested, not machine-checked, [above](#overflow-and-non-finite-values)).
 
 `SoA<T, k>` and its views ([reference](../reference/soa.md)) hold numbers as one array per limb and
 compute nothing: an element read is the value written (its limbs, but that a zero limb of two may

@@ -99,7 +99,9 @@ Three things remain the program's:
   the product is rounded before Kairn sees it; to keep its error, make one factor a two-limb number.
 - **One-limb numbers behave like `T`**, contraction included: they are not guarded, so `p * q + r` on
   `Expansion<double, 1>` may be one rounding where the compiler contracts, as for `double`
-  ([One limb](../getting-started/guarantees.md#one-limb)).
+  ([One limb](../getting-started/guarantees.md#one-limb)). Not so `Packed<double, 1>`, whose sum
+  guards its operands and whose product is the opaque product: there `p * q + r` is two roundings
+  under every setting ([Packed, One limb](../reference/packed.md#one-limb)).
 - **Limbs written directly** into `limb[]` are not guarded: such a limb must not be a product the
   compiler can see being computed; `from_limbs` guards what it is given.
 

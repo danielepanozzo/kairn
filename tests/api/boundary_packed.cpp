@@ -271,12 +271,13 @@ FORM(kp_mixed, return x + KPROD;)
 FORM(kp_mixed_minus, return x - KPROD;)
 FORM(kp_program_add, return P2<T>(P1<T>::from_limbs(Program<T>::add(KPROD.limb[0], x.limb[0])));)
 FORM(kp_program_add_rev, return P2<T>(P1<T>::from_limbs(Program<T>::add(x.limb[0], KPROD.limb[0])));)
-// A square of the program, a * a, which a compiler can prove is never -0: Apple clang 21 under
-// -ffp-contract=fast then drops the guard a * a + 0, which it may since the two have the same value,
-// and fuses the square into the kernel's first addition (a finding of 2026-11-23, in Packed<T, 1> +
-// and in x + a of two limbs, and outside this file in kairn::two_sum and the sums of arrays: the
-// guard of rule R3 does not hold such a product). Counted and printed, never required to agree, so
-// that every build shows whether its compiler does it (run_squares).
+// A square of the program, a * a, which a compiler can prove is never -0: Clang under
+// -ffp-contract=fast (Apple clang 21, Clang 18) then drops the guard a * a + 0, which it may since
+// the two have the same value, and fuses the square into the kernel's first addition (a finding of
+// 2026-11-23, in Packed<T, 1> + and in x + a of two limbs, and outside this file in kairn::two_sum,
+// the accumulator's add and the sums of arrays: the guard of rule R3 does not hold such a product).
+// Counted and printed, never required to agree, so that every build shows whether its compiler
+// does it (run_squares).
 #define SQUARE P1<T>::from_limbs(M::reg(a, a))
 FORM(sq_p1_plus, return P2<T>(X1 + SQUARE);)
 FORM(sq_plus, return x + SQUARE;)

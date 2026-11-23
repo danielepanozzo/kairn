@@ -745,7 +745,7 @@ KAIRN_FORCEINLINE Packed<T, 1> abs_upper(const Packed<T, 1>& x) noexcept {
 /// guarded, rule R3): z = RN(x + y), |z - (x + y)| <= u/(1 + u) |x + y|, when x, y and z are
 /// finite; z is finite only if x and y are. Each operand passes through the guard (an addition of
 /// +0) first, so a product the program computed and passes in is rounded before the sum, under
-/// every contraction setting (but a square a * a, whose guard Apple clang drops under
+/// every contraction setting (but a square a * a, whose guard Clang drops under
 /// -ffp-contract=fast: docs/getting-started/guarantees.md, "Products the program passes in"); and
 /// a sum of two zeros is +0 ((-0) + (-0) is -0 for T; MSVC removes that addition in packed code,
 /// and there it can stay -0). Infinities, NaN and an overflow are T's (tested, not proved beyond

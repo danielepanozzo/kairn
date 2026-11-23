@@ -4,18 +4,21 @@
 all $W$ numbers in one register, for `T` = `float` or `double` and $k = 1$ or $2$. Its operations
 are those of [`Expansion<T, k>`](index.md) that have an entry kernel, under the same names,
 computed by the packed form of that kernel: the arithmetic, the comparisons and the conversions of
-two limbs, and for one limb the operations that do not round ([below](#the-operations)). `kairn::PackedMask<T>` holds the $W$ truth values that a
+two limbs, and for one limb the operations that do not round ([below](#the-operations)) and `+`,
+`-` and `*`, which call entry kernels of one rounding ([One limb](#one-limb)). `kairn::PackedMask<T>` holds the $W$ truth values that a
 comparison returns. They are in `kairn/packed.hpp`, which `kairn/kairn.hpp` does not include
 ([below](#compile-time)).
 
-**Status: each operation has, in each lane, the statement of the scalar operation of the same
-name.** `Packed` has no arithmetic of its own. Each operation calls the packed form of the kernel
-that the operation of `Expansion` calls; the generator writes the packed form from the same
-description as the scalar kernel, and its tests compare the two lane by lane, bit for bit. So
-lane $i$ of `x + y` is the number that `Expansion`'s `x + y` gives for lane $i$ of `x` and lane $i$
-of `y`, with that operation's proved bound, its results for infinities and NaN, and its
-requirement of canonical operands: the page of each kernel applies to each lane. Nothing is stated
-across lanes: the $W$ operations are side by side, never combined.
+**Status: each operation has, in each lane, the statement of its kernel, which is proved.**
+`Packed` has no arithmetic of its own. Each operation calls the packed form of a kernel: of two
+limbs, the kernel that the operation of `Expansion` calls; of one limb, `+`, `-` and `*` call the
+steps of the maps of one limb, whose statements are those of the operators of `Expansion<T, 1>`
+([below](#one-limb)). The generator writes the packed form from the same description as the
+scalar kernel, and its tests compare the two lane by lane, bit for bit. So lane $i$ of `x + y` of
+two limbs is the number that `Expansion`'s `x + y` gives for lane $i$ of `x` and lane $i$ of `y`,
+with that operation's proved bound, its results for infinities and NaN, and its requirement of
+canonical operands: the page of each kernel applies to each lane. Nothing is stated across lanes:
+the $W$ operations are side by side, never combined.
 
 The number is the same with every compiler; its bits are too, **except the sign of a zero limb
 with MSVC**. A kernel guards each operand that comes from the program by adding $+0$ to it, which
@@ -44,6 +47,7 @@ template <class T, int K> struct Packed {
 template <class T> struct PackedMask { register_type bits; bool lane(int i) const; };
 bool any(PackedMask<T>), all(PackedMask<T>);  PackedMask<T> m & m, m | m, !m;
 Packed<T, K> select(PackedMask<T> m, Packed<T, K> a, Packed<T, K> b);
+Packed<T, 1> x + y, x - y, x * y;  x += y, x -= y, x *= y;   // x, y: Packed<T, 1>
 ```
 
 ## The three forms
@@ -107,23 +111,100 @@ the fix-up; `ldexp` and `half` beyond the powers of two of `T` take the same ste
 a composition argued and tested but not machine-checked
 ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)).
 
-**One limb.** `Packed<T, 1>` is the packed `T`, the limb operand of the mixed forms above, and has
-negation, `abs`, the six comparisons and `to_nearest`, `to_down`, `to_up`, `abs_upper`, which are,
-as for `Expansion<T, 1>`, the exact operations of `T`: a sign bit flipped or cleared, a comparison
-of lanes, the value itself. **It has no arithmetic**: no `+`, `-`, `*`, `add_fast`, `ldexp`, `half`
-and no function of `kairn::finite`. The kernels that the arithmetic of `Expansion<T, 1>` names,
-[`add_1_1`](add_1_1.md) and [`mul_1_1`](mul_1_1.md), have packed forms, but they are not *entry*
-kernels, the only kernels a public header may call ([rule
-R3](../developer/architecture.md#the-kernel-ir): an entry kernel guards the values that enter from
-the program; the generator's tests check that no header calls another); `Expansion<T, 1>` computes
-the operations of `T` itself, and nothing in `Packed` rounds but through a kernel. A loop of one
-limb is a loop of `T`, or of `Expansion<T, 1>`.
+### One limb
 
-**Not here**, with the reason: the arithmetic of one limb (above); `sign`, `isfinite` and `is_normalized` (no kernel computes them;
-`is_normalized` of two limbs rounds); the marked forms of `kairn::unverified`; the building blocks
-of `kairn/blocks.hpp`; `Ball` and `Interval` (no packed type); a sum or any other combination of
-the lanes (a program writes it with `lane()` and the operators of `Expansion`, in the order it
-chooses: [the tutorial](../tutorials/vector-loop.md) does).
+`Packed<T, 1>` is the packed `T`: next to a `Packed<T, 2>` it is the limb operand of the mixed
+forms above. Its negation, `abs`, the six comparisons and `to_nearest`, `to_down`, `to_up`,
+`abs_upper` are, as for `Expansion<T, 1>`, the exact operations of `T`: a sign bit flipped or
+cleared, a comparison of lanes, the value itself. Its arithmetic takes two `Packed<T, 1>` of one
+limb type, and calls an entry kernel of one rounding to nearest:
+
+| Packed, $k = 1$ | In each lane, $z$ | Kernel |
+|---|---|---|
+| `x + y`, `x += y` | $\mathrm{RN}(x + y)$, with $\lvert z - (x + y)\rvert \le \frac{u}{1 + u}\,\lvert x + y\rvert$ | [`add_entry_step_1`](add_entry_step_1.md): [`add_1_1`](add_1_1.md) on both operands guarded |
+| `x - y`, `x -= y` | $\mathrm{RN}(x - y)$, with $\lvert z - (x - y)\rvert \le \frac{u}{1 + u}\,\lvert x - y\rvert$ | [`sub_entry_step_1`](sub_entry_step_1.md): [`sub_1_1`](sub_1_1.md) on both operands guarded |
+| `x * y`, `x *= y` | $\mathrm{RN}(xy)$, with $\lvert z - xy\rvert \le \frac{u}{1 + u}\,\lvert xy\rvert + \tfrac12\eta$ | [`scale_step_1`](scale_step_1.md): [`mul_1_1`](mul_1_1.md), the opaque product $\mathrm{fma}(x, y, +0)$ |
+
+**Proved**, in each lane, of finite operands whose result is finite: the value and the bound in the
+table, by the theorem of each kernel over the reals (`proofs/theories/MapSteps.v`) and its bridge
+to the IEEE model (`*_ieee_bridge`, `proofs/theories/IeeeMapSteps.v`); and of any operands, that
+the result is finite only if both operands are (`*_ieee_lead`): an infinity or a NaN in a lane
+gives an infinity or a NaN. **Tested, not proved**: which infinity or NaN comes out, and that an
+overflow gives the infinity of its sign; they are the results of `T`'s operation on the same
+operands (`tests/api/packed.cpp`, below). These are the claims of [`add_1_1`](add_1_1.md),
+[`sub_1_1`](sub_1_1.md) and [`mul_1_1`](mul_1_1.md), the statements of the operators of
+`Expansion<T, 1>`. The three kernels are entry kernels, the only ones a public header may call
+([rule R3](../developer/architecture.md#the-kernel-ir): an entry kernel guards each value of the
+program that it adds; the generator's tests check that no header calls another): the steps of the
+maps `add`, `sub` and `scale` of one limb on the program's arrays ([Functions on
+arrays](batch.md)), which `Packed<T, 1>` calls on their own. Twins of their own would have the same
+listings, token for token, and the same statements: the operators call the steps. A debug build
+checks the environment before each, the rounding mode included, as before `Expansion<T, 1>`'s
+operators ([Checks](#checks)).
+
+**What differs from `T` and from `Expansion<T, 1>`.** The operators of `Expansion<T, 1>` are those
+of `T` ([D6](../developer/design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang)).
+Each lane of `Packed<T, 1>` has the same value, with these differences, each of which a test
+checks:
+
+| | `T`, `Expansion<T, 1>` | `Packed<T, 1>` | Test |
+|---|---|---|---|
+| A product the program computes and passes to `+` or `-`, `a * b + x` | fused into the sum where the compiler contracts | rounded first, by the guard, under every contraction setting; but a square `a * a` with Clang under `-ffp-contract=fast`, which drops the guard ([a finding](../getting-started/guarantees.md#products-the-program-passes-in)) | `api.boundary.packed.*` (`P1 x + a*b` and seven more forms; `P1 x + a*a` printed, no verdict) |
+| `x * y + z` | one rounding where the compiler contracts ([D6](../developer/design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang) says when for `Expansion<T, 1>`) | two, always: the product is the opaque product, which nothing can fuse, and the sum guards it | `api.boundary.packed.*` (`P1(a) * P1(b) + P1 x` and five more) |
+| $(-0) + (-0)$, $(-0) - (+0)$ | $-0$ | $+0$: the guard computes $-0 + 0$; with MSVC, which removes that addition in packed code, it can stay $-0$ | `api.packed.*` ("against T") |
+| an exact zero product of negative sign, $(-1) \times 0$ | $-0$ | $+0$: $\mathrm{fma}(-1, 0, +0)$ is $-0 + 0$; a product that underflows keeps its sign | `api.packed.*` ("against T") |
+| a NaN | a NaN | a NaN; which one is not specified | `api.packed.*` (a NaN compared as a NaN) |
+| the rounding mode | the current one | to nearest; a debug build checks it | `api.checks.*` |
+| an operand of type `T` or `Expansion<T, 1>` | converts | does not: a program broadcasts it | `api.reject.packed.one_limb_*` |
+
+With MSVC `api.packed.*` prints which sign $(-0) + (-0)$ came out with, without a verdict; and,
+as for every operation of `Packed`, none of these is usable in constant evaluation, where those of
+`T` and `Expansion<T, 1>` are.
+
+**The result of `x * y`** is the opaque product, whose value is the rounded product: nothing of
+the exact product is left for a compiler to fuse. Passed straight into an operation of Kairn that
+adds it (`x * y + z`, `w + x * y` with `w` of two limbs, an array given to `sum` or `add`), it is
+guarded there as well; added by the program itself, on the registers with the form's own addition,
+it is not fused either: no compiler measured fused it, with the guard or in the copy of the headers
+without it (`api.boundary.packed.*`, `api.boundary.arrays.*`, the forms of `P1(a) * P1(b)`). A
+product the program computes with its own multiplication and adds with its own addition is the
+program's, and follows the compiler's contraction as for `T`.
+
+**What it costs.** Each operator against the bare instruction of the form on the same data
+(`vaddq_f64`, `vsubq_f64`, `vmulq_f64` with NEON, `_mm256_add_pd`, `_mm256_sub_pd`, `_mm256_mul_pd`
+with AVX2, and their `float` forms): in a loop `z[i] = x[i] op y[i]` over three arrays of 8 KiB, in
+the first-level cache, $W$ lanes at a time, and in a dependent chain `acc = acc op y[i]`, one
+register, every lane near 1; each figure the median of 21 runs of a program written for the
+purpose (built at `-O3` with `NDEBUG`; on the x86-64 machine with `-mavx2 -mfma`, on one processor
+of the second socket), the time of `Packed<T, 1>` over that of the bare instruction, `double` and
+`float` together (2026-11-23). The program is not in `bench/`.
+
+| Machine, compiler, form | `x + y`, `x - y`, loop | `x * y`, loop | `x + y`, `x - y`, chain | `x * y`, chain | Spread of the runs |
+|---|---|---|---|---|---|
+| Apple M3 Max, Apple clang 21, NEON | 0.98 to 1.00 | 0.99 to 1.00 | 1.04 to 1.05 | 1.00 | up to 23% |
+| Apple M3 Max, GCC 16, NEON | 0.98 to 1.00 | 0.97 to 1.00 | 2.20 to 2.21 | 1.00 | up to 36% |
+| AMD EPYC 7452, GCC 13, AVX2 | 0.98 to 1.01 | 1.00 to 1.01 | 1.84 to 1.90 | 1.53 to 1.55 | up to 10% |
+| AMD EPYC 7452, Clang 18, AVX2 | 1.01 to 1.02 | 1.00 | 0.98 to 1.03 | 1.14 to 1.16 | up to 10% |
+
+The spread is the largest time of the 21 runs less the smallest, over the median; the ratio of the
+smallest times is within 0.10 of that of the medians in every row. The bare loop takes 0.14 to 0.15
+ns per `double` lane and 0.07 per `float` lane on the M3, 0.17 to 0.18 and 0.09 on the EPYC; a step
+of the bare chain of sums 0.67 to 0.70 ns on the M3, 0.96 to 0.99 with GCC 13 and 1.31 to 1.35 with
+Clang 18 on the EPYC. In the loop the two guards of a sum are additions that the processor
+overlaps with the loads and the store, which bound the loop. In a chain the guard of the running
+value is on the critical path: GCC keeps it, and a step costs two additions; Clang proves that the
+running value is never $-0$ and drops its guard, which then does not change it (the guard of the
+other operand stays, off the path). The product is one fused multiply-add with a zero addend
+instead of a multiplication: of the same latency on the M3, of a longer one than the
+multiplication on the EPYC (Zen 2), which shows in a chain of products.
+
+**Not here**, with the reason: `add_fast`, `ldexp`, `half` and the functions of `kairn::finite` of
+one limb, and an operand of type `T` or `Expansion<T, 1>` (not decided: a program broadcasts the
+value); `sign`, `isfinite` and `is_normalized` (no kernel computes them; `is_normalized` of two
+limbs rounds); the marked forms of `kairn::unverified`; the building blocks of `kairn/blocks.hpp`;
+`Ball` and `Interval` (no packed type); a sum or any other combination of the lanes (a program
+writes it with `lane()` and the operators of `Expansion`, in the order it chooses: [the
+tutorial](../tutorials/vector-loop.md) does).
 
 ## Moves, loads and stores
 
@@ -160,9 +241,11 @@ With `KAIRN_CHECKS` 1 (a build without `NDEBUG`,
 checks the floating-point environment once, then every lane of every operand, exactly as the
 operation of `Expansion` of the same name checks its one operand, with the same messages: a lane
 that is not canonical stops the program with `kairn: an operand: is not canonical ...`. The loads
-and `from_limbs` check each lane as `Expansion<T, 2>::from_limbs` does. The operations that do not
-round for `Expansion` do not check the rounding mode here either (negation, `abs`, comparisons,
-the conversions to one limb); the moves check nothing.
+and `from_limbs` check each lane as `Expansion<T, 2>::from_limbs` does. The arithmetic of one limb
+checks what the operators of `Expansion<T, 1>` check: the environment, the rounding mode included
+(every value of `T` is a canonical number of one limb). The operations that do not round for
+`Expansion` do not check the rounding mode here either (negation, `abs`, comparisons, the
+conversions to one limb); the moves check nothing.
 
 ## Regular type
 
@@ -196,11 +279,19 @@ therefore does not include them: a program includes `kairn/packed.hpp` or `kairn
   other lines (a NaN beside a finite number, an overflow in one lane only), every lane position
   taking its share, and judged against the claims of the scalar kernel, in the quick and the full
   tier and with every flag set's runner. On x86-64 builds whose flags give the scalar form, a
-  runner built for AVX2 runs the packed forms too.
+  runner built for AVX2 runs the packed forms too. The arithmetic of one limb has packed forms
+  only (`packed_plus` of `add_entry_step_1`, ...: no scalar operation calls its kernels), judged
+  in the form of each build, the scalar form of one lane where the build's flags give no SIMD.
 - **Bit for bit against the scalar operations** (`tests/api/packed.cpp`): every operation above,
   `float` and `double`, one and two limbs, on every pair of a corpus of every kind of value, one
   pair per lane position in turn, in the form of the build, the scalar form and, where it applies,
   AVX2. Every limb of every lane equals the scalar result, a NaN compared as a NaN, and with MSVC
-  a zero as a zero ([above](#packed-numbers-in-registers)).
+  a zero as a zero ([above](#packed-numbers-in-registers)). The scalar result of the arithmetic of
+  one limb is that of the scalar kernel it calls; and the same operations are compared with the
+  operators of `Expansion<T, 1>`, `T`'s, with the differences of the table [above](#one-limb), each
+  of which the corpus must reach.
+- **A product of the program, and the product of `x * y`**, passed straight in
+  (`tests/api/boundary_packed.cpp`, `boundary_batch.cpp`): [above](#one-limb), and
+  [Testing](../developer/testing.md#packed-and-the-containers).
 - **The checks**, the compile-fail cases and the tutorial's loop in the three forms:
   [Testing](../developer/testing.md#packed-and-the-containers).

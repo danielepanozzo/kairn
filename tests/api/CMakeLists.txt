@@ -711,14 +711,19 @@ foreach(_i RANGE 0 ${_last} 2)
     # with and without -mavx2 -mfma in the build's flags); Apple clang 21 with =fast, NEON and
     # scalar; Clang 18 on Linux AArch64 with =fast in the scalar form only (it fused no product
     # written with the NEON intrinsics: 0 of 40 000 registers in every form). Clang 18 on x86-64
-    # fused nothing without the guard, in either form and at any setting, and MSVC and clang-cl
-    # were not measured with Packed: their builds only report.
+    # with =fast, in the AVX2 and the scalar forms, since the arithmetic of Packed<T, 1>
+    # (2026-11-23: the program's product into x + y of one limb, every register; it fused no form
+    # of two limbs, in either form and at any setting). MSVC and clang-cl were not measured with
+    # Packed: their builds only report.
     set(_fuses_packed OFF)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND (_variant STREQUAL "" OR _variant STREQUAL "contract-fast"))
       set(_fuses_packed ON)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
            AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$"
            AND (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR _form STREQUAL "scalar"))
+      set(_fuses_packed ON)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast"
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
       set(_fuses_packed ON)
     endif()
     if(_fuses_packed)
