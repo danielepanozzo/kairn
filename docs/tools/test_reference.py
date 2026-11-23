@@ -17,6 +17,15 @@
   the kernel's own names, conditions and core; the axioms are those of the audit's allow-list, and
   a proved theorem that no audit file prints fails; every form of ldexp beyond the powers of two
   says that its steps are not machine-checked; the C++ API is in the nav and the index.
+- The stored brute-force runs a page counts: those of every campaign whose code is the kernel's
+  now; none after its code changed in place, or after a kernel it calls changed (printed again by
+  the generator) or a function of the prelude it calls; all of them after a change of a text field,
+  a comment or the indentation; a kernel no run judged says so; the total of several campaigns
+  leaves out the runs that judged other claims and counts a toy domain once; a summary of a commit
+  that results/brute-code.json does not have fails.
+- docs/tools/brute_code.py, on headers written for the test: what a definition is, which changes
+  are of code, what it refuses to read; results/brute-code.json has every commit of the stored
+  runs, and is what the history gives (where the history is in the clone: a shallow one skips it).
 
 Python 3 standard library only; no network, no compiler.
 """
@@ -337,12 +346,68 @@ class Table(unittest.TestCase):
 
 # --- The tool on modified copies ---------------------------------------------------------------
 
-COPIED = ["gen/claims.json", "gen/kernels", "include/kairn/gen/bounds.hpp", "results",
+COPIED = ["gen/claims.json", "gen/kernels", "include/kairn/gen/bounds.hpp", "include/kairn/gen/prelude.hpp",
+          "include/kairn/gen/scalar.hpp", "include/kairn/gen/avx2.hpp", "include/kairn/gen/neon.hpp", "results",
           "docs/tools/reference_operations.py", "docs/developer/design/phase0/references.md",
           "docs/developer/results", "proofs/theories", "proofs/gen/Statements.v", "proofs/gen/Model.v",
           "proofs/gen/IeeeModel.v", "proofs/gen/Audit.v", "proofs/gen/IeeeAudit.v", "proofs/audit",
           "mkdocs.yml",
           "docs/reference"]
+
+
+def edit_definitions(text, name, old, new):
+    """A generated header with old replaced by new in the definitions of the function name (from the
+    line that names it to the next line that is a closing brace alone)."""
+    lines, inside, done = text.split("\n"), False, 0
+    for i, line in enumerate(lines):
+        if not inside and re.search(r"[ *&]%s\(.*\{$" % re.escape(name), line) and not line.startswith(" "):
+            inside = True
+        if inside:
+            if old in line:
+                lines[i] = line.replace(old, new)
+                done += 1
+            if line == "}":
+                inside = False
+    if not done:
+        raise AssertionError("no definition of %s has %r" % (name, old))
+    return "\n".join(lines)
+
+
+def print_headers(root):
+    """Print include/kairn/gen/prelude.hpp, scalar.hpp, avx2.hpp and neon.hpp under root from the
+    descriptions of root/gen/kernels/, with the repository's generator, as `kairn-gen build` would."""
+    sys.path.insert(0, os.path.join(ROOT, "gen"))
+    keep = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True   # as gen/kairn-gen: nothing of a run is written into the repository
+    try:
+        from kairn_gen import build, cpp, simd
+    finally:
+        sys.dont_write_bytecode = keep
+        sys.path.pop(0)
+    kernels, errors = build.load(root)
+    if errors:
+        raise AssertionError("the generator refuses the descriptions: %s" % errors)
+    for name, text in (("prelude", cpp.prelude(kernels)), ("scalar", cpp.scalar(kernels)),
+                       ("avx2", simd.header(simd.AVX2, kernels)), ("neon", simd.header(simd.NEON, kernels))):
+        with open(os.path.join(root, "include", "kairn", "gen", name + ".hpp"), "w", encoding="utf-8",
+                  newline="\n") as f:
+            f.write(text)
+
+
+def table_rows(text, lead):
+    """{title: (cases judged, failed)} of the table after the paragraph that starts with lead."""
+    after = text[text.index(lead):]
+    rows = {}
+    for line in after.split("\n")[1:]:
+        if not line.startswith("|"):
+            if rows:
+                break
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if cells[0] in ("Run", "---"):
+            continue
+        rows[cells[0]] = (int(cells[1].replace(" ", "")), int(cells[2].replace(" ", "")))
+    return rows
 
 
 IEEE_ONLY = ("make_2", "make_2_limbs", "ball_make_1", "ball_make_2")
@@ -815,7 +880,8 @@ class Tool(unittest.TestCase):
         self.assertEqual(reference.check(self.copy.root), [])
 
     def test_crlf_checkout_is_fresh(self):
-        for rel in ("docs/reference/add_2_2.md", "mkdocs.yml"):
+        # The generated headers too: their line ends are not code.
+        for rel in ("docs/reference/add_2_2.md", "mkdocs.yml", "include/kairn/gen/scalar.hpp"):
             path = self.copy.path(rel)
             text = reference.read(path)
             with open(path, "w", encoding="utf-8", newline="") as f:
@@ -911,6 +977,266 @@ class Tool(unittest.TestCase):
         shutil.rmtree(self.copy.path("results"))
         page = reference.plan(self.copy.root)["docs/reference/add_2_2.md"]
         self.assertIn("No stored brute-force run has judged this kernel yet.", page)
+
+    # --- The stored runs of a kernel's code (results/brute-code.json, docs/tools/brute_code.py) ---
+
+    def measured(self, name):
+        page = self.page(name)
+        return page[page.index("## Measured"):page.index("## Not claimed")]
+
+    def test_unchanged_code_shows_the_runs_of_every_campaign(self):
+        # add_1_1 has the code of Milestone 1's runs: its page shows them, those of Milestone 2, and
+        # their total.
+        m = self.measured("add_1_1")
+        self.assertIn("**Milestone 1**: the runs of commit `6f89054`", m)
+        self.assertIn("**Milestone 2**: the runs of commit `5f597fb`", m)
+        self.assertNotIn("other code", m)
+        self.assertIn("results/brute-code.json", m)
+        # Milestone 1's runs as the summaries count them, and the total the sum of the campaigns.
+        judged = sum(json.loads(reference.read(self.copy.path("results/milestone1/brute/" + f)))
+                     ["compiled"]["kernels"]["add_1_1"]["binary64"]["counts"]["judged"]
+                     for f in ("linux-x86-64.json", "macos-arm64.json", "windows-x64.json"))
+        m1 = table_rows(m, "**Milestone 1**")
+        m2 = table_rows(m, "**Milestone 2**")
+        total = table_rows(m, "**In all**")
+        title = "`binary64` (`double`), compiled"
+        self.assertEqual(m1[title + ": 60 runners on 3 machines"][0], judged)
+        self.assertGreater(judged, 10 ** 8)
+        self.assertEqual(total[title + ", Milestone 1 and Milestone 2"][0],
+                         judged + m2[title + ": 90 runners on 3 machines"][0])
+        # An enumeration of a toy domain that an earlier one enumerated is counted once.
+        toy = [t for t in total if t.startswith("toy formats")]
+        self.assertEqual(len(toy), 1)
+        self.assertIn("each counted once", toy[0])
+        self.assertLess(total[toy[0]][0], sum(v[0] for t, v in list(m1.items()) + list(m2.items())
+                                              if t.startswith("toy formats")))
+
+    def test_code_changed_in_place_counts_no_run(self):
+        # add_1_1's packed code changed after every stored run: no run is of its code, and the page
+        # names the runs it does not count; a kernel whose code did not change keeps its runs.
+        self.edit_file("include/kairn/gen/avx2.hpp",
+                       lambda t: edit_definitions(t, "add_1_1", "_mm256_add_pd(a, b)", "_mm256_add_pd(b, a)"))
+        m = self.measured("add_1_1")
+        self.assertIn("No stored brute-force run is of this kernel's code as it is now: the runs of Milestone 1, "
+                      "at commits `6f89054` and `f7e0b6d`, and of Milestone 2, at commit `5f597fb`, were of other "
+                      "code, and are not counted.", m)
+        self.assertNotIn("| Run |", m)
+        self.assertIn("**Milestone 1**", self.measured("add_2_2"))
+
+    def test_code_changed_since_a_campaign_shows_the_later_runs(self):
+        # mul_1_1's code changed between Milestone 1 and Milestone 2 (its constant-evaluation branch):
+        # its page shows the runs of Milestone 2 only, and says why.
+        m = self.measured("mul_1_1")
+        self.assertIn("**Milestone 2**", m)
+        self.assertNotIn("**Milestone 1**", m)
+        self.assertNotIn("**In all**", m)
+        self.assertIn("The runs of Milestone 1, at commits `6f89054` and `f7e0b6d`, were of other code, and are "
+                      "not counted.", m)
+        # axpy_entry_step_2 was changed in place at the close of rule R3: only the supplementary run
+        # of that commit is of its code.
+        m = self.measured("axpy_entry_step_2")
+        self.assertIn("**Milestone 2**: the supplementary run of commit `8ee5ed9`", m)
+        self.assertIn("The runs of Milestone 2, at commit `5f597fb`, were of other code, and are not counted.", m)
+        self.assertNotIn("compiled: 90 runners", m)
+
+    def test_a_text_field_and_comments_are_not_code(self):
+        # The source of the claims, a comment of the generated header and the indentation of its code
+        # changed: the code did not, and every run still counts.
+        before = self.measured("add_1_1")
+        self.change("add_1_1", lambda k: k["source"].update(cite="the same bound, cited otherwise"))
+        self.edit_file("include/kairn/gen/scalar.hpp", lambda t: t.replace(
+            "// one rounding to nearest, the bound u/(1+u) of JR18.", "// another comment.", 1))
+        self.edit_file("include/kairn/gen/scalar.hpp", lambda t: edit_definitions(
+            t, "add_1_1", "    const double s = a + b;", "        const double s = a + b;  // a comment"))
+        self.assertEqual(self.measured("add_1_1"), before)
+
+    def test_a_changed_callee_changes_its_callers(self):
+        # fast_two_sum's listing changed (its sum written b + a) and the headers printed again by the
+        # generator, which inlines every call: the kernels that call it have other code; two_sum and
+        # add_1_1, which do not, keep their runs.
+        self.edit_file("gen/kernels/fast_two_sum.kernel", lambda t: t.replace("s = add(a, b)", "s = add(b, a)"))
+        print_headers(self.copy.root)
+        for name in ("fast_two_sum", "add_2_2", "add_fast_2_2", "mul_2_2"):
+            self.assertIn("No stored brute-force run is of this kernel's code as it is now", self.measured(name))
+        for name in ("ball_add_2", "add_2_2_full"):   # through add_2_2
+            self.assertIn("No stored brute-force run is of this kernel's code as it is now", self.measured(name))
+        for name in ("two_sum", "add_1_1", "lt_2_2"):
+            m = self.measured(name)
+            self.assertIn("**Milestone 1**", m)
+            self.assertNotIn("other code", m)
+
+    def test_a_changed_helper_changes_the_kernels_that_call_it(self):
+        # A function of the prelude that kernels call by name (abs_bits) is part of their code.
+        self.edit_file("include/kairn/gen/prelude.hpp", lambda t: t.replace(
+            "& 0x7fffffffffffffffu);", "& 0x7fffffffffffffffull);", 1))
+        self.assertIn("No stored brute-force run is of this kernel's code as it is now", self.measured("ball_add_2"))
+        self.assertIn("**Milestone 1**", self.measured("add_1_1"))
+
+    def test_a_kernel_that_no_run_judged(self):
+        # One summary left, of add_2_2 alone: add_1_1's page says no run judged it.
+        brute = self.copy.path("results/milestone2/brute")
+        data = json.loads(reference.read(os.path.join(brute, "linux-x86-64.json")))
+        data["compiled"]["kernels"] = {"add_2_2": data["compiled"]["kernels"]["add_2_2"]}
+        data["interp"]["enumerations"] = [r for r in data["interp"]["enumerations"] if r["kernel"] == "add_2_2"]
+        shutil.rmtree(self.copy.path("results/milestone1/brute"))
+        shutil.rmtree(brute)
+        os.makedirs(brute)
+        with open(os.path.join(brute, "linux-x86-64.json"), "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        self.assertIn("No stored brute-force run has judged this kernel yet.", self.measured("add_1_1"))
+        m = self.measured("add_2_2")
+        self.assertIn("**Milestone 2**: the runs of commit `5f597fb`", m)
+        self.assertIn("compiled: 36 runners on 1 machine |", m)
+        self.assertNotIn("**Milestone 1**", m)
+        self.assertNotIn("**In all**", m)
+
+    def test_runs_that_judged_other_claims_are_left_out_of_the_total(self):
+        # ball_add_2_full's claim gained its condition B4 after Milestone 1's main runs, of its code
+        # now: the page shows them, flagged, and the total counts the supplementary run that judged
+        # the condition and Milestone 2's.
+        m = self.measured("ball_add_2_full")
+        self.assertIn("**The condition of this claim was not judged by every run.**", m)
+        self.assertIn("but for the rows that judged other claims, which are not counted", m)
+        m1, m2 = table_rows(m, "**Milestone 1**"), table_rows(m, "**Milestone 2**")
+        total = table_rows(m, "**In all**")
+        title = "`binary64` (`double`), compiled"
+        self.assertEqual(total[title + ", Milestone 1 and Milestone 2"][0],
+                         m1[title + ", supplementary run: 60 runners on 3 machines"][0]
+                         + m2[title + ": 90 runners on 3 machines"][0])
+
+    def test_a_run_of_a_commit_without_fingerprints_fails(self):
+        def drop(text):
+            data = json.loads(text)
+            del data["commits"]["5f597fbcf2a7f5b077671e115487bc9515c0bb24"]
+            return json.dumps(data)
+        self.edit_file("results/brute-code.json", drop)
+        self.fails("results/milestone2/brute/", "5f597fb", "docs/tools/brute_code.py")
+
+
+SYNTHETIC_PRELUDE = """// Generated.
+#pragma once
+namespace kairn::gen {
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+template <class T, int N>
+struct result {
+    T limb[N];
+};
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr double abs_bits(double a) noexcept {
+    return a;  // stands for the real one
+}
+}  // namespace kairn::gen
+"""
+
+SYNTHETIC_HEADER = """// Generated.
+#pragma once
+#include "prelude.hpp"
+
+KAIRN_GEN_PUSH_WARNINGS
+namespace kairn::gen {
+
+// a(x) -> y
+// A kernel with a fix-up of its own, that calls b by name.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD result<double, 1> a(double x) noexcept {
+    return {{x}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE void a(double x, double& y_out) noexcept {
+    const double t = b(x);  // a comment at the end of a line
+    if (t > 0) [[likely]] {
+        y_out = t;
+    } else {
+        y_out = fixup::a(x).limb[0];
+    }
+}
+
+// b(x) -> y
+KAIRN_GEN_FORCEINLINE double b(double x) noexcept { return x + 1.0; }
+
+// c(x) -> y
+KAIRN_GEN_FORCEINLINE void c(double x, double& y_out) noexcept {
+    y_out = abs_bits(x);
+}
+
+// fold s
+inline void s_seq(const double* x_in, std::size_t n, double& r_out) noexcept {
+    double r = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        c(x_in[i_], r);
+    }
+    r_out = r;
+}
+
+}  // namespace kairn::gen
+KAIRN_GEN_POP_WARNINGS
+"""
+
+
+class BruteCode(unittest.TestCase):
+    """docs/tools/brute_code.py: what the code of a kernel is, and the fingerprints of the stored
+    runs' commits."""
+
+    def prints(self, header=SYNTHETIC_HEADER, prelude=SYNTHETIC_PRELUDE):
+        files = {"prelude": prelude, "scalar": header, "avx2": "", "neon": header}
+        return reference.BRUTE_CODE.fingerprints(files, ["a", "b", "c", "d"], ["s"])
+
+    def test_definitions(self):
+        defs = reference.BRUTE_CODE.definitions(SYNTHETIC_HEADER, "test")
+        self.assertEqual([n for n, _ in defs], ["a", "a", "b", "c", "s_seq"])
+        self.assertEqual(defs[0][1], ("KAIRN_GEN_COLD result<double, 1> a(double x) noexcept {", "return {{x}};", "}"))
+        self.assertIn("const double t = b(x);", defs[1][1])
+        self.assertEqual(defs[2][1], ("KAIRN_GEN_FORCEINLINE double b(double x) noexcept { return x + 1.0; }",))
+        self.assertEqual(reference.BRUTE_CODE.definitions(SYNTHETIC_PRELUDE, "test")[0][0], "abs_bits")
+
+    def test_comments_blank_lines_and_indentation_are_not_code(self):
+        other = SYNTHETIC_HEADER.replace("// A kernel with", "// Another kernel with").replace(
+            "    const double t = b(x);  // a comment at the end of a line", "\n        const double t = b(x);")
+        self.assertEqual(self.prints(other), self.prints())
+
+    def test_a_changed_operation_changes_its_kernel_and_its_callers(self):
+        before, after = self.prints(), self.prints(SYNTHETIC_HEADER.replace("x + 1.0", "x + 2.0"))
+        self.assertNotEqual(before["b"], after["b"])
+        self.assertNotEqual(before["a"], after["a"])   # a calls b by name
+        self.assertEqual(before["c"], after["c"])
+        self.assertEqual(before["s"], after["s"])
+        self.assertIsNone(before["d"])                 # no header defines d
+
+    def test_a_changed_helper_changes_the_functions_that_call_it(self):
+        before, after = self.prints(), self.prints(prelude=SYNTHETIC_PRELUDE.replace("return a;", "return -a;"))
+        self.assertNotEqual(before["c"], after["c"])
+        self.assertNotEqual(before["s"], after["s"])   # the loop calls c by name
+        self.assertEqual(before["a"], after["a"])
+        self.assertEqual(before["b"], after["b"])
+
+    def test_what_it_cannot_read_fails(self):
+        with self.assertRaises(reference.BRUTE_CODE.CodeError):
+            reference.BRUTE_CODE.definitions(SYNTHETIC_HEADER.replace(
+                "void c(double x, double& y_out) noexcept {", "void c(double x,\n    double& y_out) noexcept {"), "test")
+        with self.assertRaises(reference.BRUTE_CODE.CodeError):
+            reference.BRUTE_CODE.definitions(SYNTHETIC_HEADER + "}\n", "test")
+        # A function would be the code of two objects: the kernel s_seq and the loop s.
+        with self.assertRaises(reference.BRUTE_CODE.CodeError):
+            reference.BRUTE_CODE.fingerprints({"prelude": "", "scalar": SYNTHETIC_HEADER, "avx2": "", "neon": ""},
+                                              ["s_seq"], ["s"])
+
+    def test_the_fingerprints_have_every_commit_of_the_stored_runs(self):
+        code = reference.BRUTE_CODE.load(ROOT)
+        for commit, summaries in reference.BRUTE_CODE.summary_commits(ROOT).items():
+            self.assertIn(commit, code, "%s, of %s" % (commit, summaries))
+
+    def test_the_fingerprints_are_what_the_history_gives(self):
+        # Needs the commits of the stored runs: a shallow clone (the CI's checkout) has none.
+        commits = reference.BRUTE_CODE.summary_commits(ROOT)
+        if not all(reference.BRUTE_CODE.has_commit(ROOT, c) for c in commits):
+            self.skipTest("the commits of the stored runs are not in this clone (a shallow one); "
+                          "python3 docs/tools/brute_code.py --check needs them")
+        self.assertEqual(reference.BRUTE_CODE.manifest(ROOT),
+                         reference.read(os.path.join(ROOT, *reference.BRUTE_CODE.MANIFEST.split("/"))))
 
 
 class Numbers(unittest.TestCase):
