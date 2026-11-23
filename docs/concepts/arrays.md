@@ -29,7 +29,7 @@ summation changes.
 | | For | What is guaranteed |
 |---|---|---|
 | A plain loop of `Expansion<T, k>` | any data structure, one number at a time; the simplest | each operation's bound; the loop's own analysis is the program's |
-| [`kairn::Packed<T, k>`](../reference/packed.md) | a loop the program writes itself, $W$ numbers at a time in SIMD registers: $W$ = 4 `double` or 8 `float` with AVX2, 2 or 4 with AArch64's Advanced SIMD, 1 elsewhere | in each lane, the statement of the operation of `Expansion` of the same name, which is proved; nothing across lanes, nothing about the loop |
+| [`kairn::Packed<T, k>`](../reference/packed.md) | a loop the program writes itself, $W$ numbers at a time in SIMD registers: $W$ = 4 `double` or 8 `float` with AVX2, 2 or 4 with AArch64's Advanced SIMD, 1 elsewhere; of one limb, a loop of `T` in SIMD registers, `x * y + z` never fused | in each lane, the statement of the operation of `Expansion` of the same name, which is proved; nothing across lanes, nothing about the loop |
 | The functions on arrays of [`kairn/batch.hpp`](../reference/batch.md) | `sum`, `sum_fast`, `dot`, the maps `add`, `sub`, `scale`, `mul_pow2`, `axpy`, the coefficients of a product of polynomials `conv`, and `norm_upper`, an upper bound of the largest magnitude | each calls one generated loop whose statement is proved for every length of array and every number of lanes, in the real model and in the IEEE model |
 | [`kairn::Accumulator<T, k>`](../reference/accumulator.md) | a sum or a dot product computed term by term, in an order of the program's own or in parts merged at the end | a bound for every history of additions, products and merges |
 
@@ -42,6 +42,20 @@ includes `kairn/kairn.hpp`, 0.218 s instead of 0.106 s with Apple clang and 1.00
 with GCC 13 on AVX2 ([Packed, Compile time](../reference/packed.md#compile-time)). There is no choice of
 instruction set at run time: the form of `Packed` is the one of the instruction set a file is
 compiled for, and on x86-64 the AVX2 form needs `-mavx2 -mfma` or `-march=x86-64-v3`.
+
+For numbers of one limb the choice is between a loop of `T` (or `Expansion<T, 1>`, which computes
+the operations of `T`) and one of `Packed<T, 1>`. The first costs what `T` costs; the compiler may
+vectorize it, and contracts `x * y + z` into one rounding where its setting says so. The second is
+the same loop $W$ numbers at a time in registers, with the same value in each lane but each
+operation rounded on its own: `x * y + z` is two roundings with every compiler and setting, and a
+product the program passes in is rounded before the sum (but a square with Clang under
+`-ffp-contract=fast`: [a finding](../getting-started/guarantees.md#products-the-program-passes-in)).
+The guards that make it so cost nothing measurable in a loop over arrays in the first-level cache,
+and up to one addition more per step in a chain of sums, where a compiler keeps them (GCC: 1.8 to
+2.2 times the bare addition). The product, a fused multiply-add with a zero addend, costs what a
+multiplication costs, but in a chain of products on the x86-64 machine measured, 1.14 to 1.55
+times ([Packed, One limb](../reference/packed.md#one-limb), which measures it and lists every
+difference from `T`).
 
 ## How the error of a sum grows with its length
 

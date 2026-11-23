@@ -1,6 +1,6 @@
 # The step of the map add_1 on arrays that the program supplies (milestone2.md, "Arrays that the
 # program fills"): both operands pass through guard, rule R3, then add_1_1. Its claims are those
-# of add_1_1.
+# of add_1_1. Also x + y of Packed<T, 1> (kairn/packed.hpp), which calls it on its own.
 kernel:        add_entry_step_1
 input:         x
 input:         y

@@ -15,8 +15,10 @@ $$z \approx x a.$$
 | Form | Operands | Result | Note |
 |---|---|---|---|
 | `scale(x, a, z)` | `SoAView<const T, 1>`, `T`, `SoAView<T, 1>` | `bool` | the step of the loop the function calls, once per element; not `constexpr`; rounds (loop `scale_1`) |
+| `x * y` | `Packed<T, 1>`, `Packed<T, 1>` | `Packed<T, 1>` | `kairn/packed.hpp`, in each lane, $a$ being `y`; the opaque product, so an exact zero product is $+0$ ([Packed](packed.md#one-limb)); not `constexpr`; rounds |
+| `x *= y` | `Packed<T, 1>`, `Packed<T, 1>` | `Packed<T, 1>` | `kairn/packed.hpp`, in each lane, $a$ being `y`; the opaque product, so an exact zero product is $+0$ ([Packed](packed.md#one-limb)); not `constexpr`; rounds |
 
-`T` is `float` or `double`; the functions are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).
+`T` is `float` or `double`; the functions on arrays are in namespace `kairn`, header `kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken where the table writes a view of `const T`. They take no marker: a function on arrays compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)). The operators of `Packed<T, 1>` are in `kairn/packed.hpp`, which `kairn/kairn.hpp` does not include either, and take no marker ([Packed](packed.md#one-limb)).
 
 ## Requires
 
@@ -82,7 +84,8 @@ It calls [`mul_1_1`](mul_1_1.md).
 ```
 # The step of the map scale_1, an array of one limb times a scalar of T (milestone2.md, "sum, dot,
 # axpy, convolution"): the product rounded to nearest, mul_1_1. The program supplies both; a
-# product needs no guard (rule R3). Its claims are those of mul_1_1.
+# product needs no guard (rule R3). Its claims are those of mul_1_1. Also x * y of Packed<T, 1>
+# (kairn/packed.hpp), which calls it on its own.
 
 z = mul_1_1(x, a)
 ```

@@ -42,8 +42,14 @@
 //   48-51  Packed (packed.hpp): an operation with a number or a T operand (no packed form takes
 //          one), the narrowing of two limbs to one written as an implicit conversion, and an
 //          operation of two limb types; each control writes what compiles instead
-//   53     the arithmetic of Packed<T, 1>, which there is none of (its kernels are not entry
-//          kernels); the control negates, and adds a Packed<T, 1> to a Packed<T, 2>
+//   53     the arithmetic of Packed<T, 1> on two limb types; the control adds each to its own type
+//   114-116 the arithmetic of Packed<T, 1> with an operand that is not a Packed<T, 1>: a T and an
+//          Expansion<T, 1> (no conversion makes one: a program broadcasts it), and x += y of a
+//          Packed<T, 1> x and a Packed<T, 2> y, whose result has two limbs; each control writes what
+//          compiles instead (the operand broadcast, the sum of two limbs). Not a case: a register of
+//          the form as the other operand, which Apple clang 21 on AArch64 accepts as an operation
+//          of its vector extension on the bytes of the Packed (p - p.limb[0], a register), for
+//          every Packed, without calling Kairn
 //   97-107 BallVector (ball_vector.hpp): an operation writing a const BallVector and a view of
 //          const limbs, ball vectors whose types fix lengths that differ, two limb types, a view of
 //          mutable limbs made of a view of const ones, a view converted to a BallVector implicitly
@@ -109,7 +115,7 @@
 #include <kairn/kairn.hpp>
 // The headers that kairn.hpp does not include, in the cases about them only: each case is compiled
 // twice, and they would add their cost to every one.
-#if KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 53
+#if (KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 53) || (KAIRN_TEST_CASE >= 114 && KAIRN_TEST_CASE <= 116)
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
 #endif
@@ -300,7 +306,8 @@ int main() {
     sink = I1(MARK(s), s).lower().limb[0];
 #elif KAIRN_TEST_CASE == 41
     sink = B1(MARK(i)).radius();
-#elif (KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 51) || KAIRN_TEST_CASE == 53
+#elif (KAIRN_TEST_CASE >= 42 && KAIRN_TEST_CASE <= 51) || KAIRN_TEST_CASE == 53 || \
+    (KAIRN_TEST_CASE >= 114 && KAIRN_TEST_CASE <= 116)
     double h[4] = {1, 2, 3, 4}, l[4] = {0, 0, 0, 0};
     const kairn::SoAView<double, 2> mv(h, l, 4);
     [[maybe_unused]] const kairn::SoAView<const double, 2> cv = mv;
@@ -367,10 +374,33 @@ int main() {
 #endif
     sink = z.lane(0).limb[0];
 #elif KAIRN_TEST_CASE == 53
+    const kairn::Packed<float, 1> pg;
 #if defined(KAIRN_TEST_CONTROL)
-    sink = (-pa).lane(0).limb[0] + (P2(pa) + pa).lane(0).limb[0];
+    sink = (pa + pa).lane(0).limb[0] + double((pg + pg).lane(0).limb[0]);
 #else
-    sink = (pa + pa).lane(0).limb[0];
+    sink = (pa + pg).lane(0).limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 114
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (pa + P1::broadcast(E1(2.0))).lane(0).limb[0];
+#else
+    sink = (pa + 2.0).lane(0).limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 115
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (pa * P1::broadcast(a)).lane(0).limb[0];
+#else
+    sink = (pa * a).lane(0).limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 116
+#if defined(KAIRN_TEST_CONTROL)
+    P2 w = px;
+    w += pa;
+    sink = w.lane(0).limb[0];
+#else
+    P1 w = pa;
+    w += px;
+    sink = w.lane(0).limb[0];
 #endif
 #elif KAIRN_TEST_CASE == 51
     const kairn::Packed<float, 2> pf;

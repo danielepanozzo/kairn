@@ -4,15 +4,16 @@
 /// comparison of packed numbers returns (docs/developer/design/milestone2.md, "Packed type and
 /// containers").
 ///
-/// Packed has no arithmetic of its own. Each operation calls the packed form of the generated
-/// kernel that the operation of the same name of Expansion calls (include/kairn/gen/avx2.hpp or
-/// gen/neon.hpp), or, where the target has neither, that scalar kernel itself, with W = 1
-/// (gen/scalar.hpp). The generator emits every packed kernel from the description of the scalar
-/// one and its tests compare the two lane by lane, bit for bit; so the statement of each operation
-/// is that of the operation of Expansion in each lane: lane i of x + y is the number that
-/// Expansion's x + y gives for lane i of x and lane i of y, with that operation's bound, its
-/// results for infinities and NaN, and its requirement of canonical operands. Nothing is stated
-/// across lanes: W operations are done side by side, never combined.
+/// Packed has no arithmetic of its own. Each operation calls the packed form of a generated kernel
+/// (include/kairn/gen/avx2.hpp or gen/neon.hpp), or, where the target has neither, that scalar
+/// kernel itself, with W = 1 (gen/scalar.hpp): for two limbs, the kernel that the operation of the
+/// same name of Expansion calls; for the arithmetic of one limb, an entry kernel of one rounding
+/// (below). The generator emits every packed kernel from the description of the scalar one and its
+/// tests compare the two lane by lane, bit for bit; so the statement of each operation is that of
+/// its kernel in each lane: lane i of x + y of two limbs is the number that Expansion's x + y gives
+/// for lane i of x and lane i of y, with that operation's bound, its results for infinities and
+/// NaN, and its requirement of canonical operands. Nothing is stated across lanes: W operations are
+/// done side by side, never combined.
 ///
 /// Which form is compiled is decided once per translation unit by KAIRN_PACKED_FORM (below): AVX2
 /// with FMA (W = 4 for double, 8 for float), Advanced SIMD of AArch64 (W = 2, 4), or the scalar
@@ -21,19 +22,28 @@
 /// translation unit is compiled for.
 ///
 /// One limb: Packed<T, 1> is the packed T, the limb operand of the mixed forms of two limbs
-/// (x + a, a - x, x < a), and it has negation, abs, the comparisons and the conversions to one
-/// limb, which are, as for Expansion<T, 1>, the exact IEEE 754 operations of T, computed with the
-/// instructions the generated kernels use for them (a sign bit flipped or cleared, a comparison of
-/// lanes). It has no arithmetic: the kernels the arithmetic of Expansion<T, 1> names, add_1_1 and
-/// mul_1_1, are not entry kernels, the only ones a public header may call (rule R3, which
-/// gen/tests/test_rules.py checks), and Expansion<T, 1> computes the operations of T itself, which
-/// Packed does not do: none of its operations rounds but through a kernel.
+/// (x + a, a - x, x < a). Its negation, abs, comparisons and conversions to one limb are, as for
+/// Expansion<T, 1>, the exact IEEE 754 operations of T, computed with the instructions the
+/// generated kernels use for them (a sign bit flipped or cleared, a comparison of lanes). Its
+/// arithmetic, +, - and * and their compound forms, calls entry kernels, the only ones a public
+/// header may call (rule R3, which gen/tests/test_rules.py checks): add_entry_step_1 and
+/// sub_entry_step_1, which are add_1_1 and sub_1_1 on both operands guarded, and scale_step_1,
+/// which is mul_1_1, the opaque product, whose factors need no guard. They are also the steps of
+/// the maps add, sub and scale of one limb (kairn/batch.hpp). Expansion<T, 1> computes the
+/// operations of T itself, with the same values (the claims of add_1_1 and mul_1_1 are those of
+/// these kernels); Packed does not, since none of its operations rounds but through a kernel. So
+/// on Packed<T, 1> x * y + z is never fused, under any contraction setting, where on T and
+/// Expansion<T, 1> it follows the compiler's contraction (decision D6); a product the program
+/// computes and passes in is rounded before the sum (but a square, as operator+ says); and a zero
+/// can come out with the other sign (docs/reference/packed.md, "One limb", has the differences).
 ///
-/// Not here: the arithmetic of one limb (above), sign, isfinite and is_normalized (no kernel computes them; is_normalized of two limbs
-/// rounds), the operands marked kairn::unverified (every kernel these operations call is proved
-/// today; an operation whose kernel is not proved does not compile, and has no marked form), the
-/// building blocks of blocks.hpp, Ball and Interval, a reduction across lanes (a program writes it
-/// with lane() and the operators of Expansion, in the order it chooses), and constant evaluation.
+/// Not here: add_fast, ldexp, half and the functions of kairn::finite of one limb, an operand of
+/// type T or Expansion<T, 1> (a program broadcasts it), sign, isfinite and is_normalized (no
+/// kernel computes them; is_normalized of two limbs rounds), the operands marked kairn::unverified
+/// (every kernel these operations call is proved today; an operation whose kernel is not proved
+/// does not compile, and has no marked form), the building blocks of blocks.hpp, Ball and
+/// Interval, a reduction across lanes (a program writes it with lane() and the operators of
+/// Expansion, in the order it chooses), and constant evaluation.
 #pragma once
 
 #include "expansion.hpp"
@@ -729,6 +739,69 @@ KAIRN_FORCEINLINE Packed<T, 1> abs_upper(const Packed<T, 1>& x) noexcept {
     return kairn::abs(x);
 }
 
+// --- One limb: arithmetic, the entry kernels of one rounding ---------------------------------------
+
+/// In each lane, x + y rounded to nearest (kernel add_entry_step_1: add_1_1 on both operands
+/// guarded, rule R3): z = RN(x + y), |z - (x + y)| <= u/(1 + u) |x + y|, when x, y and z are
+/// finite; z is finite only if x and y are. Each operand passes through the guard (an addition of
+/// +0) first, so a product the program computed and passes in is rounded before the sum, under
+/// every contraction setting (but a square a * a, whose guard Clang drops under
+/// -ffp-contract=fast: docs/getting-started/guarantees.md, "Products the program passes in"); and
+/// a sum of two zeros is +0 ((-0) + (-0) is -0 for T; MSVC removes that addition in packed code,
+/// and there it can stay -0). Infinities, NaN and an overflow are T's (tested, not proved beyond
+/// the finiteness above); which NaN is not specified.
+template <class T>
+    requires kairn::detail::proof_checked<gen::bounds::add_entry_step_1<T>>
+KAIRN_FORCEINLINE Packed<T, 1> operator+(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
+    packed_detail::check(x, y);
+    Packed<T, 1> z;
+    gen::add_entry_step_1(x.limb[0], y.limb[0], z.limb[0]);
+    return z;
+}
+/// In each lane, x - y rounded to nearest (kernel sub_entry_step_1: sub_1_1 on both operands
+/// guarded): z = RN(x - y), with the bound of x + y, when x, y and z are finite; z is finite only
+/// if x and y are. The guard as for x + y: (-0) - (+0) is +0 (-0 for T; it can stay -0 with MSVC).
+template <class T>
+    requires kairn::detail::proof_checked<gen::bounds::sub_entry_step_1<T>>
+KAIRN_FORCEINLINE Packed<T, 1> operator-(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
+    packed_detail::check(x, y);
+    Packed<T, 1> z;
+    gen::sub_entry_step_1(x.limb[0], y.limb[0], z.limb[0]);
+    return z;
+}
+/// In each lane, x y rounded to nearest (kernel scale_step_1: mul_1_1, the opaque product
+/// fma(x, y, +0)): z = RN(xy), |z - xy| <= u/(1 + u) |xy| + eta/2, when x, y and z are finite; z
+/// is finite only if x and y are. A factor needs no guard: nothing can be fused into a product.
+/// An exact zero product is +0 ((-1) 0 is -0 for T); one that underflows keeps its sign.
+/// Infinities, NaN and an overflow are T's (tested, not proved beyond the finiteness above);
+/// which NaN is not specified.
+template <class T>
+    requires kairn::detail::proof_checked<gen::bounds::scale_step_1<T>>
+KAIRN_FORCEINLINE Packed<T, 1> operator*(const Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
+    packed_detail::check(x, y);
+    Packed<T, 1> z;
+    gen::scale_step_1(x.limb[0], y.limb[0], z.limb[0]);
+    return z;
+}
+/// x = x + y (kernel add_entry_step_1).
+template <class T>
+    requires kairn::detail::proof_checked<gen::bounds::add_entry_step_1<T>>
+KAIRN_FORCEINLINE Packed<T, 1>& operator+=(Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
+    return x = x + y;
+}
+/// x = x - y (kernel sub_entry_step_1).
+template <class T>
+    requires kairn::detail::proof_checked<gen::bounds::sub_entry_step_1<T>>
+KAIRN_FORCEINLINE Packed<T, 1>& operator-=(Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
+    return x = x - y;
+}
+/// x = x y (kernel scale_step_1).
+template <class T>
+    requires kairn::detail::proof_checked<gen::bounds::scale_step_1<T>>
+KAIRN_FORCEINLINE Packed<T, 1>& operator*=(Packed<T, 1>& x, const Packed<T, 1>& y) noexcept {
+    return x = x * y;
+}
+
 // --- Two limbs: arithmetic, the full kernels -----------------------------------------------------
 
 /// In each lane, x + y (kernel add_2_2_full): Expansion's x + y, IEEE-like.
@@ -1083,7 +1156,8 @@ KAIRN_FORCEINLINE Packed<T, 1> abs_upper(const Packed<T, 2>& x) noexcept {
 /// The finite cores (decision D5), lane by lane: the functions of kairn::finite of expansion.hpp
 /// for packed operands, each the packed form of the core that the function of the same name
 /// calls, with its contract in each lane (a lane whose leading limb is not finite is not canonical:
-/// select or test it before passing it to an operator). None for one limb, which has no arithmetic.
+/// select or test it before passing it to an operator). None for one limb, whose operators have no
+/// fix-up to leave out.
 namespace finite {
 
 /// In each lane, x + y, the core alone (kernel add_2_2).

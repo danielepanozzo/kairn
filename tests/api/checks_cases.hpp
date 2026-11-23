@@ -558,6 +558,20 @@ inline const Operation operations[] = {
          const P2 x = P2::broadcast(o.x);
          put(b, P2::from_limbs(x.limb[0], x.limb[1]));
      }},
+    // The arithmetic of one limb, whose kernels round (add_entry_step_1, sub_entry_step_1,
+    // scale_step_1): as Expansion<T, 1>'s operators, the environment, the rounding mode included.
+    {"packed1.add", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) + P1::broadcast(E1(v_c))); }},
+    {"packed1.sub", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) - P1::broadcast(E1(v_c))); }},
+    {"packed1.mul", Kind::rounds, [](Bits& b) { put(b, P1::broadcast(E1(v_a)) * P1::broadcast(E1(v_c))); }},
+    {"packed1.mul_assign", Kind::rounds, [](Bits& b) {
+         P1 z = P1::broadcast(E1(v_a));
+         z *= P1::broadcast(E1(v_c));
+         put(b, z);
+     }},
+    {"packed1f.add", Kind::rounds, [](Bits& b) {
+         using F = kairn::Packed<float, 1>;
+         put(b, F::broadcast(kairn::Expansion<float, 1>(float(v_a))) + F::broadcast(kairn::Expansion<float, 1>(float(v_c))));
+     }},
     {"soa.get", Kind::rounds, [](Bits& b) {
          Arrays a(o.x);
          put(b, kairn::SoAView<const double, 2>(a.h, a.l, 16).get(3));

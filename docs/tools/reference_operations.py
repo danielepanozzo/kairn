@@ -107,14 +107,16 @@ GROUPS = [
     ("packed", "Vector loops: Packed and the containers",
      "`Packed<T, k>` (`kairn/packed.hpp`) holds W numbers in registers; its operations are those of `Expansion` "
      "that have a kernel, under the same names, each the packed form of that kernel, with its statement in every "
-     "lane ([Packed numbers in registers](packed.md)). `SoA<T, k>` and its views (`kairn/soa.hpp`) hold numbers as "
+     "lane, and of one limb `+`, `-` and `*`, which call the steps of the maps of one limb on their own "
+     "([Packed numbers in registers](packed.md)). `SoA<T, k>` and its views (`kairn/soa.hpp`) hold numbers as "
      "one array per limb and compute nothing ([Arrays of numbers](soa.md)). `kairn/kairn.hpp` includes neither."),
     ("maps", "Operations on arrays, entry by entry",
      "The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the "
      "operation of one entry, on an array the program supplies where it says so, and every element a map of "
      "`kairn/batch.hpp` writes satisfies its claims ([Functions on arrays](batch.md)). The steps of the maps on "
      "stored arrays have no caller there. The operations of a ball vector call the difference of one limb and "
-     "the steps of the scaling."),
+     "the steps of the scaling, and `+`, `-` and `*` of `Packed<T, 1>` call the steps of one limb of the sum, the "
+     "difference and the scaling on their own."),
     ("ball-vectors", "Ball vectors: N centers and one radius",
      "`BallVector<T, k, N>` and `BallVectorView<T, k>` (`kairn/ball_vector.hpp`, "
      "[Ball vectors](ball_vector.md)): each operation is one generated loop over the arrays of the centers, "
@@ -165,6 +167,12 @@ ONE = "the limb of the `Expansion<T, 1>` operand is the limb $a$"
 # what each step claims; the function's claims, those of its loop, are on [Functions on
 # arrays](batch.md).
 STEP = "the step of the loop the function calls, once per element; not `constexpr`; rounds"
+# The arithmetic of Packed<T, 1> (kairn/packed.hpp): the same kernels on their own, in each lane.
+PACKED_ONE_LIMB = ("`kairn/packed.hpp`, in each lane; both operands guarded, so a product of the program is rounded "
+                   "first, and a sum or difference of two zeros is $+0$ ([Packed](packed.md#one-limb)); not "
+                   "`constexpr`; rounds")
+PACKED_PRODUCT = ("`kairn/packed.hpp`, in each lane, $a$ being `y`; the opaque product, so an exact zero product is "
+                  "$+0$ ([Packed](packed.md#one-limb)); not `constexpr`; rounds")
 STEP_ORDER = STEP + "; in the lane order of the build, or, with `kairn::sequential`, in the sequential order"
 # The notes of the building blocks on T: whether constant evaluation has them, with what, and that
 # they round.
@@ -1076,15 +1084,21 @@ KERNELS = {
                              note="$m = n$, a count of `T` rounded up; `unit` is $g$, `tiny` is $t$")),
     "sub_1_1": page("maps", "The difference of two numbers of one limb, rounded to nearest"),
     "add_entry_step_1": page("maps", "x + y of one limb, on arrays of the program",
-                             form("add(x, y, z)", V1, V1, W1, result="bool", note=STEP + " (loop `add_1_entry`)")),
+                             form("add(x, y, z)", V1, V1, W1, result="bool", note=STEP + " (loop `add_1_entry`)"),
+                             form("x + y", P1, P1, result=P1, group="packed", note=PACKED_ONE_LIMB),
+                             form("x += y", P1, P1, result=P1, group="packed", note=PACKED_ONE_LIMB)),
     "sub_entry_step_1": page("maps", "x - y of one limb, on arrays of the program",
-                             form("sub(x, y, z)", V1, V1, W1, result="bool", note=STEP + " (loop `sub_1_entry`)")),
+                             form("sub(x, y, z)", V1, V1, W1, result="bool", note=STEP + " (loop `sub_1_entry`)"),
+                             form("x - y", P1, P1, result=P1, group="packed", note=PACKED_ONE_LIMB),
+                             form("x -= y", P1, P1, result=P1, group="packed", note=PACKED_ONE_LIMB)),
     "add_entry_step_2": page("maps", "x + y of two limbs, on arrays of the program",
                              form("add(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `add_2_entry`)")),
     "sub_entry_step_2": page("maps", "x - y of two limbs, on arrays of the program",
                              form("sub(x, y, z)", V2, V2, W2, result="bool", note=STEP + " (loop `sub_2_entry`)")),
     "scale_step_1": page("maps", "x a of one limb, a of T",
-                         form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)")),
+                         form("scale(x, a, z)", V1, T, W1, result="bool", note=STEP + " (loop `scale_1`)"),
+                         form("x * y", P1, P1, result=P1, group="packed", note=PACKED_PRODUCT),
+                         form("x *= y", P1, P1, result=P1, group="packed", note=PACKED_PRODUCT)),
     "scale_step_2": page("maps", "x a of two limbs, a of T, on a stored array and scalar"),
     "scale_entry_step_2": page("maps", "x a of two limbs, a of T, on the guarded limbs and scalar",
                                form("scale(x, a, z)", V2, T, W2, result="bool", note=STEP + " (loop `scale_2_entry`; the "
@@ -1268,8 +1282,8 @@ EXACT = [
     exact("packed", "in each lane, the function of `kairn::finite` of the same name: the core, without the fix-up",
           form("finite::add, finite::sub, finite::mul, finite::add_fast, finite::ldexp", P2, PK, result=P2),
           kernel="that of `Expansion`"),
-    exact("packed", "one limb: the exact operations of `T`, as for `Expansion<T, 1>`; no arithmetic, whose "
-          "kernels are not entry kernels ([Packed](packed.md#the-operations))",
+    exact("packed", "one limb: the operations that do not round, the exact operations of `T`, as for "
+          "`Expansion<T, 1>` (its arithmetic calls kernels of its own: [Packed](packed.md#one-limb))",
           form("-x, abs(x), x < y, x == y, to_nearest(x), to_down(x), to_up(x), abs_upper(x)", P1, P1, result=P1)),
     exact("packed", "moves: zero, one number in every lane, a lane read or written, a select by a mask; limbs "
           "copied, nothing computed",

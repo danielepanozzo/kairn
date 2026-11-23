@@ -22,6 +22,17 @@
 // build: a product is fused only into an addition. A third kind (--factor none|some|report): the
 // products of Packed<T, 2> and Packed<T, 1> with the other factor a constant F (1, -1, 2) the
 // compiler sees (KNOWN below); --factor none in the build with the guard: every form agrees.
+//
+// The arithmetic of Packed<T, 1> is in the first kind (the register of products as an operand of
+// x + y and x - y, whose kernels guard both operands) and the second (x * y). Two kinds more, of
+// its product x * y of the program's factors (kernel scale_step_1, the opaque product
+// fma(x, y, +0)): passed straight into an operation of Kairn that adds it (x * y + z of one limb as
+// a program writes it, and x + a of two limbs), and added by the program itself with the form's
+// own addition, on the registers. Both must agree in the build with the guard (--expect none);
+// against the copy without it they are counted and reported only (the product there is the same).
+// Squares last (run_squares): a square of the program, a * a, whose guard a compiler may drop (a
+// finding: SQUARE below), counted and printed with no verdict; and the square of Packed<T, 1>,
+// P1(a) * P1(a), counted with the two kinds above.
 #include <kairn/kairn.hpp>
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
@@ -63,6 +74,7 @@ struct Program<double> {
     using R = __m256d;
     static ALWAYS_INLINE R load(const double* p) { return _mm256_loadu_pd(p); }
     static ALWAYS_INLINE R mul(R a, R b) { return _mm256_mul_pd(a, b); }
+    static ALWAYS_INLINE R add(R a, R b) { return _mm256_add_pd(a, b); }
     static ALWAYS_INLINE void store(double* p, R a) { _mm256_storeu_pd(p, a); }
 };
 template <>
@@ -70,6 +82,7 @@ struct Program<float> {
     using R = __m256;
     static ALWAYS_INLINE R load(const float* p) { return _mm256_loadu_ps(p); }
     static ALWAYS_INLINE R mul(R a, R b) { return _mm256_mul_ps(a, b); }
+    static ALWAYS_INLINE R add(R a, R b) { return _mm256_add_ps(a, b); }
     static ALWAYS_INLINE void store(float* p, R a) { _mm256_storeu_ps(p, a); }
 };
 #elif KAIRN_PACKED_FORM == KAIRN_PACKED_FORM_NEON
@@ -79,6 +92,7 @@ struct Program<double> {
     using R = float64x2_t;
     static ALWAYS_INLINE R load(const double* p) { return vld1q_f64(p); }
     static ALWAYS_INLINE R mul(R a, R b) { return vmulq_f64(a, b); }
+    static ALWAYS_INLINE R add(R a, R b) { return vaddq_f64(a, b); }
     static ALWAYS_INLINE void store(double* p, R a) { vst1q_f64(p, a); }
 };
 template <>
@@ -86,6 +100,7 @@ struct Program<float> {
     using R = float32x4_t;
     static ALWAYS_INLINE R load(const float* p) { return vld1q_f32(p); }
     static ALWAYS_INLINE R mul(R a, R b) { return vmulq_f32(a, b); }
+    static ALWAYS_INLINE R add(R a, R b) { return vaddq_f32(a, b); }
     static ALWAYS_INLINE void store(float* p, R a) { vst1q_f32(p, a); }
 };
 #else
@@ -95,6 +110,7 @@ struct Program {
     using R = T;
     static ALWAYS_INLINE R load(const T* p) { return *p; }
     static ALWAYS_INLINE R mul(R a, R b) { return a * b; }
+    static ALWAYS_INLINE R add(R a, R b) { return a + b; }
     static ALWAYS_INLINE void store(T* p, R a) { *p = a; }
 };
 #endif
@@ -225,6 +241,51 @@ FORM(less_equal_rev, return as_number(PROD <= x);)
 FORM(equal, return as_number(x == PROD);)
 FORM(not_equal, return as_number(PROD != x);)
 
+// One limb: the arithmetic of Packed<T, 1> (add_entry_step_1 and sub_entry_step_1 guard both
+// operands), the register of products against the leading limb of x as a Packed<T, 1>; each
+// result widened to two limbs exactly, for the comparison.
+#define X1 P1<T>::from_limbs(x.limb[0])
+FORM(p1_plus, return P2<T>(X1 + PROD);)
+FORM(p1_plus_rev, return P2<T>(PROD + X1);)
+FORM(p1_minus, return P2<T>(X1 - PROD);)
+FORM(p1_rminus, return P2<T>(PROD - X1);)
+FORM(p1_plus_assign, P1<T> y = X1; y += PROD; return P2<T>(y);)
+FORM(p1_minus_assign, P1<T> y = X1; y -= PROD; return P2<T>(y);)
+FORM(p1_broadcast, return P2<T>(X1 + P1<T>::broadcast(E1<T>(ONE(k))));)
+FORM(p1_load, FILL1(s) return P2<T>(P1<T>::load(s) + X1);)
+FORM(p1_times, return P2<T>(X1 * PROD);)
+FORM(p1_times_assign, P1<T> y = X1; y *= PROD; return P2<T>(y);)
+// The product of Packed<T, 1> (scale_step_1, the opaque product fma(a, b, +0)) of the program's
+// factors, loaded: with the rounded products the factors are p and 1, and p 1 is p. KPROD passed
+// straight into an operation of Kairn that adds it (with one limb, x * y + z as a program writes
+// it; with two, x + a), which guards it: it must agree with the guard. And KPROD added by the
+// program itself, on the registers of the form with its own addition: the opaque product is not a
+// product a compiler fuses into that addition either (measured: these forms must agree in the build
+// with the guard, whose product is the same as without it).
+#define KPROD (P1<T>::load(a) * P1<T>::load(b))
+FORM(kp_plus, return P2<T>(KPROD + X1);)
+FORM(kp_plus_rev, return P2<T>(X1 + KPROD);)
+FORM(kp_minus, return P2<T>(X1 - KPROD);)
+FORM(kp_plus_assign, P1<T> y = X1; y += KPROD; return P2<T>(y);)
+FORM(kp_mixed, return x + KPROD;)
+FORM(kp_mixed_minus, return x - KPROD;)
+FORM(kp_program_add, return P2<T>(P1<T>::from_limbs(Program<T>::add(KPROD.limb[0], x.limb[0])));)
+FORM(kp_program_add_rev, return P2<T>(P1<T>::from_limbs(Program<T>::add(x.limb[0], KPROD.limb[0])));)
+// A square of the program, a * a, which a compiler can prove is never -0: Clang under
+// -ffp-contract=fast (Apple clang 21, Clang 18) then drops the guard a * a + 0, which it may since
+// the two have the same value, and fuses the square into the kernel's first addition (a finding of
+// 2026-11-23, in Packed<T, 1> + and in x + a of two limbs, and outside this file in kairn::two_sum,
+// the accumulator's add and the sums of arrays: the guard of rule R3 does not hold such a product).
+// Counted and printed, never required to agree, so that every build shows whether its compiler
+// does it (run_squares).
+#define SQUARE P1<T>::from_limbs(M::reg(a, a))
+FORM(sq_p1_plus, return P2<T>(X1 + SQUARE);)
+FORM(sq_plus, return x + SQUARE;)
+// And the square as the product of Packed<T, 1>, P1(a) * P1(a) (KPROD with b = a), passed into
+// x + y and added by the program itself.
+FORM(sq_kp_plus, return P2<T>(X1 + KPROD);)
+FORM(sq_kp_program_add, return P2<T>(P1<T>::from_limbs(Program<T>::add(KPROD.limb[0], x.limb[0])));)
+
 // The other factor a constant the compiler sees (rule R3, the factors of a fused operation:
 // docs/developer/architecture.md): Packed<T, 2> of F in every lane, F = 1, -1 or 2, times the
 // program's register of products. A compiler that sees F = 1 rewrites fma(x, 1, s) as x + s and may
@@ -269,10 +330,13 @@ template <class T>
 struct Form {
     const char* name;
     Fn<T> in_place, rounded;
-    bool plus_x;       // x is +p, for the forms that subtract or negate the product; else -p
-    bool needs_guard;  // false: multiplied or compared
+    bool plus_x;  // x is +p, for the forms that subtract or negate the product; else -p
+    // 0: needs the guard; 1: multiplied or compared, no guard needed; 2: the product of
+    // Packed<T, 1> into an operation of Kairn; 3: the product of Packed<T, 1> added by the program.
+    int kind;
 };
-#define ROW(NAME, TEXT, PLUS, GUARD) {TEXT, &NAME##_inline<T>, &NAME##_rounded<T>, PLUS, GUARD}
+#define ROW(NAME, TEXT, PLUS, GUARD) {TEXT, &NAME##_inline<T>, &NAME##_rounded<T>, PLUS, (GUARD) ? 0 : 1}
+#define ROWK(NAME, TEXT, PLUS, KIND) {TEXT, &NAME##_inline<T>, &NAME##_rounded<T>, PLUS, KIND}
 
 template <class T>
 using Bits = std::conditional_t<sizeof(T) == 8, std::uint64_t, std::uint32_t>;
@@ -302,7 +366,7 @@ T uniform() {  // in [0.5, 1)
 }
 
 struct Totals {
-    long guarded = 0, unguarded = 0, known = 0;
+    long guarded = 0, unguarded = 0, known = 0, kairn_product = 0, program_add = 0;
 };
 
 template <class T>
@@ -398,6 +462,24 @@ void run(const char* type, long registers, Totals& totals) {
         ROW(less_equal_rev, "a*b <= x", true, false),
         ROW(equal, "x == a*b", true, false),
         ROW(not_equal, "a*b != x", true, false),
+        ROW(p1_plus, "P1 x + a*b", false, true),
+        ROW(p1_plus_rev, "a*b + P1 x", false, true),
+        ROW(p1_minus, "P1 x - a*b", true, true),
+        ROW(p1_rminus, "a*b - P1 x", true, true),
+        ROW(p1_plus_assign, "P1 x += a*b", false, true),
+        ROW(p1_minus_assign, "P1 x -= a*b", true, true),
+        ROW(p1_broadcast, "P1 x + P1::broadcast(E1(a*b))", false, true),
+        ROW(p1_load, "P1::load({a*b}) + P1 x", false, true),
+        ROW(p1_times, "P1 x * (a*b)", false, false),
+        ROW(p1_times_assign, "P1 x *= a*b", false, false),
+        ROWK(kp_plus, "P1(a) * P1(b) + P1 x", false, 2),
+        ROWK(kp_plus_rev, "P1 x + P1(a) * P1(b)", false, 2),
+        ROWK(kp_minus, "P1 x - P1(a) * P1(b)", true, 2),
+        ROWK(kp_plus_assign, "P1 x += P1(a) * P1(b)", false, 2),
+        ROWK(kp_mixed, "x + P1(a) * P1(b)", false, 2),
+        ROWK(kp_mixed_minus, "x - P1(a) * P1(b)", true, 2),
+        ROWK(kp_program_add, "add(P1(a) * P1(b), x) by the program", false, 3),
+        ROWK(kp_program_add_rev, "add(x, P1(a) * P1(b)) by the program", false, 3),
     };
     constexpr int n_forms = int(sizeof forms / sizeof forms[0]);
     long differ[n_forms] = {};
@@ -445,10 +527,58 @@ void run(const char* type, long registers, Totals& totals) {
     for (int f = 0; f < n_forms; ++f) {
         char seen[33] = {};
         for (int l = 0; l < W; ++l) seen[l] = (lanes_seen[f] >> l) & 1 ? char('0' + l % 10) : '.';
-        std::printf("  %-36s differs in %6ld of %ld, in lanes %s%s\n", forms[f].name, differ[f], registers, seen,
-                    forms[f].needs_guard ? "" : "   (multiplied or compared: no guard needed)");
-        (forms[f].needs_guard ? totals.guarded : totals.unguarded) += differ[f];
+        static const char* const notes[] = {"", "   (multiplied or compared: no guard needed)",
+                                            "   (the product of Packed<T, 1> into Kairn)",
+                                            "   (the product of Packed<T, 1> added by the program)"};
+        std::printf("  %-38s differs in %6ld of %ld, in lanes %s%s\n", forms[f].name, differ[f], registers, seen,
+                    notes[forms[f].kind]);
+        long* const count[] = {&totals.guarded, &totals.unguarded, &totals.kairn_product, &totals.program_add};
+        *count[forms[f].kind] += differ[f];
     }
+}
+
+// The squares (SQUARE above): a in [1/2, 1), x within a few units of -RN(a a), the square in place
+// against the rounded square. The registers that differ, printed; those of the program's square
+// returned, with no verdict; those of the square of Packed<T, 1> counted with the other forms of its
+// kind, which must agree in the build with the guard.
+template <class T>
+long run_squares(const char* type, long registers, Totals& totals) {
+    constexpr int W = P1<T>::lanes;
+    const Form<T> forms[] = {ROWK(sq_p1_plus, "P1 x + a*a", false, 0), ROWK(sq_plus, "x + a*a", false, 0),
+                             ROWK(sq_kp_plus, "P1 x + P1(a) * P1(a)", false, 2),
+                             ROWK(sq_kp_program_add, "add(P1(a) * P1(a), x) by the program", false, 3)};
+    const T step = sizeof(T) == 8 ? T(0x1p-30) : T(0x1p-20);
+    long total = 0;
+    for (const Form<T>& f : forms) {
+        long differ = 0;
+        for (long i = 0; i < registers; ++i) {
+            T a[W], p[W], one[W];
+            P2<T> x;
+            for (int l = 0; l < W; ++l) {
+                a[l] = uniform<T>();
+                p[l] = rounded(a[l], a[l]);
+                one[l] = T(1);
+                x.set_lane(l, E2<T>(-p[l] * (T(1) + T((i + l) % 7) * step)));
+            }
+            const P2<T> u = f.in_place(x, a, a, 0), v = f.rounded(x, p, one, 0);
+            bool differs = false;
+            for (int l = 0; l < W; ++l) {
+                const E2<T> ul = u.lane(l), vl = v.lane(l);
+                differs = differs || !same_limb(ul.limb[0], vl.limb[0]) || !same_limb(ul.limb[1], vl.limb[1]);
+            }
+            differ += differs;
+        }
+        if (f.kind == 0) {
+            std::printf("  %-38s %-6s differs in %6ld of %ld   (a square of the program: reported only)\n", f.name,
+                        type, differ, registers);
+            total += differ;
+        } else {
+            std::printf("  %-38s %-6s differs in %6ld of %ld   (the square of Packed<T, 1>)\n", f.name, type, differ,
+                        registers);
+            (f.kind == 2 ? totals.kairn_product : totals.program_add) += differ;
+        }
+    }
+    return total;
 }
 
 }  // namespace
@@ -472,13 +602,21 @@ int main(int argc, char** argv) {
     std::printf("the other factor a constant F the compiler sees (1, -1, 2), 20000 registers per form, type and F:\n");
     run_known<double>("double", 20000, totals);
     run_known<float>("float", 20000, totals);
+    std::printf("a square, of the program (whose guard a compiler may drop: no verdict) and of Packed<T, 1>, 20000 "
+                "registers per form and type:\n");
+    const long squares = run_squares<double>("double", 20000, totals) + run_squares<float>("float", 20000, totals);
     std::printf("forms that need the guard: %ld registers differ; forms that need none: %ld; with a known factor: %ld\n",
                 totals.guarded, totals.unguarded, totals.known);
+    std::printf("a square of the program: %ld registers differ%s\n", squares,
+                squares ? ": this compiler dropped the guard of a square and fused it (reported, no verdict)" : "");
+    std::printf("the product of Packed<T, 1> passed into Kairn: %ld registers differ; added by the program: %ld\n",
+                totals.kairn_product, totals.program_add);
     if (std::strcmp(expect, "report") == 0 && totals.guarded == 0)
         std::printf("no form differs: this compiler and setting fused no product into Packed here, so this build "
                     "does not show that the guard is needed\n");
     bool ok = totals.unguarded == 0;
-    if (std::strcmp(expect, "none") == 0) ok = ok && totals.guarded == 0;
+    if (std::strcmp(expect, "none") == 0) ok = ok && totals.guarded == 0 && totals.kairn_product == 0 &&
+                                                 totals.program_add == 0;
     if (std::strcmp(expect, "some") == 0) ok = ok && totals.guarded > 0;
     if (std::strcmp(factor, "none") == 0) ok = ok && totals.known == 0;
     if (std::strcmp(factor, "some") == 0) ok = ok && totals.known > 0;

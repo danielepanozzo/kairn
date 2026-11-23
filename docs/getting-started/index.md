@@ -208,7 +208,9 @@ the operation of `Expansion` it is, whose bound the reference page of its kernel
   neither, from one source. Each operation of `Packed` is, in each lane, the operation of
   `Expansion` of the same name, computed by the packed form of its kernel, which the generator
   writes from the same description and tests lane by lane: the arithmetic of two limbs, and for
-  one limb the operations that do not round (`Packed<T, 1>` has no arithmetic). It is for a loop the program writes
+  one limb the operations that do not round and `+`, `-` and `*`, which have the values of
+  `Expansion<T, 1>`'s but guard what they add, so that `x * y + z` is never fused
+  ([Packed, One limb](../reference/packed.md#one-limb)). It is for a loop the program writes
   itself, over numbers stored as one array per limb, which [`kairn/soa.hpp`](../reference/soa.md)
   holds or maps over the program's own arrays. The [tutorial](../tutorials/vector-loop.md) writes
   one and says what can be claimed about it: each operation's bound, per lane, and nothing about

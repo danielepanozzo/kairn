@@ -2061,11 +2061,17 @@ class Site:
                     "([The accumulator](accumulator.md)).")
             elif any("SoAView" in t for f in p["forms"] for t in f["operands"]):
                 # The functions on arrays (kairn/batch.hpp): a header of their own, and no marker.
+                # A row of another header (an operator of Packed<T, 1> over the same step) names it.
+                packed = any(t.startswith("Packed") for f in p["forms"] for t in f["operands"])
                 text = "\n".join(rows) + "\n\n" + (
-                    "`T` is `float` or `double`; the functions are in namespace `kairn`, header "
+                    "`T` is `float` or `double`; the functions %sare in namespace `kairn`, header "
                     "`kairn/batch.hpp`, which `kairn/kairn.hpp` does not include; a view of `T` is taken "
                     "where the table writes a view of `const T`. They take no marker: a function on arrays "
-                    "compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).")
+                    "compiles only while the kernels of its loop are proved ([Functions on arrays](batch.md)).%s"
+                    % ("on arrays " if packed else "",
+                       " The operators of `Packed<T, 1>` are in `kairn/packed.hpp`, which `kairn/kairn.hpp` "
+                       "does not include either, and take no marker ([Packed](packed.md#one-limb))."
+                       if packed else ""))
             else:
                 text = "\n".join(rows) + "\n\n" + (
                     "`T` is `float` or `double`; the operations are in namespace `kairn`, header "
