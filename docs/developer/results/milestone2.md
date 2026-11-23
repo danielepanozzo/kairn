@@ -530,7 +530,7 @@ Full text in [the list](../design/phase0/decisions.md#deviations-from-the-brief-
 | 24 | The quick tier in about two minutes per platform | 4 to 5 minutes on Linux and macOS, 12 on Windows, on hosted runners; 3.2 minutes on the Mac with four workers. Left as it is by the owner (2026-11-23) |
 | 25 | Proofs parametric in the exponent range | The real-model statements are; the IEEE-model statements hold for formats shaped like `binary32` and `binary64` |
 | 26 | A tightness bound per operation | None for the hull, intersection and split of balls, the radius of a two-limb interval, and two conversions |
-| 27 | Exhaustive tier with gradual and flush-to-zero variants | Gradual only; the other proposed for Milestone 3, with the flush-to-zero proofs, and so decided by the owner (2026-11-23) |
+| 27 | Exhaustive tier with gradual and flush-to-zero variants | Gradual only; the other proposed for Milestone 3, with the flush-to-zero proofs, and so decided by the owner (2026-11-23); those proofs, and the variant with them, are in Milestone 4 since the decision of that day on [the scope of Milestone 3](#the-scope-of-milestone-3) |
 | 28 | The environment checked at every batch-API entry | The functions on arrays and the ball vectors check in every build; the accumulator's operations, called once per element, only in a debug build. Confirmed by the owner (2026-11-23) |
 | 29 | Every header correct under any client flags, contraction included | Found on 2026-11-23, after this report: with Clang under `-ffp-contract=fast` a square the program passes straight in is not rounded first. Documented and not repaired, by the owner's decision ([below](#found-after-the-review-a-square-loses-its-guard)) |
 | (plan) | Conversions between limb types in Milestone 2 | Moved to Milestone 3 with the device pass they serve (README, plan and log say so) |
@@ -793,7 +793,7 @@ and a recommendation, everything it put to them. Each answer is a row of
 |---|---|---|
 | The cost of the environment check at a batch entry ([open issue 2](#open-issues)) | The check stays in every build; its report of a failure moves out of line, and the constructors of short ball vectors are forced inline. No tag, no macro that turns it off | the same |
 | The accumulator checks the environment in a debug build only (deviation 28) | Confirmed as built | a check in every build where the bound is asked for |
-| The flush-to-zero variant of the exhaustive tier (deviation 27) | Milestone 3, with the flush-to-zero proofs | the same |
+| The flush-to-zero variant of the exhaustive tier (deviation 27) | With the flush-to-zero proofs, then Milestone 3's; they moved to Milestone 4 the same day ([below](#the-scope-of-milestone-3)) | the same |
 | Failures under Rosetta that a rerun does not repeat ([open issue 20](#open-issues)) | The tests stay strict: no retry | one retry, with a note |
 | `Ball(Expansion<T, 2>, r)` takes its center unguarded ([open issue 12](#open-issues)) | It guards it: one kernel, proved by reduction | the same |
 | CI time (deviation 24, [open issue 5](#open-issues)) | Left as it is | measure, split by label, limits at three times the measured time |
@@ -880,3 +880,14 @@ where it happens, what is then wrong and what a program does about it, and the p
 results are in `experiments/milestone2/square/`. Three repairs were built as patches and
 measured, and not made; the log has what each costs. `kairn::self_test()` is to get a probe that
 reports the limitation for the file that calls it.
+
+### The scope of Milestone 3
+
+Decided by the owner on 2026-11-23, after this review ([the log](../design/phase0/decisions.md#decisions-log)
+has the grounds): Milestone 3 is the CUDA backend for the kernels and loops that are proved today,
+with `float` and with `double` limbs, and plans no new theorem, since CUDA's default arithmetic is
+the IEEE arithmetic the proofs are about. The conversions between limb types, the Metal backend
+with the proofs for flush-to-zero arithmetic, and the flush-to-zero variant of the exhaustive
+tier move to Milestone 4, beside the numbers of three and four limbs. Where this report says that
+something moved to Milestone 3 (the conversions, the flush-to-zero variant), it is now there.
+Milestone 3 is not started.

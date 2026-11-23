@@ -2757,6 +2757,12 @@ independent oracle; not machine-checked". *Risk: low to medium* (edge cases of i
 
 ## Limbs of another type
 
+**State on 2026-11-23: in Milestone 4.** The owner decided on that date that Milestone 3 is the
+CUDA backend for the kernels that are proved, without these conversions, and that they come with
+the numbers of three and four limbs: two `float` limbs hold fewer bits than one `double`
+([the log](phase0/decisions.md#decisions-log)). Where this page says below that they moved to
+Milestone 3, read Milestone 4.
+
 **State on 2026-11-20: moved to Milestone 3.** Nothing of this section is implemented in
 Milestone 2, and no kernel of it is generated. The decision that adopted it allowed the move
 ([question 11](#open-questions): "moved to the next milestone if it does not fit"), and this
@@ -3206,7 +3212,8 @@ no failure and no difference. A slice runs in the full tier (270 tests) and a fo
 Less than the brief asks, in two ways
 ([deviation 27](phase0/decisions.md#deviations-from-the-brief-flagged)): gradual underflow only,
 since nothing in the library states anything about flush-to-zero arithmetic yet, so that variant
-goes to Milestone 3 with those statements; and kernels of three or more limbs of input are
+goes with those statements (to Milestone 4, since the owner's decision of 2026-11-23 on the scope
+of Milestone 3); and kernels of three or more limbs of input are
 sampled, not enumerated (at precision 8 their enumerations exceed $4 \cdot 10^{10}$ cases).
 
 ## Open questions
