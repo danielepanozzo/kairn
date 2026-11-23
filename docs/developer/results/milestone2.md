@@ -263,12 +263,19 @@ machine.
   hours, the other two 5.9 each (the brief's default is 3 to 4 hours per machine).
 - **The aim of $10^8$ results per kernel and format was reached for part of the kernels.**
   The milestone has 233 kernels and 47 loops at the commit of the runs, against 63 kernels in
-  Milestone 1, and twice the runners per compiler. Of the 191 kernels new or changed since
-  Milestone 1, the 116 cheapest to judge reached $10^8$ cases on each of their 232 kernel and
-  format pairs (176 pairs in results judged; the others 83 million or more, their overflowing
-  cases not being judged). **The other 75 new or changed kernels and the 42 unchanged ones have
-  7.2 million cases per kernel and format, and the 47 loops 42 000 to 72 000 arrays** of up to
-  4 096 elements. Nothing was dropped silently: the page lists each group by name.
+  Milestone 1, and twice the runners per compiler; 190 kernels are new or changed since
+  Milestone 1 (170 new, 20 changed) and 43 unchanged. The 116 kernels run to the aim, 115 of them
+  new or changed and one unchanged, `to_nearest_2`, reached $10^8$ cases on each of their 232
+  kernel and format pairs (176 pairs in results judged; the others 83 million or more, their
+  overflowing cases not being judged). **The other 75 new or changed kernels and the other 42
+  unchanged ones have 7.2 million cases per kernel and format, and the 47 loops 42 000 to 72 000
+  arrays** of up to 4 096 elements. Nothing was dropped silently: the page lists each group by
+  name. (Corrected on 2026-11-23: this report first said 191 new or changed and 42 unchanged. The
+  comparison made for the campaign had taken the loops printed after `to_nearest_2`, the last
+  kernel of each generated header, as its code; its code and its claims are those of Milestone 1.
+  Found when the reference pages were made to compare the code of each run. By the code alone,
+  the rule of those pages, 51 kernels are unchanged since Milestone 1: eight more have the same
+  code under claims that gained a condition.)
 - **The exhaustive tier on emulated formats**, run whole for the first time: 1 247 784 868
   lines of 1 120 entries: every operand at precision 8 of the 80 kernels of one or two limbs
   and at 9 to 11 of the 15 of one limb, and 407 million random cases, among them 3.8 million
@@ -633,8 +640,10 @@ whole list.
     accumulator's radius is given only while $m u \le 1/2$; the two-limb sums' bounds are not
     shown tight (the brute-force runs reached at most a third of the bound, a half for the fast
     sum, and about a sixth on long arrays).
-15. **The brute-force runs did not reach $10^8$ results for every kernel.** 116 of the 191
-    kernels new or changed since Milestone 1 reached it; the other 75, and the 42 unchanged
+15. **The brute-force runs did not reach $10^8$ results for every kernel.** 115 of the 190
+    kernels new or changed since Milestone 1 reached it, and one unchanged kernel with them (the
+    counts were first given as 116 of 191, [corrected above](#brute-force-results)); the other
+    75, and the other 42 unchanged
     ones, have 7.2 million cases per kernel and format, and the 47 loops 42 000 to 72 000 arrays
     ([above](#brute-force-results)). The brief sizes the tier by time, 3 to 4 hours per machine,
     and the runs took 5.9 to 9.4; about nine more hours of the Linux machine would bring the 75
@@ -642,7 +651,10 @@ whole list.
     kernel shows its latest run only, so the 42 kernels whose code did not change now show 7
     million cases where Milestone 1's run had 110 to 122 million. Proposal: the page shows
     every stored run of a kernel whose code is unchanged. **Decided by the owner on 2026-11-23:
-    the pages are changed so; no further runs are made for this milestone.**
+    the pages are changed so; no further runs are made for this milestone.** Done: a page counts
+    a stored run when the kernel's generated code at the run's commit is its code now, and the
+    51 kernels whose code is that of Milestone 1's runs show those runs' 110 to 122 million
+    cases per format next to this milestone's 7.2 million.
 16. **The oracle's arrays have few non-finite elements** (6 of 100 map arrays in the quick tier).
 17. **No test runs Kairn from several threads**: thread safety is by design (no global state).
 18. **Not measured**: Windows, MSVC and clang-cl in the benchmarks of this milestone (the tests
