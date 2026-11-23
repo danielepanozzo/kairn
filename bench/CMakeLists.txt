@@ -170,21 +170,39 @@ endforeach()
 # what that check costs is the ratio of a function's time in kairn-bench-m2-LEVEL to its time here.
 set(KAIRN_BENCH_NOCHECK_INCLUDE "" CACHE PATH
     "A copy of include/ made by bench/entry_check.py: builds kairn-bench-m2-nocheck-LEVEL against it")
-# kairn-bench-m2-cold-LEVEL likewise against KAIRN_BENCH_COLD_INCLUDE, a copy made with --variant cold
-# (the check kept, its report out of line and cold): a candidate change of the header, measured.
-set(KAIRN_BENCH_COLD_INCLUDE "" CACHE PATH
-    "A copy of include/ made by bench/entry_check.py --variant cold: builds kairn-bench-m2-cold-LEVEL against it")
+# kairn-bench-m2-before-LEVEL likewise against KAIRN_BENCH_BEFORE_INCLUDE, the headers of an earlier
+# commit (bench/entry_check.py before DEST: by default 25ebe3d6, with the report of the check inline at
+# every check): the same harness with the headers as they were. (Until 2026-11-23 a third copy,
+# KAIRN_BENCH_COLD_INCLUDE, held the report out of line and cold as a candidate; the header now has
+# that form.)
+set(KAIRN_BENCH_BEFORE_INCLUDE "" CACHE PATH
+    "The headers of an earlier commit, from bench/entry_check.py before: builds kairn-bench-m2-before-LEVEL against them")
+# kairn-bench-m2-NAME-LEVEL for each NAME=DIR of KAIRN_BENCH_EXTRA_INCLUDES: the same program against a
+# copy of the headers with another bound of forced inlining of the short constructors of BallVector
+# (bench/entry_check.py inline DIR LIMBS), for the measurements that chose the bound.
+set(KAIRN_BENCH_EXTRA_INCLUDES "" CACHE STRING
+    "NAME=DIR;...: builds kairn-bench-m2-NAME-LEVEL against each copy of the headers DIR (bench/entry_check.py inline)")
 set(_m2_codes INLINE OUTLINED EXTERNAL CHECKS)
 if(KAIRN_BENCH_NOCHECK_INCLUDE)
   list(APPEND _m2_codes NOCHECK)
 endif()
-if(KAIRN_BENCH_COLD_INCLUDE)
-  list(APPEND _m2_codes COLD)
+if(KAIRN_BENCH_BEFORE_INCLUDE)
+  list(APPEND _m2_codes BEFORE)
 endif()
+foreach(_extra IN LISTS KAIRN_BENCH_EXTRA_INCLUDES)
+  if(NOT _extra MATCHES "^([a-z0-9]+)=(.+)$")
+    message(FATAL_ERROR "KAIRN_BENCH_EXTRA_INCLUDES: ${_extra} is not NAME=DIR (NAME in lower case and digits)")
+  endif()
+  list(APPEND _m2_codes "EXTRA_${CMAKE_MATCH_1}")
+  set(_m2_extra_dir_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}")
+endforeach()
 # kairn-bench-m2-checks-LEVEL: the inline setting with KAIRN_CHECKS 1 in every translation unit, for
 # what the checks cost (bench/README.md, "Milestone 2").
 foreach(_code IN LISTS _m2_codes)
   string(TOLOWER "${_code}" _name)
+  if(_code MATCHES "^EXTRA_(.+)$")
+    set(_name "${CMAKE_MATCH_1}")
+  endif()
   foreach(_level IN LISTS _levels)
     if(_code STREQUAL "INLINE")
       set(_target kairn-bench-m2-${_level})
@@ -206,10 +224,14 @@ foreach(_code IN LISTS _m2_codes)
       string(APPEND _flags " (headers: a copy with the check of the environment of the batch entries compiled out)")
       set(_setting INLINE)
       target_include_directories(${_target} BEFORE PRIVATE "${KAIRN_BENCH_NOCHECK_INCLUDE}")
-    elseif(_code STREQUAL "COLD")
-      string(APPEND _flags " (headers: a copy with the report of the check of the environment of the batch entries out of line and cold)")
+    elseif(_code MATCHES "^EXTRA_")
+      string(APPEND _flags " (headers: the copy ${_name}, from bench/entry_check.py inline)")
       set(_setting INLINE)
-      target_include_directories(${_target} BEFORE PRIVATE "${KAIRN_BENCH_COLD_INCLUDE}")
+      target_include_directories(${_target} BEFORE PRIVATE "${_m2_extra_dir_${_name}}")
+    elseif(_code STREQUAL "BEFORE")
+      string(APPEND _flags " (headers: those of an earlier commit, from bench/entry_check.py before)")
+      set(_setting INLINE)
+      target_include_directories(${_target} BEFORE PRIVATE "${KAIRN_BENCH_BEFORE_INCLUDE}")
     else()
       set(_setting ${_code})
     endif()

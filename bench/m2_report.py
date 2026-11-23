@@ -1671,6 +1671,364 @@ def configurations3(items):
                                                            ', '.join('`%s`' % c for c in commits)))
 
 
+# --- The check at entry measured again (2026-11-23) --------------------------------------------------
+# recheck-MACHINE-COMPILER-LEVEL-cK-rN.json, K b: kairn-bench-m2-before-LEVEL (the headers of 25ebe3d6,
+# the report of the check inline), 1: kairn-bench-m2-LEVEL (the report out of line and cold, the short
+# constructors of BallVector forced inline for every size), 0: kairn-bench-m2-nocheck-LEVEL (no check);
+# run one after the other, in that order, three rounds, with the filter m2k/,m2x/,m2y/. Their short
+# arrays are the tables of the arrays below.
+# inline-MACHINE-COMPILER-LEVEL-cK-rN.json, the bound of the forced inlining: K b as above, f
+# (kairn-bench-m2-forced-LEVEL: forced for every size), u (kairn-bench-m2-unforced-LEVEL: forced for
+# none), 1 (the header of the tree, with its bound), 0 (the same without the check); in that order,
+# three rounds, the filter m2x/,m2y/ and five functions of m2k/. Their ball vectors are the tables of
+# the ball vectors below, where they exist.
+
+RUNS4 = re.compile(r'^(?P<family>recheck|inline)-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])'
+                   r'-c(?P<c>[bfu10])-r(?P<run>\d+)$')
+
+
+def load_recheck(directory, family='recheck'):
+    """{name: {(machine, compiler, 'inline', level): [run, ...]}} for the runs of FAMILY: 'after' and
+    'before' the time of each function in the program with the check (the header of the tree, and the
+    header before) minus its time in the program without it, 'ratio' the tree's time over the time
+    before, 'share' 1 - without over the tree's, 'with' the tree's times; for the family inline also
+    'forced' and 'unforced', the time of the programs forced for every size and for none over the time
+    before, and 'noise', per function the largest spread over the rounds of the programs b, f, u, 1;
+    'raw' the runs themselves; the programs of one round paired."""
+    rounds_ = {}
+    for path in sorted(glob.glob(os.path.join(directory, '%s-*.json' % family))):
+        m = RUNS4.match(os.path.basename(path)[:-len('.json')])
+        if not m or m.group('family') != family:
+            continue
+        d = json.load(open(path))
+        d['path'] = os.path.basename(path)
+        d['ns'] = {r['name']: r['ns_min'] for r in d['results']}
+        key = (m.group('machine'), m.group('compiler'), 'inline', m.group('level'))
+        rounds_.setdefault(key, {}).setdefault(m.group('run'), {})[m.group('c')] = d
+    out = {name: {} for name in ('after', 'before', 'ratio', 'share', 'with', 'forced', 'unforced', 'noise', 'raw')}
+    for key, rounds in rounds_.items():
+        for run, progs in sorted(rounds.items()):
+            out['raw'].setdefault(key, []).extend(progs[c] for c in ('b', 'f', 'u', '1', '0') if c in progs)
+            if not all(c in progs for c in ('b', '1', '0')):
+                continue
+            tb, t1, t0 = progs['b']['ns'], progs['1']['ns'], progs['0']['ns']
+            common = [n for n in t1 if n in t0 and n in tb]
+            out['with'].setdefault(key, []).append({'ns': t1})
+            out['after'].setdefault(key, []).append({'ns': {n: t1[n] - t0[n] for n in common}})
+            out['before'].setdefault(key, []).append({'ns': {n: tb[n] - t0[n] for n in common}})
+            out['ratio'].setdefault(key, []).append({'ns': {n: t1[n] / tb[n] for n in common}})
+            out['share'].setdefault(key, []).append({'ns': {n: 1 - t0[n] / t1[n] for n in common}})
+            for c, name in (('f', 'forced'), ('u', 'unforced')):
+                if c in progs:
+                    tc = progs[c]['ns']
+                    out[name].setdefault(key, []).append({'ns': {n: tc[n] / tb[n] for n in common if n in tc}})
+        full = [p for _, p in sorted(rounds.items()) if all(c in p for c in ('b', 'f', 'u', '1'))]
+        out.setdefault('times', {})[key] = [{c: p[c]['ns'] for c in p} for p in full]
+        if full:
+            # What placement alone does: the controls of the short ball vectors (the generated loops
+            # called directly, the same code in every program), |X / b - 1| of the median round, for X
+            # f, u and 1; its 90th percentile is the floor of the noise of every function.
+            ctl = [n for n in full[0]['b']['ns'] if n.endswith('/kairn') and n.startswith(('m2x/', 'm2y/'))]
+            dev = sorted(abs(sorted(p[c]['ns'][n] / p['b']['ns'][n] for p in full)[len(full) // 2] - 1)
+                         for n in ctl for c in ('f', 'u', '1') if all(n in p[c]['ns'] for p in full))
+            floor = dev[int(0.9 * (len(dev) - 1))] if dev else 0.0
+            noise = {'': floor}
+            for n in full[0]['b']['ns']:
+                sp = [floor]
+                for c in ('b', 'f', 'u', '1'):
+                    v = [p[c]['ns'][n] for p in full if n in p[c]['ns']]
+                    if len(v) == len(full):
+                        sp.append(max(v) / min(v) - 1)
+                noise[n] = max(sp)
+            out['noise'][key] = noise
+    return out
+
+
+def recheck_tables(rc, rcb=None):
+    """The tables of the check measured again: the short arrays from rc (the runs recheck), the short
+    ball vectors from rcb (the runs inline, the header of the tree with its bound) where given."""
+    if not rc.get('after'):
+        return
+    rcb = rcb if rcb and rcb.get('after') else rc
+    names = [('ssum1', '`sum`, one limb'), ('ssum2', '`sum`, two limbs'), ('sdot1', '`dot`, one limb'),
+             ('sdot2', '`dot`, two limbs')]
+    sizes = (1, 2, 4, 8, 16, 64, 1024)
+    for kind, kl in (('tp', 'independent calls'), ('lat', 'dependent calls')):
+        rows = [('%s, n = %d' % (label, n), time('m2k/%s/%s_n%d/op' % (kind, k, n))) for k, label in names for n in sizes]
+        table(rc['with'], 'Short arrays, 2026-11-23, %s: ns per call, with the check' % kl, rows, kind='time')
+        table(rc['after'], 'The check at entry, 2026-11-23, %s: ns per call (with the check minus without)' % kl, rows,
+              kind='time')
+        table(rc['before'], 'The check at entry before 2026-11-23, measured again, %s: ns per call (the header before '
+              'minus without the check)' % kl, rows, kind='time')
+        table(rc['ratio'], 'Short arrays, 2026-11-23, %s: the header of 2026-11-23 over the header before' % kl, rows)
+        table(rc['share'], 'The check at entry, 2026-11-23, %s: its share of the call (1 - without over with)' % kl,
+              rows)
+    # The controls: the generated loops called directly, the same code in the three programs.
+    rows = [('control: the generated loop of %s, n = %d' % (label, n), time('m2k/tp/%s_n%d/kairn' % (k, n)))
+            for k, label in (('ssum1', '`sum`, one limb'), ('sdot2', '`dot`, two limbs')) for n in (1, 16, 1024)]
+    table(rc['ratio'], 'The check at entry, 2026-11-23: controls, the header of 2026-11-23 over the header before', rows)
+    table({k: [{'ns': {n: 1 - v for n, v in x['ns'].items()}} for x in rs] for k, rs in rc['share'].items()},
+          'The check at entry, 2026-11-23: controls, without the check over with', rows)
+    for b, bl in (('m2y', 'one operation per unit'), ('m2x', 'every size in one unit')):
+        for kind, kl in (('tp', 'many vectors'), ('lat', 'a dependent chain')):
+            rows = []
+            for op, ol in BVS_OPS:
+                for kk in (1, 2):
+                    for n in (3, 7, 13, 18, 80):
+                        rows.append(('%s, %d limb%s, N = %d' % (ol, kk, 's' if kk == 2 else '', n),
+                                     time('%s/%s/%s_%d_%d/op' % (b, kind, op, kk, n))))
+            table(rcb['with'], 'Short ball vectors, 2026-11-23, %s, %s: ns per operation, with the check' % (bl, kl), rows,
+                  kind='time')
+            table(rcb['after'], 'Short ball vectors, 2026-11-23, %s, %s: the check, ns per operation (with minus without)'
+                  % (bl, kl), rows, kind='time')
+            table(rcb['before'], 'Short ball vectors before 2026-11-23, measured again, %s, %s: the check, ns per '
+                  'operation (the header before minus without)' % (bl, kl), rows, kind='time')
+            table(rcb['ratio'], 'Short ball vectors, 2026-11-23, %s, %s: the header of 2026-11-23 over the header before'
+                  % (bl, kl), rows)
+    # From which length the check is under 5% and under 1% of the call, per configuration: the shortest
+    # n from which every longer one is under it in every round.
+    present = present_of(rc['share'])
+    print('\n| The check at entry, 2026-11-23, is under 5%%; 1%% of the call from n = | %s |'
+          % ' | '.join(col[2] for col in present))
+    print('|---' * (len(present) + 1) + '|')
+    for kind, kl in (('tp', 'independent'), ('lat', 'dependent')):
+        for k, label in names:
+            cells = []
+            for col in present:
+                parts = []
+                for level in ('O2', 'O3'):
+                    rs = rc['share'].get((col[0], col[1], 'inline', level), [])
+                    if not rs:
+                        continue
+                    out = []
+                    for lim in (0.05, 0.01):
+                        ok = None
+                        for n in reversed(sizes):
+                            name = 'm2k/%s/%s_n%d/op' % (kind, k, n)
+                            if all(name in x['ns'] and x['ns'][name] < lim for x in rs):
+                                ok = n
+                            else:
+                                break
+                        out.append(str(ok) if ok else '> 1024')
+                    parts.append('%s (-%s)' % ('; '.join(out), level))
+                cells.append(', '.join(parts))
+            print('| %s, %s | %s |' % (label, kl, ' | '.join(cells)))
+
+
+def recheck_runs(rc):
+    """Each run of the check measured again: its checks, its spread against the fastest run of the same
+    program and configuration, the spread within it, the load; then the spread of each program."""
+    raw = rc.get('raw', {})
+    if not raw:
+        return
+    print('\n| Run (the check at entry, 2026-11-23) | Functions checked, failed | Over the fastest run of the program: '
+          'median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at '
+          'start, end |')
+    print('|---|---|---|---|---|')
+    spreads = []
+    for key in sorted(raw):
+        groups = {}
+        for r in raw[key]:
+            groups.setdefault(r['setting'], []).append(r)
+        for setting, g in sorted(groups.items()):
+            names = set(g[0]['ns'])
+            for r in g[1:]:
+                names &= set(r['ns'])
+            best = {n: min(r['ns'][n] for r in g) for n in names}
+            for r in g:
+                rel = sorted(r['ns'][n] / best[n] for n in names)
+                within = sorted(x['ns_median'] / x['ns_min'] for x in r['results'])
+                la = r['load_average']
+                print('| `%s` | %d, %d | %.3f, %.3f | %.3f | %.1f, %.1f |' % (
+                    r['path'], r['checks']['compared'], r['checks']['failed'], rel[len(rel) // 2],
+                    rel[int(0.9 * (len(rel) - 1))], within[len(within) // 2], la['start'][0], la['end'][0]))
+            if len(g) > 1:
+                sp = sorted((max(r['ns'][n] for r in g) / min(r['ns'][n] for r in g) - 1, n) for n in names)
+                label = {'before': 'the header before', 'inline': 'the header of the tree',
+                         'nocheck': 'no check'}.get(setting, setting)
+                spreads.append(('%s, %s' % ('-'.join(x for x in key if x != 'inline'), label), len(g), sp))
+    print('\n| Spread of (the check at entry, 2026-11-23) | Runs | Spread of a function over the runs: median, 90th '
+          'percentile, worst | Worst function |')
+    print('|---|---:|---|---|')
+    for label, n, sp in spreads:
+        print('| %s | %d | %.1f%%, %.1f%%, %.1f%% | `%s` |' % (label, n, 100 * sp[len(sp) // 2][0],
+                                                            100 * sp[int(0.9 * (len(sp) - 1))][0], 100 * sp[-1][0],
+                                                            sp[-1][1]))
+    print('\n| Configuration (the check at entry, 2026-11-23) | CPU | Compiler | Flags (this commit\'s program) | '
+          'Rounds | Dates, commits |')
+    print('|---|---|---|---|---|---|')
+    for key in sorted(raw):
+        rs = raw[key]
+        r = next((x for x in rs if x['setting'] == 'inline'), rs[0])
+        rounds = len(rc['after'].get(key, []))
+        print('| %s | %s; %s | %s | `%s` | %d | %s, %s |' % (
+            '-'.join(key), r['machine']['cpu'], r['machine']['pinning'], r['compiler'], r['flags'], rounds,
+            ', '.join(sorted({x['date'] for x in rs})), ', '.join('`%s`' % c for c in sorted({x['commit'] for x in rs}))))
+
+
+BV_SIZES = [(1, 3), (1, 7), (1, 13), (1, 18), (1, 80), (2, 3), (2, 7), (2, 13), (2, 18), (2, 80)]
+
+
+def bound_tables(ib):
+    """The measurements of the bound of forced inlining (the runs inline): for the constructor of each
+    size, the program forced for every size, the one forced for none and the header of the tree over
+    the header before; and how many of the 24 functions of each size (6 operations, many vectors and a
+    chain, in both units) are slower and faster than with the header before beyond the noise: the
+    lowest of a function's three times above the highest of the header before by more than what
+    placement alone does in that configuration (the 90th percentile of |X / before - 1| over the
+    controls, the same code in every program), and the highest below the lowest by more than it; and
+    the same for the program forced for every size against the one forced for none, what the forcing
+    itself changes."""
+    if not ib.get('forced'):
+        return
+    for b, bl in (('m2x', 'every size in one unit'), ('m2y', 'one operation per unit')):
+        for kind, kl in (('tp', 'many vectors'), ('lat', 'a dependent chain')):
+            rows = [('the constructor, %d limb%s, N = %d' % (k, 's' if k == 2 else '', n),
+                     time('%s/%s/make_%d_%d/op' % (b, kind, k, n))) for k, n in BV_SIZES]
+            for name, what in (('forced', 'forced for every size'), ('unforced', 'forced for none'),
+                               ('ratio', 'with the bound of the tree')):
+                table(ib[name], 'The bound, %s, %s: the constructor %s over the header before' % (bl, kl, what), rows)
+    ops = [op for op, _ in BVS_OPS]
+    present = present_of(ib['forced'])
+
+    def verdict(key, x, y, k, n):
+        """How many of the 24 functions of a size are slower and faster in program x than in y."""
+        rs, floor = ib['times'].get(key, []), ib['noise'].get(key, {}).get('', 0.0)
+        slow, fast = [], []
+        for b in ('m2x', 'm2y'):
+            for kind in ('tp', 'lat'):
+                for op in ops:
+                    f = '%s/%s/%s_%d_%d/op' % (b, kind, op, k, n)
+                    if not rs or not all(f in r[x] and f in r[y] for r in rs):
+                        continue
+                    lo_x, hi_x = min(r[x][f] for r in rs), max(r[x][f] for r in rs)
+                    lo_y, hi_y = min(r[y][f] for r in rs), max(r[y][f] for r in rs)
+                    if lo_x > hi_y * (1 + floor):
+                        slow.append((lo_x / hi_y, '%s %s %s' % (op, kind, b)))
+                    elif hi_x < lo_y * (1 - floor):
+                        fast.append((hi_x / lo_y, '%s %s %s' % (op, kind, b)))
+        return sorted(slow, reverse=True), sorted(fast)
+
+    # Per compiler: the constructor of each size in the unit of every size, many vectors (ns, the
+    # lowest and highest of the three rounds), forced for every size, for none and with the header
+    # before, and the verdict of the 24 functions of the size, forced over not forced.
+    for col in present:
+        print('\n| The bound, %s: the constructor, every size in one unit, many vectors, ns per operation; forced over not forced, the 24 functions of the size: slower; faster | forced (-O2) | not forced (-O2) | before (-O2) | slower; faster (-O2) | forced (-O3) | not forced (-O3) | before (-O3) | slower; faster (-O3) |'
+              % col[2])
+        print('|---' * 9 + '|')
+        for k, n in BV_SIZES:
+            cells = []
+            for level in ('O2', 'O3'):
+                key = (col[0], col[1], 'inline', level)
+                rs = ib['times'].get(key, [])
+                f = 'm2x/tp/make_%d_%d/op' % (k, n)
+                for prog in ('f', 'u', 'b'):
+                    v = [r[prog][f] for r in rs if f in r.get(prog, {})]
+                    cells.append(fmt_ns_range(min(v), max(v)) if v else '')
+                slow, fast = verdict(key, 'f', 'u', k, n)
+                cells.append('%d%s; %d%s' % (len(slow), (' (%s %.2f)' % (slow[0][1], slow[0][0])) if slow else '',
+                                             len(fast), (' (%s %.2f)' % (fast[0][1], fast[0][0])) if fast else ''))
+            # The tree forces the constructors of up to 14 limbs with Clang, none with GCC.
+            forced = col[1] in ('clang', 'appleclang') and k * n <= 14
+            print('| %d limb%s, N = %d%s | %s |' % (k, 's' if k == 2 else '', n,
+                                                  ' (forced in the tree)' if forced else '', ' | '.join(cells)))
+
+    print('\n| The bound: what placement alone does, |X / before - 1| of the controls at the 90th percentile (the floor of the noise) | %s |'
+          % ' | '.join(col[2] for col in present))
+    print('|---' * (len(present) + 1) + '|')
+    cells = []
+    for col in present:
+        cells.append(', '.join('%.1f%% (-%s)' % (100 * ib['noise'][(col[0], col[1], 'inline', lv)][''], lv)
+                               for lv in ('O2', 'O3') if (col[0], col[1], 'inline', lv) in ib['noise']))
+    print('| the generated loops of the short ball vectors, called directly | %s |' % ' | '.join(cells))
+    # X slower than Y for a function: X's lowest time over the rounds above Y's highest by more than
+    # the floor of placement; faster: X's highest below Y's lowest by more than it.
+    for x, y, what in (('f', 'b', 'forced for every size, over the header before'), ('u', 'b', 'forced for none, over the header before'),
+                       ('1', 'b', 'with the bound of the tree, over the header before'), ('f', 'u', 'forced for every size, over forced for none')):
+        print('\n| The bound, %s: functions slower; faster (of 24 per size), and the largest of each | %s |'
+              % (what, ' | '.join(col[2] for col in present)))
+        print('|---' * (len(present) + 1) + '|')
+        for k, n in BV_SIZES:
+            cells = []
+            for col in present:
+                parts = []
+                for level in ('O2', 'O3'):
+                    key = (col[0], col[1], 'inline', level)
+                    rs, floor = ib['times'].get(key, []), ib['noise'].get(key, {}).get('', 0.0)
+                    if not rs:
+                        continue
+                    slow, fast = [], []
+                    for b in ('m2x', 'm2y'):
+                        for kind in ('tp', 'lat'):
+                            for op in ops:
+                                f = '%s/%s/%s_%d_%d/op' % (b, kind, op, k, n)
+                                if not all(f in r[x] and f in r[y] for r in rs):
+                                    continue
+                                lo_x, hi_x = min(r[x][f] for r in rs), max(r[x][f] for r in rs)
+                                lo_y, hi_y = min(r[y][f] for r in rs), max(r[y][f] for r in rs)
+                                if lo_x > hi_y * (1 + floor):
+                                    slow.append((lo_x / hi_y, '%s %s %s' % (op, kind, b)))
+                                elif hi_x < lo_y * (1 - floor):
+                                    fast.append((hi_x / lo_y, '%s %s %s' % (op, kind, b)))
+                    slow.sort(reverse=True)
+                    fast.sort()
+                    w = (' (%s %.2f)' % (slow[0][1], slow[0][0])) if slow else ''
+                    v = (' (%s %.2f)' % (fast[0][1], fast[0][0])) if fast else ''
+                    parts.append('%d%s; %d%s (-%s)' % (len(slow), w, len(fast), v, level))
+                cells.append(', '.join(parts))
+            print('| %d limb%s, N = %d | %s |' % (k, 's' if k == 2 else '', n, ' | '.join(cells)))
+
+
+CTOR23 = re.compile(r'^ctor23-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])-c(?P<c>[a-z0-9]+)-r(?P<run>\d+)$')
+CTOR23_PROGRAMS = [('b', 'the header before'), ('1', 'the header of the tree'), ('u', 'the tree, forced for no size'),
+                   ('xb', 'the header before, code aligned (-falign-functions=64 -falign-loops=64)'),
+                   ('x1', 'the tree, code aligned'), ('ab', 'the header before, BallVector aligned to 32 bytes'),
+                   ('a1', 'the tree, BallVector aligned to 32 bytes')]
+
+
+def ctor23_tables(directory):
+    """The runs ctor23-*: GCC 13 at -O3, the constructors of three entries, in seven programs one after
+    the other, three rounds: what the constructor of BallVector<double, 2, 3> in a unit of its own
+    follows. A cell is the lowest and highest time over the rounds, ns."""
+    runs = {}
+    for path in sorted(glob.glob(os.path.join(directory, 'ctor23-*.json'))):
+        m = CTOR23.match(os.path.basename(path)[:-len('.json')])
+        if m:
+            d = json.load(open(path))
+            runs.setdefault(m.group('c'), []).append({r['name']: r['ns_min'] for r in d['results']})
+    if not runs:
+        return
+    fns = [('m2y/tp/make_2_3/op', '2 limbs, N = 3, one operation per unit'), ('m2y/tp/make_2_3/kairn', 'its control'),
+           ('m2x/tp/make_2_3/op', '2 limbs, N = 3, every size in one unit'), ('m2y/lat/make_2_3/op', 'the same in a chain'),
+           ('m2y/tp/make_1_3/op', '1 limb, N = 3, one operation per unit'), ('m2x/tp/make_1_3/op', '1 limb, N = 3, every size in one unit')]
+    print('\n| The constructor of `BallVector<double, 2, 3>`, GCC 13 at -O3, Zen 2: ns per operation | %s |'
+          % ' | '.join(label for _, label in fns))
+    print('|---' * (len(fns) + 1) + '|')
+    for c, label in CTOR23_PROGRAMS:
+        if c not in runs:
+            continue
+        cells = []
+        for f, _ in fns:
+            v = [r[f] for r in runs[c] if f in r]
+            cells.append(fmt_ns_range(min(v), max(v)) if v else '')
+        print('| %s | %s |' % (label, ' | '.join(cells)))
+
+
+def report_recheck(directory):
+    rc = load_recheck(directory)
+    ib = load_recheck(directory, 'inline')
+    print('\n## the check at entry, 2026-11-23: runs')
+    recheck_runs(rc)
+    if ib.get('raw'):
+        print('\n## the bound of forced inlining, 2026-11-23: runs')
+        recheck_runs(ib)
+    print('\n## the check at entry, 2026-11-23')
+    recheck_tables(rc, ib)
+    print('\n## the bound of forced inlining, 2026-11-23')
+    bound_tables(ib)
+    ctor23_tables(directory)
+
+
 def report3(directory):
     items = load3(directory)
     print('\n## part 3: configurations')
@@ -1767,6 +2125,8 @@ def report(directory, sections):
             report2(directory)
         elif name == 'part3':
             report3(directory)
+        elif name == 'recheck':
+            report_recheck(directory)
         else:
             SECTIONS[name](c if name == 'settings' else inline)
 
@@ -1783,7 +2143,7 @@ def fill(directory, template, out):
     import io
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3'])
+        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3', 'recheck'])
     tables, current = {}, None
     for line in buf.getvalue().splitlines():
         if line.startswith('| ') and current is None:
@@ -1831,9 +2191,11 @@ def fill(directory, template, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('dir')
-    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3'], action='append')
+    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3', 'recheck'],
+                    action='append')
     ap.add_argument('--fill', nargs=2, metavar=('TEMPLATE', 'OUT'))
-    ap.add_argument('--part', type=int, choices=[1, 2, 3], help='the tables of one part only (default: the first part)')
+    ap.add_argument('--part', type=int, choices=[1, 2, 3, 4],
+                    help='the tables of one part only (default: the first part; 4: the check at entry measured again on 2026-11-23)')
     a = ap.parse_args()
     if a.fill:
         fill(a.dir, a.fill[0], a.fill[1])
@@ -1843,6 +2205,9 @@ def main():
         return 0
     if a.part == 3:
         report3(a.dir)
+        return 0
+    if a.part == 4:
+        report_recheck(a.dir)
         return 0
     report(a.dir, a.section or list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'])
     return 0

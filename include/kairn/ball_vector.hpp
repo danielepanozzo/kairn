@@ -287,6 +287,32 @@ KAIRN_FORCEINLINE bool overlap(const T* a, std::size_t n, const T* b, std::size_
 // in practice, and the mode is checked. Then with KAIRN_CHECKS a negative radius, reported as
 // almost surely a mistake (the constructor makes it the whole space), and for two limbs each center
 // canonical, whose test rounds.
+// How far the constructors of a BallVector from centers and a radius, and the member that makes the
+// ball vector, are forced inline: while the centers have at most bv_inline_limbs limbs in all (K N),
+// they are forced inline (KAIRN_FORCEINLINE); above that they are ordinary inline functions, the
+// compiler's to inline or to call, the code of before 2026-11-23. The bound is 14 limbs with Clang
+// and 0 with every other compiler, which then compiles the code of before for every size. A choice
+// of the authors, from the measurements of 2026-11-23 (the benchmarks of Milestone 2, question 14;
+// docs/reference/ball_vector.md, "Checks"): the same harness forced for every size and for none, GCC
+// 13 and Clang 18 on x86-64, Apple clang 21 and GCC 16 on AArch64, -O2 and -O3, N = 3, 7, 13, 18 and
+// 80 of one and two limbs. With Clang 18 and Apple clang, which otherwise call these constructors,
+// forcing up to 14 limbs (of those sizes 1 x 3, 1 x 7, 1 x 13, 2 x 3, 2 x 7) was never slower than
+// not forcing beyond the noise, and a constructor took 0.37 to 0.79 of its time; from 18 limbs it
+// was slower at -O3 (two limbs and 13 or 18 entries 1.2 to 1.3 times: the loop unrolled for every
+// limb spills) and faster at -O2. GCC 13 and 16 inline these constructors without being forced, to
+// the same code; forcing them changed only what GCC inlines of the other loops in the same unit,
+// faster with GCC 13 (the scaling of one limb at -O3) and slower with GCC 16 (chains of the
+// difference of one limb at -O3, 1.4 to 1.7 times), so GCC is left to itself; MSVC was not
+// measured. The one place that selects is bv_forced_inline; it changes no result, only what the
+// compiler may call.
+#if defined(__clang__)
+inline constexpr std::size_t bv_inline_limbs = 14;
+#else
+inline constexpr std::size_t bv_inline_limbs = 0;
+#endif
+template <int K, std::size_t N>
+concept bv_forced_inline = std::size_t(K) * N <= bv_inline_limbs;
+
 template <class T, int K>
 KAIRN_FORCEINLINE void bv_make(const T* const* c, std::size_t n, T r, T* const* z, T* rr) noexcept {
     [[maybe_unused]] bool operands = check_batch_environment();
@@ -487,15 +513,42 @@ public:
     /// are the guards, c + 0 and r + 0, and the loop's m - m, whose values are the same under every
     /// rounding mode, but the sign of whose zeros is not). Then, when KAIRN_CHECKS is 1, a negative
     /// r is reported (it is almost surely a mistake) and, for two limbs, a center that is not
-    /// canonical. Not constexpr.
-    BallVector(const std::array<center_type, N>& c, T r) noexcept {
+    /// canonical. Not constexpr. With Clang forced inline, with the private member that makes the
+    /// ball vector, while the centers have at most 14 limbs in all (K N <= detail::bv_inline_limbs):
+    /// a few copies and one call of the loop, which Clang otherwise calls rather than inlines in a
+    /// unit of many operations; above that, and with other compilers, an ordinary inline function
+    /// (docs/reference/ball_vector.md, "Checks").
+    KAIRN_FORCEINLINE BallVector(const std::array<center_type, N>& c, T r) noexcept
+        requires detail::bv_forced_inline<K, N>
+    {
+        for (int j = 0; j < K; ++j)
+            for (std::size_t i = 0; i < N; ++i) c_[j][i] = c[i].limb[j];
+        make(r);
+    }
+    /// The same constructor, above the bound of forced inlining (detail::bv_inline_limbs): an
+    /// ordinary inline function.
+    BallVector(const std::array<center_type, N>& c, T r) noexcept
+        requires(!detail::bv_forced_inline<K, N>)
+    {
         for (int j = 0; j < K; ++j)
             for (std::size_t i = 0; i < N; ++i) c_[j][i] = c[i].limb[j];
         make(r);
     }
     /// The same from the arrays of a view of N centers, c.size() == N (checked with KAIRN_CHECKS, not
-    /// otherwise): the centers are copied in, then made a ball vector of radius r as above.
-    BallVector(SoAView<const T, K> c, T r) noexcept {
+    /// otherwise): the centers are copied in, then made a ball vector of radius r as above. Forced
+    /// inline, as the constructor above, up to the same bound.
+    KAIRN_FORCEINLINE BallVector(SoAView<const T, K> c, T r) noexcept
+        requires detail::bv_forced_inline<K, N>
+    {
+        detail::check_lengths(c.size() == N);
+        for (int j = 0; j < K; ++j)
+            for (std::size_t i = 0; i < N; ++i) c_[j][i] = c.limb(j)[i];
+        make(r);
+    }
+    /// The same constructor, above the bound of forced inlining: an ordinary inline function.
+    BallVector(SoAView<const T, K> c, T r) noexcept
+        requires(!detail::bv_forced_inline<K, N>)
+    {
         detail::check_lengths(c.size() == N);
         for (int j = 0; j < K; ++j)
             for (std::size_t i = 0; i < N; ++i) c_[j][i] = c.limb(j)[i];
@@ -568,8 +621,21 @@ public:
     constexpr operator BallVectorView<const T, K>() const noexcept { return view(); }
 
 private:
-    // The centers in c_ and the radius r made a ball vector, in place.
-    void make(T r) noexcept {
+    // The centers in c_ and the radius r made a ball vector, in place (make_in_place, forced into
+    // each): forced inline up to the bound, as the constructors that call it (otherwise Clang 18 and
+    // Apple clang call it for a short vector, and the centers go through memory around the call);
+    // above it, and with other compilers than Clang, an ordinary inline function.
+    KAIRN_FORCEINLINE void make(T r) noexcept
+        requires detail::bv_forced_inline<K, N>
+    {
+        make_in_place(r);
+    }
+    void make(T r) noexcept
+        requires(!detail::bv_forced_inline<K, N>)
+    {
+        make_in_place(r);
+    }
+    KAIRN_FORCEINLINE void make_in_place(T r) noexcept {
         const T* in[K];
         T* out[K];
         for (int j = 0; j < K; ++j) {

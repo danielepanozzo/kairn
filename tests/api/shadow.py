@@ -204,7 +204,7 @@ def main():
     # A scan that found almost nothing would make the test pass for nothing: the headers declare
     # several hundred names, of every kind below.
     expected = {'inf': 'ball.hpp, a local', 'limbs': 'expansion.hpp, a parameter of from_limbs',
-                'problem': 'environment.hpp, a local of a condition', 'what': 'config.hpp, a parameter',
+                'differs': 'environment.hpp, a local of a condition', 'what': 'config.hpp, a parameter',
                 'i': 'ball.hpp, the variable of a for', 'te': 'environment.hpp, a further name',
                 's_out': 'gen/scalar.hpp, an output', 'cz0': 'gen/scalar.hpp, a local'}
     missing = [f'{n} ({where})' for n, where in expected.items() if n not in names]

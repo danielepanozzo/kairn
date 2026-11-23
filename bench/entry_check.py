@@ -1,37 +1,48 @@
 #!/usr/bin/env python3
-"""entry_check.py: a copy of the headers without the check of the environment at the batch entries.
+"""entry_check.py: copies of the headers for the measurement of the check of the environment at the batch entries.
 
-    python3 bench/entry_check.py copy DEST [--variant nocheck|cold]
+    python3 bench/entry_check.py copy DEST            the headers without the check
+    python3 bench/entry_check.py inline DEST LIMBS    the headers with another bound of forced inlining
+    python3 bench/entry_check.py before DEST [--commit C]   the headers of an earlier commit
+    python3 bench/entry_check.py check                whether the header has the expected form
 
 Every function of kairn/batch.hpp and every operation on whole ball vectors reads the floating-point
 environment at entry, in every build (detail::check_batch_environment, include/kairn/environment.hpp),
-and the headers have no macro to leave it out. To measure what it costs, this script copies
-include/kairn to DEST/kairn and replaces, in the copy only, the body of check_batch_environment with
-`return true;`, so that nothing is read; it refuses if the function in include/ is not the one it
-expects. kairn-bench-m2-nocheck-LEVEL is the harness of Milestone 2 built against the copy
+and the headers have no macro to leave it out. To measure what it costs, `copy` copies include/kairn
+to DEST/kairn and replaces, in the copy only, the body of check_batch_environment with `return true;`,
+so that nothing is read; it refuses if the function in include/ is not the one it expects (`check`
+says whether it is). kairn-bench-m2-nocheck-LEVEL is the harness of Milestone 2 built against the copy
 (-DKAIRN_BENCH_NOCHECK_INCLUDE=DEST, bench/CMakeLists.txt); the copy is never committed, and nothing
-under include/ changes. bench/README.md, "Milestone 2", third part, says how the two programs are
-compared. With --variant cold the check is kept and only its report moves: the hot path is one read
-of the register and one test of a mask, and the message and the call of KAIRN_ENVIRONMENT_FAILURE are
-in a function of their own, out of line and cold (-DKAIRN_BENCH_COLD_INCLUDE=DEST builds
-kairn-bench-m2-cold-LEVEL against it): a candidate change of the header, measured, not made.
-Standard library only.
+under include/ changes.
+
+Since 2026-11-23 the header has the form that this script's variant `cold` wrote into a copy on
+2026-11-22 (the third part of the benchmarks of Milestone 2): one read of the control register and
+one test of a mask on the hot path, the message and the call of KAIRN_ENVIRONMENT_FAILURE in a
+function of their own, never inlined and cold (detail::report_environment). The variant is gone; the
+header itself is what `check` verifies. `inline DEST LIMBS` copies include/kairn with the check kept
+and the bound of the forced inlining of the short constructors of BallVector (ball_vector.hpp,
+detail::bv_inline_limbs, 14 limbs with Clang and 0 with other compilers) set to LIMBS for every
+compiler: 0 forces none, a large number every size; kairn-bench-m2-NAME-LEVEL
+is the harness built against such a copy (-DKAIRN_BENCH_EXTRA_INCLUDES=NAME=DEST). `before DEST` writes DEST/kairn from include/kairn of an
+earlier commit (by default 25ebe3d6, the last with the report inline at every check), read with
+`git archive` from this repository: -DKAIRN_BENCH_BEFORE_INCLUDE=DEST builds kairn-bench-m2-before-LEVEL
+against it, the harness of this tree with the headers as they were. bench/README.md, "Milestone 2",
+third part, says how the programs are compared. Standard library and git only.
 """
 import argparse
+import io
+import re
 import os
 import shutil
+import subprocess
 import sys
+import tarfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 BODY = '''KAIRN_FORCEINLINE constexpr bool check_batch_environment(bool rounding = true) noexcept {
     bool ok = true;
-    if (!__builtin_is_constant_evaluated()) {
-        if (const char* problem = environment_problem(rounding)) {
-            ok = false;
-            KAIRN_ENVIRONMENT_FAILURE(problem);
-        }
-    }
+    if (!__builtin_is_constant_evaluated()) ok = environment_checked(rounding);
     return ok;
 }'''
 
@@ -42,44 +53,35 @@ NOCHECK = '''KAIRN_FORCEINLINE constexpr bool check_batch_environment(bool round
     return true;
 }'''
 
-
-# --variant cold: the check kept, its hot path one read of the register and one test of a mask, the
-# message and the call of KAIRN_ENVIRONMENT_FAILURE moved into a function of their own that is out of
-# line and cold. A candidate change of the header, measured against the header as it is (bench-
-# milestone2.md, question 14); not the library's code.
-COLD = '''// bench/entry_check.py, --variant cold: the bits of the control register that differ from the
-// default environment (0 when it is the default one), one read and one test.
-KAIRN_FORCEINLINE unsigned long long environment_bits(bool rounding) noexcept {
-#if defined(KAIRN_DETAIL_MXCSR)
-    return _mm_getcsr() & (rounding ? 0xE040u : 0x8040u);
-#elif defined(KAIRN_DETAIL_FPCR)
-#if defined(__clang__)
-    const std::uint64_t fpcr = __builtin_arm_rsr64("fpcr");
-#else
-    const std::uint64_t fpcr = __builtin_aarch64_get_fpcr64();
-#endif
-    return fpcr & ((rounding ? (std::uint64_t{3} << 22) : 0) | (std::uint64_t{1} << 24) | std::uint64_t{3});
-#else
-    return environment_problem(rounding) != nullptr;
-#endif
-}
-// The report, out of line and cold: the message, and KAIRN_ENVIRONMENT_FAILURE.
-[[gnu::cold, gnu::noinline]] inline void batch_environment_report(bool rounding) noexcept {
-    if (const char* problem = environment_problem(rounding)) KAIRN_ENVIRONMENT_FAILURE(problem);
-}
-KAIRN_FORCEINLINE constexpr bool check_batch_environment(bool rounding = true) noexcept {
-    bool ok = true;
-    if (!__builtin_is_constant_evaluated()) {
-        if (__builtin_expect(environment_bits(rounding) != 0, 0)) {
-            ok = false;
-            batch_environment_report(rounding);
-        }
-    }
-    return ok;
+# The report out of line and cold, which `check` also requires.
+REPORT = '''KAIRN_DETAIL_COLD inline void report_environment(std::uint64_t b) noexcept {
+    KAIRN_ENVIRONMENT_FAILURE(environment_message(b));
 }'''
 
+BEFORE = '25ebe3d6'
 
-def copy(dest, variant='nocheck'):
+# The bound of forced inlining (ball_vector.hpp: 14 limbs with Clang, 0 with any other compiler, in one
+# block), which `inline` replaces in its copy by one definition for every compiler.
+BOUND = re.compile(r'^#if defined\(__clang__\)\ninline constexpr std::size_t bv_inline_limbs = \d+;\n#else\n'
+                   r'inline constexpr std::size_t bv_inline_limbs = \d+;\n#endif$', re.M)
+
+
+def header():
+    return open(os.path.join(ROOT, 'include', 'kairn', 'environment.hpp')).read()
+
+
+def check():
+    text = header()
+    ok = text.count(BODY) == 1 and text.count(REPORT) == 1
+    print('include/kairn/environment.hpp: check_batch_environment %s' %
+          ('has the expected form (one read and one test, the report out of line and cold)' if ok
+           else 'is not the expected one: update bench/entry_check.py'))
+    return 0 if ok else 1
+
+
+def copy(dest):
+    if check() != 0:
+        sys.exit(1)
     src = os.path.join(ROOT, 'include', 'kairn')
     out = os.path.join(dest, 'kairn')
     if os.path.exists(out):
@@ -87,12 +89,42 @@ def copy(dest, variant='nocheck'):
     shutil.copytree(src, out)
     path = os.path.join(out, 'environment.hpp')
     text = open(path).read()
-    if text.count(BODY) != 1:
-        sys.exit('check_batch_environment in include/kairn/environment.hpp is not the expected one: '
-                 'update bench/entry_check.py')
-    open(path, 'w').write(text.replace(BODY, NOCHECK if variant == 'nocheck' else COLD))
-    print('wrote %s (check_batch_environment %s in the copy of environment.hpp)'
-          % (out, 'compiled out' if variant == 'nocheck' else 'with its report out of line and cold'))
+    open(path, 'w').write(text.replace(BODY, NOCHECK))
+    print('wrote %s (check_batch_environment compiled out in the copy of environment.hpp)' % out)
+
+
+def inline(dest, limbs):
+    if check() != 0:
+        sys.exit(1)
+    src = os.path.join(ROOT, 'include', 'kairn')
+    out = os.path.join(dest, 'kairn')
+    if os.path.exists(out):
+        sys.exit('%s exists: give an empty directory' % out)
+    shutil.copytree(src, out)
+    path = os.path.join(out, 'ball_vector.hpp')
+    text = open(path).read()
+    if len(BOUND.findall(text)) != 1:
+        sys.exit('detail::bv_inline_limbs in include/kairn/ball_vector.hpp is not the expected one: update bench/entry_check.py')
+    open(path, 'w').write(BOUND.sub('inline constexpr std::size_t bv_inline_limbs = %d;' % limbs, text))
+    print('wrote %s (detail::bv_inline_limbs = %d for every compiler in the copy of ball_vector.hpp)' % (out, limbs))
+
+
+def before(dest, commit):
+    out = os.path.join(dest, 'kairn')
+    if os.path.exists(out):
+        sys.exit('%s exists: give an empty directory' % out)
+    data = subprocess.run(['git', '-C', ROOT, 'archive', '--format=tar', commit, 'include/kairn'],
+                          check=True, capture_output=True).stdout
+    os.makedirs(out)
+    with tarfile.open(fileobj=io.BytesIO(data)) as t:
+        for m in t.getmembers():
+            if m.isfile() and m.name.startswith('include/kairn/'):
+                rel = m.name[len('include/kairn/'):]
+                path = os.path.join(out, rel)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, 'wb') as f:
+                    f.write(t.extractfile(m).read())
+    print('wrote %s (include/kairn of %s)' % (out, commit))
 
 
 def main():
@@ -100,10 +132,22 @@ def main():
     sub = ap.add_subparsers(dest='cmd', required=True)
     c = sub.add_parser('copy')
     c.add_argument('dest')
-    c.add_argument('--variant', choices=['nocheck', 'cold'], default='nocheck')
+    i = sub.add_parser('inline')
+    i.add_argument('dest')
+    i.add_argument('limbs', type=int)
+    b = sub.add_parser('before')
+    b.add_argument('dest')
+    b.add_argument('--commit', default=BEFORE)
+    sub.add_parser('check')
     a = ap.parse_args()
     if a.cmd == 'copy':
-        copy(a.dest, a.variant)
+        copy(a.dest)
+    elif a.cmd == 'inline':
+        inline(a.dest, a.limbs)
+    elif a.cmd == 'before':
+        before(a.dest, a.commit)
+    else:
+        return check()
     return 0
 
 

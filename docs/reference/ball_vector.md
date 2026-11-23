@@ -238,22 +238,45 @@ table says so; otherwise it overlaps none of them. A partial overlap is not supp
 ## Checks
 
 **The environment, in every build.** Every operation on whole ball vectors is a batch entry: the
-constructors from centers and a radius (of a `BallVector` and of a view), the negation, the sum,
-the difference, the scalings, `ldexp`, `half`, `axpy`, the product of polynomials, `norm_upper`, and
-the operators that call them. Before its loop each reads the floating-point environment once, as
+constructors from centers and a radius (of a `BallVector` and of a view), the negation, the sum, the
+difference, the scalings, `ldexp`, `half`, `axpy`, the product of polynomials, `norm_upper`, and the
+operators that call them. Before its loop each reads the floating-point environment once, as
 `kairn::environment_ok()` does, with `KAIRN_CHECKS` 1 or 0, and if it is not the default one calls
-`KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build
-(`kairn: the floating-point environment: the rounding mode is not to nearest ...`, or flush to
-zero), which by default stops the program: the default environment is the precondition of each,
-checked. The negation, a change of sign and a copy of the radius, leaves the rounding mode out;
-every other operation reads it, the constructors of one limb among them (below). One read of the
-control register per call: measured on ball vectors of 3 to 18 entries, most operations lose the
-read or less to it (5 to 6 ns on an AMD Zen 2, about half a nanosecond on an Apple M3; `x + y` of
-two limbs takes 1.01 to 1.26 times as long), and a constructor more where the compiler no longer
-inlines it with the check: 18 to 20 ns more for `BallVector<double, 1, 3>` with Clang 18, 6 to 14 ns
-with GCC 13 at `-O3` in a file of many operations; on the M3 a chain of short operations of one limb,
-each on the result of the one before, 3 to 7 ns per operation
-([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#14-short-arrays-and-the-check-at-entry)).
+`KAIRN_ENVIRONMENT_FAILURE` with the message of a debug build (`kairn: the floating-point
+environment: the rounding mode is not to nearest ...`, or flush to zero), which by default stops the
+program: the default environment is the precondition of each, checked. The negation, a change of
+sign and a copy of the radius, leaves the rounding mode out; every other operation reads it, the
+constructors of one limb among them (below). Per call: one read of the control register, one test of
+a mask and a branch; the message and the call of `KAIRN_ENVIRONMENT_FAILURE` are in a function of
+their own, never inlined, so that the check does not keep the compiler from inlining a short
+operation. With Clang the constructors from centers and a radius, and the member that makes the ball
+vector, are forced inline while the centers have at most 14 limbs in all ($kN \le 14$: up to
+`BallVector<T, 1, 14>` and `BallVector<T, 2, 7>`); above that, and with every other compiler for
+every size, they are ordinary inline functions, the compiler's to inline or to call, as before
+2026-11-23 (`detail::bv_inline_limbs`). That bound is a choice of the authors, from measurements of
+2026-11-23 of the harness forced for every size and for none, with GCC 13 and Clang 18 on an AMD Zen
+2 and Apple clang 21 and GCC 16 on an Apple M3, at `-O2` and `-O3`, on 3, 7, 13, 18 and 80 entries
+of one and two limbs. With Clang 18 and Apple clang, which otherwise call these constructors,
+forcing up to 14 limbs was never slower than not forcing beyond the noise, and the constructor of
+each size took at best 0.37 to 0.79 of its time; from 18 limbs forcing was slower at `-O3` (two
+limbs and 13 or 18 entries 1.22 to 1.34 times: the loop unrolled for every limb no longer fits the
+registers) and faster at `-O2`. GCC 13 and 16 inline these constructors without being forced, to the
+same code; forced, they changed what GCC inlines of the other loops of the same unit, faster with
+GCC 13 and slower with GCC 16 (chains of `sub` of one limb at `-O3`, 1.4 to 1.7 times). Measured
+with that bound, on ball vectors of 3 to 80 entries: on an AMD Zen 2 an operation loses 2.4 to 2.5
+ns to the check at the median (reading MXCSR is slow there); a constructor of up to 14 limbs 0.3 to
+3.8 ns with Clang 18, which before 2026-11-23 stopped inlining it with the check and lost 6.7 to 20
+ns there (18.2 to 18.5 for `BallVector<double, 1, 3>`), and 0.9 to 9.2 ns with GCC 13, about the
+read, as before; on an Apple M3 an operation 0.1 ns at the median, a constructor of up to 14 limbs
+at most 4.6 ns with Apple clang (with the header before 1.9 to 16, where it stopped inlining it) and
+at most 0.8 ns with GCC 16; but a chain of `scale` of one limb, each on the result of the one
+before, 4.3 to 6.4 ns per operation, as before. Some functions take longer than with the header
+before, none because of the forcing: with GCC 13 at `-O3` the constructor of `BallVector<double, 2,
+3>` in a unit with nothing else 1.21 to 1.35 times, from the code around the check's new form; on
+the M3 with Apple clang chains of `add` and `sub` of `BallVector<double, 1, 13>` 1.3 to 1.6 times,
+with the check or without it, and with GCC 16 chains of one limb, whose loops GCC now inlines, 1.1
+to 1.4 times
+([Benchmarks, Milestone 2](../developer/results/bench-milestone2.md#the-check-measured-again-on-2026-11-23)).
 
 With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](../developer/testing.md#the-checks-of-a-debug-build)), after the environment:
 
@@ -274,7 +297,10 @@ With `KAIRN_CHECKS` 1 (a build without `NDEBUG`; [The checks of a debug build](.
   (without the checks, such an `axpy` returns the whole space; such a product is not told).
 
 With `KAIRN_CHECKS` 0 nothing but the environment is checked. The accessors, the whole space, the
-views and the copy of a view, which copy limbs, check nothing.
+views and the copy of a view, which copy limbs, check nothing. A program that defines
+`KAIRN_ENVIRONMENT_FAILURE` defines it the same way in every file
+([config.hpp](https://github.com/danielepanozzo/kairn/blob/main/include/kairn/config.hpp)): every
+check reports through one function of the program, which the linker keeps once.
 
 ## Regular type
 
@@ -285,7 +311,9 @@ not the constructors from centers nor any operation, since the generated loops a
 (`api.reject.ball_vector.not_constexpr`). No operation needs the marker `kairn::unverified`: every
 loop this header calls is proved. The operations are ordinary inline functions in every setting of
 `KAIRN_ENCLOSURE_CODE`: each calls one loop, itself an ordinary inline function whose end (the
-radius and the finish) is never inlined.
+radius and the finish) is never inlined. The constructors of a `BallVector` from centers and a
+radius are forced inline with Clang up to 14 limbs (since 2026-11-23), and the loop they call is
+then the compiler's to inline or not ([Checks](#checks)).
 
 ## Compile time
 
