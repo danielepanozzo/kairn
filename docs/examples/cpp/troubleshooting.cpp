@@ -100,6 +100,8 @@ int main() {
                      status.kernel ? status.kernel : "");
         return 1;
     }
+    // Not an error: a limitation of this file's build, such as a square that is not rounded first.
+    if (status.limited()) std::fprintf(stderr, "kairn::self_test: %s\n", status.limitation);
     // --8<-- [end:report]
     check(kairn::environment_ok(), "the environment is the default one at startup");
 

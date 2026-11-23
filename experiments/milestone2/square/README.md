@@ -178,6 +178,10 @@ What the table shows:
 MSVC's `/fp:fast` is refused by `_M_FP_FAST`; whether clang-cl defines that macro under
 `/fp:fast` was not checked. Under the flags that Clang accepts silently, `self_test()` catches
 reassociation and flushing, and the loss of signed zeros under contraction only through a kernel
-it happens to fuse (it did with Apple clang, not with Clang 18). It does not look for a square of
-the program: under plain `-ffp-contract=fast` it reports ok with the four compilers at `-O1`,
-`-O2` and `-O3`.
+it happens to fuse (it did with Apple clang, not with Clang 18). When these probes ran it did not
+look for a square of the program: under plain `-ffp-contract=fast` it reported ok with the four
+compilers at `-O1`, `-O2` and `-O3`. Since then (the limitation being documented and not
+repaired) it has a probe of the square that reports it in `Status::limitation` without failing:
+with Apple clang 21 and Clang 18 at `-O1` to `-O3` under `-ffp-contract=fast`, also under
+`-fno-signed-zeros -ffp-contract=fast` where `ok()` stays true (Clang 18; Apple clang 21 at
+`-O3`), and with nothing else ([The exception: a square](../../../docs/getting-started/guarantees.md#the-exception-a-square)).

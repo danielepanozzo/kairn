@@ -248,7 +248,8 @@ only reports. The guard relies on what the opaque product
 already relies on: the compiler honors the sign of zero, so it may not remove `a + 0` unless it
 proves that `a` is never $-0$. Clang does prove it of a square, and under `-ffp-contract=fast`
 then fuses the square into the kernel's addition: a limitation found on 2026-11-23, documented and
-not repaired ([The exception: a square](../getting-started/guarantees.md#the-exception-a-square)). The
+not repaired ([The exception: a square](../getting-started/guarantees.md#the-exception-a-square)),
+which `kairn::self_test()` reports, without failing, for the file that calls it. The
 generator emits every guard and checks the rule; the public headers contain none of their own.
 
 One compiler does not fit that description. With the hand-written guard of the first headers,

@@ -797,6 +797,82 @@ foreach(_i RANGE 0 ${_last} 2)
       --factor ${_factor_arrays})
     set_tests_properties(api.boundary.arrays.${_form}${_suffix} api.boundary.arrays.unguarded.${_form}${_suffix}
       PROPERTIES LABELS "api;boundary;arrays")
+    # The exception of a square, pinned (boundary_square.cpp; docs/getting-started/guarantees.md,
+    # "The exception: a square"): api.boundary.square.FORM.*. The squares passed straight into
+    # two_sum, a two-limb number plus a T, the sum of Packed<T, 1>, the accumulators and sum, add and
+    # axpy over an array must not differ (--square none) with GCC (so that a GCC that starts
+    # removing the guard fails here), with Clang under off, on and its default, and with MSVC where
+    # it does not contract; they are printed without a verdict (--square report) with Clang and
+    # clang-cl under -ffp-contract=fast, where the page says they lose the guard, and with MSVC
+    # under /fp:contract, where Kairn's operations were not measured with a square (MSVC 19.52 kept
+    # the guard of every expression of experiments/milestone2/square/square_plain.cpp there). The
+    # ways the page gives to round a square first, and the products that are not squares, must not
+    # differ in any build. At -O2, as api.boundary.
+    if(_variant STREQUAL "contract-fast" OR (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND _variant STREQUAL "fp-contract")
+       OR (_variant STREQUAL "" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_FLAGS MATCHES "ffp-contract=fast"))
+      set(_square report)
+    else()
+      set(_square none)
+    endif()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      set(_square none)
+    endif()
+    set(_target kairn-api-boundary-square-${_form}${_target_suffix})
+    _kairn_api_program(${_target} boundary_square.cpp ${_level} ${_option} ${_form_options})
+    add_test(NAME api.boundary.square.${_form}${_suffix} COMMAND ${_target} --square ${_square})
+    set_tests_properties(api.boundary.square.${_form}${_suffix} PROPERTIES LABELS "api;boundary;square")
+  endforeach()
+  # The probe of kairn::self_test() for the same exception (square_probe.cpp): api.square_probe.*,
+  # at -O2 under each setting and at -O1 and -O3 under -ffp-contract=fast. Status::limitation must
+  # be set exactly where the fusion happens, ok() never affected. Measured (2026-11-23): the probe
+  # reports it with Apple clang 21 at -O1, -O2 and -O3 and with Clang 18 on x86-64 at -O1, -O2 and
+  # -O3, -mfma and -mavx2 -mfma, under -ffp-contract=fast; never under off, on or the default, never
+  # with GCC 13 or 16 (at -O0 to -O3, under every setting). A fixed expectation where it was measured
+  # and a compiler's next version could change it least (--expect limitation: Apple clang at -O1 and
+  # -O2, Clang 18 on x86-64; --expect none: GCC, MSVC, Clang under off, on and its default); a check
+  # of consistency in the one translation unit elsewhere under =fast (--expect consistent: the probe
+  # reports the limitation exactly when the direct form, the probe's kernel computed in this file on
+  # squares, differs), which prints what it saw.
+  set(_probe_levels "")
+  if(NOT _msvc_style)
+    set(_probe_levels -O2)
+    if(_variant STREQUAL "contract-fast")
+      list(APPEND _probe_levels -O1 -O3)
+    endif()
+  endif()
+  if(NOT _probe_levels)
+    set(_probe_levels default)
+  endif()
+  foreach(_plevel IN LISTS _probe_levels)
+    set(_lsuffix "")
+    set(_lopt "")
+    if(NOT _plevel STREQUAL "default")
+      set(_lopt ${_plevel})
+      if(NOT _plevel STREQUAL "-O2")
+        string(REPLACE "-" "." _lsuffix "${_plevel}")
+      endif()
+    endif()
+    set(_probe none)
+    set(_probe_fast OFF)
+    if(_variant STREQUAL "contract-fast" OR
+       (_variant STREQUAL "" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_FLAGS MATCHES "ffp-contract=fast"))
+      set(_probe_fast ON)
+    endif()
+    if(_probe_fast AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND NOT _msvc_style
+       AND (_plevel STREQUAL "-O1" OR _plevel STREQUAL "-O2"))
+      set(_probe limitation)
+    elseif(_probe_fast AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT _msvc_style
+           AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+      set(_probe limitation)
+    elseif(_probe_fast AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      set(_probe consistent)
+    endif()
+    string(REPLACE "." "-" _ltarget "${_lsuffix}")
+    set(_target kairn-api-square-probe${_target_suffix}${_ltarget})
+    _kairn_api_program(${_target} square_probe.cpp ${_lopt} ${_option})
+    add_test(NAME api.square_probe${_suffix}${_lsuffix} COMMAND ${_target} --expect ${_probe})
+    set_tests_properties(api.square_probe${_suffix}${_lsuffix} PROPERTIES LABELS "api;square")
   endforeach()
 endforeach()
 
