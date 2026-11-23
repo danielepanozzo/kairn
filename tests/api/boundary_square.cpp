@@ -70,7 +70,8 @@ struct Out {
     struct NAME {                                          \
         template <class T>                                 \
         static INLINE T f(const In<T>& in) {               \
-            [[maybe_unused]] const T a = in.a, b = in.b;   \
+            [[maybe_unused]] const T a = in.a;             \
+            [[maybe_unused]] const T b = in.b;             \
             __VA_ARGS__                                    \
         }                                                  \
     };
