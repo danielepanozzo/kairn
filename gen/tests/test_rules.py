@@ -1226,6 +1226,10 @@ class R3OfTheKernels(unittest.TestCase):
     PACKED_ONE_LIMB_CALLED = {'add_entry_step_1': 'packed.hpp operator+(const Packed<T, 1>& x, const Packed<T, 1>& y)',
                               'sub_entry_step_1': 'packed.hpp operator-(const Packed<T, 1>& x, const Packed<T, 1>& y)',
                               'scale_step_1': 'packed.hpp operator*(const Packed<T, 1>& x, const Packed<T, 1>& y)'}
+    # And the probe of kairn::self_test() for the exception of a square (docs/getting-started/
+    # guarantees.md, "The exception: a square") passes a square of fixed operands straight into the
+    # first of them, the guarded sum of Packed<T, 1>'s scalar form: from that function too.
+    SELF_TEST_PROBE_CALLED = {'add_entry_step_1': 'environment.hpp detail::square_probe()'}
     # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
     # of the blocks that add their operands, and of two_prod and the directed products, whose
     # operands are factors of a fused operation (rule R3, the factors of a fused operation); the
@@ -1360,7 +1364,8 @@ class R3OfTheKernels(unittest.TestCase):
             self.assertEqual(set(reasons), {g.name for g in ks[name].inputs}, name)
             self.assertTrue(all(isinstance(r, str) and len(r) > 20 for r in reasons.values()), name)
         for name, site in self.PACKED_ONE_LIMB_CALLED.items():
-            self.assertEqual(calls[name], [site], name)
+            probe = [self.SELF_TEST_PROBE_CALLED[name]] if name in self.SELF_TEST_PROBE_CALLED else []
+            self.assertEqual(calls[name], sorted([site] + probe), name)
         # The cores of the Ball operations and of the scalings by a power of two are reached only
         # through their full forms, and the building blocks of the intervals only through the
         # interval kernels: never called directly.
