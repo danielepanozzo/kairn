@@ -8,7 +8,8 @@
 // operands chosen so that the sum cancels, with the square written in the call and with it rounded
 // first (through a volatile, in a function that is not inlined), and counts the differences: the
 // direct form. It also prints, for information, the same comparison for two_sum(c, a * a) and for
-// Expansion<double, 2>(c) + a * a, which Clang fuses in fewer configurations.
+// Expansion<double, 2>(c) + a * a, which Clang fuses in fewer configurations. And under each
+// directed rounding mode self_test() must fail while its probe says what it says to nearest.
 //
 //   square_probe --expect none          the probe reports nothing and the direct form never
 //                                       differs (GCC, MSVC, Clang under off, on and its default)
@@ -20,6 +21,7 @@
 //                                       version; tests/api/CMakeLists.txt); prints which it saw
 #include <kairn/kairn.hpp>
 
+#include <cfenv>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -97,6 +99,19 @@ int main(int argc, char** argv) {
 
     bool ok = s.ok();
     if (!s.ok()) std::printf("FAIL: self_test() failed, which no supported flag set may do\n");
+    // Under a directed rounding mode self_test() fails, and the probe says what it says to nearest:
+    // it reports only the exact value of a fused sum, which no rounding mode changes.
+    const int modes[] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO};
+    for (const int mode : modes) {
+        if (std::fesetround(mode) != 0) continue;
+        const kairn::Status d = kairn::self_test();
+        std::fesetround(FE_TONEAREST);
+        if (d.ok() || d.limited() != s.limited()) {
+            std::printf("FAIL: under a directed rounding mode self_test() %s and the probe %s\n",
+                        d.ok() ? "passes" : "fails", d.limited() ? "reports the limitation" : "reports nothing");
+            ok = false;
+        }
+    }
     const bool fused = direct > 0;
     if (std::strcmp(expect, "none") == 0) {
         if (s.limited()) std::printf("FAIL: the probe reports a limitation where none was measured\n");

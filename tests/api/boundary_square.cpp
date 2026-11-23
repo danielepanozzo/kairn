@@ -342,12 +342,12 @@ void run(long cases, bool verdict, Tally& t) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    const char* square = argc == 3 && std::strcmp(argv[1], "--square") == 0 ? argv[2] : "";
-    if (std::strcmp(square, "none") != 0 && std::strcmp(square, "report") != 0) {
+    const char* mode = argc == 3 && std::strcmp(argv[1], "--square") == 0 ? argv[2] : "";
+    if (std::strcmp(mode, "none") != 0 && std::strcmp(mode, "report") != 0) {
         std::fprintf(stderr, "usage: boundary_square --square none|report\n");
         return 2;
     }
-    const bool verdict = std::strcmp(square, "none") == 0;
+    const bool verdict = std::strcmp(mode, "none") == 0;
     constexpr long cases = 2000;
     std::printf("Packed<double, 1>: %d lanes; the squares %s\n", kairn::Packed<double, 1>::lanes,
                 verdict ? "must not differ" : "are reported only");

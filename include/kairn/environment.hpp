@@ -324,21 +324,25 @@ inline const char* self_test_limb() noexcept {
 // form of Packed<T, 1>, whose packed forms caught every configuration where any operation was
 // measured to fuse a square (Apple clang 21 and Clang 18 under -ffp-contract=fast, -O1 to -O3, the
 // scalar and the packed forms) and none with GCC 13 or 16 (experiments/milestone2/square/). c is
-// -RN(a a), so the sum is 0 when the square is rounded first, and the rounding error of the square,
-// -0x1.898208143bbaep-55, when the compiler dropped the guard and fused a a into the addition.
-// The operands are read from volatile objects, as the other cases read theirs. What it sees is the
-// flags and the optimization of the copy of self_test that the linker kept (an inline function,
-// one copy per program), on this one form: not other files, not other forms.
+// -RN(a a), so the sum is 0 when the square is rounded first, and exactly a a + c, the rounding
+// error of the square, -0x1.898208143bbaep-55, when the compiler dropped the guard and fused a a
+// into the addition: that value, which is exact in every rounding mode, and no other, is reported
+// (under a directed rounding mode, which the checks report as a failure, the unfused sum is 0 or
+// +-2^-53: no false report). The operands are read from volatile objects, as the other
+// cases read theirs. What it sees is the flags and the optimization of the copy of self_test that
+// the linker kept (an inline function, one copy per program), on this one form: not other files,
+// not other forms.
 inline const char* square_probe() noexcept {
     volatile double v_a = 0x1.6a09e667f3bcdp-1, v_c = -0x1.0000000000001p-1;
     const double a = v_a;
-    double z = 1;
+    double z = 0;
     gen::add_entry_step_1(v_c, a * a, z);
-    return z == 0 ? nullptr
-                  : "a square passed straight into an operation is not rounded first: the compiler fused it into "
-                    "the operation's first addition (Clang under -ffp-contract=fast); pass "
-                    "kairn::two_prod(a, a).product, or compile the files that call Kairn under another "
-                    "contraction setting";
+    return !bits_equal(z, -0x1.898208143bbaep-55)
+               ? nullptr
+               : "a square passed straight into an operation is not rounded first: the compiler fused it into "
+                 "the operation's first addition (Clang under -ffp-contract=fast); pass "
+                 "kairn::two_prod(a, a).product, or compile the files that call Kairn under another "
+                 "contraction setting";
 }
 
 }  // namespace detail

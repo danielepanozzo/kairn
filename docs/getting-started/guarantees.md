@@ -451,8 +451,12 @@ contraction setting (Clang's default is not affected), or the square is rounded 
 compiler cannot fuse it: `kairn::two_prod(a, a).product` is the rounded square and was measured
 not to be fused (Apple clang 21, with and without link-time optimization), and a `volatile`
 variable does it by the rules of the language; or the square is kept exact, as
-`Expansion<T, 2>(a) * a`. The test `api.boundary.square.*` checks those three ways, through every
-operation above, under every contraction setting of every compiler it is built with.
+`Expansion<T, 2>(a) * a`. The test `api.boundary.square.*` checks those three ways under every
+contraction setting of every compiler it is built with: the first two through `two_sum`, a
+two-limb number plus a `T`, the sum of `Packed<T, 1>`, both accumulators and `sum`, `add` and `axpy`
+over an array, the exact square through the sum of two two-limb numbers, `Accumulator<T, 2>` and
+a sum of two limbs; it also checks that the squares do not differ where the page says they do not,
+and that eleven products that are not squares never do.
 
 *What `kairn::self_test()` says.* It reports the limitation, and does not fail: a program
 compiled with Clang under `-ffp-contract=fast` that never passes a square straight in is within
