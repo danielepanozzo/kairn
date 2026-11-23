@@ -159,7 +159,8 @@ failed upstream, as for a NaN bound given to an interval; until 2026-11-20 it ga
 set); otherwise it is the ball of the center and the radius given, of their values: a limb $-0$
 comes back $+0$, as everywhere else a value passes a guard (for a center of two limbs since 0.3.1,
 whose `Ball<T, 2>(c, r)` guards every limb; 0.3.0 kept those limbs as given, bit for bit, and so
-did the constructors of an interval from bounds of two limbs). In a build with `KAIRN_CHECKS`, a
+did the constructors of an interval from bounds of two limbs); with MSVC it may stay $-0$: the
+compiler removes the addition of zero where it packs two guards; the value is unchanged. In a build with `KAIRN_CHECKS`, a
 negative radius is reported, since it is almost surely a mistake. Every Ball operation calls a
 *full Ball kernel*, which proves, for canonical operands: **B1** the result is canonical; **B2**
 it is empty exactly when an operand is empty; **B3** if it is a finite ball, every operand is a

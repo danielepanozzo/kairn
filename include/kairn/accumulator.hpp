@@ -288,7 +288,9 @@ public:
     /// be fused otherwise: GCC 13 at its default setting, Clang 18 and Apple clang 21 under
     /// -ffp-contract=fast). A state saved with running_sum(), magnitudes() and count() and restored
     /// keeps its values: every limb comes back bit for bit but that a -0 comes back +0 (the guard
-    /// -0 + 0 is +0 under rounding to nearest) and a NaN comes back a NaN; in constant evaluation the
+    /// -0 + 0 is +0 under rounding to nearest; with MSVC it may stay -0: the compiler removes the
+    /// addition of zero where it packs two guards; the value is unchanged) and a NaN comes back a
+    /// NaN; in constant evaluation the
     /// guard is not applied, and every limb comes back bit for bit. Its only rounded operations are
     /// the guards, a + 0, whose value is a under every rounding mode (only the sign of a zero depends
     /// on the mode): not preceded by the debug build's check of the rounding mode. constexpr.

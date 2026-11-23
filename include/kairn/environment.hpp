@@ -116,13 +116,16 @@ KAIRN_DETAIL_COLD inline void report_environment(std::uint64_t b) noexcept {
 // in a register by a mov and a movk (outside a loop, where a register is free for it) for one ands,
 // GCC 16 makes it two ands of immediates (0x1ffffff, then 0xffffffffffc00003 or 0xffffffffff000003),
 // and a branch. On another target, a call of std::fegetround() and a comparison (nothing without the
-// rounding mode).
+// rounding mode). The report is the last statement of its branch, the result set before it: MSVC
+// sees that the default KAIRN_ENVIRONMENT_FAILURE does not return, and refuses a statement after
+// the report as unreachable code (C4702, an error with /WX).
 KAIRN_FORCEINLINE bool environment_checked(bool rounding) noexcept {
+    bool ok = true;
     if (const std::uint64_t differs = environment_state() & environment_mask(rounding)) [[unlikely]] {
+        ok = false;
         report_environment(differs);
-        return false;
     }
-    return true;
+    return ok;
 }
 
 // The environment check of KAIRN_CHECKS, first in every check of an operation: whether the checks

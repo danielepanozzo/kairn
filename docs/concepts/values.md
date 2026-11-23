@@ -36,8 +36,10 @@ number of two limbs given to the constructor of a set passes through the guard t
 limb: the center of `Ball<T, 2>(c, r)`, `Ball<T, 2>(c)` and of the ball of a constant, the bounds
 of `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)` and `from_bounds`, the centers of a
 `BallVector<T, 2, N>`. Each limb keeps its value, and a limb $-0$ comes back $+0$ (the guard
-computes $-0 + 0$, which is $+0$ when rounding to nearest); in constant evaluation the guard is
-not applied, and every limb comes back bit for bit (`api.constexpr` checks both).
+computes $-0 + 0$, which is $+0$ when rounding to nearest; with MSVC it may stay $-0$: the
+compiler removes the addition of zero where it packs two guards; the value is unchanged); in
+constant evaluation the guard is not applied, and every limb comes back bit for bit
+(`api.constexpr` checks both, the first with a zero of either sign under MSVC).
 
 **A set is rebuilt from the limbs read out of it with `from_limbs`**, for a program that keeps the
 limbs in storage of its own:
@@ -80,7 +82,8 @@ radius ([What holds today](../getting-started/guarantees.md#overflow-and-non-fin
 program above shows it. An accumulator is rebuilt with `Accumulator<T, k>::from_state(s, a, n)`,
 whose bound is that of the history its state was read from; it guards every limb it is given, so
 the state comes back with the same values, a $-0$ limb as $+0$ (since 0.3.1 for a running sum of
-two limbs, which 0.3.0 copied as it was).
+two limbs, which 0.3.0 copied as it was; with MSVC it may stay $-0$: the compiler removes the
+addition of zero where it packs two guards; the value is unchanged).
 
 ## Threads
 
