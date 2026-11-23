@@ -5,6 +5,9 @@
 /// What each version has. Until 1.0 a minor version may change the interface, and a version names
 /// what a tree has, not a release.
 ///
+/// - 0.3.2: kairn::Status has a third member, limitation, with limited(): kairn::self_test()
+///   reports there, without failing, that a square the program passes straight into an operation
+///   is not rounded first in the translation unit that calls it (Clang under -ffp-contract=fast).
 /// - 0.3.1, the changes decided at the owner's review of Milestone 2 (2026-11-23): the operators
 ///   +, -, * and their compound forms of Packed<T, 1>; the constructors of a Ball and of an
 ///   Interval from numbers of two limbs guard every limb they are given, and
@@ -37,10 +40,10 @@
 /// The minor version.
 #define KAIRN_VERSION_MINOR 3
 /// The patch version.
-#define KAIRN_VERSION_PATCH 1
+#define KAIRN_VERSION_PATCH 2
 
 /// "MAJOR.MINOR.PATCH", as a string literal.
-#define KAIRN_VERSION_STRING "0.3.1"
+#define KAIRN_VERSION_STRING "0.3.2"
 
 /// MAJOR * 10000 + MINOR * 100 + PATCH, for comparisons in `#if`.
 #define KAIRN_VERSION (KAIRN_VERSION_MAJOR * 10000 + KAIRN_VERSION_MINOR * 100 + KAIRN_VERSION_PATCH)

@@ -4,7 +4,7 @@ Rigorous floating-point expansions ("k-numbers") with interval and ball arithmet
 header-only C++20. Every error bound is meant to carry a machine-checked proof, and the shipped
 code is generated from the same source the proofs are about.
 
-**Status: pre-release (version 0.3.1). Phase 0 (specification and feasibility) and Milestone 1
+**Status: pre-release (version 0.3.2). Phase 0 (specification and feasibility) and Milestone 1
 are complete ([report](docs/developer/results/milestone1.md)); Milestone 2 is complete, and the
 changes decided at the owner's review of 2026-11-23 are made
 ([report](docs/developer/results/milestone2.md#the-owners-review)); Milestone 3 has not started

@@ -878,8 +878,12 @@ The owner decided on 2026-11-23 that the limitation is documented and not repair
 29): [The exception: a square](../../getting-started/guarantees.md#the-exception-a-square) says
 where it happens, what is then wrong and what a program does about it, and the probes with their
 results are in `experiments/milestone2/square/`. Three repairs were built as patches and
-measured, and not made; the log has what each costs. `kairn::self_test()` is to get a probe that
-reports the limitation for the file that calls it.
+measured, and not made; the log has what each costs. `kairn::self_test()` reports the limitation,
+without failing, in `Status::limitation`, for the file that calls it (version 0.3.2; a choice of
+the authors that it is a report: a program that never passes a square is within the guarantees),
+and it adds no measurable compile time to `self_test()` ([open issue 3](#open-issues)). The tests
+`api.boundary.square.*` and `api.square_probe.*` pin what the pages say, the ways to round a
+square among them.
 
 ### The scope of Milestone 3
 

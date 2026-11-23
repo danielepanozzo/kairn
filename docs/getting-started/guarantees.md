@@ -425,7 +425,8 @@ first changes nothing (`p = a * a; two_sum(c, p)` is fused alike).
 *Where.* Measured with Apple clang 21 on AArch64 at `-O1` and `-O2`, at `-O3` for the sum of
 `Packed<T, 1>` and the functions on arrays, and at `-O3` everywhere with link-time optimization;
 and with Clang 18 on x86-64 where the square has one use (the sum of `Packed<T, 1>`, `add` and
-`axpy` over arrays, the one-limb `sum` and `dot`, `Accumulator<T, 1>::add`). Not with GCC 13 or
+`axpy` over arrays, the one-limb `sum` and `dot`; `Accumulator<T, 1>::add` in one loop of the
+probes, six rounds in ten, and not in the forms the tests run). Not with GCC 13 or
 16. Not with MSVC 19.52 under `/fp:precise` or `/fp:contract`. Not under Clang's default
 contraction setting (`on`) or under `off`, with or without link-time optimization. Of fourteen
 kinds of expression tried, only the three above lose the guard: not a product of two absolute

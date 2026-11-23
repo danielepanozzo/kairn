@@ -47,10 +47,10 @@
 // The test of a version, as a program writes it (version.hpp).
 #if !defined(KAIRN_VERSION_AT_LEAST)
 #error "version.hpp defines no KAIRN_VERSION_AT_LEAST"
-#elif !KAIRN_VERSION_AT_LEAST(0, 3, 1) || KAIRN_VERSION_AT_LEAST(0, 3, 2) || !KAIRN_VERSION_AT_LEAST(0, 3, 0)
-#error "KAIRN_VERSION_AT_LEAST disagrees with version 0.3.1"
+#elif !KAIRN_VERSION_AT_LEAST(0, 3, 2) || KAIRN_VERSION_AT_LEAST(0, 3, 3) || !KAIRN_VERSION_AT_LEAST(0, 3, 0)
+#error "KAIRN_VERSION_AT_LEAST disagrees with version 0.3.2"
 #endif
-static_assert(KAIRN_VERSION == 301 && KAIRN_VERSION_AT_LEAST(0, 2, 0) && !KAIRN_VERSION_AT_LEAST(1, 0, 0));
+static_assert(KAIRN_VERSION == 302 && KAIRN_VERSION_AT_LEAST(0, 2, 0) && !KAIRN_VERSION_AT_LEAST(1, 0, 0));
 
 // A program's own function with the name of a building block: Kairn's does not hide it, even with
 // `using namespace kairn`, and a plain double finds no function of Kairn's by argument-dependent
