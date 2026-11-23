@@ -3565,5 +3565,6 @@ commit had passed or passed on the rerun of the job; 400 runs of the first build
 same lines, never differed. Not reproduced on a test machine and not explained: the hosted runners
 are virtual machines, the test machines are not. The tests are unchanged: a failure of this kind
 fails the job, and the job is run again by hand. Whether a run under Rosetta that fails should be
-repeated once by the test itself, and fail only when it fails again, is an open issue of the
-[Milestone 2 report](results/milestone2.md#open-issues).
+repeated once by the test itself, and fail only when it fails again, was open issue 20 of the
+[Milestone 2 report](results/milestone2.md#open-issues); the owner decided on 2026-11-23 that it
+is not: the tests stay strict, and each such failure is added to this paragraph.

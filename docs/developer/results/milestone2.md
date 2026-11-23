@@ -1,7 +1,8 @@
 # Milestone 2 report
 
-**Status: complete, with the deviations and open issues listed below; awaiting the owner's
-review.** Milestone 2 is the second row of the [plan](../design/phase0/plan.md#milestones): intervals, one interface shared by
+**Status: complete, with the deviations and open issues listed below; reviewed by the owner on
+2026-11-23 ([the owner's review](#the-owners-review), at the end, has each decision and what
+changed after it).** Milestone 2 is the second row of the [plan](../design/phase0/plan.md#milestones): intervals, one interface shared by
 intervals and balls, the building blocks as public functions, constants built at compile time,
 vectors of balls with one radius and the functions on arrays, the packed type and the containers,
 and an exhaustive tier of tests on small emulated formats. It ends when the first client's ball
@@ -502,13 +503,13 @@ the proofs clean, and almost every finding of the first audit fixed or flagged. 
 |---|---|
 | `axpy(a, x, y, y)` of ball vectors, in a build without the checks, returned a finite ball vector that does not contain the result; the same spelling is the in-place form of the functions on arrays | Fixed: the whole space in every build, a report in a debug build (a ruling, below) |
 | No statement says when the result of a function on arrays, or the accumulator's radius, is finite: a loop that always answered "not finite" would satisfy the proofs. The oracle tests it | Deviation 26, extended; open issue |
-| The accumulator checks the environment in a debug build only, where the brief asks the check at every batch entry | Deviation 28; for the owner |
+| The accumulator checks the environment in a debug build only, where the brief asks the check at every batch entry | Deviation 28; confirmed by the owner on 2026-11-23 |
 | Six user pages said a factor needs no guard, against the strict rule, for the 13 objects then pending | Corrected when those were closed |
 | The count of terms up to which the accumulator gives a radius was misstated (one limb: fewer than $2^{22}$ of `float`, $2^{51}$ of `double`; two limbs: twice as many) | Corrected |
 | A generated reference page promised the exact midpoint for the one-limb ball of an interval | Corrected in the tool |
 | A ball vector of two limbs over arrays the program fills: no loop guards its centers (no compiler was seen to fuse through one) | Guarded (`bv_make_2_entry`) |
 | Stale comments, counts, two deviations, the order of the log; a line of code on a reference page that would not compile | Corrected |
-| The move of the flush-to-zero variant read as settled | Worded as a proposal, for the owner |
+| The move of the flush-to-zero variant read as settled | Worded as a proposal, for the owner; decided on 2026-11-23: Milestone 3 |
 | CI red on the audited commit (MSVC) | Fixed before landing (below) |
 
 ## Deviations flagged in this milestone
@@ -519,16 +520,18 @@ Full text in [the list](../design/phase0/decisions.md#deviations-from-the-brief-
 |---|---|---|
 | 22 | Shipped code is generated and every bound machine-checked | `rational` and `integer` are integer code written by hand, specified exactly, tested, and checked against their statement for each constant computed at compile time |
 | 23 | Interval semantics modeled on IEEE 1788.1 | A NaN bound, a NaN radius, an interval of an infinite point give the whole line, not the empty set (the owner's decisions): a failure upstream must not become "no solution" |
-| 24 | The quick tier in about two minutes per platform | 4 to 5 minutes on Linux and macOS, 12 on Windows, on hosted runners; 3.2 minutes on the Mac with four workers |
+| 24 | The quick tier in about two minutes per platform | 4 to 5 minutes on Linux and macOS, 12 on Windows, on hosted runners; 3.2 minutes on the Mac with four workers. Left as it is by the owner (2026-11-23) |
 | 25 | Proofs parametric in the exponent range | The real-model statements are; the IEEE-model statements hold for formats shaped like `binary32` and `binary64` |
 | 26 | A tightness bound per operation | None for the hull, intersection and split of balls, the radius of a two-limb interval, and two conversions |
-| 27 | Exhaustive tier with gradual and flush-to-zero variants | Gradual only; the other proposed for Milestone 3, with the flush-to-zero proofs |
-| 28 | The environment checked at every batch-API entry | The functions on arrays and the ball vectors check in every build; the accumulator's operations, called once per element, only in a debug build |
+| 27 | Exhaustive tier with gradual and flush-to-zero variants | Gradual only; the other proposed for Milestone 3, with the flush-to-zero proofs, and so decided by the owner (2026-11-23) |
+| 28 | The environment checked at every batch-API entry | The functions on arrays and the ball vectors check in every build; the accumulator's operations, called once per element, only in a debug build. Confirmed by the owner (2026-11-23) |
 | (plan) | Conversions between limb types in Milestone 2 | Moved to Milestone 3 with the device pass they serve (README, plan and log say so) |
 
 ## Open issues
 
-Most important first; each with a proposal where there is one.
+Most important first; each with a proposal where there is one. Six of them were decided by the
+owner on 2026-11-23 and say so at their end; [the owner's review](#the-owners-review) has the
+whole list.
 
 1. **`BallVector` cannot hold what the first client's polynomials are** (one weight per
    coefficient). [Below](#what-the-first-client-needs-next).
@@ -583,6 +586,7 @@ Most important first; each with a proposal where there is one.
 
    Recommended: the cold report in any case, as the first change after this report; the tag if
    the client's author wants the last 6 to 8%.
+   **Decided by the owner on 2026-11-23: the report out of line; no tag and no macro.**
 3. **`self_test()` compiles in 6.4 to 6.5 s with GCC 13** (1.1 s at Milestone 1). Proposal:
    cases for the kernels whose compiled code a flag can break in distinct ways, the rest behind
    a macro.
@@ -591,7 +595,7 @@ Most important first; each with a proposal where there is one.
    which moves only the arithmetic out of line. Proposal: the setting covers them too.
 5. **CI time** (above). Proposal: before Milestone 3, measure each test on a hosted runner, shard
    by label, set limits at three times the measured time; run the nightly's compiled part on pull
-   requests that touch the runners.
+   requests that touch the runners. **Decided by the owner on 2026-11-23: left as it is.**
 6. **Split at the midpoint is not claimed**, for intervals or balls, though the kernels do it; a
    bisection's progress rests on it. Strengthen the claims.
 7. **No statement says when a result is finite** for the hull, the intersection and the split
@@ -607,7 +611,8 @@ Most important first; each with a proposal where there is one.
    Milestone 1 claim says a quarter: the claim, and the conditions of the balls that rest on it,
    could be improved.
 10. **`Packed<T, 1>` has no arithmetic** (its kernels are not entry kernels), so `x + a*b` on
-   one-limb data needs two passes or a promoted operand.
+   one-limb data needs two passes or a promoted operand. **Decided by the owner on 2026-11-23:
+   it gets `+`, `-` and `*` now.**
 11. **The product of ball vectors written over an operand is reported by a debug build only**:
    without the checks the result is not an enclosure. (`axpy` written into `y` now returns the
    whole space in every build; the functions on arrays have the same precondition for arrays
@@ -617,7 +622,8 @@ Most important first; each with a proposal where there is one.
    proved: there is no kernel for a single guarded value. And `Ball(Expansion<T, 2>, r)`, of
    Milestone 1, takes its center as stored, while the constructors of a ball vector now guard
    the same kind of value, since a program can write an `Expansion`'s limbs. Proposal: guard it
-   too (one kernel, proved by reduction), for one rule everywhere.
+   too (one kernel, proved by reduction), for one rule everywhere. **So decided by the owner on
+   2026-11-23**, for `Ball(Expansion<T, 2>, r)`.
 13. **One-limb constructors exempt from the rounding-mode check** on the argument "it only
     guards": after the clang-cl finding each needs a look: `Ball<T, 1>(a)`, `Ball<T, 1>(c)`,
     `Ball<T, 1>(c, r)`, `Ball<T, 1>(q)`, `Ball<T, 2>(a)`, and the constructors of an interval of
@@ -635,7 +641,8 @@ Most important first; each with a proposal where there is one.
     kernels to $10^8$, and no such budget brings the loops there. Also: the reference page of a
     kernel shows its latest run only, so the 42 kernels whose code did not change now show 7
     million cases where Milestone 1's run had 110 to 122 million. Proposal: the page shows
-    every stored run of a kernel whose code is unchanged.
+    every stored run of a kernel whose code is unchanged. **Decided by the owner on 2026-11-23:
+    the pages are changed so; no further runs are made for this milestone.**
 16. **The oracle's arrays have few non-finite elements** (6 of 100 map arrays in the quick tier).
 17. **No test runs Kairn from several threads**: thread safety is by design (no global state).
 18. **Not measured**: Windows, MSVC and clang-cl in the benchmarks of this milestone (the tests
@@ -654,7 +661,8 @@ Most important first; each with a proposal where there is one.
     machines are not). Proposal: for the builds run under Rosetta only, rerun a failing run once
     on the same input and fail only if it fails again, printing a note when it does not; a real
     fault of the compiler or the library is deterministic and would still fail. Not done: it
-    relaxes a test, so it is the owner's to decide.
+    relaxes a test, so it is the owner's to decide. **Decided by the owner on 2026-11-23: no
+    retry; the tests stay strict, and such a failure is rerun by hand and counted.**
 21. **Smaller items.** The test cases of ITF1788 under the Apache license were to be converted
     and stored (a decision of the design review): not done, and with them the four relations of
     the full standard (`less`, `precedes` and their strict forms) are not provided. In
@@ -735,6 +743,8 @@ The other answers to the open questions of the design page followed its recommen
 
 Taken by the authors while the work ran, each logged with its reason; an earlier state of the
 tree attributed some of them to the owner, which was corrected in 32 places. Each can be reversed.
+**On 2026-11-23 the owner confirmed every row but one, and reversed that one: `Packed<T, 1>`
+gets its arithmetic now** ([the owner's review](#the-owners-review)).
 
 | Ruling | Why |
 |---|---|
@@ -759,3 +769,23 @@ tree attributed some of them to the owner, which was corrected in 32 places. Eac
 | The two steps of `axpy` of two limbs were changed in place to guard the scalar's limbs, not given twins | their statements did not change; they were proved again |
 | The constructors of a ball vector of two limbs guard every limb of every center, the one from an array of `Expansion<T, 2>` included | a program can write an `Expansion`'s limbs; the second audit's finding |
 | `Accumulator::from_state` guards the values it takes | measured to fuse without |
+
+## The owner's review
+
+On 2026-11-23 the owner reviewed this report and answered, one question each with the options
+and a recommendation, everything it put to them. Each answer is a row of
+[the log](../design/phase0/decisions.md#decisions-log) of that date.
+
+| Question | The owner's decision | Recommended at the review |
+|---|---|---|
+| The cost of the environment check at a batch entry ([open issue 2](#open-issues)) | The check stays in every build; its report of a failure moves out of line, and the constructors of short ball vectors are forced inline. No tag, no macro that turns it off | the same |
+| The accumulator checks the environment in a debug build only (deviation 28) | Confirmed as built | a check in every build where the bound is asked for |
+| The flush-to-zero variant of the exhaustive tier (deviation 27) | Milestone 3, with the flush-to-zero proofs | the same |
+| Failures under Rosetta that a rerun does not repeat ([open issue 20](#open-issues)) | The tests stay strict: no retry | one retry, with a note |
+| `Ball(Expansion<T, 2>, r)` takes its center unguarded ([open issue 12](#open-issues)) | It guards it: one kernel, proved by reduction | the same |
+| CI time (deviation 24, [open issue 5](#open-issues)) | Left as it is | measure, split by label, limits at three times the measured time |
+| Brute-force coverage below $10^8$ for 75 new or changed kernels ([open issue 15](#open-issues)) | No further runs; the reference pages show every stored run of unchanged code | the nine more hours, and the pages |
+| The 21 [rulings of the authors](#rulings-taken-without-the-owner-for-confirmation) | 20 confirmed. Reversed: `Packed<T, 1>` gets `+`, `-` and `*` now, before Milestone 3 ([open issue 10](#open-issues)) | all 21 confirmed |
+| When the changes are made | Now, as a follow-up of this milestone; then one commit on each of the client's pull requests moves its pin. Milestone 3 is not started | the same |
+
+The open issues the review did not decide stay open as listed.
