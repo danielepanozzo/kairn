@@ -248,10 +248,10 @@ entry, and units for the compile time:
 |---|---|
 | `m2_batch.cpp` | the functions of `kairn/batch.hpp` (`m2a` for `double`, `m2af` for `float`): `sum`, `sum_fast`, `dot`, `add`, `scale`, `axpy`, `norm_upper` over arrays in L1 (KIND `tp`, 512 elements), in the last-level cache (`llc`, 128 Ki elements of `double`, 256 Ki of `float`) and in no cache (`mem`, 4 Mi and 8 Mi), and `conv` of 16, 64 and 512 coefficients, the time per element (per term for `conv`); short arrays (`m2k`, `double`): 256 calls of `sum` and `dot` on windows of 1 to 1024 elements of one array, independent (`tp`) or each waiting for the one before (`lat`), the length read at run time (kernel `NAME_nN`) or known to the compiler (`NAME_kN`), the time per call; the accumulator (`m2c`): `add` and `add_product` per element, partial accumulators merged, `merge`, `sum()`, `error_bound()` and `ball()` of 256 accumulators. Compiled as packed code: the default order is the lane order of the unit's form of `Packed` |
 | `m2_bv.cpp` | `BallVector<double, k, N>` against `std::array<Ball<double, k>, N>` (`m2w`, kernel `OP_k_N`, N = 4, 8, 16, 64): `add`, `sub`, `scale`, `axpy`, the product of polynomials (`conv`) and `norm_upper` on 256 / N vectors, the time per operation on a whole vector; and the widths (`m2_bv_widths_json`, in the JSON as `ball_vector_widths`): the one radius against the largest and the median of the entries' radii after one operation and after chains of 10 and 100 |
-| `m2_bvs.cpp` | short ball vectors of fixed length (`m2x`, kernel `OP_k_N`, N = 3, 7, 13, 18, 80): `add`, `x + y`, `sub`, `scale`, `half` and the constructor from centers and a radius, on many vectors (`tp`) and in a chain of 256 operations each on the result of the one before (`lat`), the time per operation, every size in one unit; compiled again with `KB_BVS_ONE` as 60 units of one operation and one size each (`m2y`, the same kernels; CMake generates them into the build tree), since what a compiler inlines depends on the size of the unit; with `kairn-bench-m2-nocheck-LEVEL` (and `kairn-bench-m2-cold-LEVEL`), what the check at entry costs these operations |
+| `m2_bvs.cpp` | short ball vectors of fixed length (`m2x`, kernel `OP_k_N`, N = 3, 7, 13, 18, 80): `add`, `x + y`, `sub`, `scale`, `half` and the constructor from centers and a radius, on many vectors (`tp`) and in a chain of 256 operations each on the result of the one before (`lat`), the time per operation, every size in one unit; compiled again with `KB_BVS_ONE` as 60 units of one operation and one size each (`m2y`, the same kernels; CMake generates them into the build tree), since what a compiler inlines depends on the size of the unit; with `kairn-bench-m2-nocheck-LEVEL` (and `kairn-bench-m2-before-LEVEL`), what the check at entry costs these operations |
 | `m2_exact.hpp` | exact sums of `double` (a fixed-point accumulator of 2240 bits): the reference of the checks of the two files above and of the errors |
 | `m2_accuracy.cpp` | `kairn-bench-m2-accuracy-LEVEL`: the errors of the sums and dot products of one and two limbs, the naive loop, Sum2 and Dot2 of Ogita, Rump and Oishi, and the accumulators, against the exact result, on data of chosen condition (GenDot of the same authors), and the stated bounds over the errors; nothing is timed |
-| `entry_check.py` | `copy DEST`: a copy of `include/kairn` with the check of the environment at the batch entries compiled out (`detail::check_batch_environment` returns `true`), never committed; with `-DKAIRN_BENCH_NOCHECK_INCLUDE=DEST` CMake builds `kairn-bench-m2-nocheck-LEVEL`, the same program against it. `copy DEST --variant cold`: the check kept, its report (the message and `KAIRN_ENVIRONMENT_FAILURE`) out of line and cold, a candidate change of the header; `-DKAIRN_BENCH_COLD_INCLUDE=DEST` builds `kairn-bench-m2-cold-LEVEL` |
+| `entry_check.py` | `copy DEST`: a copy of `include/kairn` with the check of the environment at the batch entries compiled out (`detail::check_batch_environment` returns `true`), never committed; with `-DKAIRN_BENCH_NOCHECK_INCLUDE=DEST` CMake builds `kairn-bench-m2-nocheck-LEVEL`, the same program against it. `before DEST [--commit C]`: the headers of an earlier commit (by default `25ebe3d6`, the last whose checks compiled the report inline), from git; `-DKAIRN_BENCH_BEFORE_INCLUDE=DEST` builds `kairn-bench-m2-before-LEVEL`. `check`: whether the header has the form the script expects. Until 2026-11-23 a variant `cold` made a third copy with the report out of line and cold, a candidate change of the header, built as `kairn-bench-m2-cold-LEVEL` (the runs `entryx-...-cv-*`); the header now has that form, and the variant is gone |
 | `compile_time/batch.cpp` ... | the include units of `compile_time.py` (`batch`, `ball_vector`, `accumulator`, `kairn_batch`, `kairn_ball_vector`, `include_packed`); `enclosure_costs.py --kind arrays` and `ballvectors`, units of N calls |
 
 Their variants, besides `op`, `kairn` (the generated loop the public function calls, on the limbs:
@@ -272,7 +272,7 @@ entries'). The runs are stored as `ITEM-MACHINE-COMPILER-LEVEL-rN.json`, ITEM `a
 `entry-MACHINE-COMPILER-LEVEL-cK-rN.json`, K 1 for `kairn-bench-m2-LEVEL` and 0 for
 `kairn-bench-m2-nocheck-LEVEL`, run one after the other with the filter `m2k/,m2w/,m2a/tp/`; the
 triplets of the short ball vectors as `entryx-MACHINE-COMPILER-LEVEL-cK-rN.json`, K 1, 0 and `v` for
-`kairn-bench-m2-cold-LEVEL`, with the filter `m2x/,m2y/`; the errors as `accuracy-MACHINE-COMPILER-LEVEL.json`; the compile times as
+`kairn-bench-m2-cold-LEVEL` (the cold copy of that day), with the filter `m2x/,m2y/`; the errors as `accuracy-MACHINE-COMPILER-LEVEL.json`; the compile times as
 `headers-compile-MACHINE-COMPILER.json` and `compile-MACHINE-COMPILER-arrays.json`,
 `-ballvectors.json`. Runs named `r3-ITEM-...` (the same items and programs) are the functions whose
 code changed when rule R3 on the factors of a fused operation was closed (`dot`, `axpy` and `conv` of
@@ -305,6 +305,28 @@ python3 bench/compile_time.py run --cxx g++ --configs O2,O3 --reps 7 --cpu 40 \
 python3 bench/enclosure_costs.py compile --cxx g++ --flags=-mavx2 --kind arrays --sizes 100,1000 \
     --settings inline,calls --reps 3 ... --json results/milestone2/bench/compile-linux-gcc-arrays.json
 python3 bench/m2_report.py --part 3 results/milestone2/bench
+```
+
+**The check at entry measured again (2026-11-23).** When the report of the check moved out of line
+and the short constructors of `BallVector` were forced inline, the same functions were measured
+again, three programs per configuration built from one tree: `kairn-bench-m2-before-LEVEL` (the
+headers of `25ebe3d6`, `entry_check.py before`), `kairn-bench-m2-LEVEL` (the headers of the tree) and
+`kairn-bench-m2-nocheck-LEVEL` (`entry_check.py copy`), run one after the other in that order, three
+rounds, with the filter `m2k/,m2x/,m2y/` (the short arrays and the short ball vectors), and stored as
+`recheck-MACHINE-COMPILER-LEVEL-cK-rN.json`, K `b`, `1` and `0`. `m2_report.py --part 4` prints their
+tables: each program's time minus the time without the check, in the same round, and the ratio of the
+two headers.
+
+```sh
+python3 bench/entry_check.py copy /tmp/nocheck
+python3 bench/entry_check.py before /tmp/before
+cmake -S . -B build-bench -G Ninja -DCMAKE_BUILD_TYPE=Release -DKAIRN_BUILD_TESTS=OFF -DKAIRN_BUILD_BENCHMARKS=ON \
+      -DKAIRN_BENCH_NOCHECK_INCLUDE=/tmp/nocheck -DKAIRN_BENCH_BEFORE_INCLUDE=/tmp/before
+F=m2k/,m2x/,m2y/
+taskset -c 12 build-bench/bench/kairn-bench-m2-before-O2 --cpu 12 --reps 31 --filter $F ... recheck-linux-gcc-O2-cb-r1.json
+taskset -c 12 build-bench/bench/kairn-bench-m2-O2 --cpu 12 --reps 31 --filter $F ... recheck-linux-gcc-O2-c1-r1.json
+taskset -c 12 build-bench/bench/kairn-bench-m2-nocheck-O2 --cpu 12 --reps 31 --filter $F ... recheck-linux-gcc-O2-c0-r1.json
+python3 bench/m2_report.py --part 4 results/milestone2/bench
 ```
 
 ## Other costs

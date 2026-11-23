@@ -1671,6 +1671,175 @@ def configurations3(items):
                                                            ', '.join('`%s`' % c for c in commits)))
 
 
+# --- The check at entry measured again (2026-11-23) --------------------------------------------------
+# recheck-MACHINE-COMPILER-LEVEL-cK-rN.json, K b: kairn-bench-m2-before-LEVEL (the headers of 25ebe3d6,
+# the report of the check inline), 1: kairn-bench-m2-LEVEL (the report out of line and cold, the short
+# constructors of BallVector forced inline), 0: kairn-bench-m2-nocheck-LEVEL (no check); run one after
+# the other, in that order, three rounds, with the filter m2k/,m2x/,m2y/.
+
+RECHECK = re.compile(r'^recheck-(?P<machine>mac|linux)-(?P<compiler>[a-z0-9]+)-(?P<level>O[23])-c(?P<c>[b10])'
+                     r'-r(?P<run>\d+)$')
+
+
+def load_recheck(directory):
+    """{name: {(machine, compiler, 'inline', level): [run, ...]}}: 'after' and 'before' the time of each
+    function in the program with the check (this commit's header, and the header before) minus its time
+    in the program without it, 'ratio' this commit's time over the time before, 'share' 1 - without over
+    this commit's, 'with' this commit's times, 'raw' the runs themselves; the three programs of one
+    round paired."""
+    triples = {}
+    for path in sorted(glob.glob(os.path.join(directory, 'recheck-*.json'))):
+        m = RECHECK.match(os.path.basename(path)[:-len('.json')])
+        if not m:
+            continue
+        d = json.load(open(path))
+        d['path'] = os.path.basename(path)
+        d['ns'] = {r['name']: r['ns_min'] for r in d['results']}
+        key = (m.group('machine'), m.group('compiler'), 'inline', m.group('level'))
+        triples.setdefault(key, {}).setdefault(m.group('run'), {})[m.group('c')] = d
+    out = {name: {} for name in ('after', 'before', 'ratio', 'share', 'with', 'raw')}
+    for key, rounds in triples.items():
+        for run, three in sorted(rounds.items()):
+            out['raw'].setdefault(key, []).extend(three[c] for c in ('b', '1', '0') if c in three)
+            if not all(c in three for c in ('b', '1', '0')):
+                continue
+            tb, t1, t0 = three['b']['ns'], three['1']['ns'], three['0']['ns']
+            common = [n for n in t1 if n in t0 and n in tb]
+            out['with'].setdefault(key, []).append({'ns': t1})
+            out['after'].setdefault(key, []).append({'ns': {n: t1[n] - t0[n] for n in common}})
+            out['before'].setdefault(key, []).append({'ns': {n: tb[n] - t0[n] for n in common}})
+            out['ratio'].setdefault(key, []).append({'ns': {n: t1[n] / tb[n] for n in common}})
+            out['share'].setdefault(key, []).append({'ns': {n: 1 - t0[n] / t1[n] for n in common}})
+    return out
+
+
+def recheck_tables(rc):
+    if not rc.get('after'):
+        return
+    names = [('ssum1', '`sum`, one limb'), ('ssum2', '`sum`, two limbs'), ('sdot1', '`dot`, one limb'),
+             ('sdot2', '`dot`, two limbs')]
+    sizes = (1, 2, 4, 8, 16, 64, 1024)
+    for kind, kl in (('tp', 'independent calls'), ('lat', 'dependent calls')):
+        rows = [('%s, n = %d' % (label, n), time('m2k/%s/%s_n%d/op' % (kind, k, n))) for k, label in names for n in sizes]
+        table(rc['with'], 'Short arrays, 2026-11-23, %s: ns per call, with the check' % kl, rows, kind='time')
+        table(rc['after'], 'The check at entry, 2026-11-23, %s: ns per call (with the check minus without)' % kl, rows,
+              kind='time')
+        table(rc['before'], 'The check at entry before 2026-11-23, measured again, %s: ns per call (the header before '
+              'minus without the check)' % kl, rows, kind='time')
+        table(rc['ratio'], 'Short arrays, 2026-11-23, %s: the header of 2026-11-23 over the header before' % kl, rows)
+        table(rc['share'], 'The check at entry, 2026-11-23, %s: its share of the call (1 - without over with)' % kl,
+              rows)
+    # The controls: the generated loops called directly, the same code in the three programs.
+    rows = [('control: the generated loop of %s, n = %d' % (label, n), time('m2k/tp/%s_n%d/kairn' % (k, n)))
+            for k, label in (('ssum1', '`sum`, one limb'), ('sdot2', '`dot`, two limbs')) for n in (1, 16, 1024)]
+    table(rc['ratio'], 'The check at entry, 2026-11-23: controls, the header of 2026-11-23 over the header before', rows)
+    table({k: [{'ns': {n: 1 - v for n, v in x['ns'].items()}} for x in rs] for k, rs in rc['share'].items()},
+          'The check at entry, 2026-11-23: controls, without the check over with', rows)
+    for b, bl in (('m2y', 'one operation per unit'), ('m2x', 'every size in one unit')):
+        for kind, kl in (('tp', 'many vectors'), ('lat', 'a dependent chain')):
+            rows = []
+            for op, ol in BVS_OPS:
+                for kk in (1, 2):
+                    for n in (3, 7, 13, 18, 80):
+                        rows.append(('%s, %d limb%s, N = %d' % (ol, kk, 's' if kk == 2 else '', n),
+                                     time('%s/%s/%s_%d_%d/op' % (b, kind, op, kk, n))))
+            table(rc['with'], 'Short ball vectors, 2026-11-23, %s, %s: ns per operation, with the check' % (bl, kl), rows,
+                  kind='time')
+            table(rc['after'], 'Short ball vectors, 2026-11-23, %s, %s: the check, ns per operation (with minus without)'
+                  % (bl, kl), rows, kind='time')
+            table(rc['before'], 'Short ball vectors before 2026-11-23, measured again, %s, %s: the check, ns per '
+                  'operation (the header before minus without)' % (bl, kl), rows, kind='time')
+            table(rc['ratio'], 'Short ball vectors, 2026-11-23, %s, %s: the header of 2026-11-23 over the header before'
+                  % (bl, kl), rows)
+    # From which length the check is under 5% and under 1% of the call, per configuration: the shortest
+    # n from which every longer one is under it in every round.
+    present = present_of(rc['share'])
+    print('\n| The check at entry, 2026-11-23, is under 5%%; 1%% of the call from n = | %s |'
+          % ' | '.join(col[2] for col in present))
+    print('|---' * (len(present) + 1) + '|')
+    for kind, kl in (('tp', 'independent'), ('lat', 'dependent')):
+        for k, label in names:
+            cells = []
+            for col in present:
+                parts = []
+                for level in ('O2', 'O3'):
+                    rs = rc['share'].get((col[0], col[1], 'inline', level), [])
+                    if not rs:
+                        continue
+                    out = []
+                    for lim in (0.05, 0.01):
+                        ok = None
+                        for n in reversed(sizes):
+                            name = 'm2k/%s/%s_n%d/op' % (kind, k, n)
+                            if all(name in x['ns'] and x['ns'][name] < lim for x in rs):
+                                ok = n
+                            else:
+                                break
+                        out.append(str(ok) if ok else '> 1024')
+                    parts.append('%s (-%s)' % ('; '.join(out), level))
+                cells.append(', '.join(parts))
+            print('| %s, %s | %s |' % (label, kl, ' | '.join(cells)))
+
+
+def recheck_runs(rc):
+    """Each run of the check measured again: its checks, its spread against the fastest run of the same
+    program and configuration, the spread within it, the load; then the spread of each program."""
+    raw = rc.get('raw', {})
+    if not raw:
+        return
+    print('\n| Run (the check at entry, 2026-11-23) | Functions checked, failed | Over the fastest run of the program: '
+          'median, 90th percentile | Median over minimum within the run (median function) | Load average (1 min) at '
+          'start, end |')
+    print('|---|---|---|---|---|')
+    spreads = []
+    for key in sorted(raw):
+        groups = {}
+        for r in raw[key]:
+            groups.setdefault(r['setting'], []).append(r)
+        for setting, g in sorted(groups.items()):
+            names = set(g[0]['ns'])
+            for r in g[1:]:
+                names &= set(r['ns'])
+            best = {n: min(r['ns'][n] for r in g) for n in names}
+            for r in g:
+                rel = sorted(r['ns'][n] / best[n] for n in names)
+                within = sorted(x['ns_median'] / x['ns_min'] for x in r['results'])
+                la = r['load_average']
+                print('| `%s` | %d, %d | %.3f, %.3f | %.3f | %.1f, %.1f |' % (
+                    r['path'], r['checks']['compared'], r['checks']['failed'], rel[len(rel) // 2],
+                    rel[int(0.9 * (len(rel) - 1))], within[len(within) // 2], la['start'][0], la['end'][0]))
+            if len(g) > 1:
+                sp = sorted((max(r['ns'][n] for r in g) / min(r['ns'][n] for r in g) - 1, n) for n in names)
+                label = {'before': 'the header before', 'inline': 'the header of the tree',
+                         'nocheck': 'no check'}.get(setting, setting)
+                spreads.append(('%s, %s' % ('-'.join(x for x in key if x != 'inline'), label), len(g), sp))
+    print('\n| Spread of (the check at entry, 2026-11-23) | Runs | Spread of a function over the runs: median, 90th '
+          'percentile, worst | Worst function |')
+    print('|---|---:|---|---|')
+    for label, n, sp in spreads:
+        print('| %s | %d | %.1f%%, %.1f%%, %.1f%% | `%s` |' % (label, n, 100 * sp[len(sp) // 2][0],
+                                                            100 * sp[int(0.9 * (len(sp) - 1))][0], 100 * sp[-1][0],
+                                                            sp[-1][1]))
+    print('\n| Configuration (the check at entry, 2026-11-23) | CPU | Compiler | Flags (this commit\'s program) | '
+          'Rounds | Dates, commits |')
+    print('|---|---|---|---|---|---|')
+    for key in sorted(raw):
+        rs = raw[key]
+        r = next((x for x in rs if x['setting'] == 'inline'), rs[0])
+        rounds = len(rc['after'].get(key, []))
+        print('| %s | %s; %s | %s | `%s` | %d | %s, %s |' % (
+            '-'.join(key), r['machine']['cpu'], r['machine']['pinning'], r['compiler'], r['flags'], rounds,
+            ', '.join(sorted({x['date'] for x in rs})), ', '.join('`%s`' % c for c in sorted({x['commit'] for x in rs}))))
+
+
+def report_recheck(directory):
+    rc = load_recheck(directory)
+    print('\n## the check at entry, 2026-11-23: runs')
+    recheck_runs(rc)
+    print('\n## the check at entry, 2026-11-23')
+    recheck_tables(rc)
+
+
 def report3(directory):
     items = load3(directory)
     print('\n## part 3: configurations')
@@ -1767,6 +1936,8 @@ def report(directory, sections):
             report2(directory)
         elif name == 'part3':
             report3(directory)
+        elif name == 'recheck':
+            report_recheck(directory)
         else:
             SECTIONS[name](c if name == 'settings' else inline)
 
@@ -1783,7 +1954,7 @@ def fill(directory, template, out):
     import io
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3'])
+        report(directory, list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3', 'recheck'])
     tables, current = {}, None
     for line in buf.getvalue().splitlines():
         if line.startswith('| ') and current is None:
@@ -1831,9 +2002,11 @@ def fill(directory, template, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('dir')
-    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3'], action='append')
+    ap.add_argument('--section', choices=sorted(SECTIONS) + ['rational_compile', 'compile_tables', 'modes', 'part2', 'part3', 'recheck'],
+                    action='append')
     ap.add_argument('--fill', nargs=2, metavar=('TEMPLATE', 'OUT'))
-    ap.add_argument('--part', type=int, choices=[1, 2, 3], help='the tables of one part only (default: the first part)')
+    ap.add_argument('--part', type=int, choices=[1, 2, 3, 4],
+                    help='the tables of one part only (default: the first part; 4: the check at entry measured again on 2026-11-23)')
     a = ap.parse_args()
     if a.fill:
         fill(a.dir, a.fill[0], a.fill[1])
@@ -1843,6 +2016,9 @@ def main():
         return 0
     if a.part == 3:
         report3(a.dir)
+        return 0
+    if a.part == 4:
+        report_recheck(a.dir)
         return 0
     report(a.dir, a.section or list(SECTIONS) + ['rational_compile', 'compile_tables', 'modes'])
     return 0
