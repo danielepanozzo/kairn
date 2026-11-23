@@ -19,6 +19,7 @@ changed for them.
 | `check.py` | Judges each printed case in exact arithmetic (Python `fractions`): does the result with the square in place violate what the operation claims of the values the program passed, or only differ in bits? The rounded-first result is judged too, as a control. |
 | `run_kairn.sh OUTDIR INCLUDE CXX [FLAGS]` | `square_kairn.cpp` and `check.py` over the same matrix of levels and contraction settings. |
 | `self_test.cpp`, `run_flags.sh OUTDIR INCLUDE CXX [FLAGS]` | For `-fno-signed-zeros`, `-fassociative-math`, `-funsafe-math-optimizations`, `-ffast-math` (alone and with `-ffp-contract=fast`): whether the headers refuse the flag, what `kairn::self_test()` says, and what the two probes show. |
+| `run_boundary.sh OUTDIR INCLUDE TESTS CXX [FLAGS]` | The library's four boundary tests (`tests/api/boundary*.cpp`) built against the headers in `INCLUDE` as the test suite builds them, under each contraction setting and in both forms, with `--expect none --factor none`: for a copy of the headers with a candidate repair of the guard. |
 
 ## Running them
 
@@ -69,6 +70,16 @@ several uses too, once into each addition (`fmadd` and `fmsub` from one square).
 shows both: `double p = x * x + 0.0; double s = c + p; return s - p;` is `fmadd`, `fmsub` with Apple
 clang and `vmulsd`, `vaddsd`, `vsubsd` with Clang 18; `return c + (x * x + 0.0)` is one FMA with
 both.
+
+`-DGUARD=1` writes the probe's guard as `a` passed through an empty `asm` statement, then `+ 0`
+(`"+w"` on AArch64, `"+x"` on x86-64), and `-DGUARD=2` as `a + z` with `z` read from a `volatile`
+object: two candidate repairs. With either, no expression differs with Apple clang 21, Clang 18,
+GCC 13 or GCC 16 at `-O1`, `-O2` or `-O3` under `-ffp-contract=fast`, nor under
+`-fno-signed-zeros -ffp-contract=fast`, where the plain guard loses products of every kind of the
+list with Apple clang at `-O1` and `-O2` and with GCC 13 and 16 at `-O2` and `-O3` (a flag that
+Kairn's headers refuse with GCC and accept with Clang). `#pragma clang fp contract(off)` around the
+kernel is no repair: Clang ignores it under `-ffp-contract=fast` and honors it only under
+`-ffp-contract=fast-honor-pragmas`; `__arithmetic_fence` does not keep the square out either.
 
 ## Which operations of Kairn are reached (`square_kairn.cpp`)
 

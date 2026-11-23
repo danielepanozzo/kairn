@@ -14,7 +14,8 @@
 //   square_plain [N]        (default N = 20000)
 //
 // Build: any C++20 compiler; g++ or clang++ -std=c++20 -O2 [-ffp-contract=...] [-mavx2 -mfma];
-// cl /std:c++20 /EHsc /O2 [/fp:precise | /fp:contract | /fp:fast] [/arch:AVX2]. See README.md.
+// cl /std:c++20 /EHsc /O2 [/fp:precise | /fp:contract | /fp:fast] [/arch:AVX2]. -DGUARD=1 or 2
+// writes the guard as one of the candidate repairs (below). See README.md.
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -44,12 +45,48 @@
 
 namespace {
 
+// --- The guard ---------------------------------------------------------------------------------
+//
+// GUARD selects how the guard is written: 0 (the default) `a + 0`, as the kernels have it; 1 `a`
+// passed through an empty asm statement first (a candidate repair; GCC and Clang only); 2 `a + z`
+// with z read from a volatile object (another candidate).
+#if !defined(GUARD)
+#define GUARD 0
+#endif
+#if GUARD == 2
+volatile double zero_double = 0.0;
+volatile float zero_float = 0.0f;
+INLINE double zero_of(double) { return zero_double; }
+INLINE float zero_of(float) { return zero_float; }
+#endif
+template <class V>
+INLINE V opaque(V v) {
+#if GUARD == 1
+#if defined(__x86_64__) || defined(__i386__)
+    __asm__("" : "+x"(v));
+#elif defined(__aarch64__)
+    __asm__("" : "+w"(v));
+#else
+    __asm__("" : "+m"(v));
+#endif
+#endif
+    return v;
+}
+template <class T>
+INLINE T guard(T a) {
+#if GUARD == 2
+    return a + zero_of(T(0));
+#else
+    return opaque(a) + T(0);
+#endif
+}
+
 // --- The kernel: two_sum(c, p) on guarded operands, as gen/kernels/two_sum_entry.kernel -----------
 
 template <class T>
 INLINE void two_sum(T c, T p, T& s_out, T& e_out) {
-    const T gc = c + T(0);
-    const T gp = p + T(0);
+    const T gc = guard(c);
+    const T gp = guard(p);
     const T s = gc + gp;
     const T bb = s - gc;
     const T e = (gc - (s - bb)) + (gp - bb);
@@ -243,9 +280,16 @@ const char* const packed_name = "neon";
 #endif
 
 #if HAVE_AVX2 || HAVE_NEON
+INLINE V::R guard_v(V::R a) {
+#if GUARD == 2
+    return V::add(a, V::splat(zero_of(0.0)));
+#else
+    return V::add(opaque(a), V::zero());
+#endif
+}
 INLINE void two_sum_v(V::R c, V::R p, V::R& s_out, V::R& e_out) {
-    const V::R gc = V::add(c, V::zero());
-    const V::R gp = V::add(p, V::zero());
+    const V::R gc = guard_v(c);
+    const V::R gp = guard_v(p);
     const V::R s = V::add(gc, gp);
     const V::R bb = V::sub(s, gc);
     const V::R e = V::add(V::sub(gc, V::sub(s, bb)), V::sub(gp, bb));
