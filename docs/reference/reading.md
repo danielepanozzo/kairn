@@ -97,7 +97,8 @@ gives them. The references are on the [References](../developer/design/phase0/re
 **Listing.** The kernel as the generator reads it: one operation of `T` per line, each rounded to
 nearest. The C++ and the formal model are both printed from it.
 
-**Measured.** What the latest brute-force runs found, explained [below](#what-the-measured-numbers-are).
+**Measured.** What the stored brute-force runs of the kernel's code found, campaign by campaign,
+explained [below](#what-the-measured-numbers-are).
 
 **Not claimed.** What the statements do not cover. For a kernel with a statement about finite
 operands only: operands that are infinite or NaN, and results that overflow; the page names the
@@ -142,10 +143,12 @@ a reference page reports only the status of the claims.
 
 ## What the measured numbers are
 
-The brute-force tier runs by hand on the test machines, and its summaries are stored under
-`results/`. A program that shares no code with the library or the generator, the *oracle*, judges
-every result in exact rational arithmetic against the kernel's claims. A page shows the latest
-runs:
+The brute-force tier runs by hand on the test machines before each milestone report, a
+*campaign*, and its summaries are stored under `results/`, one directory per campaign
+(`results/milestone1/brute/`, `results/milestone2/brute/`). A program that shares no code with
+the library or the generator, the *oracle*, judges every result in exact rational arithmetic
+against the kernel's claims. A page shows every stored run of the kernel's code as it is now,
+campaign by campaign, and their total when there are several:
 
 - **compiled**: the C++ kernel, built with every compiler of the machines, scalar and packed code,
   under every contraction setting, on random operands of `binary64` (`double`) and `binary32`
@@ -154,12 +157,25 @@ runs:
   `fp:5:-3:2`, a format of 5 bits of precision
   ([Number formats](../developer/architecture.md#number-formats) explains the name).
 
+A run counts only if it ran the code the kernel has now. The code of a kernel is its generated
+C++: its functions in `include/kairn/gen/scalar.hpp`, `avx2.hpp` and `neon.hpp`, into which the
+generator inlines every kernel it calls, and the functions of the generated headers that they
+call (such as `abs_bits`), with comments, blank lines and indentation left out. For every commit
+that a stored run names, `results/brute-code.json` keeps the SHA-256 of that code for every kernel,
+written from the repository's history by `docs/tools/brute_code.py`; the page compares it with the
+code of the tree it is written from. A kernel whose code changed shows only the runs of its new code
+and names those it does not count; one whose code no stored run ran says so. A change of the claims
+alone does not change the code: such a run is shown, the page says that it judged other claims, and
+the total leaves it out. The total adds the random cases of the compiled runs; an enumeration of a
+toy domain (a format, and the operands it is restricted to) that an earlier run of the same code
+enumerated judged the same operands again, and counts once.
+
 The columns:
 
-- **Cases judged**: the cases whose result has a finite leading limb. When it does not, the
-  statement on finite operands says nothing, so those cases are counted and not judged. The stored
-  runs measure no statement about infinite and NaN operands, and a kernel no run has judged says
-  so.
+- **Cases judged**: for a statement on finite operands, the cases whose result has a finite leading
+  limb. When it does not, the statement says nothing, so those cases are counted and not judged.
+  When the page says that the runs judged the kernel in the extended domain, the cases with
+  infinite and NaN operands and results are judged too. A kernel no run has judged says so.
 - **Failed**: cases that violate a claim, or whose operands violate the requirements.
 - **Largest error / bound**: over the judged cases, the largest $\lvert\text{error}\rvert$ divided
   by the bound the claim allows for that case; 1 is the bound itself. For a claim that the result is
@@ -172,9 +188,10 @@ The columns:
 What they are not: a proof, or an estimate of how loose a bound is. Random operands find the worst
 case of a bound only by luck, so a largest ratio of 0.75 says that no case beyond 0.75 was drawn,
 not that none exists; the proof is what covers every case. The measurements test what the proofs
-do not cover: the generated code, the compilers and the hardware. If the claims change after a run,
-the page says that the run judged other claims. The complete results, with the cases that attain
-each extreme, are in [Brute force, Milestone 1](../developer/results/brute-milestone1.md).
+do not cover: the generated code, the compilers and the hardware. The complete results, with the
+cases that attain each extreme, are in the report of each campaign:
+[Brute force, Milestone 1](../developer/results/brute-milestone1.md) and
+[Brute force, Milestone 2](../developer/results/brute-milestone2.md).
 
 ## How the pages are made
 
