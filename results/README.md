@@ -11,7 +11,11 @@ is an input of the library, of the generator, or of the proofs.
 - `milestone1/bench/`: benchmark measurements.
 - `milestone1/mutants/`: what the tests catch of the faults that `tests/kernel_mutants.py` plants
   in the generated scalar kernels, and the analysis of those that nothing caught (its `README.md`).
-- `milestone2/brute/`: the same for Milestone 2, with `supplementary/`; `emulated/` (the
+- `milestone1/costs/`: the costs of Milestone 1, which `docs/developer/results/costs-milestone1.md`
+  reports: compile times (`compile/`), the check of the environment (`checks/`), MSVC's stack
+  cookie (`gs/`) and the times of the quick tier in CI (`ci/`).
+- `milestone2/brute/`: the summaries of the brute-force runs of Milestone 2, as for Milestone 1,
+  with `supplementary/`; `emulated/` (the
   exhaustive tier on emulated formats) and `lengths/` (`tests/brute/lengths.py`), which the
   reference pages do not show.
 - `milestone2/bench/`: benchmark measurements of Milestone 2, one JSON file per run of a harness

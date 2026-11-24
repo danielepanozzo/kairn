@@ -708,7 +708,8 @@ by one bit of its `double` view); at the present pin, sums 1.1 to 4.6 times fast
 per coefficient, squares 1.7 to 4.9 times, splits up to 20% faster from 7 coefficients and 38%
 slower at 3, builds 11 to 31% slower.
 Both are pinned to `main` at `788d45f` (version 0.3.0, the last commit of this milestone that
-changes a header): the client's suites pass (35 and 36 of them, and 13 on the GPU), its double
+changes a header; since 2026-11-23 at `455724e`, version 0.3.2:
+[below](#the-first-client-after-the-changes)): the client's suites pass (35 and 36 of them, and 13 on the GPU), its double
 path is byte-identical to its main branch (42 objects), and the six two-limb queries give the same
 bits at every pin of Kairn they were run with. Nothing in the client had to change for the strict
 rule; its guards cost the client 0 to 8% in splits and builds and nothing measurable elsewhere.
@@ -894,6 +895,43 @@ audit (the totals above). MSVC needed two changes first, both choices of the aut
   addition. As for every guard with MSVC, this rests on tests that run on every change and not on
   a rule of the language ([Architecture](../architecture.md#the-kernel-ir), rule R3). The programs
   are in `experiments/milestone2/msvc/`.
+
+### The first client after the changes
+
+On 2026-11-23 one commit on each of the two draft pull requests moved its pin to `main` at
+`455724e` (version 0.3.2). Nothing else had to change in the client: it defines no
+`KAIRN_ENVIRONMENT_FAILURE`, it compiles with GCC only, and no call that the two pull requests
+add passes a square of a `double` straight into an operation
+([below](#found-after-the-review-a-square-loses-its-guard)). Its suites pass (35 and 36 of them,
+and 13 on the GPU), its double path is byte-identical to its main branch (42 objects), and every
+output of its two-limb paths is bit for bit what it was at `788d45f`, with no $-0$ in any.
+
+What the check at entry costs it now, in the rows of [open issue 2](#open-issues), measured
+again back to back (GCC 13, x86-64, release build; repetitions agree within 2% or 2 ns):
+
+| The first client's code | At `788d45f` | At `455724e` | No check |
+|---|---|---|---|
+| Sum of 3 / 7 / 13 / 18 coefficients, ns | 35 / 63 / 79 / 75 | 22 / 33 / 30 / 63 | 19 / 35 / 27 / 62 |
+| Split of 3 / 7 / 13 / 18 coefficients, µs | 0.176 / 0.452 / 0.974 / 0.566 | 0.177 / 0.448 / 0.963 / 0.549 | 0.156 / 0.401 / 0.879 / 0.531 |
+| Five two-limb searches, µs | 7.62 / 1.61 / 8.52 / 0.73 / 3.06 | 7.62 / 1.66 / 8.50 / 0.79 / 3.07 | 7.15 / 1.53 / 8.00 / 0.67 / 2.84 |
+
+The sums are within 3 ns of the code without a check, which is what the variant with the report
+out of line had given (22 / 38 / 30 / 63). The splits and the searches are where they were: the
+splits 10 to 13% above the code without a check up to 13 coefficients and 3% at 18, the searches
+6 to 8%, which is the reads themselves. In two places the gain that the variant had shown did not
+come, and the cause is not established: the build of a leaf with a time factor takes 0.46 µs as
+before (0.42 to 0.43 with the variant, 0.41 without a check), and the query that makes no split takes
+0.79 µs where it took 0.73 (0.69 with the variant, 0.67 without a check), 8% slower than before
+the change. In every form with a check GCC 13 calls the constructor of
+`BallVector<double, 2, 3>` out of line from the client's root box, and inlines it without one;
+this is the constructor that the benchmarks found slower with GCC 13
+([above](#what-changed-after-the-review)).
+
+The new guard of `Ball(Expansion<T, 2>, r)` costs the client 0.5 ns per construction (1.89 ns
+where it took 1.39) and 2% of its construction of a ball from an interval; the queries of the
+path with a ball per coefficient take 0.96 to 1.01 of their time. Compile times are within 0.2 s.
+What the client still needs from Kairn is the list of
+[What the first client needs next](#what-the-first-client-needs-next), unchanged.
 
 ### Found after the review: a square loses its guard
 
