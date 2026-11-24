@@ -3670,17 +3670,20 @@ system and processor, in `generator.yml`, which ran it already inside the whole 
 of the reference script also run in `checks.yml`, beside the pages they test, as before: they take
 seconds there, and that job is the one that reports on the documentation.
 
-**Failures that a rerun did not repeat.** Two, both in the generator's suite on the hosted macOS
-runner, both in an x86-64 build of a test's runner run under Rosetta, and both in the runner's own
+**Failures that a rerun did not repeat.** Three, all in the generator's suite on the hosted macOS
+runner, all in an x86-64 build of a test's runner run under Rosetta, and all in the runner's own
 conversions between `float` and `double`, not in a kernel. On 2026-11-20, in the build
 `c++ -arch x86_64 -mavx2 -mfma -O0 -ffp-contract=off`, the scalar runner printed `nan` for one
 output of one line of 299 450 (`two_sum`, `binary32`), while the other output of the same line,
 computed from the first, was right. On 2026-11-22, in the build
 `c++ -arch x86_64 -mfma -O2 -ffp-contract=fast` of `test_maps`, the runner refused one of its
 inputs: `0x1.7bb55cp-20`, which is a number of `binary32`, did not come back the same from the
-conversion of the parsed `double` to `float` and back, before any kernel ran. Each time the same
-commit had passed or passed on the rerun of the job; 400 runs of the first build on the Mac, on the
-same lines, never differed. Not reproduced on a test machine and not explained: the hosted runners
+conversion of the parsed `double` to `float` and back, before any kernel ran. On 2026-11-23, on
+`main` at `455724e`, in the build `c++ -arch x86_64 -mfma -O0 -ffp-contract=off` of `test_bv`, the
+runner refused one of its inputs the same way: `-0x1.fffffep+106`, which is a number of `binary32`
+(line 11 010 of its requests); the same job had passed on that commit in the pull request,
+before the merge. Each time the same commit had passed or passed on the rerun of the job; 400
+runs of the first build on the Mac, on the same lines, never differed. Not reproduced on a test machine and not explained: the hosted runners
 are virtual machines, the test machines are not. The tests are unchanged: a failure of this kind
 fails the job, and the job is run again by hand. Whether a run under Rosetta that fails should be
 repeated once by the test itself, and fail only when it fails again, was open issue 20 of the
