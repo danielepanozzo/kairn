@@ -243,6 +243,7 @@ x86-64 (1.25 to 2.3 times) and nothing measurable on the Mac.
 | MSVC 19.52 | cannot `bit_cast`, in constant evaluation, an element of a `float` array member initialized with `{}` | the tests of the signs of a ball | the limbs are initialized with zeros written out; latent since Milestone 1 |
 | MSVC 19.52 | refuses in constant evaluation a `float` product whose exact value exceeds the largest `float` although it rounds to it | `two_prod`'s tests | one assertion is `double`-only with MSVC |
 | MSVC | folds the packed guard (an addition of zero), so a −0 stays −0 in packed code; values unaffected, and the guard still blocks the fusion | the packed tests | tests compare zeros as zeros under MSVC |
+| MSVC 19.52, `/O2` (`/fp:precise`, `/fp:contract`) | removes the addition of zero of the scalar guard where it moves two guarded values as one register, so a −0 given to `Ball<T, 2>(c, r)`, `Ball<T, 2>(Constant)`, `from_limbs` of two limbs or `Accumulator<T, 2>::from_state` may stay −0; values unaffected, and the guard still blocks the fusion | `api.constexpr`, at [the gates of the changes of the review](#the-gates-of-the-merged-tree) | the run-time checks compare zeros as zeros under MSVC, and the texts say so; `experiments/milestone2/msvc/guard_pair.cpp` reproduces it without Kairn |
 | MSVC 19.52 | in constant evaluation, refuses a `float` sum whose exact value exceeds the largest `float` although it rounds to it (the test of a canonical pair in a debug build) | the first MSVC build of the interface additions | the compile-time test takes a pair below the largest number with MSVC |
 | clang-cl (hosted CI) | under rounding downward, the one-limb constructor of a ball vector returned the whole space: its radius is −0 there, and the test of its sign came out false (the mechanism was not established: no clang-cl on a test machine) | the tests of the rounding modes | that constructor checks the rounding mode like the functions that round; the other one-limb constructors exempt by the same argument are an open issue |
 | GCC 13, `-ffp-contract=fast` | rewrites `a + a` as `a * 2` and fuses it | the generator's tests | the generator refuses `add(a, a)` |
@@ -826,7 +827,8 @@ nothing admitted.
 - **`Ball(Expansion<T, 2>, r)` guards its center** ([open issue 12](#open-issues)), through
   `ball_make_2_entry`, proved by reduction to `ball_make_2`, which stays for centers that a
   kernel wrote. Its statement gives the center of a finite ball as the values given, where
-  `ball_make_2` gives the limbs themselves: a limb $-0$ comes back $+0$. By a choice of the
+  `ball_make_2` gives the limbs themselves: a limb $-0$ comes back $+0$ (but with MSVC, where it
+  may stay $-0$: [the gates](#the-gates-of-the-merged-tree)). By a choice of the
   authors the constructors of an interval from numbers of two limbs guard their limbs the same
   way (`interval_make_2_entry`, whose statement is `interval_make_2`'s word for word), and
   `Accumulator::from_state` of two limbs guards its running sum. Cost: 0 to 14% of a
@@ -858,6 +860,39 @@ Also found, and open: Clang accepts `p - p.limb[0]`, a `Packed` minus a register
 an operation of its own vector types, where GCC refuses it; and `-fno-signed-zeros`, which Kairn
 does not support and Clang accepts without a macro, is reported by `kairn::self_test()` with
 Apple clang and not with Clang 18 when it is combined with `-ffp-contract=fast`.
+
+### The gates of the merged tree
+
+The four changes together passed, on 2026-11-23: the quick tier with Apple clang 21 (1 239
+tests), GCC 16 (1 240), GCC 13 (1 246; 1 240 with `-mavx2 -mfma`), Clang 18 (1 243; 1 237) and
+MSVC 19.52 (1 235, the whole test tree built with `/W4 /WX`); the full tier with GCC 13 (2 064);
+the generator's own suite with GCC 13 and Clang 18; and a clean build of the proofs with the
+audit (the totals above). MSVC needed two changes first, both choices of the authors
+([the log](../design/phase0/decisions.md#decisions-log)):
+
+- **A warning.** `detail::environment_checked` sets its result before the report of a failure and
+  returns it after the branch: MSVC refused the statement that followed the report as unreachable
+  (C4702). GCC and Clang compile both forms to the same code, so the timings above stand.
+- **One sentence of the changes above does not hold with MSVC, and is relaxed there.** A limb
+  $-0$ given to a constructor that guards it was to come back $+0$. With MSVC 19.52 at `/O2` it
+  may stay $-0$: the compiler removes the guard's addition of zero where it moves two guarded
+  values as one register, which it was seen to do in `Ball<T, 2>(c, r)`, `Ball<T, 2>(Constant)`,
+  `from_limbs` of two limbs and `Accumulator<T, 2>::from_state`, depending on the code around
+  them. The values are unchanged, and no statement of a kernel is about the sign of a zero. It is
+  the behavior the owner confirmed for packed code at the review ("under MSVC a packed $-0$ may
+  stay $-0$"), now seen in scalar code; the authors extended that ruling, the owner has not ruled
+  on the scalar case. The test compares such a limb as a zero under MSVC and holds every other
+  compiler to $+0$; the comments of the three constructors and the pages say so.
+
+  What the guard is for was measured before the sentence was relaxed: whether MSVC, where it
+  drops the addition, fuses a product the program wrote into that limb. It does not: in 16 forms
+  of 200 000 cases each, for `double` and `float`, none differs from the same form on the product
+  rounded first, under `/fp:precise`, `/fp:contract` and `/fp:strict`, while against a copy of
+  the headers without the guard the six forms of `from_limbs` differ in every case under
+  `/fp:contract`. In the listings MSVC multiplies the product on its own before it drops the
+  addition. As for every guard with MSVC, this rests on tests that run on every change and not on
+  a rule of the language ([Architecture](../architecture.md#the-kernel-ir), rule R3). The programs
+  are in `experiments/milestone2/msvc/`.
 
 ### Found after the review: a square loses its guard
 
