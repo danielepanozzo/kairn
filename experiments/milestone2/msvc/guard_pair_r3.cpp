@@ -88,7 +88,7 @@ template <class T> NOINLINE T rounded(T a, T b) {
 #define F_ACC_L0(X) A2<T> acc = A2<T>::from_state(e2<T>(X, T(0)), X, 1); acc.add(o.m0); return acc;
 #define F_BV2(X) std::array<E2<T>, 2> c{e2<T>(T(1), X), e2<T>(X, T(0))}; return V2<T>(c, X) + o.v;
 // The same three constructors, the struct written by the caller and read by a function that is
-// not inlined (the shape of survey.cpp's mem), the result then added.
+// not inlined (the shape of guard_pair_constructors.cpp), the result then added.
 template <class T> NOINLINE B2<T> const_callee(const kairn::Constant<E2<T>>& q, const B2<T>& y) { return B2<T>(q) + y; }
 template <class T> NOINLINE B2<T> cr_callee(const CR<T>& s, const B2<T>& y) { return B2<T>(s.c, s.r) + y; }
 template <class T> NOINLINE A2<T> acc_callee(const E2<T>& s, T m, T x) { A2<T> acc = A2<T>::from_state(s, m, 1); acc.add(x); return acc; }
