@@ -14,9 +14,9 @@
 ///   Accumulator::from_state of two limbs guards its running sum (of the values given, a limb -0
 ///   comes back +0, but with MSVC, where it may stay -0: the compiler removes the addition of
 ///   zero where it packs two guards; 0.3.0 kept those limbs bit for bit); the check of the
-///   environment at a batch
-///   entry reports through one function that is never inlined, so KAIRN_ENVIRONMENT_FAILURE is
-///   defined the same way in every translation unit of a program, or in none.
+///   environment at a batch entry reports through one function that is never inlined, so
+///   KAIRN_ENVIRONMENT_FAILURE is defined the same way in every translation unit of a program,
+///   or in none.
 /// - 0.3.0, the development line of Milestone 2 with the whole interface of its statements:
 ///   everything of 0.2.0 below, the interval and the enclosure interface whole (Interval of
 ///   interval.hpp, with Interval::is_finite(); the types of enclosure.hpp; the predicates, member

@@ -807,7 +807,8 @@ The open issues the review did not decide stay open as listed.
 
 ### What changed after the review
 
-Version 0.3.1. Kernels: 239 (237 at the report). Theorems checked by Rocq: 1 574 (1 563): 194
+Version 0.3.1 (0.3.2 with the probe of `kairn::self_test()`,
+[below](#found-after-the-review-a-square-loses-its-guard)). Kernels: 239 (237 at the report). Theorems checked by Rocq: 1 574 (1 563): 194
 generated in the real model, 404 generated in the IEEE model, 976 by hand; the same four axioms,
 nothing admitted.
 
@@ -918,7 +919,9 @@ without failing, in `Status::limitation`, for the file that calls it (version 0.
 the authors that it is a report: a program that never passes a square is within the guarantees),
 and it adds no measurable compile time to `self_test()` ([open issue 3](#open-issues)). The tests
 `api.boundary.square.*` and `api.square_probe.*` pin what the pages say, the ways to round a
-square among them.
+square among them. With the probe the tree passed the gates of the four changes again (the quick
+tier: 1 253 tests with Apple clang 21, 1 254 with GCC 16, 1 260 with GCC 13, 1 257 with Clang 18,
+1 247 with MSVC 19.52, with which the probe reports nothing; the full tier with GCC 13: 2 064).
 
 ### The scope of Milestone 3
 
