@@ -456,7 +456,8 @@ def matrix_cases(kernels, name):
 def differences(cases, want, out):
     """The lines of a runner's output `out` for `cases` that are not bit-identical to the
     interpreter's limbs `want`, each with those limbs; an AssertionError if `out` is not the
-    completion of the cases, line by line."""
+    completion of the cases, line by line. A flag among the limbs wanted (the loops over arrays
+    have one, a bool) is shown as the number the runner prints for it."""
     got = out.splitlines()
     if len(got) != len(cases):
         raise AssertionError(f'{len(got)} lines for {len(cases)} requests')
@@ -466,7 +467,7 @@ def differences(cases, want, out):
             raise AssertionError(line)
         g = parse_completed(line)
         if len(g) != len(w) or not all(common.same(x, y) for x, y in zip(g, w)):
-            bad.append((line, [x.hex() for x in w]))
+            bad.append((line, [float(x).hex() for x in w]))
     return bad
 
 
@@ -509,6 +510,21 @@ def shared_builds():
     if _shared is None:
         _shared = Builds('cxx', [RUNNER], ['-I', INCLUDE, '-I', common.TESTS])
     return _shared
+
+
+class Report(unittest.TestCase):
+    """differences(), the report of the lines of a runner that differ; needs no compiler."""
+
+    def test_differences_shows_a_flag(self):
+        """The report of a line that differs when the limbs wanted hold a flag: on 2026-11-23 a run
+        of a ball vector under Rosetta differed on the hosted macOS runner, and the report failed on
+        the flag's bool before it named the line (testing.md, "Failures that a rerun did not
+        repeat")."""
+        cases = [('k', 'binary64', None, 'k binary64 0x1p+0')] * 2
+        want = [[1.0, True], [0.5, False]]
+        out = 'k binary64 0x1p+0 -> 0x1p+0 0x1p+0\nk binary64 0x1p+0 -> 0x1p-1 0x1p+0\n'
+        self.assertEqual(differences(cases, want, out),
+                         [('k binary64 0x1p+0 -> 0x1p-1 0x1p+0', [(0.5).hex(), (0.0).hex()])])
 
 
 class Kernels(unittest.TestCase):

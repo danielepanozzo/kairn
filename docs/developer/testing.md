@@ -3670,10 +3670,11 @@ system and processor, in `generator.yml`, which ran it already inside the whole 
 of the reference script also run in `checks.yml`, beside the pages they test, as before: they take
 seconds there, and that job is the one that reports on the documentation.
 
-**Failures that a rerun did not repeat.** Three, all in the generator's suite on the hosted macOS
-runner, all in an x86-64 build of a test's runner run under Rosetta, and all in the runner's own
-conversions between `float` and `double`, not in a kernel. On 2026-11-20, in the build
-`c++ -arch x86_64 -mavx2 -mfma -O0 -ffp-contract=off`, the scalar runner printed `nan` for one
+**Failures that a rerun did not repeat.** Four, all in the generator's suite on the hosted macOS
+runner, all in an x86-64 build of a test's runner run under Rosetta; the first three in the
+runner's own conversions between `float` and `double`, not in a kernel, the fourth not known. On
+2026-11-20, in the build `c++ -arch x86_64 -mavx2 -mfma -O0 -ffp-contract=off`, the scalar runner
+printed `nan` for one
 output of one line of 299 450 (`two_sum`, `binary32`), while the other output of the same line,
 computed from the first, was right. On 2026-11-22, in the build
 `c++ -arch x86_64 -mfma -O2 -ffp-contract=fast` of `test_maps`, the runner refused one of its
@@ -3682,9 +3683,17 @@ conversion of the parsed `double` to `float` and back, before any kernel ran. On
 `main` at `455724e`, in the build `c++ -arch x86_64 -mfma -O0 -ffp-contract=off` of `test_bv`, the
 runner refused one of its inputs the same way: `-0x1.fffffep+106`, which is a number of `binary32`
 (line 11 010 of its requests); the same job had passed on that commit in the pull request,
-before the merge. Each time the same commit had passed or passed on the rerun of the job; 400
-runs of the first build on the Mac, on the same lines, never differed. Not reproduced on a test machine and not explained: the hosted runners
-are virtual machines, the test machines are not. The tests are unchanged: a failure of this kind
+before the merge. Later that evening, on `main` at `3e298dc`, which differs from `455724e` in
+documentation only, the same build of the same test printed at least one line that differs
+from the interpreter: which line, and by what, is not known, because the test's report of such a
+line failed on the flag of a ball vector before it printed anything (`differences` of
+`gen/tests/test_cxx.py`, corrected the next day with a test of its own, so that the next such
+failure names its line). That evening the job ran nine times, on four commits, and failed
+these two times. Each time the same commit had passed or passed on the rerun of the job; 400
+runs of the first build on the Mac, on the same lines, never differed, nor did 9 runs of the
+whole of that test of `test_bv` there on 2026-11-23, with its builds under Rosetta. Not reproduced
+on a test machine and not explained: the hosted runners are virtual machines, the test machines
+are not. The tests are unchanged: a failure of this kind
 fails the job, and the job is run again by hand. Whether a run under Rosetta that fails should be
 repeated once by the test itself, and fail only when it fails again, was open issue 20 of the
 [Milestone 2 report](results/milestone2.md#open-issues); the owner decided on 2026-11-23 that it
