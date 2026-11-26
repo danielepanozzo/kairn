@@ -30,8 +30,9 @@ construction and access, which only copy limbs, and the constants of include/kai
 which compute with integers. They appear in the index, not on pages of their own.
 
 PAGES lists the pages of docs/reference/ written by hand for operations of EXACT that need more
-than a line of the index: (group, title, file name without .md). reference.py puts each in the
-nav after the kernel pages of its group, and neither writes nor removes it.
+than a line of the index, or for a header or a family of kernels as a whole: (group, title, file
+name without .md). reference.py puts each in the nav after the kernel pages of its group, and
+neither writes nor removes it.
 
 Nothing here is a number, a bound or a status: those come from gen/claims.json and the stored
 results, and the reference pages print them from there.
@@ -86,6 +87,13 @@ GROUPS = [
      "([One enclosure interface](enclosure.md)), each exact. The arithmetic is not `constexpr` (its code is where "
      "`KAIRN_ENCLOSURE_CODE` puts it), nor the midpoint, the radius and the conversions of two limbs; the rest is, "
      "and of it only the midpoint, the radius, the split and the conversions round."),
+    ("upward", "The round-up interval",
+     "`kairn/upward.hpp`, an opt-in header that `kairn/kairn.hpp` does not include and that requires the options "
+     "of [The round-up interval](../concepts/upward.md) (GCC and Clang `-frounding-math`, MSVC `/fp:strict`): one "
+     "interval of `float` or `double` stored as its upper bound and its lower bound negated, the two lanes of one "
+     "register, and computed under the rounding mode upward, which its scopes set. Its kernels are a family of "
+     "their own, each stated in the IEEE model only, with the sums and products of its listing rounded upward; "
+     "[its kernels](upward.md) says how to read their pages."),
     ("blocks", "Building blocks on T",
      "Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests of exactness, its own "
      "radius arithmetic, and bounds rounded down or up without changing the rounding mode. Each is one call of "
@@ -1208,6 +1216,33 @@ KERNELS = {
                                                "underflows"),
     "conv_radius": page("ball-vectors", "The radius of the product of two polynomials whose coefficients are BallVectors"),
     "bv_conv_finish": page("ball-vectors", "The result of the product of two BallVectors: the radius, or NaN"),
+    # --- The round-up interval (kairn/upward.hpp, docs/developer/design/upward.md) --------------------
+    # Entry kernels that no header calls yet: their forms join the table when the interval type of
+    # the header does (the design page, "The interface", says which operation calls which kernel).
+    "upward_make_1": page("upward", "A round-up interval from two values of T"),
+    "upward_from_interval_1": page("upward", "A round-up interval from an interval of the default type"),
+    "upward_to_interval_1": page("upward", "A round-up interval as an interval of the default type"),
+    "upward_neg_1": page("upward", "The negation of a round-up interval"),
+    "upward_add_1": page("upward", "Sum of two round-up intervals"),
+    "upward_sub_1": page("upward", "Difference of two round-up intervals"),
+    "upward_mul_1": page("upward", "Product of two round-up intervals"),
+    "upward_add_num_1": page("upward", "A round-up interval plus a number of T"),
+    "upward_mul_num_1": page("upward", "A round-up interval times a number of T"),
+    "upward_hull_1": page("upward", "The hull of two round-up intervals"),
+    "upward_intersection_1": page("upward", "The intersection of two round-up intervals"),
+    "upward_empty_1": page("upward", "Whether a round-up interval is empty"),
+    "upward_entire_1": page("upward", "Whether a round-up interval is the whole line"),
+    "upward_contains_1": page("upward", "Whether a point is a member of a round-up interval"),
+    "upward_subset_1": page("upward", "Whether a round-up interval is a subset of another"),
+    "upward_positive_1": page("upward", "Whether every member of a round-up interval is positive"),
+    "upward_negative_1": page("upward", "Whether every member of a round-up interval is negative"),
+    "upward_zero_1": page("upward", "Whether a round-up interval is [0, 0]"),
+    "upward_less_1": page("upward", "The three-valued X < Y of round-up intervals"),
+    "upward_less_equal_1": page("upward", "The three-valued X <= Y of round-up intervals"),
+    "upward_equal_1": page("upward", "The three-valued X = Y of round-up intervals"),
+    "upward_rel_equal_1": page("upward", "The relation equal of IEEE 1788, round-up intervals"),
+    "upward_rel_interior_1": page("upward", "The relation interior of IEEE 1788, round-up intervals"),
+    "upward_rel_disjoint_1": page("upward", "The relation disjoint of IEEE 1788, round-up intervals"),
 }
 
 
@@ -1328,6 +1363,7 @@ EXACT = [
 PAGES = [
     ("construction", "Constants from fractions", "rational"),
     ("intervals", "One enclosure interface: intervals and balls", "enclosure"),
+    ("upward", "The round-up interval: its kernels", "upward"),
     ("packed", "Packed numbers in registers", "packed"),
     ("packed", "Arrays of numbers: SoA and its views", "soa"),
     ("arrays", "Functions on arrays", "batch"),

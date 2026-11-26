@@ -357,8 +357,12 @@ COPIED = ["gen/claims.json", "gen/kernels", "include/kairn/gen/bounds.hpp", "inc
           "docs/tools/reference_operations.py", "docs/developer/design/phase0/references.md",
           "docs/developer/results", "proofs/theories", "proofs/gen/Statements.v", "proofs/gen/Model.v",
           "proofs/gen/IeeeModel.v", "proofs/gen/Audit.v", "proofs/gen/IeeeAudit.v", "proofs/audit",
+          "proofs/gen/UpwardModel.v", "proofs/gen/UpwardStatements.v", "proofs/gen/UpwardAudit.v",
           "mkdocs.yml",
           "docs/reference"]
+# Inputs that a tree may not have yet: the C++ of the round-up interval, which its pages say is not
+# printed while the file is not there.
+COPIED_IF_PRESENT = ["include/kairn/gen/upward.hpp"]
 
 
 def edit_definitions(text, name, old, new):
@@ -435,7 +439,7 @@ class Copy:
 
     def __init__(self):
         self.root = tempfile.mkdtemp(prefix="kairn-reference-")
-        for rel in COPIED:
+        for rel in COPIED + [r for r in COPIED_IF_PRESENT if os.path.exists(os.path.join(ROOT, r))]:
             src, dst = os.path.join(ROOT, rel), os.path.join(self.root, rel)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             if os.path.isdir(src):
@@ -705,6 +709,154 @@ class Tool(unittest.TestCase):
         # A constant of a claim this script cannot read is an error, never a guess.
         self.change("add_down_2_2", lambda k: k["ensures"][1].update(rel="up(v)"))
         self.fails("add_down_2_2", "rel")
+
+    # The round-up interval (architecture.md, "Claims of the round-up interval"): its pages are
+    # printed whatever the statuses are, so each test sets the ones it reads.
+    def unverified(self, name):
+        self.change(name, lambda k: (k.update(status="unverified", ieee_status="unverified"),
+                                     k.pop("ieee_theorem", None)))
+
+    def test_upward_kernels(self):
+        # A stored pair, its requirement and the state of a result; I4 of a product, exactly rounded,
+        # in both lanes upward; the listing's operations and pair lines; what is assumed.
+        page = self.page("upward_mul_1")
+        self.assertIn("- $X = [-x_n, x_u]$, stored as $(x_u, x_n)$, is a canonical state of the round-up interval: "
+                      "the empty set, both lanes a NaN; or a nonempty interval", page)
+        self.assertIn("**I1.** The result $Z = [-z_n, z_u]$, stored as $(z_u, z_n)$, is a canonical state", page)
+        self.assertIn("$-z_n = \\mathrm{RD}(\\ell)$ and $z_u = \\mathrm{RU}(h)$, the roundings in the format with "
+                      "overflow", page)
+        self.assertIn("both lanes rounded upward, $z_n = \\mathrm{RU}(-\\ell)$", page)
+        self.assertNotIn("step of `T`", page)
+        self.assertIn("Its products round upward, toward $+\\infty$", page)
+        self.assertIn("its products rounded upward, toward $+\\infty$, with gradual underflow, in the IEEE model", page)
+        self.assertIn("A line of two statements separated by ` | ` is a *pair line*", page)
+        self.assertIn("`max_nl(a, b)` is the greater of $a$ and $b$, and $b$ when $a$ is a NaN", page)
+        self.assertNotIn("prod(a, b)", page)
+        self.assertIn("$X$ as $(x_u, x_n)$, $Y$ as $(y_u, y_n)$, $Z$ as $(z_u, z_n)$", page)
+        self.assertIn("its products rounded upward, and no flush to zero of results or operands", page)
+        self.assertIn("(`proofs/gen/UpwardModel.v`)", page)
+        # A number: the members of Interval(t), and I5 for a finite one.
+        page = self.page("upward_add_num_1")
+        self.assertIn("$Z$ contains $x + t'$ for every $x \\in X$, $t' \\in \\langle t\\rangle$", page)
+        self.assertIn("$\\langle t\\rangle$ is the set of the number $t$ as `Interval(t)` makes it", page)
+        self.assertIn("**I5.** For bounded $X$ and a finite $t$, $Z$ is bounded exactly when", page)
+        self.assertIn("- $t$ is any value of `T`: a number, $\\pm\\infty$ or a NaN.", page)
+        self.assertIn("Its sums round upward", page)
+        # The conversions (same_set), the constructor, the set operations, a predicate.
+        page = self.page("upward_to_interval_1")
+        self.assertIn("$Z$ is the empty set, $(+\\infty, -\\infty)$, exactly when $X$ is empty.", page)
+        self.assertIn("so for a nonempty $X$ the same bounds, $z_l = -x_n$ and $z_u = x_u$, exactly", page)
+        self.assertIn("The result $Z = [z_l, z_u]$ is a canonical interval.", page)
+        page = self.page("upward_from_interval_1")
+        self.assertIn("- $X = [x_l, x_u]$ is a canonical interval", page)
+        self.assertIn("$Z$ is the empty set, both lanes a NaN, exactly when $X$ is empty.", page)
+        self.assertIn("$-z_n = x_l$ and $z_u = x_u$", page)
+        page = self.page("upward_make_1")
+        self.assertIn("$Z$ is the whole line, $(z_u, z_n) = (+\\infty, +\\infty)$.", page)
+        self.assertIn("$Z$ is the empty set, both lanes a NaN.", page)
+        self.assertIn("$-z_n = l_o$ and $z_u = h_i$", page)
+        self.assertIn("$\\min(-x_n, -y_n)$ and $\\max(x_u, y_u)$", self.page("upward_hull_1"))
+        self.assertIn("$-z_n = \\max(-x_n, -y_n)$ and $z_u = \\min(x_u, y_u)$", self.page("upward_intersection_1"))
+        page = self.page("upward_less_1")
+        self.assertIn("$X = [-x_n, x_u]$ and $Y = [-y_n, y_u]$", page)
+        self.assertIn("No operation of it rounds: it gives the same result in every rounding mode.", page)
+        self.assertIn("at least 1 bit, no operation of the kernel rounding, in the IEEE model", page)
+        self.assertIn("no flush to zero of results or operands (its result does not depend on the rounding mode)", page)
+        # The index: the group of the family, and its page in the nav after the kernels.
+        files = reference.plan(self.copy.root)
+        self.assertIn("## The round-up interval\n", files["docs/reference/index.md"])
+        nav = files["mkdocs.yml"].split("\n")
+        self.assertLess(nav.index("          - The negation of a round-up interval: reference/upward_neg_1.md"),
+                        nav.index('          - "The round-up interval: its kernels": reference/upward.md'))
+
+    def test_upward_statuses(self):
+        # UNVERIFIED: the statement in UpwardStatements.v, and the sentence on hand-written proofs.
+        self.unverified("upward_add_1")
+        page = self.page("upward_add_1")
+        self.assertIn("**UNVERIFIED.** No proof of the statement is checked. The statement is `upward_add_1_spec`, "
+                      "which the generator prints from these claims into [`proofs/gen/UpwardStatements.v`]", page)
+        self.assertIn(reference.IEEE_PROOFS_SENTENCE, page)
+        self.assertIn("[`upward_add_1`](upward_add_1.md) **UNVERIFIED**", self.page("index"))
+        # Proved: the theorem, its file and the audit of the family, and the axioms.
+        self.edit_file("proofs/theories/IeeeUpwardOps.v",
+                       lambda t: t + "\n(* A test. *)\nTheorem upward_add_1_test_correct : True.\nProof. exact I. Qed.\n")
+        self.change("upward_add_1", lambda k: k.update(status="proved", ieee_status="proved", ieee_theorem={
+            "file": "proofs/theories/IeeeUpwardOps.v", "name": "upward_add_1_test_correct"}))
+        self.fails("upward_add_1", "upward_add_1_test_correct", "no audit file prints")
+        self.edit_file("proofs/gen/UpwardAudit.v", lambda t: t + "Print Assumptions upward_add_1_test_correct.\n")
+        page = self.page("upward_add_1")
+        self.assertIn("Kernel `upward_add_1` · proved ·", page)
+        self.assertIn("## Guarantees", page)
+        self.assertIn("**Proved.** Rocq checks the theorem `upward_add_1_test_correct`, in "
+                      "[`proofs/theories/IeeeUpwardOps.v`]", page)
+        self.assertIn(", against `upward_add_1_spec`, the statement the generator prints from these claims into "
+                      "[`proofs/gen/UpwardStatements.v`]", page)
+        self.assertIn("(`Print Assumptions upward_add_1_test_correct`, in [`proofs/gen/UpwardAudit.v`]", page)
+        self.assertIn("## Axioms", page)
+        self.assertNotIn(reference.IEEE_PROOFS_SENTENCE, page)
+        # A kernel of the family that UpwardStatements.v does not state fails.
+        self.edit_file(reference.UPWARD_STATEMENTS, lambda t: t.replace("Definition upward_sub_1_spec", "Definition x_spec"))
+        self.fails("upward_sub_1", "UpwardStatements.v", "upward_sub_1_spec")
+
+    def test_upward_cpp_when_printed(self):
+        # The C++ of the family: named on a page once include/kairn/gen/upward.hpp defines the kernel.
+        path = self.copy.path(reference.UPWARD_CPP)
+        if os.path.exists(path):
+            os.remove(path)
+        self.assertIn("The generator prints no C++ of it yet.", self.page("upward_neg_1"))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("inline void upward_neg_1() {}\n")
+        page = self.page("upward_neg_1")
+        self.assertIn("the description the C++ (`include/kairn/gen/upward.hpp`) and the formal model "
+                      "(`proofs/gen/UpwardModel.v`) are generated from", page)
+        self.assertNotIn("prints no C++", page)
+
+    def test_upward_vocabulary_only_in_the_family(self):
+        # The requirement upward(), stored pairs, numbers and same_set are read for the kernels that
+        # say "rounding": "upward", and nowhere else; and the rounding is one the script knows.
+        self.change("upward_add_1", lambda k: k.pop("rounding"))
+        self.fails("upward_add_1", "upward(xu, xn)", "round-up interval")
+        self.change("upward_add_1", lambda k: k.update(rounding="downward"))
+        self.fails("upward_add_1", "downward")
+        self.change("upward_add_1", lambda k: k.update(rounding="upward"))
+        self.change("add_2_2", lambda k: k.update(rounding="upward"))
+        self.fails("add_2_2", "extended domain and ieee_only")
+        self.change("add_2_2", lambda k: k.pop("rounding"))
+        self.change("interval_add_1", lambda k: k["ensures"][0].update(numbers=["xl"]))
+        self.fails("interval_add_1", "numbers")
+        self.change("interval_add_1", lambda k: k["ensures"][0].pop("numbers"))
+        self.change("interval_make_1", lambda k: k.update(ensures=[
+            {"kind": "same_set", "of": {"lower": "zl", "upper": "zu"}, "from": {"lower": "lo", "upper": "hi"}}]))
+        self.fails("interval_make_1", "same_set", "round-up interval")
+
+    def test_upward_sets(self):
+        # A set of the family is its bounds or a stored pair that an upward() requirement names.
+        self.change("upward_add_1", lambda k: k["ensures"][0]["intervals"].update(x={"upper": "xu", "nlower": "yn"}))
+        self.fails("upward_add_1", "(xu, yn)", "upward()")
+        self.change("upward_add_1", lambda k: k["ensures"][0]["intervals"].update(x={"top": "xu", "nlower": "xn"}))
+        self.fails("upward_add_1", "neither its bounds")
+        self.change("upward_add_1", lambda k: k["ensures"][0]["intervals"].update(x={"upper": "xu", "nlower": "xn"}))
+        self.change("upward_to_interval_1", lambda k: k["ensures"][0].update(of={"upper": "zl", "nlower": "xu"}))
+        self.fails("upward_to_interval_1", "same_set", "not an output")
+
+    def test_labels_of_the_round_up_interval(self):
+        # The oracle's labels (oracle/kairn_oracle/upward.py, set_text; intervals.py, _iv_text and
+        # _outs_text), from the claims alone.
+        label = reference.entry_label
+        pair = {"x": {"upper": "xu", "nlower": "xn"}, "y": {"upper": "yu", "nlower": "yn"}}
+        self.assertEqual(label({"kind": "same_set", "of": {"upper": "zu", "nlower": "zn"},
+                                "from": {"lower": "xl", "upper": "xu"}}), "same_set((upper zu, nlower zn)) as [xl, xu]")
+        self.assertEqual(label({"kind": "interval_set", "upper": "zu", "nlower": "zn", "set": "union", "intervals": pair}),
+                         "interval_set(upper zu, nlower zn) union of x=(upper xu, nlower xn), y=(upper yu, nlower yn)")
+        self.assertEqual(label({"kind": "makes_interval", "upper": "zu", "nlower": "zn",
+                                "from": {"lower": "lo", "upper": "hi"}}),
+                         "makes_interval(upper zu, nlower zn) from lower lo, upper hi")
+        self.assertEqual(label({"kind": "certain", "of": "m", "rel": "empty", "args": ["x"],
+                                "intervals": {"x": pair["x"]}, "exact": True}),
+                         "certain(m) empty(x) over x=(upper xu, nlower xn), exact")
+        self.assertEqual(label({"kind": "encloses_interval", "upper": "zu", "nlower": "zn", "set": "x+y",
+                                "intervals": pair, "tight": {"kind": "rounded"}, "bounded_when": []}),
+                         "encloses_interval(upper zu, nlower zn)")
 
     # ieee_only, the claims' word on whether a kernel has a statement on finite operands.
     def test_ieee_only_outside_the_extended_domain(self):

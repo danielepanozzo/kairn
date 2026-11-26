@@ -106,6 +106,7 @@ nav:
       - The floating-point environment: concepts/environment.md
       - Values, threads and constant expressions: concepts/values.md
       - Arrays: concepts/arrays.md
+      - The round-up interval: concepts/upward.md
   - Tutorials:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md
@@ -267,6 +268,32 @@ nav:
           - A ball that contains an interval, two-limb bounds: reference/interval_to_ball_2.md
           - An interval split at its midpoint, two-limb bounds: reference/interval_split_2.md
           - "One enclosure interface: intervals and balls": reference/enclosure.md
+      - The round-up interval:
+          - A round-up interval from two values of T: reference/upward_make_1.md
+          - A round-up interval from an interval of the default type: reference/upward_from_interval_1.md
+          - A round-up interval as an interval of the default type: reference/upward_to_interval_1.md
+          - The negation of a round-up interval: reference/upward_neg_1.md
+          - Sum of two round-up intervals: reference/upward_add_1.md
+          - Difference of two round-up intervals: reference/upward_sub_1.md
+          - Product of two round-up intervals: reference/upward_mul_1.md
+          - A round-up interval plus a number of T: reference/upward_add_num_1.md
+          - A round-up interval times a number of T: reference/upward_mul_num_1.md
+          - The hull of two round-up intervals: reference/upward_hull_1.md
+          - The intersection of two round-up intervals: reference/upward_intersection_1.md
+          - Whether a round-up interval is empty: reference/upward_empty_1.md
+          - Whether a round-up interval is the whole line: reference/upward_entire_1.md
+          - Whether a point is a member of a round-up interval: reference/upward_contains_1.md
+          - Whether a round-up interval is a subset of another: reference/upward_subset_1.md
+          - Whether every member of a round-up interval is positive: reference/upward_positive_1.md
+          - Whether every member of a round-up interval is negative: reference/upward_negative_1.md
+          - "Whether a round-up interval is [0, 0]": reference/upward_zero_1.md
+          - "The three-valued X < Y of round-up intervals": reference/upward_less_1.md
+          - "The three-valued X <= Y of round-up intervals": reference/upward_less_equal_1.md
+          - "The three-valued X = Y of round-up intervals": reference/upward_equal_1.md
+          - The relation equal of IEEE 1788, round-up intervals: reference/upward_rel_equal_1.md
+          - The relation interior of IEEE 1788, round-up intervals: reference/upward_rel_interior_1.md
+          - The relation disjoint of IEEE 1788, round-up intervals: reference/upward_rel_disjoint_1.md
+          - "The round-up interval: its kernels": reference/upward.md
       - Building blocks on T:
           - TwoSum on values of the program: reference/two_sum_entry.md
           - Fast2Sum on values of the program: reference/fast_two_sum_entry.md

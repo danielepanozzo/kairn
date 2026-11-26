@@ -19,9 +19,12 @@ Inputs, and nothing else:
 - include/kairn/gen/bounds.hpp: the constants that kairn::traits exports, as compiled;
 - proofs/gen/Statements.v and Model.v: the generated statements, as Rocq reads them, and which
   kernels the generated model has; and the theorem file each proved statement names, to check
-  that it has that theorem;
+  that it has that theorem; for the kernels of the round-up interval (`"rounding": "upward"`),
+  proofs/gen/UpwardModel.v and UpwardStatements.v, which kernels have a model and a statement
+  there, and include/kairn/gen/upward.hpp, whether the generator has printed their C++ yet;
 - proofs/audit/allowed_axioms.txt, the axioms the audit of `make -C proofs` allows, and the audit
-  files (proofs/gen/Audit.v, proofs/gen/IeeeAudit.v, proofs/audit/HandAudit.v), to check that the
+  files (proofs/gen/Audit.v, proofs/gen/IeeeAudit.v, proofs/gen/UpwardAudit.v,
+  proofs/audit/HandAudit.v), to check that the
   audit prints the assumptions of every theorem a page calls proved. Which axioms each theorem
   depends on only Rocq computes: a page names the allowed ones and points to the artifact of the
   Proofs workflow, where the audit's output is kept, and never lists them per theorem;
@@ -38,7 +41,9 @@ requirement or vocabulary this script does not know is an error, never a guess: 
 its template written here first (Kernel.finite_bullet, Site.extended_bullets and their
 neighbors). The two readings of a claim, on finite operands and in the extended domain of
 infinities and NaN, are those of docs/developer/architecture.md ("Claims", "Claims of the second
-wave", "Claims of the non-finite layer").
+wave", "Claims of the non-finite layer"); the vocabulary of the round-up interval (the requirement
+upward(U, N), sets and outputs named by their stored pair, numbers, same_set) is that of "Claims of
+the round-up interval", read only for the kernels that say "rounding": "upward".
 """
 import argparse
 import decimal
@@ -66,7 +71,17 @@ FORMATS = [("binary64", "double", 53, 971), ("binary32", "float", 24, 104)]
 
 KNOWN_KERNEL_FIELDS = {"name", "inputs", "outputs", "value", "requires", "ensures", "min_precision",
                        "status", "theorem", "source", "flops", "instances", "domain", "ieee_status",
-                       "ieee_theorem", "ieee_only"}
+                       "ieee_theorem", "ieee_only", "rounding"}
+# The field rounding, written only in the entries of the round-up interval (architecture.md, "Claims
+# of the round-up interval"): every operation of the kernel that rounds rounds upward. Its family
+# has a vocabulary of its own, read for those kernels only: the requirement upward(U, N), a set
+# named by its stored pair {"upper": U, "nlower": N} in `intervals`, outputs "upper" and "nlower" in
+# place of "lower" and "upper", `numbers`, and the kind same_set.
+KNOWN_ROUNDINGS = {"upward"}
+UPWARD_REQUIRES = {"upward"}
+UPWARD_KINDS = {"same_set"}
+# The kinds whose output pair may be named "upper" and "nlower" (a stored pair).
+STORED_OUTPUT_KINDS = {"encloses_interval", "interval_set", "makes_interval"}
 KNOWN_GROUP_FIELDS = {"name", "limbs", "type"}
 KNOWN_GROUP_TYPES = {"mask"}
 KNOWN_DOMAINS = {"finite", "extended"}
@@ -89,7 +104,8 @@ KNOWN_TIGHT = {"exact": set(), "rounded": {"steps", "when"}, "outward": {"rel", 
 # The kinds whose entries name their own set, or make a value from the inputs: a kernel whose every
 # entry is one of them has no value.
 OWN_SET_KINDS = {"makes_ball", "makes_interval", "encloses_interval", "set_bound", "interval_set",
-                 "ball_of_interval", "interval_of_ball", "splits", "certain", "trit", "ball_set", "ball_splits"}
+                 "ball_of_interval", "interval_of_ball", "splits", "certain", "trit", "ball_set", "ball_splits",
+                 "same_set"}
 # The set operations of interval_set and the special values of ball_of_interval (architecture.md,
 # "Claims of the interval kernels: two limbs and the enclosure interface").
 KNOWN_SET_OPERATIONS = {"union": ("\\cup", "hull"), "intersection": ("\\cap", "intersection")}
@@ -135,6 +151,9 @@ KIND_FIELDS = {
     # The set operations of a ball.
     "ball_set": ({"center", "radius", "set", "balls"}, set()),
     "ball_splits": ({"parts", "from"}, set()),
+    # The conversions of the round-up interval: the same set in the other storage (of, the output;
+    # from, the input; each a stored pair or the bounds of a default interval).
+    "same_set": ({"of", "from"}, set()),
 }
 # The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
 # rounding under a condition, a condition of exactness, a zero factor, the midpoint of a ball made
@@ -147,7 +166,9 @@ KIND_OPTIONAL = {"rounded": {"when", "zero_factor", "value"},
                  "bound": {"zero_factor"}, "outward": {"exact_when", "zero_factor"},
                  # the midpoint of a ball made from an interval; its center and radius (stage B2)
                  "makes_ball": {"midpoint_when", "rel", "abs", "smallest_radius"},
-                 "encloses_interval": {"bounded_exactly", "zero_factor"}, "set_bound": {"tight"},
+                 # numbers: the one-limb inputs that range over the members of Interval(t) (the round-up
+                 # interval)
+                 "encloses_interval": {"bounded_exactly", "zero_factor", "numbers"}, "set_bound": {"tight"},
                  # the smallest radius; a radius finite under conditions (stage B2)
                  "ball_of_interval": {"smallest_radius", "finite_when"},
                  # the condition of a bounded result of two limbs (stage B2)
@@ -169,18 +190,18 @@ DOMAIN_KINDS = {
     "extended": {"normalized", "error", "rounded", "upper", "predicate", "encloses", "extends",
                  "represents", "makes_ball", "neighbor", "bound", "finite_or_nan", "makes_interval",
                  "encloses_interval", "set_bound", "outward", "interval_set", "ball_of_interval", "interval_of_ball",
-                 "splits", "certain", "trit", "ball_set", "ball_splits"},
+                 "splits", "certain", "trit", "ball_set", "ball_splits", "same_set"},
 }
 DOMAIN_REQUIRES = {
     "finite": {"normalized", "abs_ge", "nonneg", "power_of_two", "count", "format", "at_most"},
-    "extended": {"canonical", "ball", "nonneg", "power_of_two", "interval", "not_nan"},
+    "extended": {"canonical", "ball", "nonneg", "power_of_two", "interval", "not_nan", "upward"},
 }
 # The kinds that exist only for a kernel without a statement on finite operands (a full kernel, a
 # constructor, an interval kernel, the finish of a fold), which the claims mark "ieee_only": true;
 # represents too, when it is the only entry.
 IEEE_ONLY_KINDS = {"extends", "makes_ball", "finite_or_nan", "makes_interval", "encloses_interval", "set_bound",
                    "interval_set", "ball_of_interval", "interval_of_ball", "splits", "certain", "trit", "ball_set",
-                   "ball_splits"}
+                   "ball_splits", "same_set"}
 
 # The one sentence every page with an UNVERIFIED statement about infinite and NaN operands carries,
 # word for word: gen/claims.json is the only source of a status here.
@@ -191,7 +212,15 @@ IEEE_PROOFS_SENTENCE = ("The [Proofs](../proofs/index.md#what-is-proved-and-in-w
 # The axiom audit: the allow-list, the files with one `Print Assumptions NAME.` per audited theorem,
 # and where the CI keeps what the audit printed (.github/workflows/proofs.yml).
 ALLOWED_AXIOMS = "proofs/audit/allowed_axioms.txt"
-AUDIT_FILES = ["proofs/gen/Audit.v", "proofs/gen/IeeeAudit.v", "proofs/audit/HandAudit.v"]
+AUDIT_FILES = ["proofs/gen/Audit.v", "proofs/gen/IeeeAudit.v", "proofs/gen/UpwardAudit.v", "proofs/audit/HandAudit.v"]
+# The generated files of the round-up interval: its formal models and statements (gen/kairn_gen/upward.py),
+# and the header of its C++ (written by the C++ printers; a page says when it is not there yet).
+UPWARD_MODEL = "proofs/gen/UpwardModel.v"
+UPWARD_STATEMENTS = "proofs/gen/UpwardStatements.v"
+UPWARD_CPP = "include/kairn/gen/upward.hpp"
+UPWARD_DESIGN = "../developer/design/upward.md"
+UPWARD_CONCEPT = "../concepts/upward.md"
+UPWARD_PAGE = "upward.md"
 PROOFS_WORKFLOW = REPO_URL + "/actions/workflows/proofs.yml"
 AUDIT_ARTIFACT = "proof-audit"
 NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight",
@@ -448,9 +477,12 @@ def has_binary(node):
 
 
 def name_tex(name):
-    """x -> x, x0 -> x_0, cx -> c_x, cz0 -> c_{z0}; eta, in the threshold of a condition, -> eta."""
+    """x -> x, x0 -> x_0, cx -> c_x, cz0 -> c_{z0}; eta, in the threshold of a condition, -> eta;
+    t' -> t', a member of the set of a number (`numbers` of the round-up interval)."""
     if name == "eta":
         return "\\eta"
+    if name.endswith("'"):
+        return name_tex(name[:-1]) + "'"
     m = re.fullmatch(r"([a-z])([a-z]?)(\d*)", name)
     if name in ("ok", "no") or (not m and re.fullmatch(r"[a-z]{3,}", name)):
         # a word: the mask of an exported bound, the flag of a fold, the answers of a comparison
@@ -545,14 +577,24 @@ def load_listing(root, name):
             header.append((m.group(1), m.group(2).strip()))
         elif line.strip():
             body.append(line.rstrip())
-    limbs = {}
+    limbs, pairs = {}, {}
     for key, value in header:
         if key in ("input", "output"):
-            m = re.fullmatch(r"(?:(?:mask|stored|supplied)\s+)*([a-z][a-z0-9]*)(?:\s*=\s*(.+))?", value)
+            m = re.fullmatch(r"(?:(?:mask|stored|supplied|pair)\s+)*([a-z][a-z0-9]*)(?:\s*=\s*(.+))?", value)
             if not m:
                 fail("kernel %s: cannot read the line %s: %s" % (name, key, value))
+            if "pair" in value.split("=")[0].split()[:-1]:
+                # A pair of the round-up interval (`input: pair stored x = xu xn`): each lane is a
+                # one-limb input or output of its own, named by the lane, lane 0 first.
+                lanes = (m.group(2) or "").split()
+                if len(lanes) != 2:
+                    fail("kernel %s: the pair %s has the lanes %r, not two" % (name, m.group(1), lanes))
+                pairs[m.group(1)] = tuple(lanes)
+                for lane in lanes:
+                    limbs[lane] = [lane]
+                continue
             limbs[m.group(1)] = m.group(2).split() if m.group(2) else [m.group(1)]
-    return {"comment": comment, "header": header, "body": body, "limbs": limbs,
+    return {"comment": comment, "header": header, "body": body, "limbs": limbs, "pairs": pairs,
             "fields": dict(header)}
 
 
@@ -784,6 +826,15 @@ class Kernel:
         self.ieee_proved = self.extended and entry["ieee_status"] == "proved"
         self.value = (parse(entry["value"], "%s, value" % where, set(self.inputs))
                       if "value" in entry else None)
+        # The family of the round-up interval: every operation that rounds rounds upward, in the
+        # IEEE model only (architecture.md, "Claims of the round-up interval").
+        if "rounding" in entry and entry["rounding"] not in KNOWN_ROUNDINGS:
+            fail("%s: the rounding %r has no template in docs/tools/reference.py (it knows %s)"
+                 % (where, entry["rounding"], ", ".join(sorted(KNOWN_ROUNDINGS))))
+        self.upward = entry.get("rounding") == "upward"
+        if self.upward and not (self.extended and entry.get("ieee_only") is True):
+            fail("%s: a kernel of the round-up interval (rounding upward) is of the extended domain and "
+                 "ieee_only" % where)
         # Requirements, in the vocabulary of the domain.
         self.requires = []
         for req in entry["requires"]:
@@ -791,6 +842,9 @@ class Kernel:
             if not m or m.group(1) not in DOMAIN_REQUIRES[self.domain]:
                 fail("%s: the requirement %r has no template in docs/tools/reference.py for the %s domain"
                      % (where, req, self.domain))
+            if m.group(1) in UPWARD_REQUIRES and not self.upward:
+                fail("%s: the requirement %r is read only for a kernel of the round-up interval "
+                     "(\"rounding\": \"upward\")" % (where, req))
             args = [a.strip() for a in m.group(2).split(",")]
             if m.group(1) == "format":                # format(half): about the format, not an input
                 if args != ["half"]:
@@ -805,7 +859,7 @@ class Kernel:
             for a in args:
                 if a not in self.inputs:
                     fail("%s: the requirement %r names %r, which is not an input" % (where, req, a))
-            if len(args) != {"abs_ge": 2, "ball": 2, "interval": 2}.get(m.group(1), 1):
+            if len(args) != {"abs_ge": 2, "ball": 2, "interval": 2, "upward": 2}.get(m.group(1), 1):
                 fail("%s: the requirement %r has the wrong number of arguments" % (where, req))
             self.requires.append((m.group(1), args))
         # Claims, in the vocabulary of the domain, with exactly the fields of their kind.
@@ -814,14 +868,21 @@ class Kernel:
             if kind not in DOMAIN_KINDS[self.domain]:
                 fail("%s: the claim kind %r has no template in docs/tools/reference.py for the %s domain; "
                      "write one before regenerating the pages" % (where, kind, self.domain))
+            if kind in UPWARD_KINDS and not self.upward:
+                fail("%s: the claim kind %s is read only for a kernel of the round-up interval "
+                     "(\"rounding\": \"upward\")" % (where, kind))
             required, optional = KIND_FIELDS[kind]
             if self.domain == "finite":
                 optional = set()
             optional = optional | KIND_OPTIONAL.get(kind, set())
+            if kind in STORED_OUTPUT_KINDS and "nlower" in e:
+                # The output pair named by its stored pair, upper and nlower (the round-up interval).
+                required = (required - {"lower"}) | {"nlower"}
             fields = set(e) - {"kind"}
             if not required <= fields or fields - required - optional:
                 fail("%s: a %s claim has the fields %s; this script knows %s" % (
                     where, kind, sorted(fields), sorted(required | optional)))
+            self.check_upward_vocabulary(e, where)
             for c in e.get("finite_when", []):
                 if set(c) != KNOWN_CONDITION_FIELDS or not isinstance(c["exp"], int):
                     fail("%s: the finite_when condition %r is not one this script knows" % (where, c))
@@ -1030,6 +1091,14 @@ class Kernel:
             if len(self.limbs(args[0])) == 2:          # stage B1: a canonical value that is not a NaN
                 return "$%s$ is not a NaN: a finite normalized pair or $(\\pm\\infty, \\pm 0)$" % name_tex(args[0])
             return "$%s$ is a number of `T` or an infinity, not a NaN" % name_tex(args[0])
+        if kind == "upward":
+            # The round-up interval (architecture.md, "Claims of the round-up interval"): the stored
+            # pair (u, n) = (b, -a) of [a, b], or (NaN, NaN).
+            u, n = (name_tex(a) for a in args)
+            return ("%s is a canonical state of the round-up interval: the empty set, both lanes a NaN; or a "
+                    "nonempty interval, each lane a number of `T` or $+\\infty$ (neither a NaN nor $-\\infty$), "
+                    "with $-%s \\le %s$; its members are the real numbers between $-%s$ and $%s$" % (
+                        self.stored_text(args[0], args[1]), n, u, n, u))
         fail("kernel %s: the requirement %s has no reading in the extended domain" % (self.name, kind))
 
     def interval_names(self):
@@ -1039,8 +1108,32 @@ class Kernel:
             if e["kind"] in ("encloses_interval", "interval_set") or (e["kind"] in ("certain", "trit") and
                                                                      "intervals" in e):
                 for n, b in e["intervals"].items():
-                    out[(b["lower"], b["upper"])] = n
+                    if "lower" in b:
+                        out[(b["lower"], b["upper"])] = n
+            if e["kind"] == "same_set" and "lower" in e["from"]:
+                # The default interval that a conversion of the round-up interval reads: its page calls it X.
+                out[(e["from"]["lower"], e["from"]["upper"])] = "x"
         return out
+
+    def stored_names(self):
+        """{(upper, nlower): name} of the stored pairs of the round-up interval: those the claims name
+        in `intervals`, then the pairs of the description (`input: pair stored x = xu xn`)."""
+        out = {}
+        for e in self.entry["ensures"]:
+            for n, b in (e.get("intervals") or {}).items():
+                if "nlower" in b:
+                    out.setdefault((b["upper"], b["nlower"]), n)
+        for n, lanes in self.listing.get("pairs", {}).items():
+            out.setdefault(lanes, n)
+        return out
+
+    def stored_text(self, upper, nlower, what="state"):
+        """`$X = [-x_n, x_u]$, stored as $(x_u, x_n)$`: a state of the round-up interval, by its
+        name when it has one."""
+        name = self.stored_names().get((upper, nlower))
+        u, n = name_tex(upper), name_tex(nlower)
+        lead = "$%s = [-%s, %s]$" % (name_tex(name).upper(), n, u) if name else "$[-%s, %s]$" % (n, u)
+        return "%s, stored as $(%s, %s)$," % (lead, u, n)
 
     def extended_free_inputs(self):
         """The inputs no requirement constrains: in the extended domain, any value of T (for several
@@ -1122,6 +1215,55 @@ class Kernel:
             parts.append("$%s = 0$ or $\\lvert %s\\rvert %s %s$" % (x, x, KNOWN_EXACT_CONDITIONS[kinds[0]], tex(bound)))
         return ", ".join(parts[:-1]) + (", and " if len(parts) > 2 else " and ") + parts[-1] if len(parts) > 1 \
             else parts[0]
+
+    def check_upward_vocabulary(self, e, where):
+        """What the round-up interval adds to the claims (architecture.md, "Claims of the round-up
+        interval"), read only for its kernels: a set of `intervals` named by its stored pair, which
+        is an upward() requirement; an output pair upper and nlower; numbers, one-limb inputs outside
+        every set; and the two sets of same_set. A set is its bounds or its stored pair, nothing
+        else."""
+        stored = []
+        if e["kind"] in STORED_OUTPUT_KINDS and "nlower" in e:
+            stored.append(("the output pair", e, self.outputs))
+        for n, b in (e.get("intervals") or {}).items():
+            if not isinstance(b, dict) or set(b) not in ({"lower", "upper"}, {"upper", "nlower"}):
+                fail("%s: the set %s of a %s claim is %r: neither its bounds (lower, upper) nor its stored "
+                     "pair (upper, nlower)" % (where, n, e["kind"], b))
+            if "nlower" in b:
+                stored.append(("the set %s" % n, b, self.inputs))
+                if ("upward", [b["upper"], b["nlower"]]) not in self.requires:
+                    fail("%s: the set %s of a %s claim is the stored pair (%s, %s), which no requirement "
+                         "upward() names" % (where, n, e["kind"], b["upper"], b["nlower"]))
+        if e["kind"] == "same_set":
+            for f, names in (("of", self.outputs), ("from", self.inputs)):
+                b = e[f]
+                if not isinstance(b, dict) or set(b) not in ({"lower", "upper"}, {"upper", "nlower"}):
+                    fail("%s: the %s of a same_set claim is %r: neither the bounds (lower, upper) nor a stored "
+                         "pair (upper, nlower)" % (where, f, b))
+                for v in b.values():
+                    if v not in names or len(self.limbs(v)) != 1:
+                        fail("%s: the set %s of a same_set claim names %s, which is not %s of one limb" % (
+                            where, f, v, "an output" if f == "of" else "an input"))
+        if stored and not self.upward:
+            fail("%s: %s of a %s claim is named by a stored pair (upper and nlower), which is read only for a "
+                 "kernel of the round-up interval (\"rounding\": \"upward\")" % (where, stored[0][0], e["kind"]))
+        for what, b, names in stored:
+            for v in (b["upper"], b["nlower"]):
+                if v not in names or len(self.limbs(v)) != 1:
+                    fail("%s: %s of a %s claim names %s, which is not %s of one limb" % (
+                        where, what, e["kind"], v, "an output" if names is self.outputs else "an input"))
+        if "numbers" in e:
+            if not self.upward:
+                fail("%s: numbers, of an encloses_interval claim, is read only for a kernel of the round-up "
+                     "interval (\"rounding\": \"upward\")" % where)
+            nums = e["numbers"]
+            in_sets = {v for b in e["intervals"].values() for v in b.values()}
+            if not isinstance(nums, list) or not nums or len(set(nums)) != len(nums):
+                fail("%s: numbers is a list of inputs, each once, or left out" % where)
+            for t in nums:
+                if t not in self.inputs or t in in_sets or t in self.mask_inputs or len(self.limbs(t)) != 1:
+                    fail("%s: the number %r of an encloses_interval claim is not an input of one limb outside "
+                         "its sets" % (where, t))
 
     def check_set_predicate(self, e, where):
         """The relation, the arguments and the sets of a certain or trit claim are ones the pages
@@ -1450,7 +1592,7 @@ def power_tex(e):
 LABELLED_KINDS = {"error", "normalized", "leading_rounded", "represents", "rounded", "upper", "holds",
                   "maximum", "predicate", "encloses", "outward", "extends", "finite_or_nan", "bound",
                   "certain", "trit", "set_bound", "interval_set", "ball_set", "splits", "ball_splits",
-                  "makes_interval", "makes_ball"}
+                  "makes_interval", "makes_ball", "same_set"}
 
 
 def _of(e):
@@ -1492,10 +1634,30 @@ def _suffix(e):
     return s
 
 
+def _set_text(s):
+    """A set by its bounds, [L, U], or by its stored pair, (upper U, nlower N): oracle/kairn_oracle/
+    upward.py, set_text."""
+    return "(upper %s, nlower %s)" % (s["upper"], s["nlower"]) if "nlower" in s else "[%s, %s]" % (s["lower"], s["upper"])
+
+
+def _outs_text(e):
+    """The outputs of an interval claim: L, U, or upper U, nlower N (oracle/kairn_oracle/intervals.py,
+    _outs_text)."""
+    return "upper %s, nlower %s" % (e["upper"], e["nlower"]) if "nlower" in e else "%s, %s" % (e["lower"], e["upper"])
+
+
 def _sets_text(e):
     if "intervals" in e:
-        return ", ".join("%s=[%s, %s]" % (n, s["lower"], s["upper"]) for n, s in e["intervals"].items())
+        return ", ".join("%s=%s" % (n, _set_text(s)) for n, s in e["intervals"].items())
     return ", ".join("%s=[%s +- %s]" % (n, s["center"], s["radius"]) for n, s in e["balls"].items())
+
+
+def bounds_tex(b):
+    """The lower and the upper bound of a set, or of the output pair of a claim, in TeX: its lower and
+    upper, or for a stored pair of the round-up interval -nlower and upper."""
+    if "nlower" in b:
+        return "-" + name_tex(b["nlower"]), name_tex(b["upper"])
+    return name_tex(b["lower"]), name_tex(b["upper"])
 
 
 def entry_label(e):
@@ -1572,7 +1734,9 @@ def entry_label(e):
             s += ", tight rounded" + (", steps %d" % e["tight"]["steps"] if e["tight"].get("steps") else "")
         return s
     if kind == "interval_set":
-        return "interval_set(%s, %s) %s of %s" % (e["lower"], e["upper"], e["set"], _sets_text(e))
+        return "interval_set(%s) %s of %s" % (_outs_text(e), e["set"], _sets_text(e))
+    if kind == "same_set":
+        return "same_set(%s) as %s" % (_set_text(e["of"]), _set_text(e["from"]))
     if kind == "ball_set":
         return "ball_set(%s, %s) %s of %s" % (e["center"], e["radius"], e["set"], _sets_text(e))
     if kind == "splits":
@@ -1584,12 +1748,12 @@ def entry_label(e):
         return "ball_splits [%s +- %s], [%s +- %s] of [%s +- %s]" % (
             a["center"], a["radius"], b["center"], b["radius"], e["from"]["center"], e["from"]["radius"])
     if kind == "makes_interval":
-        return "makes_interval(%s, %s) from lower %s, upper %s" % (
-            e["lower"], e["upper"], e["from"]["lower"], e["from"]["upper"])
+        return "makes_interval(%s) from lower %s, upper %s" % (_outs_text(e), e["from"]["lower"], e["from"]["upper"])
     if kind == "makes_ball" and "center" in e["from"]:
         return "makes_ball(%s, %s) from center %s, radius %s" % (
             e["center"], e["radius"], e["from"]["center"], e["from"]["radius"])
-    outputs = of or ", ".join(e[f] for f in ("center", "radius", "lower", "upper") if f in e)
+    outputs = of or (_outs_text(e) if "nlower" in e else
+                     ", ".join(e[f] for f in ("center", "radius", "lower", "upper") if f in e))
     return "%s(%s)" % (kind, outputs)
 
 
@@ -1777,10 +1941,17 @@ class Site:
         # The generated formal models (the real one, and the IEEE one where it exists) and the
         # kernels each defines.
         self.models = []
-        for f in ("Model.v", "IeeeModel.v"):
+        for f in ("Model.v", "IeeeModel.v", "UpwardModel.v"):
             path = os.path.join(root, "proofs", "gen", f)
             if os.path.exists(path):
                 self.models.append((f, set(re.findall(r"^Definition (\w+) ", read(path), re.M))))
+        # The round-up interval: the kernels that proofs/gen/UpwardStatements.v states, and the
+        # kernels whose C++ include/kairn/gen/upward.hpp has (none until the C++ printers write it).
+        path = in_root(root, UPWARD_STATEMENTS)
+        self.upward_statements = (set(re.findall(r"^Definition (\w+)_spec : Prop :=", read(path), re.M))
+                                  if os.path.exists(path) else set())
+        path = in_root(root, UPWARD_CPP)
+        self.upward_cpp = read(path) if os.path.exists(path) else None
         self.kernels = {}
         entries = load_claims(root, claims)
         # The claims of each kernel as a run judges them (docs/tools/brute_code.py, NOT_JUDGED).
@@ -1887,6 +2058,9 @@ class Site:
             status = "proved" if k.proved else "**UNVERIFIED**"
         w("Kernel `%s` · %s · [all operations](index.md) · [how to read this page](reading.md)" % (name, status))
         w("")
+        if k.upward:
+            w(self.upward_family(k))
+            w("")
         if not k.proved:
             calls = ("An operation that calls this kernel compiles only with the marker `kairn::unverified` on "
                      "an operand, and `kairn::traits` exports no constants for it"
@@ -1910,6 +2084,12 @@ class Site:
         w("")
         w(self.computes(k))
         w("")
+        if k.upward and self.stored_pairs(k):
+            w("A state of the round-up interval is stored as its upper bound and its lower bound negated, "
+              "the two lanes of one register: %s ([its kernels](%s#the-stored-pair))." % (
+                  ", ".join("$%s$ as $(%s, %s)$" % (name_tex(n).upper(), name_tex(u), name_tex(l))
+                            for n, (u, l) in self.stored_pairs(k)), UPWARD_PAGE))
+            w("")
         multi = [n for n in k.inputs + k.outputs if len(k.limbs(n)) > 1 and not k.expanded(n)]
         if multi:
             w("A number of several limbs stands for their exact sum: %s." % ", ".join(
@@ -2002,13 +2182,16 @@ class Site:
         w("## Listing")
         w("")
         models = ["`proofs/gen/%s`" % f for f, names in self.models if name in names]
-        made = ("the C++ and the formal model%s (%s) are" % ("s" if len(models) > 1 else "", ", ".join(models))
-                if models else "the C++ is")
-        w("From [`gen/kernels/%s.kernel`](%s/blob/main/gen/kernels/%s.kernel), the description %s generated "
-          "from.%s Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is "
-          "$\\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend "
-          "([the kernel IR](../developer/architecture.md#the-kernel-ir))." % (
-              name, REPO_URL, name, made, "" if models else " The generator prints no formal model of it yet."))
+        if k.upward:
+            w(self.upward_listing(k, models))
+        else:
+            made = ("the C++ and the formal model%s (%s) are" % ("s" if len(models) > 1 else "", ", ".join(models))
+                    if models else "the C++ is")
+            w("From [`gen/kernels/%s.kernel`](%s/blob/main/gen/kernels/%s.kernel), the description %s generated "
+              "from.%s Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is "
+              "$\\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend "
+              "([the kernel IR](../developer/architecture.md#the-kernel-ir))." % (
+                  name, REPO_URL, name, made, "" if models else " The generator prints no formal model of it yet."))
         calls = k.calls(self.all_names)
         if calls:
             w("It calls %s." % ", ".join(self.link(c) for c in calls))
@@ -2035,6 +2218,73 @@ class Site:
             w("- " + line)
         w("")
         return "\n".join(out)
+
+    # The round-up interval (architecture.md, "The round-up interval"; the design page).
+    @staticmethod
+    def listing_ops(k):
+        """The operations of the IR that the listing of a kernel applies, comments left out."""
+        return {op for line in k.listing["body"] for op in re.findall(r"\b([a-z_]+)\(", line.split("#")[0])}
+
+    def rounds_upward(self, k):
+        """Whether a kernel of the round-up interval has an operation that rounds (add_ru, mul_ru)."""
+        return bool(self.listing_ops(k) & {"add_ru", "mul_ru"})
+
+    def rounded_words(self, k):
+        """What a kernel of the round-up interval rounds: "sums", "products" or "sums and products"."""
+        ops = self.listing_ops(k)
+        return " and ".join(w for o, w in (("add_ru", "sums"), ("mul_ru", "products")) if o in ops)
+
+    @staticmethod
+    def stored_pairs(k):
+        """[(name, (upper, nlower))] of the pairs of a kernel's description, in their order."""
+        return list(k.listing.get("pairs", {}).items())
+
+    def upward_family(self, k):
+        """The paragraph at the top of the page of a kernel of the round-up interval."""
+        text = ("A kernel of the round-up interval ([its kernels](%s)), of the opt-in header `kairn/upward.hpp`, which "
+                "`kairn/kairn.hpp` does not include and which requires the options of [The round-up interval](%s) "
+                "(GCC and Clang `-frounding-math`, MSVC `/fp:strict`). " % (UPWARD_PAGE, UPWARD_CONCEPT))
+        if self.rounds_upward(k):
+            return text + ("Its %s round upward, toward $+\\infty$: the statement below is about them so rounded, "
+                           "which is what the compiled code computes inside a `kairn::upward::Scope`, in a file "
+                           "compiled with those options; that step is assumed, not machine-checked "
+                           "([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked))."
+                           % self.rounded_words(k))
+        return text + "No operation of it rounds: it gives the same result in every rounding mode."
+
+    def upward_listing(self, k, models):
+        """The sentence before the listing of a kernel of the round-up interval: what it is generated
+        into, and what its operations and pair lines mean."""
+        name = k.name
+        cpp = self.upward_cpp is not None and re.search(r"\b%s\b" % re.escape(name), self.upward_cpp)
+        if models:
+            made = ("the C++ (`%s`) and the formal model (%s) are" if cpp else "the formal model (%s) is") % (
+                (UPWARD_CPP, ", ".join(models)) if cpp else ", ".join(models))
+        else:
+            made = "the C++ (`%s`) is" % UPWARD_CPP if cpp else None
+        if made is None:
+            fail("kernel %s: neither %s nor %s has it; run python3 gen/kairn-gen build" % (name, UPWARD_MODEL, UPWARD_CPP))
+        missing = (" The generator prints no C++ of it yet." if not cpp else "") + (
+            " The generator prints no formal model of it yet." if not models else "")
+        ops = self.listing_ops(k)
+        means = []
+        if ops & {"add_ru", "mul_ru"}:
+            means.append("`%s` %s IEEE 754's %s rounded upward, toward $+\\infty$" % (
+                "` and `".join(o for o in ("add_ru", "mul_ru") if o in ops),
+                "are" if {"add_ru", "mul_ru"} <= ops else "is",
+                " and ".join(w for o, w in (("add_ru", "sum"), ("mul_ru", "product")) if o in ops)))
+        if "max_nl" in ops:
+            means.append("`max_nl(a, b)` is the greater of $a$ and $b$, and $b$ when $a$ is a NaN")
+        if "unord" in ops:
+            means.append("`unord(a, b)` is whether $a$ or $b$ is a NaN")
+        pairs = any(" | " in line.split("#")[0] for line in k.listing["body"])
+        return ("From [`gen/kernels/%s.kernel`](%s/blob/main/gen/kernels/%s.kernel), the description %s generated "
+                "from.%s Each statement is one operation of `T`, and none rounds to nearest ([the round-up interval "
+                "in the kernel IR](../developer/architecture.md#the-round-up-interval))%s.%s" % (
+                    name, REPO_URL, name, made, missing, "".join("; " + m for m in means),
+                    (" A line of two statements separated by ` | ` is a *pair line*: the two lanes of one "
+                     "instruction, lane 0 on the left ([the pair form](%s#the-pair-form))." % UPWARD_DESIGN)
+                    if pairs else ""))
 
     def cpp(self, k, p):
         name = k.name
@@ -2214,6 +2464,8 @@ class Site:
                 lines.extend(self.extended_ball_set(k, x))
             elif kind == "ball_splits":
                 lines.extend(self.extended_ball_splits(k, x))
+            elif kind == "same_set":
+                lines.extend(self.extended_same_set(k, x))
             else:
                 fail("kernel %s: the claim kind %r has no reading in the extended domain" % (k.name, kind))
         if not kinds:
@@ -2381,9 +2633,31 @@ class Site:
                 "$%s = (\\mathrm{NaN}, \\mathrm{NaN})$." % (
                     name_tex(o), v, v, name_tex(o), o0, o1, v, v, name_tex(o), v, name_tex(o))]
 
+    def result_text(self, x):
+        """The first line of a statement whose result is an interval: a canonical interval, or a
+        canonical state of the round-up interval when the claim names its output pair upper and
+        nlower."""
+        zl, zu = bounds_tex(x)
+        if "nlower" in x:
+            return ("The result $Z = [%s, %s]$, stored as $(%s, %s)$, is a canonical state of the round-up "
+                    "interval." % (zl, zu, name_tex(x["upper"]), name_tex(x["nlower"])))
+        return "The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu)
+
     def extended_makes_interval(self, k, x):
         lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
-        zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
+        zl, zu = bounds_tex(x)
+        if "nlower" in x:
+            # The constructor of the round-up interval: the cases of interval_make_1, stored as (u, n).
+            u, n = name_tex(x["upper"]), name_tex(x["nlower"])
+            return [self.result_text(x),
+                    "If a bound is a NaN, whatever the other, or both are the same infinity ($[+\\infty, +\\infty]$, "
+                    "$[-\\infty, -\\infty]$): $Z$ is the whole line, $(%s, %s) = (+\\infty, +\\infty)$." % (u, n),
+                    "Otherwise, if the bounds are reversed, $%s > %s$ ($[+\\infty, -\\infty]$, and $%s = +\\infty$ or "
+                    "$%s = -\\infty$ with the other finite, among them): $Z$ is the empty set, both lanes a NaN." % (
+                        lo, hi, lo, hi),
+                    "Otherwise ($%s \\le %s$, $%s < +\\infty$ and $%s > -\\infty$): $Z$ is $[%s, %s]$, $-%s = %s$ and "
+                    "$%s = %s$ as extended real numbers (a zero may change its sign)." % (
+                        lo, hi, lo, hi, lo, hi, n, lo, u, hi)]
         return ["The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu),
                 "If a bound is a NaN, whatever the other, or both are the same infinity ($[+\\infty, +\\infty]$, "
                 "$[-\\infty, -\\infty]$): $Z$ is the whole line, $[-\\infty, +\\infty]$.",
@@ -2394,24 +2668,45 @@ class Site:
                 "real numbers (a zero may change its sign)." % (lo, hi, lo, hi, lo, hi)]
 
     def interval_set(self, k, x):
+        """The set expression of an encloses_interval claim in TeX, the members it ranges over in
+        words, and the names of its sets. A number of `numbers` (the round-up interval) ranges over
+        the members of Interval(t): the expression names such a member t'."""
         names = list(x["intervals"])
-        s = tex(k.expr(x["set"], "encloses_interval", set(names)))
-        each = ", ".join("$%s \\in %s$" % (name_tex(n), name_tex(n).upper()) for n in names)
-        return s, each, names
+        nums = x.get("numbers", [])
+        node = substitute(k.expr(x["set"], "encloses_interval", set(names) | set(nums)), {t: t + "'" for t in nums})
+        each = ", ".join(["$%s \\in %s$" % (name_tex(n), name_tex(n).upper()) for n in names] +
+                         ["$%s' \\in \\langle %s\\rangle$" % (name_tex(t), name_tex(t)) for t in nums])
+        return tex(node), each, names
+
+    @staticmethod
+    def members_tex(x):
+        """The members an encloses_interval claim ranges over, as TeX: x \\in X, t' \\in <t>."""
+        return ", ".join(["%s \\in %s" % (name_tex(n), name_tex(n).upper()) for n in x["intervals"]] +
+                         ["%s' \\in \\langle %s\\rangle" % (name_tex(t), name_tex(t)) for t in x.get("numbers", [])])
+
+    @staticmethod
+    def numbers_text(x):
+        """What the set of a number of `numbers` is, in words; empty without numbers."""
+        return "".join("; $\\langle %s\\rangle$ is the set of the number $%s$ as `Interval(%s)` makes it: $\\{%s\\}$ "
+                       "for a finite $%s$, every real number for an infinite $%s$ or a NaN" % ((name_tex(t),) * 2 + (t,) +
+                                                                                            (name_tex(t),) * 3)
+                       for t in x.get("numbers", []))
 
     def extended_interval(self, k, x):
-        """I1 to I5 of milestone2.md, "What is stated of an interval kernel"."""
+        """I1 to I5 of milestone2.md, "What is stated of an interval kernel"; for the round-up
+        interval, on the state its output pair stands for (architecture.md, "Claims of the round-up
+        interval")."""
         s, each, names = self.interval_set(k, x)
         big = [name_tex(n).upper() for n in names]
-        zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
+        zl, zu = bounds_tex(x)
         ops = " and ".join("$%s$" % n for n in big)
-        lines = ["**I1.** The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu),
+        lines = ["**I1.** " + self.result_text(x),
                  "**I2.** $Z$ is empty exactly when %s." % (
                      "an operand is" if len(names) > 1 else "$%s$ is" % big[0]),
                  "**I3.** $Z$ contains $%s$ for every %s, unbounded operands included (their members are real "
-                 "numbers)." % (s, each)]
+                 "numbers)%s." % (s, each, self.numbers_text(x))]
         t = x["tight"]
-        members = ", ".join("%s \\in %s" % (name_tex(n), name_tex(n).upper()) for n in names)
+        members = self.members_tex(x)
         rng = ("$\\ell$ and $h$ are the greatest lower bound and the least upper bound of the exact range "
                "$\\{\\, %s : %s \\,\\}$, as extended real numbers" % (s, members))
         if t["kind"] == "exact":
@@ -2423,6 +2718,9 @@ class Site:
                 "(an infinite bound of the range is returned as such)" % (zl, zu)) if not steps else (
                 "$%s$ is $\\mathrm{RD}(\\ell)$ or at most %d step%s of `T` below it, and $%s$ is $\\mathrm{RU}(h)$ "
                 "or at most as many above it" % (zl, steps, "" if steps == 1 else "s", zu))))
+            if "nlower" in x and not steps:
+                # The stored pair: the lower bound negated is rounded upward too.
+                text += "; both lanes rounded upward, $%s = \\mathrm{RU}(-\\ell)$" % name_tex(x["nlower"])
             if t.get("when") == "product_large":
                 text += ("; exactly $\\mathrm{RD}(\\ell)$ and $\\mathrm{RU}(h)$ when each product of a finite bound "
                          "of $%s$ and a finite bound of $%s$ is zero or at least $\\eta/(2u^2)$ in magnitude" % tuple(big))
@@ -2441,8 +2739,10 @@ class Site:
         for c in x["bounded_when"]:
             cs.append("$\\lvert z\\rvert \\le %s$" % ("\\Omega" if c.get("omega") else power_tex(c["exp"])))
         if cs:
+            # A number (the round-up interval) is a bounded operand when it is finite.
+            bounded = ops + "".join(" and a finite $%s$" % name_tex(n) for n in x.get("numbers", []))
             lines.append("**I5.** For bounded %s, $Z$ is bounded %s every member $z$ of the exact range satisfies %s.%s" % (
-                ops, "exactly when" if x.get("bounded_exactly") else "when", " and ".join(cs),
+                bounded, "exactly when" if x.get("bounded_exactly") else "when", " and ".join(cs),
                 "" if all(c.get("omega") for c in x["bounded_when"]) else
                 " " + self.threshold_note([c for c in x["bounded_when"] if not c.get("omega")])))
         else:
@@ -2466,9 +2766,9 @@ class Site:
         """The hull or the intersection of two intervals (stage B1)."""
         (a, ba), (b, bb) = x["intervals"].items()
         A, B = name_tex(a).upper(), name_tex(b).upper()
-        zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
-        al, au, bl, bu = (name_tex(n) for n in (ba["lower"], ba["upper"], bb["lower"], bb["upper"]))
-        lines = ["The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu)]
+        zl, zu = bounds_tex(x)
+        (al, au), (bl, bu) = bounds_tex(ba), bounds_tex(bb)
+        lines = [self.result_text(x)]
         if x["set"] == "union":
             lines += ["$Z$ is empty exactly when $%s$ and $%s$ both are." % (A, B),
                       "Otherwise $Z$ is the smallest interval that contains $%s \\cup %s$, exactly: its lower bound "
@@ -2562,6 +2862,32 @@ class Site:
                 "Otherwise neither is, $%s = %s$, $%s = %s$ and $%s = %s$: the two together are $X$, split at that "
                 "point, which is in $X$." % (al, lo, bu, hi, au, bl)]
 
+    def same_set_sets(self, k, x):
+        """The two sets of a same_set claim (the conversions of the round-up interval): for the input
+        and for the output, its name, the words that say what it is, and its empty set."""
+        out = []
+        for f, name in (("from", "X"), ("of", "Z")):
+            b = x[f]
+            lo, hi = bounds_tex(b)
+            if "nlower" in b:
+                what = ("a state of the round-up interval, $%s = [%s, %s]$ stored as $(%s, %s)$" % (
+                    name, lo, hi, name_tex(b["upper"]), name_tex(b["nlower"])))
+                empty = "both lanes a NaN"
+            else:
+                what = "an interval of the default type, $%s = [%s, %s]$" % (name, lo, hi)
+                empty = "$(+\\infty, -\\infty)$"
+            out.append((name, what, empty, lo, hi))
+        return out
+
+    def extended_same_set(self, k, x):
+        """same_set (architecture.md, "Claims of the round-up interval"): the output is canonical,
+        empty exactly when the input is, and has the same members."""
+        (_, _, _, xl, xu), (_, _, empty, zl, zu) = self.same_set_sets(k, x)
+        return [self.result_text(x["of"]),
+                "$Z$ is the empty set, %s, exactly when $X$ is empty." % empty,
+                "$Z$ and $X$ have the same members; so for a nonempty $X$ the same bounds, $%s = %s$ and $%s = %s$, "
+                "exactly, as extended real numbers (a zero bound may change its sign)." % (zl, xl, zu, xu)]
+
     def center_tex(self, k, name):
         """A center input or output in TeX, by its name: the page says once what a name of several
         limbs stands for."""
@@ -2605,7 +2931,7 @@ class Site:
     def set_definitions(self, k, x):
         """What the sets of a certain or trit claim are, in words."""
         if "intervals" in x:
-            return " and ".join("$%s = [%s, %s]$" % (name_tex(n).upper(), name_tex(b["lower"]), name_tex(b["upper"]))
+            return " and ".join("$%s = [%s, %s]$" % ((name_tex(n).upper(),) + bounds_tex(b))
                                 for n, b in x["intervals"].items())
         return " and ".join("$%s$ the ball of center $%s$ and radius $%s$" % (
             name_tex(n).upper(), k.out_tex(b["center"]) if b["center"] in k.outputs else
@@ -2892,9 +3218,20 @@ class Site:
                         self.set_relation(k, x), sets, every[0], every[1], name_tex(x["yes"]),
                         self.set_relation(k, x, formula=True), name_tex(x["no"]),
                         self.set_relation(k, x, formula=True, negated=True)))
+        if "same_set" in kinds:
+            # The conversions of the round-up interval: the same set in the other storage.
+            x = next(x for x in e["ensures"] if x["kind"] == "same_set")
+            (_, frm, efrom, _, _), (_, of, eof, _, _) = self.same_set_sets(k, x)
+            return ("The same set in the other storage: %s, as %s; the empty set, %s, as the empty set, %s. Exact: "
+                    "the same members:\n\n$$Z = X.$$" % (frm, of, efrom, eof))
         if "makes_interval" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_interval")
             lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+            if "nlower" in x:
+                return ("The state of the round-up interval of two values of `T`, $[%s, %s]$ stored as $(%s, -%s)$; "
+                        "the whole line, $(+\\infty, +\\infty)$, when a bound is a NaN or both are the same infinity, "
+                        "and the empty set, both lanes a NaN, when they are reversed:\n\n$$Z = [%s, %s].$$" % (
+                            lo, hi, hi, lo, lo, hi))
             return ("The interval of two values of `T`; the whole line when a bound is a NaN or both are the same "
                     "infinity, and the empty set when they are reversed:\n\n$$Z = [%s, %s].$$" % (lo, hi))
         if "interval_set" in kinds:
@@ -2939,12 +3276,12 @@ class Site:
         if "encloses_interval" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "encloses_interval")
             s, each, names = self.interval_set(k, x)
-            defs = " and ".join("$%s = [%s, %s]$" % (name_tex(n).upper(), name_tex(b["lower"]), name_tex(b["upper"]))
+            defs = " and ".join("$%s = [%s, %s]$" % ((name_tex(n).upper(),) + bounds_tex(b))
                                 for n, b in x["intervals"].items())
-            return ("An interval $Z = [%s, %s]$ that contains $%s$ for every %s, with %s. An interval may be "
+            return ("%s $Z = [%s, %s]$ that contains $%s$ for every %s, with %s%s. An interval may be "
                     "unbounded, and empty.\n\n$$Z \\supseteq \\{\\, %s : %s \\,\\}.$$" % (
-                        name_tex(x["lower"]), name_tex(x["upper"]), s, each, defs, s,
-                        ", ".join("%s \\in %s" % (name_tex(n), name_tex(n).upper()) for n in names)))
+                        ("A state of the round-up interval" if "nlower" in x else "An interval"),
+                        *bounds_tex(x), s, each, defs, self.numbers_text(x), s, self.members_tex(x)))
         if "set_bound" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "set_bound")
             b, cr = next(iter(x["balls"].items()))
@@ -3090,15 +3427,21 @@ class Site:
                 parts.append("$%s$ when its leading limb is finite, flag true; otherwise NaN, flag false" % (
                     tex(k.value)))
             elif x["kind"] == "makes_interval":
-                parts.append("the interval $[%s, %s]$, canonical; the whole line for a NaN bound and for the "
+                parts.append("the %s $[%s, %s]$, canonical; the whole line for a NaN bound and for the "
                              "same infinity twice" % (
+                    "state of the interval" if "nlower" in x else "interval",
                     name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])))
             elif x["kind"] == "encloses_interval":
                 s, _, _ = self.interval_set(k, x)
-                parts.append("a canonical interval that contains every $%s$; %s" % (s, {
-                    "exact": "exactly the range", "rounded": "the range rounded outward" + (
-                        ", within a step" if x["tight"].get("steps") else ""),
-                    "outward": "within $A\\lvert v\\rvert + B$ of the range"}[x["tight"]["kind"]]))
+                parts.append("a canonical %s that contains every $%s$%s; %s" % (
+                    "state" if "nlower" in x else "interval", s,
+                    "".join(", $%s'$ a member of `Interval(%s)`" % (name_tex(t), t) for t in x.get("numbers", [])), {
+                        "exact": "exactly the range", "rounded": "the range rounded outward" + (
+                            ", within a step" if x["tight"].get("steps") else ""),
+                        "outward": "within $A\\lvert v\\rvert + B$ of the range"}[x["tight"]["kind"]]))
+            elif x["kind"] == "same_set":
+                parts.append("the same set as %s, exactly" % (
+                    "a state of the round-up interval" if "nlower" in x["of"] else "an interval of the default type"))
             elif x["kind"] == "set_bound":
                 parts.append("a %s bound of the ball%s; $%s\\infty$ for the empty ball" % (
                     "lower" if x["side"] == "below" else "upper", ", rounded" if x.get("tight") else "",
@@ -3241,9 +3584,13 @@ class Site:
         types = ", ".join("`%s` has %d bits" % (ctype, p) for _, ctype, p, _ in FORMATS)
         model = ("in the IEEE model, with signed zeros, infinities, NaN and overflow" if extended
                  else "in the model where no operation overflows")
-        return ("%s for every binary format with a precision of at least %d bit%s, rounding to nearest with "
-                "ties to even and with gradual underflow, %s. %s" % (
-                    "Proved" if proved else "Stated", mp, "" if mp == 1 else "s", model,
+        # The round-up interval: its sums and products round upward, and nothing rounds to nearest.
+        rounding = "rounding to nearest with ties to even and with gradual underflow"
+        if k.upward:
+            rounding = ("its %s rounded upward, toward $+\\infty$, with gradual underflow" % self.rounded_words(k)
+                        if self.rounds_upward(k) else "no operation of the kernel rounding")
+        return ("%s for every binary format with a precision of at least %d bit%s, %s, %s. %s" % (
+                    "Proved" if proved else "Stated", mp, "" if mp == 1 else "s", rounding, model,
                     "**Not covered: %s** (%s)." % (", ".join("`%s`" % c for c in short), types) if short
                     else "Both limb types qualify: %s." % types))
 
@@ -3302,15 +3649,24 @@ class Site:
         if k.finite_reading and spec is None:
             fail("kernel %s: proofs/gen/Statements.v has no %s_spec; run python3 gen/kairn-gen build"
                  % (k.name, k.name))
+        # The round-up interval: its statements are in a file of their own.
+        upward = None
+        if k.upward:
+            if k.name not in self.upward_statements:
+                fail("kernel %s: %s has no %s_spec; run python3 gen/kairn-gen build" % (k.name, UPWARD_STATEMENTS, k.name))
+            upward = ("`%s_spec`, %%s the generator prints from these claims into [`%s`](%s/blob/main/%s)" % (
+                k.name, UPWARD_STATEMENTS, REPO_URL, UPWARD_STATEMENTS))
         if k.proved:
             th = e.get("theorem") if k.finite_reading else (e.get("ieee_theorem") or e.get("theorem"))
             text = self.theorem_text(k, th, "theorem", (
                 ", against `%s_spec`, the statement the generator prints from these claims into "
                 "[`proofs/gen/Statements.v`](%s/blob/main/proofs/gen/Statements.v)" % (k.name, REPO_URL))
-                if spec is not None else "")
+                if spec is not None else ", against " + upward % "the statement" if upward else "")
         else:
             text = "**UNVERIFIED.** No proof of the statement is checked."
-            th = e.get("theorem")
+            if upward:
+                text += " The statement is " + upward % "which" + "."
+            th = e.get("theorem") or (e.get("ieee_theorem") if upward else None)
             if th and th.get("file") and th.get("name"):
                 text += " The theorem is to be `%s`, in `%s`." % (th["name"], th["file"])
             if k.extended and not k.finite_reading:
@@ -3364,6 +3720,16 @@ class Site:
                 lines.append("Which canonical value comes out when an operand is not finite: the claims say only "
                              "that it is canonical.")
             lines.append("The sign of a zero limb, and which NaN a NaN result is: the claims compare neither.")
+        if k.upward:
+            # What is assumed outside the proofs (the design page, "What is assumed outside the proofs").
+            lines.append("What the compiled code gives where its environment is not the one of the statement: %s. "
+                         "That is the program's to make so, as [The round-up interval](%s#what-the-program-guarantees) "
+                         "says, and no proof covers that step "
+                         "([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked))." % (
+                             "its %s rounded upward, and no flush to zero of results or operands" % self.rounded_words(k)
+                             if self.rounds_upward(k) else
+                             "no flush to zero of results or operands (its result does not depend on the rounding "
+                             "mode)", UPWARD_CONCEPT))
         if k.finite_reading and any(r in ("normalized", "canonical") or (r == "ball" and len(k.limbs(a[0])) == 2)
                                     for r, a in k.requires):
             lines.append("Anything about an operand that is not normalized, which only limbs given by the program "

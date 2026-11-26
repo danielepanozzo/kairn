@@ -1,14 +1,17 @@
 # The floating-point environment
 
-Every guarantee of Kairn is a theorem about floating-point operations that round to nearest, keep
-subnormal numbers, and are executed as written. A two-limb operation is built from *error-free
+Every guarantee of Kairn's default types is a theorem about floating-point operations that round to
+nearest, keep subnormal numbers, and are executed as written; those of the opt-in round-up interval
+are about operations that round upward ([below](#the-round-up-intervals-options-and-scopes)). A
+two-limb operation is built from *error-free
 transformations*, short sequences such as TwoSum whose second result is exactly the rounding error
 of the first; they are exact only under those conditions. When one fails, the arithmetic itself
 reports nothing: the result still looks like a two-limb number, and its second limb can be wrong
 (below, a measurement of exactly that). This page says what the library needs, what a compiler's
 contraction and fast-math do to it and what Kairn does about them, and the checks that report a
 wrong environment: two that a program calls, one that every function on arrays makes in every build,
-and those of a build with `KAIRN_CHECKS`.
+and those of a build with `KAIRN_CHECKS`; and, last, what changes with the opt-in header
+`kairn/upward.hpp`, the one part of Kairn that sets the rounding mode.
 
 ## The checks, in a program
 
@@ -29,10 +32,13 @@ compares its output with the text on this page each time (`api.example.concepts_
 
 The contract ([Environment](../developer/design/phase0/environment.md#the-contract)):
 
-1. **Rounding to nearest, ties to even**, for every operation. Kairn never reads or writes the
-   rounding mode to do its work, and never changes the floating-point environment. A result rounded
-   down or up, as an interval needs, is computed under rounding to nearest
-   ([Building blocks](../getting-started/index.md#building-blocks)).
+1. **Rounding to nearest, ties to even**, for every operation. The default types never read or
+   write the rounding mode to do their work, and never change the floating-point environment. A
+   result rounded down or up, as an interval needs, is computed under rounding to nearest
+   ([Building blocks](../getting-started/index.md#building-blocks)). The one exception is the opt-in
+   header `kairn/upward.hpp`, which `kairn/kairn.hpp` does not include: its scopes set the mode
+   upward for their lifetime, and restore what they found
+   ([below](#the-round-up-intervals-options-and-scopes)).
 2. **Subnormal numbers kept**: no flush to zero of results (FTZ) and no reading of subnormal operands
    as zero (DAZ). The bounds' absolute terms, multiples of the smallest subnormal number $\eta$, are
    about that range ([Precision and magnitude](precision.md)).
@@ -148,11 +154,12 @@ they change ([When a file is compiled](../getting-started/index.md#when-a-file-i
   (Clang under `-ffp-contract=fast`); `ok()` does not depend on it. Like every check of the
   self-test it sees the copy of the inline function that the linker kept, and only the form it
   tries.
-- **`kairn::environment_ok()`** says whether the rounding mode and flush to zero are as Kairn assumes,
-  now. Kairn never changes them; other code can (an interval library that rounds upward, or flush to
-  zero set at startup by any object compiled with `-ffast-math`), and a program that calls such code
-  checks and restores the environment before calling Kairn
-  ([Troubleshooting](../getting-started/index.md#when-the-program-runs) shows how).
+- **`kairn::environment_ok()`** says whether the rounding mode and flush to zero are as Kairn's
+  default types assume, now. They never change them; other code can (an interval library that rounds
+  upward, a scope of `kairn/upward.hpp`, or flush to zero set at startup by any object compiled with
+  `-ffast-math`), and a program that calls such code checks and restores the environment before
+  calling them ([Troubleshooting](../getting-started/index.md#when-the-program-runs) shows how;
+  inside an upward scope, a `kairn::upward::NearestScope` does it).
 - **The check of a batch entry** is made in every build, with `KAIRN_CHECKS` 1 or 0, with or without
   `NDEBUG`. A *batch entry* is a function that runs a loop over arrays: every function of
   `kairn/batch.hpp` (`sum`, `sum_fast`, `dot`, the maps, `conv`, `norm_upper`) and every operation
@@ -200,3 +207,33 @@ environment: the rounding mode is not to nearest (MXCSR.RC is not zero)`, and th
 that statement instead; the operation then goes on, without checking its operands, and with no
 guarantee for its result. In the default environment, an operand that is not canonical stops the
 program with a message of its own, in a build with `KAIRN_CHECKS`.
+
+## The round-up interval's options and scopes
+
+The opt-in header `kairn/upward.hpp` holds an interval of one limb computed under the rounding mode
+upward, for speed ([The round-up interval](upward.md)). It is the one part of Kairn that sets the
+mode, and it needs of the environment what the default types exclude:
+
+- **Options.** Every file that includes it is compiled with `-frounding-math` (GCC and Clang) or
+  `/fp:strict` (MSVC), which the CMake target `kairn::upward` adds. Without them a compiler may
+  compute operations of the program at compile time, or move them, as if the mode were to nearest.
+  GCC and MSVC show that the option is missing, and the header then stops the build, unless the
+  program defines `KAIRN_UPWARD_OPTIONS_UNCHECKED`; Clang does not show it
+  ([The compile-time guard](upward.md#the-compile-time-guard)). The fast-math refusals above hold
+  for it too, and the default types accept both options, so one file may use both kinds of interval.
+- **Scopes.** `kairn::upward::Scope` sets the mode upward, with flush to zero and denormals-are-zero
+  off, for its lifetime, and restores the control register and the C library's mode as it found
+  them, keeping the exception flags raised inside; `kairn::upward::NearestScope` does the same for
+  rounding to nearest. Every operation of the header that rounds runs inside an upward scope, and
+  the program sets the mode through these scopes only, never by hand around the header's operations
+  ([The scopes](upward.md#the-scopes)).
+- **The default types inside an upward scope** see an environment that is not theirs: a build with
+  `KAIRN_CHECKS` reports them, so does the check of a batch entry in every build (but for the two
+  that compute no sum), `kairn::environment_ok()` is false there, and `kairn::self_test()` fails, as
+  it should. A program calls them inside a `NearestScope`, and brings the values they use
+  across the scope's boundary through memory or `kairn::upward::pass()`
+  ([Code next to a scope's boundary](upward.md#code-next-to-a-scopes-boundary)).
+
+What is assumed there outside the proofs, that each operation of the header that rounds runs as the
+IEEE operation rounded upward, is in
+[What is not machine-checked](correctness.md#what-is-not-machine-checked).

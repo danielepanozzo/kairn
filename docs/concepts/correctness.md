@@ -106,8 +106,9 @@ hardware ([The floating-point environment](environment.md)).
 
 ## What is proved in which model
 
-A statement is proved in one of two models, or both
-([Proofs](../proofs/index.md#what-is-proved-and-in-which-model)):
+A statement is stated, and proved, in one of two models, or both
+([Proofs](../proofs/index.md#what-is-proved-and-in-which-model)); those of the opt-in round-up
+interval in the second only, with the status that `gen/claims.json` gives each:
 
 - **The model of real numbers.** Every operation rounds its exact result to nearest, with gradual
   underflow, in a binary format of any precision from the kernel's minimum on and with no largest
@@ -120,6 +121,12 @@ A statement is proved in one of two models, or both
   balls share, whose statements are stated in this model only, since infinite bounds are ordinary
   values of an interval; and the functions on arrays and the ball vectors, whose loops are proved
   in both models, in each order they are computed in.
+- **The kernels of the round-up interval** (the opt-in `kairn/upward.hpp`,
+  [The round-up interval](upward.md)) are stated in the model of IEEE values only, with their sums
+  and products rounded upward, toward $+\infty$ (Flocq's `Bplus` and `Bmult` with `mode_UP`), in
+  files of their own (`proofs/gen/UpwardStatements.v`); no operation of theirs rounds to nearest.
+  The status of each statement is the one `gen/claims.json` gives, on its reference page
+  ([The round-up interval: its kernels](../reference/upward.md#the-model)).
 
 Not every kernel has a statement in both. A note of the design page, dated 2026-11-21, counts them
 for the 160 kernels and 44 loops of Milestone 2
@@ -131,8 +138,8 @@ instead, 5 have only the theorems that the computation at compile time gives the
 computation at run time, and 11 have no theorem of their own in the IEEE model (`two_sum_entry`,
 the kernel of the public `two_sum`, stated for finite operands, and parts of loops whose theorems in
 that model use them); and every loop is proved in both models. The tree has grown since the note
-was counted: `gen/claims.json` now has 237 kernels and 51 loops, every one with the status `proved`
-([the reference](../reference/index.md) counts them).
+was counted: [the reference](../reference/index.md) counts the kernels of `gen/claims.json` as they
+are now, and gives the status of each.
 
 ## What is not machine-checked
 
@@ -172,6 +179,18 @@ is written, and tested, often in exact arithmetic:
   and the bounds of an interval, read as stored.
 - **Thresholds sharper than those stated**: a condition under which a result is claimed finite is
   proved as stated, and how far it is from where an overflow is first seen is measured, not proved.
+- **That each operation of the round-up interval that rounds runs as the IEEE operation rounded
+  upward.** The statements of its kernels are about `add_ru` and `mul_ru`, IEEE 754's sum and
+  product rounded toward $+\infty$, and about a maximum `max_nl` that each of two machine
+  instructions computes on quiet NaNs. That the compiled code computes them so, in the format of
+  `T` and on the values the listing names, is assumed. It holds when the program sets the mode
+  through the header's scopes, which make it upward with flush to zero and denormals-are-zero off,
+  and compiles with the header's options, which with the header's barriers (on MSVC a barrier per
+  scope, whose assurance is weaker) make the compiler emit the operations as written inside the
+  scope ([What the program guarantees](upward.md#what-the-program-guarantees)). The options are the
+  program's responsibility, by the owner's decision of 2026-11-24; the header's self-check and the
+  assertions of a checked build are evidence of the rest, not a proof of it
+  ([The self-check](upward.md#the-self-check)).
 
 One more thing is not machine-checked, by design: that what Kairn states of the functions named
 after IEEE 1788 is the standard's meaning. Each statement is proved as it is written; that it is
@@ -197,8 +216,9 @@ also accepted on proved operations, where it changes nothing, so that code writt
 compiling when a proof lands. The functions on arrays, the operations of ball vectors and `Packed`
 have no marked form: each compiles only while its kernels are proved.
 
-**In this version every kernel is proved**, so no operation needs the marker. A program can ask
-all the same, at compile time:
+**In this version every kernel of the default types is proved**, so none of their operations needs
+the marker; [the reference](../reference/index.md) gives the status of every kernel, those of the
+opt-in round-up interval included. A program can ask all the same, at compile time:
 
 ```cpp
 --8<-- "docs/examples/cpp/concepts_correctness.cpp:has_sum"

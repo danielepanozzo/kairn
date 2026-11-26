@@ -34,6 +34,11 @@ Read them in this order:
 7. [Arrays](arrays.md): the containers and views, the packed type, the functions on arrays and the
    accumulator, how the error of a sum or a dot product grows with its length, and the order of
    summation.
+8. [The round-up interval](upward.md), for a program that needs it: the opt-in header
+   `kairn/upward.hpp`, which **requires compiler options and scopes**: an interval of one limb kept
+   in one register and computed under the rounding mode upward, for speed; what the program must
+   guarantee, how it differs from the default interval, its checks and their limits, and MSVC's
+   weaker assurance.
 
 ## What the library does not have yet
 

@@ -36,7 +36,7 @@ For infinite and NaN operands
 | $\Omega$ | the largest finite number of `T` |
 | $2^{e_{\max}}$ | the overflow threshold of `T`, just above $\Omega$: $2^{1024}$ for `double`, $2^{128}$ for `float` |
 
-## Three kinds of kernel
+## Four kinds of kernel
 
 - Most kernels have a statement about **finite operands** only, proved over the real numbers.
 - Some also have a statement about operands that may be **infinite or NaN**, read in the IEEE model
@@ -49,6 +49,10 @@ For infinite and NaN operands
   operands into the result `T` would give. Its statement has five parts, F1 to F5, printed with the
   core's bound and the kernel's own conditions; a full Ball kernel has four, B1 to B4, about the
   three states of a ball. The operators and constructors of the public headers call these kernels.
+- The kernels of the **round-up interval** (`upward_add_1` and the like), the family of the opt-in
+  header `kairn/upward.hpp`, have only a statement in the IEEE model too, with the sums and products
+  of their listings rounded upward instead of to nearest, and a state stored as its upper bound and
+  its lower bound negated: [The round-up interval: its kernels](upward.md) says how to read them.
 
 ## The parts of a page
 
@@ -95,7 +99,9 @@ audit printed ([Proofs](../proofs/index.md)).
 gives them. The references are on the [References](../developer/design/phase0/references.md) page.
 
 **Listing.** The kernel as the generator reads it: one operation of `T` per line, each rounded to
-nearest. The C++ and the formal model are both printed from it.
+nearest (for the round-up interval, rounded upward, and a line may hold the two lanes of one
+instruction: [its kernels](upward.md#the-model)). The C++ and the formal model are both printed
+from it.
 
 **Measured.** What the stored brute-force runs of the kernel's code found, campaign by campaign,
 explained [below](#what-the-measured-numbers-are).
@@ -136,7 +142,8 @@ guarantee is called a target, an operation that calls it compiles only with the 
 
 The statements about infinite and NaN operands are read in Flocq's model of IEEE 754, with signed
 zeros, infinities, NaN and overflow; the generator prints them into
-`proofs/gen/IeeeStatements.v`, and the [index](index.md) says how many `gen/claims.json` marks
+`proofs/gen/IeeeStatements.v` (those of the round-up interval into
+`proofs/gen/UpwardStatements.v`), and the [index](index.md) says how many `gen/claims.json` marks
 proved. Proofs against statements written
 by hand are described on the [Proofs](../proofs/index.md#what-is-proved-and-in-which-model) page;
 a reference page reports only the status of the claims.
