@@ -35,7 +35,7 @@ import unittest
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import common
-from kairn_gen import interp, ir, upward_cpp
+from kairn_gen import interp, ir, upward, upward_cpp
 
 import test_upward
 
@@ -434,16 +434,21 @@ ALIASING = r'''
 #include "kairn/upward.hpp"
 #include "kairn/gen/upward.hpp"
 using namespace kairn::gen::upward;
+#if defined(_MSC_VER) && !defined(__clang__)
+#define NOINLINE __declspec(noinline)
+#else
+#define NOINLINE __attribute__((noinline))
+#endif
 
 template <class T>
-__attribute__((noinline)) T store_then_read(T* buf, pair<T> v) {
+NOINLINE T store_then_read(T* buf, pair<T> v) {
     buf[0] = T(7);
     buf[1] = T(8);
     pair_store(buf, v);
     return buf[0] + 10 * buf[1];
 }
 template <class T>
-__attribute__((noinline)) T write_then_load(T* buf) {
+NOINLINE T write_then_load(T* buf) {
     buf[0] = T(3);
     buf[1] = T(4);
     const pair<T> v = pair_load(buf);
@@ -451,7 +456,7 @@ __attribute__((noinline)) T write_then_load(T* buf) {
     return pair_upper(v) + 10 * pair_nlower(v);
 }
 template <class T>
-__attribute__((noinline)) T neg_in_place(T* u, T* n, std::size_t len) {
+NOINLINE T neg_in_place(T* u, T* n, std::size_t len) {
     for (std::size_t i = 0; i < len; ++i) {
         u[i] = T(i);
         n[i] = T(100);
@@ -569,6 +574,20 @@ class Printers(unittest.TestCase):
     def signed(self, name):
         """(signature, body) of every function named `name`."""
         return re.findall(rf'\nKAIRN_GEN_FORCEINLINE void {name}(\([^\n]*)\n(.*?)\n\}}', self.text, re.S)
+
+    def test_the_mark(self):
+        # The generated files say in their first paragraph that the kernels require the mode upward
+        # and the options (the design page, "The marks").
+        ks = common.kernels()
+        for text in (self.text, self.emulated, upward_cpp.runner_table(ks)):
+            first = []
+            for line in text.split('\n'):
+                if not line.startswith('//') or line.strip() == '//':
+                    if first:
+                        break
+                    continue
+                first.append(line[2:].strip())
+            self.assertIn(upward.MARK, ' '.join(first))
 
     def test_the_barriers(self):
         # The pin on the first pair input exactly in the kernels that round; a barrier on every other

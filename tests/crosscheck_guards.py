@@ -954,9 +954,58 @@ def enc_problems(kernel, entries, merged, keys, a):
                        % (label, _ratio(r[0], r[1], 3), ENC_BAND_LIMIT))
 
 
+# The round-up interval (oracle/README.md, "The round-up interval", "Strata";
+# docs/developer/design/upward.md, "Claims and the oracle"): the family upward of the oracle's
+# generator, which it chooses before every other, the interval families included. Besides the common
+# strata: those of every kernel but the constructor, and of the products, of the kernels with a
+# number, and of the constructor (upward_make_1).
+UP_STRATA = ("empty", "whole", "halfline", "point", "zerobound", "omega", "subnormal", "crossnear")
+UP_PRODUCT_STRATA = ("zeroinf", "aroundp")
+UP_NUMBER_STRATA = ("numspecial",)
+UP_MAKE_STRATA = ("nanbound", "reversed", "infinities", "point", "zerobound", "omega", "subnormal")
+
+
+def up_family(kernel):
+    """Whether a kernel is of the round-up interval, as the oracle tells it (oracle/README.md,
+    "Strata": the field rounding, a requirement upward(), or a set or an output named by its stored
+    pair in an entry)."""
+    if kernel.get("rounding") == "upward":
+        return True
+    if any(str(r).replace(" ", "").startswith("upward(") for r in kernel.get("requires", [])):
+        return True
+    for e in kernel.get("ensures", []):
+        names = [e] + list((e.get("intervals") or {}).values()) + [e.get("of") or {}, e.get("from") or {}]
+        if any(isinstance(n, dict) and "nlower" in n for n in names):
+            return True
+    return False
+
+
+def up_strata(kernel):
+    """The strata the family upward has for a kernel beyond the common ones, or () for a kernel of
+    another family."""
+    if not up_family(kernel):
+        return ()
+    ens = kernel.get("ensures", [])
+    if any(e.get("kind") == "makes_interval" for e in ens):
+        return UP_MAKE_STRATA
+    strata = UP_STRATA
+    if any(e.get("kind") == "encloses_interval" and "*" in (e.get("set") or "") for e in ens):
+        strata = strata + UP_PRODUCT_STRATA
+    # A number: a one-limb input in no stored pair and no interval (upward_add_num_1,
+    # upward_mul_num_1, upward_contains_1).
+    in_sets = set()
+    for r in kernel.get("requires", []):
+        r = str(r).replace(" ", "")
+        if r.startswith(("upward(", "interval(")):
+            in_sets |= set(r[r.index("(") + 1:-1].split(","))
+    if any(i.get("name") not in in_sets for i in kernel.get("inputs", [])):
+        strata = strata + UP_NUMBER_STRATA
+    return strata
+
+
 def extended_strata(kernel):
     """The strata the oracle's generator adds for a kernel of the extended domain (gen3.py)."""
-    if iv_family(kernel) or enc_family(kernel):
+    if up_family(kernel) or iv_family(kernel) or enc_family(kernel):
         # The interval kernels have families of their own (gen6.py, iv_strata).
         return []
     ensures = kernel.get("ensures", [])
@@ -1625,29 +1674,36 @@ def problems(summary, a):
                 if s not in strata:
                     yield ("the oracle's generator lists the strata %s, without %s, which it "
                            "adds for %s in the extended domain" % (",".join(strata), s, a.kernel))
-        family = m2_family(kernel)
-        for s in M2_STRATA.get(family, ()):
-            if s not in strata:
-                yield ("the oracle's generator lists the strata %s, without %s, which its family "
-                       "%s has (Milestone 2)" % (",".join(strata), s, family))
-        # The families of the ball vectors and of the accumulator (gen8.py).
-        for s in BV_STRATA.get(bv_family(kernel), ()):
-            if s not in strata:
-                yield ("the oracle's generator lists the strata %s, without %s, which its family "
-                       "%s has (the ball vectors and the accumulator)"
-                       % (",".join(strata), s, bv_family(kernel)))
-        # The families of the interval kernels (gen6.py).
-        for s in iv_strata(kernel):
-            if s not in strata:
-                yield ("the oracle's generator lists the strata %s, without %s, which its family "
-                       "%s has (the interval kernels)" % (",".join(strata), s,
-                                                          iv_family(kernel)[0]))
-        # The families of the enclosure interface (genenc.py).
-        for s in enc_strata(kernel):
-            if s not in strata:
-                yield ("the oracle's generator lists the strata %s, without %s, which its family "
-                       "%s has (the enclosure interface)" % (",".join(strata), s,
-                                                             enc_family(kernel)))
+        if up_family(kernel):
+            # The round-up interval: the family upward, ahead of the interval families.
+            for s in up_strata(kernel):
+                if s not in strata:
+                    yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                           "upward has (the round-up interval)" % (",".join(strata), s))
+        else:
+            family = m2_family(kernel)
+            for s in M2_STRATA.get(family, ()):
+                if s not in strata:
+                    yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                           "%s has (Milestone 2)" % (",".join(strata), s, family))
+            # The families of the ball vectors and of the accumulator (gen8.py).
+            for s in BV_STRATA.get(bv_family(kernel), ()):
+                if s not in strata:
+                    yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                           "%s has (the ball vectors and the accumulator)"
+                           % (",".join(strata), s, bv_family(kernel)))
+            # The families of the interval kernels (gen6.py).
+            for s in iv_strata(kernel):
+                if s not in strata:
+                    yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                           "%s has (the interval kernels)" % (",".join(strata), s,
+                                                              iv_family(kernel)[0]))
+            # The families of the enclosure interface (genenc.py).
+            for s in enc_strata(kernel):
+                if s not in strata:
+                    yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                           "%s has (the enclosure interface)" % (",".join(strata), s,
+                                                                 enc_family(kernel)))
 
     keys = [k for k in summary.get("keys", [])
             if (k["kernel"], k["format"]) == (a.kernel, a.format)]
