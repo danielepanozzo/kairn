@@ -2,7 +2,7 @@
 import os
 import re
 
-from . import claims, cpp, ieee, ir, library, objcode, rocq, rules, simd, upward
+from . import claims, cpp, ieee, ir, library, objcode, rocq, rules, simd, upward, upward_cpp
 from . import emulated
 
 # Every file in these directories must be one that build writes.
@@ -19,8 +19,9 @@ def load(root, kernel_dir=None):
 
 def outputs(kernels):
     """Every generated file and its text. The kernels of the upward family (ir.KernelSet.upward) are
-    in gen/claims.json, after the others, and in proofs/gen/Upward*.v, files of their own; every
-    other printer reads the other kernels only, as it did before the family existed."""
+    in gen/claims.json, after the others, and in proofs/gen/Upward*.v and include/kairn/gen/upward.hpp,
+    files of their own; every other printer reads the other kernels only, as it did before the
+    family existed."""
     return {
         'proofs/gen/Model.v': rocq.model(kernels),
         'proofs/gen/Statements.v': rocq.statements(kernels),
@@ -43,6 +44,9 @@ def outputs(kernels):
         'include/kairn/gen/neon.hpp': simd.header(simd.NEON, kernels),
         'include/kairn/gen/bounds.hpp': library.bounds(kernels),
         'include/kairn/gen/selftest.hpp': library.selftest(kernels),
+        # The C++ of the round-up interval: its own header (docs/developer/design/upward.md, "The pair
+        # form"), which include/kairn/upward.hpp includes after its barriers.
+        upward_cpp.PATH: upward_cpp.header(kernels),
         'gen/claims.json': claims.claims(kernels),
         'gen/constant_names.json': rocq.constant_names_file(kernels),
         'gen/objcode.json': objcode.objcode(kernels),
