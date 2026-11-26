@@ -7,7 +7,8 @@ and shares no code with the generator or the library; it reads `gen/claims.json`
 nothing else. The contract it implements is
 [docs/developer/architecture.md](../docs/developer/architecture.md) ("Number formats", "Claims",
 "Claims of the second wave", "Claims of the non-finite layer", "Claims of Milestone 2", "The line
-protocol").
+protocol"), and for the round-up interval
+[docs/developer/design/upward.md](../docs/developer/design/upward.md) ("Claims and the oracle").
 
 Every verdict is decided with Python integers. A limb of a format with smallest subnormal
 $\eta = 2^{q_{\min}}$ is stored as the integer $N$ with value $N\eta$; sums of limbs are integers
@@ -47,8 +48,10 @@ steps, the folds of maxima and their kernels, the convolutions, and the kernels 
 they name, frozen from the claims of 2026-11-20) and `oracle/selftest/claims-enclosure.json`
 (stage B2 of the enclosure interface: the 53 kernels of the predicates and comparisons of an
 interval and a ball, the set operations of a ball and the conversions of two limbs, with
-`ball_from_interval_2` and `add_2_2`, frozen from the claims of 2026-11-21), so that it does not
-depend on the generator.
+`ball_from_interval_2` and `add_2_2`, frozen from the claims of 2026-11-21) and
+`oracle/selftest/claims-upward.json` (the 24 kernels of the round-up interval, written by hand from
+[upward.md](../docs/developer/design/upward.md) before the generator writes their entries), so that
+it does not depend on the generator.
 
 ## gen
 
@@ -167,6 +170,10 @@ common strata, read for its operands, and strata of its own, each coming round t
 | `ballbound` | `set_bound`, `interval_of_ball`: `ball_lower_as_k`, `ball_upper_as_k`, `ball_to_interval_1` | `ballstates` (the whole line, the empty set), `radii` (radii of every size against the center), `cross` (a radius about $\lvert c\rvert$: $c - r$ small, zero or of the other sign), `beyond` ($c - r$ below $-\Omega$, $c + r$ above $\Omega$), `exactend` ($c \pm r$ a number of the format, or not) |
 | `outward` | `outward`, or `encloses` with no ball: `add_ball_2_2`, `mul_ball_2_2`, `add_down_2_2` ... `mul_dir_2_2`, `mul_ext_2_2` | sums: `cancel`, `zerosum` ($x + y = 0$, $x - y = 0$ exactly), `close`, `apart`, `tiny` (values near the smallest normal number, where the absolute term is most of the bound); products: `close`, `tiny`, `aroundp`, `exactprod`; in the extended domain (`mul_ext_2_2`) also `nonfinite` (an infinite operand), `zeroinf` (a zero against an infinity) and `edge` (products near the overflow threshold) |
 | `dirmul` | `bound` and `rounded` with `zero_factor`: `mul_dir_1` | the strata of `dirprod` on finite operands (`aroundp`, `tiny`, `exactprod`, `beyond`), and `nonfinite` (an infinite operand, the other finite, zero or infinite; never a NaN: `not_nan()`), `zeroinf`, `zerofactor` (a zero against any number) |
+
+The kernels of the round-up interval (`upward_*_1`) have the family `upward` of `genup.py`, chosen
+before every other, with its strata and its enumeration of stored pairs
+([The round-up interval](#the-round-up-interval)).
 
 The exhaustive mode of a kernel with `interval()` or `not_nan()` (`gen6.IvExhaustiveGen`) takes
 an interval as one operand, as a ball is one: the empty set and every pair $l \le h$ of bounds,
@@ -856,6 +863,106 @@ format of seed 0): the centers of two limbs come to 0.08 to 0.25 of $3u^2/(1-4u)
 2\eta$ in `binary64` and `binary32` and 0.5 in `fp:4:-6:1` (no floor: the bound is not claimed
 tight); the bounds of `ball_to_interval_2` to 0.43 to 0.51 of theirs; the center of
 `ball_from_interval_1` to 0.4 to 0.85 of $u\lvert m\rvert + \eta$.
+
+### The round-up interval
+
+[upward.md](../docs/developer/design/upward.md), "Claims and the oracle", read with "Values",
+"The kernels" and "Statements" (`upward.py`, with its hooks in `intervals.py`, `enclosure.py`,
+`claims.py`, `extended.py` and `check.py`; `genup.py` generates the requests and `refup.py` holds
+the reference runner's listings). The kernels `upward_*_1` keep an interval $[a, b]$ as its
+*stored pair* $(u, n) = (b, -a)$, two values of one limb, the upper bound and the lower bound
+negated, read by `intervals.upward_state` from the page's table of states:
+
+| Stored pair $(u, n)$ | Read as |
+|---|---|
+| (NaN, NaN) | the empty set |
+| neither lane a NaN, neither $-\infty$ (each a number of the format or $+\infty$), $-n \le u$ | the interval $[-n, u]$: $(+\infty, +\infty)$ the whole line, $(+\infty, -a)$ the half-line $[a, +\infty]$, $(b, +\infty)$ the half-line $[-\infty, b]$; its members the real numbers between the bounds |
+| one NaN lane; a lane $-\infty$; crossed lanes, $-n > u$ | not canonical: as an operand outside the requirement (invalid), as a result a failure of I1 (`not canonical` for `interval_set` and `makes_interval`, `canonical` for `same_set`), the defect counted |
+
+$(-\infty, -\infty)$ is not the empty set: it is the default empty set $(+\infty, -\infty)$ with its
+lower bound negated, which the page excludes, and a reading of $[-n, u]$ with the default rules
+would take it for the empty set. What the vocabulary adds:
+
+- **`upward(U, N)`**, a requirement of the extended domain: the one-limb inputs U and N are the
+  stored pair of a canonical state. An enumeration's or a generator's line outside it is invalid.
+- **A set named by its stored pair**, `{"upper": U, "nlower": N}`, in place of `{"lower": L,
+  "upper": U}` in the `intervals` of `encloses_interval`, `interval_set`, `certain` and `trit`
+  (the pair must be an `upward()` requirement). Every reading of those kinds is on the state the
+  pair stands for: the exact range, I2's empty operand, I5's bounded operands, the relations of
+  `certain` and `trit` and their special operands (`x: empty`, `x: whole line`, ...).
+- **An output pair**: `encloses_interval`, `interval_set` and `makes_interval` may name their
+  outputs `"upper"` and `"nlower"` in place of `"lower"` and `"upper"`. I1 to I5 and the other
+  readings are on the state: empty is two NaN lanes, the lower bound is $-$`nlower`, and a
+  nonempty result has no NaN lane and no lane $-\infty$ (I1). A pair that is not canonical counts
+  `not canonical: one NaN lane`, `not canonical: a lane -inf` or `not canonical: crossed lanes
+  (-nlower > upper)` beside the failure.
+- **`numbers`**, a list of one-limb inputs of an `encloses_interval` entry, each named once in
+  `set` as an interval is: each ranges over the members of `Interval(t)`, $\{t\}$ for a finite $t$
+  and every real number for $\pm\infty$ and NaN. Such an input is never empty (I2 is about the
+  intervals), and I5's bounded operands are the bounded intervals with every number finite.
+  Counted by class, `number t: finite`, `infinite`, `NaN`.
+- **`same_set`** (`of`: the outputs, `from`: the inputs of an `interval()` or an `upward()`
+  requirement, each a set named either way, of one limb): the result canonical (**canonical**),
+  empty exactly when the input is (**empty**), with the same members (**members**: the same bounds
+  as extended real numbers, the sign of a zero not compared). Counted by the class of the input
+  (`X: empty`, ...) and `result: empty`, `result: nonempty`.
+- **`"rounding": "upward"`**, a field of the kernel: every operation of the kernel rounds upward
+  and its runner holds the mode. It changes no verdict; `gen` writes `rounding=upward` in the
+  header of the request lines of such a kernel (absent for every other kernel), and `check` takes
+  it into the coverage's description with the header's other fields.
+
+The product's tightness is `"tight": {"kind": "rounded"}` with no `steps` and no `when`: each bound
+is exactly the rounding of the bound of the exact range ($0 \cdot \infty = 0$), so a result one
+number wider fails I4 where `interval_mul_1`'s claim (`steps: 1` unless `product_large`) allows
+it. The line protocol is the architecture's: the limbs in the order of the kernel's inputs, a state
+its two lanes as stored, `upward_add_1 binary64 XU XN YU YN -> ZU ZN`; `nan nan` is the empty set,
+`inf inf` the whole line.
+
+Readings chosen where the page leaves a choice:
+
+- `rounding` takes `"upward"` only, and only in the extended domain; the stored pairs, `numbers` and
+  `same_set` do not require it (a kernel without the field is read the same).
+- `upward(U, N)` names two distinct one-limb inputs that are in no other stored pair, no
+  `interval()` and no `ball()`. A `not_nan()` of a lane is not refused.
+- Within one entry a set may be named either way (a stored pair beside an interval of two bounds);
+  `from` of `ball_of_interval` and `splits`, and the outputs of the kinds not listed above, keep the
+  naming of the interval kernels.
+- `numbers` are inputs of one limb in no set; `when: product_large` and `zero_factor` need a set
+  that is the product of two intervals (no number), and `when` is refused over stored pairs (its
+  test reads the given limbs as bounds).
+- `same_set` is read for sets of one limb only.
+
+**Strata.** A kernel of the round-up interval (`upward.is_upward_kernel`: `rounding`, an
+`upward()` requirement or a stored pair in an entry) has the family `upward` of `genup.py`, chosen
+before every other. A stored pair is one operand, written as its lanes; the bounds of
+`upward_from_interval_1`'s interval as gen6 writes them; a number (`t`, and the bounds `lo`, `hi`
+given to `upward_make_1`) any value. Besides the common strata, read for the bounds, each kernel
+has these, twice per cycle:
+
+| Stratum | Kernels | Operands |
+|---|---|---|
+| `empty`, `whole`, `halfline`, `point` | every kernel but `upward_make_1` | an operand the empty set, the whole line, a half-line on either side, a point ($[0, 0]$ among them) |
+| `zerobound` | the same | a bound zero (its lane $+0$ or $-0$ in the line), $[0, 0]$, $[0, +\infty]$, $[-\infty, 0]$ |
+| `omega` | the same | bounds at and next to $\pm\Omega$, half-lines from them |
+| `subnormal` | the same | bounds subnormal ($\eta$ at precision 1) |
+| `crossnear` | the same | lanes whose sum crosses zero near zero: for a sum $b + d$ or $a + c$ an exact zero or a step or two off (for a difference $b - c$ or $d - a$); for a product tiny bounds of both signs; for the hull, the intersection and the comparisons intervals near zero that touch or cross by a step or two; for one operand bounds of opposite signs within a few $\eta$ of zero |
+| `zeroinf` | `upward_mul_1`, `upward_mul_num_1` | $[0, 0]$ or a zero bound against an unbounded operand, or against $t = \pm\infty$, NaN; an unbounded operand against $t = 0$ |
+| `aroundp` | the same | products of bounds around $P = 2^{2p-1}\eta$ (gen4's), where a default product may be one number wider |
+| `numspecial` | a kernel with a number | $t = +\infty$, $-\infty$, NaN or a zero; for `upward_contains_1` also a bound of the interval or a number next to one |
+| `nanbound`, `reversed`, `infinities`, `point`, `zerobound`, `omega`, `subnormal` | `upward_make_1` | the strata of the constructors (gen6.py), zero bounds, bounds near $\Omega$, subnormal bounds |
+
+The enumeration (`genup.UpExhaustiveGen`) takes a stored pair as one operand: the empty set and
+every pair $(u, n)$ of numbers of the format or $+\infty$ with $-n \le u$ (230 states in
+`fp:2:-2:1`); the bounds of an interval as gen6 does; a number every value, the infinities and
+NaN. A restriction keeps the finite lanes (values) whose leading limb it keeps; the infinities,
+NaN and the empty set stay. `search` and `shrink` refuse these kernels.
+
+**The reference runner** (`refrun`, `refup.py`) runs the 24 listings of the page, a pair line as
+its two statements, with its own rounding upward (the spacing of the format at the value; the
+checker shifts the dropped bits, the selftest's definitions walk the sorted numbers) and both
+machine forms of `max_nl`, `--max sel` (x86's `MAXPD`, the default) and `--max nm` (arm64's
+`FMAXNM` on quiet NaNs). Its variants (`refrun --list-variants`, `up-*`) plant the faults of the
+selftest below.
 
 ### Statistics
 
@@ -2120,6 +2227,26 @@ radius $+\infty$, and the point of split $(\mathrm{NaN}, \mathrm{NaN})$: what a 
 statement may give, which `enc_planted` fails in every format of the statements, on every line of
 a bounded interval, and counts as not claimed in `fp:4:-4:-1`.
 
+The round-up interval (`refup.VARIANTS`), each planted fault with the reading that must catch it
+(`up_planted`); the first seven are the page's:
+
+| Variant | Kernels | Caught in |
+|---|---|---|
+| `up-mul-step-small`: one number wider on each side where a product of finite bounds is nonzero and below $P$ (as wide as the default product may be there) | `upward_mul_1` | I4 |
+| `up-empty-nonempty`: the empty set for nonempty operands with a zero bound | `upward_add_1`, `upward_sub_1` | I2 |
+| `up-hull-one-select`: no selection of lane 1, so with `MAXPD` an empty $x$ leaves one NaN lane (with `FMAXNM` the result is right) | `upward_hull_1` | `not canonical: one NaN lane` |
+| `up-lane-neg-inf`: no test of the default empty set, which becomes $(-\infty, -\infty)$ | `upward_from_interval_1` | `canonical`, `not canonical: a lane -inf` |
+| `up-crossed`: no test of crossed lanes | `upward_intersection_1` | `not canonical: crossed lanes` |
+| `up-lower-not-negated`: the lane $n$ returned as the lower bound | `upward_to_interval_1` | `members` (`canonical` allowed) |
+| `up-number-point`: no selection of a number that is not finite, $t = \pm\infty$ or NaN treated as a point | `upward_add_num_1`, `upward_mul_num_1` | I1 or I3 (I2, I4 allowed) |
+| `up-add-nearest`: the lanes rounded to nearest | `upward_add_1` | I3 (I1, I4, I5 allowed) |
+| `up-mul-negated`: lane 1 the negation of a rounded product, $-\mathrm{RU}(p)$ for $\mathrm{RU}(-p)$ (rule U3) | `upward_mul_1` | I3 (I1, I4, I5 allowed) |
+| `up-mul-nan-seed`: the seed's NaN lanes not made $+0$ | `upward_mul_1` | I1 or I2 (I3, I4 allowed) |
+| `up-mul-empty-kept`: no last selection of an empty operand | `upward_mul_1` | I2 |
+| `up-subset-empty`, `up-less-not-negated`, `up-contains-infinite`: the test of an empty $x$ left out, $y_n$ compared without its negation, $t$ not tested finite | `upward_subset_1`, `upward_less_1`, `upward_contains_1` | `exact`; `yes`, `no`, `exact`; `sound` |
+| `up-make-crossed`: $(hi, -lo)$ for reversed bounds | `upward_make_1` | `not canonical: crossed lanes` |
+| `up-zero-signs`: every zero written $-0$ | every kernel | nothing (no claim is about the sign of a zero) |
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -2146,7 +2273,13 @@ hardware threads of the Linux machine with two workers each (`KAIRN_ORACLE_JOBS=
 2026-11-20; on the joined tree of 2026-11-21, which judges every claim of `gen/claims.json`, the
 whole selftest (119 tests) 566 seconds on the M3 Max beside other jobs, and the 448 mutants,
 3 580 seconds with `--jobs 16 --fail-fast` on the Linux machine with one worker each
-(`KAIRN_ORACLE_JOBS=1`), every one caught; `--quick` earlier, on the M3 Max with `--jobs 6`. `--only NAMES` runs only the tests
+(`KAIRN_ORACLE_JOBS=1`), every one caught; `--quick` earlier, on the M3 Max with `--jobs 6`. With
+the nine tests of the round-up interval (128 tests), on 2026-11-26: `--quick` 228 seconds on the
+M3 Max with `KAIRN_ORACLE_JOBS=4`, 20 of them the nine new tests (76 seconds without `--quick`);
+the whole selftest 3 065 seconds on the Linux machine with `KAIRN_ORACLE_JOBS=16` under a load of
+about 140 from other jobs, 469 of them the nine new tests, and the 486 mutants (24 of them the
+round-up interval's) about 71 minutes there with `--jobs 24 --fail-fast` and one worker each,
+every one caught. `--only NAMES` runs only the tests
 named (comma-separated), `--skip NAMES` all but those, `--last NAMES` runs those after the others
 and `--fail-fast` stops at the first failing test; a name that is not a test's is an error.
 ctest's full tier runs it in two parts: `--quick` with `--skip` for the six enumerations of toy
@@ -2214,7 +2347,14 @@ radius about such a center accepted, the outer bounds of the parts or their comm
 such a point not judged, a failure in a wider subnormal range not said to be a finding), a
 relation read on the wrong side,
 with the wrong strictness or without its empty set or infinite bound, a set without its radius, a
-count the guards read not counted, a stratum that does not reach what it is for) and requires
+count the guards read not counted, a stratum that does not reach what it is for; for the round-up
+interval, a stored pair read without the negation of its lower bound or with its lanes exchanged,
+one NaN lane read as the empty set, a lane $-\infty$, crossed lanes or $(-\infty, -\infty)$
+accepted, `upward()` not checked, `when` accepted over stored pairs, `certain` and `trit` reading a
+stored pair as two bounds, a number that is not finite read as a point or a finite one as the whole
+line or not a bounded operand, `same_set`'s members or emptiness not compared, a malformed claim
+accepted, a stratum or an enumeration without what it is for, the reference runner's rounding
+toward zero) and requires
 `selftest --quick` to fail on the copy. With
 `--fail-fast` each copy's selftest stops at its first failing test and runs the longest tests
 (`LONG` in `mutants.py`) last (`selftest --fail-fast --last NAMES`), so a mutant is caught in
@@ -2338,6 +2478,15 @@ follows from both parts being canonical.
 | `enc_gen` | case $i$ alone not case $i$ of its run, a seed not mattering, a stratum of the header without a case or a case of none, an invalid case, in every kernel of the family in two formats; no center $-0$ of the whole line in the streams of the set operations |
 | `enc_strata` | a stratum of the family (or of the conversions of two limbs in `gen6.py`) whose cases do not have what it is for, in `binary64` and `fp:4:-6:1` (every case, or the fraction given: an operand special, intervals touching, nested, disjoint or with an equal bound, balls on the boundary of the relation, huge, of radius zero, both special, a center near $\Omega$, a bound beyond $\Omega$, at the limit of `finite_when` or `bounded_when`, an end exactly zero) |
 | `enc_merging` | the merge of the summaries of two halves of streams of seven kernels of the family differs from the whole |
+| `claims_reading_up` | the fixture of the round-up interval (`claims-upward.json`) unreadable, a kernel without `rounding` upward, a label other than written out in the test (the stored pairs, `numbers`, `same_set`, `trit` over stored pairs); 45 malformed kernels not set aside alone with their reason (`rounding` of another value or in the finite domain; `upward()` of one input twice, of an unknown input, of two limbs, sharing an input with another stored pair or an interval, in the finite domain; a stored pair in `intervals` that is no `upward()` requirement, exchanged, with a third field, named twice; outputs `lower` beside `nlower`, `upper` and `nlower` the same, an input as `nlower`, `upper` missing, of two limbs; `numbers` not a list, empty, an input of a set, unknown, twice, missing from the claim or from the set, of two limbs, under `when` or `zero_factor`; `when` over stored pairs; `same_set` without `of` or `from`, with a malformed or repeated `of`, an input in `of`, a `from` that is no requirement or of two limbs, an unknown field, the finite domain; a point of `member` inside its set); a kernel without `rounding` set aside; a header without `rounding=upward` for these kernels or with it for an interval kernel |
+| `up_arithmetic` | the reference runner's rounding upward other than a walk over the sorted numbers of seven toy formats (precision 1 included) on every multiple of $\eta/8$ to $2.5\Omega$, or than the checker's (`directed.round_overflow`); its sum or product of any pair of values of three toy formats, infinities and NaN included, other than IEEE 754's rules of the page; a form of `max_nl` breaking `max_nl_ok` or its machine definition; in binary64 a rounding upward other than the hardware's rounding to nearest moved one step up where it is below the exact value |
+| `up_reference` | the reference runner (the 24 listings of the page) failing a kernel, or an invalid or suspicious case, on 1 500 random cases (400 with `--quick`) of each in `binary64`, `binary32` and `fp:4:-6:1` with each form of `max_nl`; an entry never applied; in `binary64` and `binary32` a class never reached (empty, bounded and unbounded results and operands, an inexact rounding at the directed rounding, `bounded_when` both ways, each class of a number, every cell of the table of the constructor, the empty set and the whole line of each set of a predicate, each answer of a comparison) |
+| `up_exhaustive` | the reference runner failing any case of the enumerations of `fp:1:0:1`, `fp:1:-1:1` and `fp:2:-2:1` (the last without `--quick`; every pair of canonical states, every value of a number: 1.37 million cases with both forms of `max_nl`), a line not judged, the coverage not complete; a result of a listing other than the definitions' (the selftest's own, below); a planted fault not caught on the enumeration of `fp:1:-1:1` |
+| `up_definition` | the result of the definitions, computed in the test with Fractions from the numbers of the format taken in order (the tightest interval around the exact range with $0 \cdot \infty = 0$, the empty set exactly for an empty operand, the table of the constructor, the conversions, the relations over the members), failing; any other output passing: every pair of lanes (numbers, $-0$, $\pm\infty$, NaN) on every input of `fp:1:0:1`, and on inputs of `fp:1:-1:1` and `fp:2:-2:1` (the last without `--quick`) and on special values of `binary64` and `binary32` the outputs near it (a lane one step off, a NaN lane, a lane $-\infty$, the lanes exchanged, the empty set, the whole line, $(-\infty, -\infty)$, the other answers of a mask); 0.9 million lines (0.5 with `--quick`) |
+| `up_planted` | a planted fault (`refrun` variants `up-*`, below) not caught in the kernels it changes in `binary64`, `binary32` and `fp:4:-6:1`, caught in a statement it is not about, seen as invalid or suspicious; a line whose values it changes passing; the output of a kernel it is not about changed; `up-zero-signs` (every zero written $-0$) failing a line; `up-hull-one-select` failing with the `FMAXNM` form |
+| `up_judge` | one of 129 hand-written lines judged otherwise than worked out by hand, each failure in its statement: right answers in each spelling of a zero; one NaN lane, a lane $-\infty$, crossed lanes and $(-\infty, -\infty)$ for the empty set failing I1 with their defect; a lower bound read without its negation; a product of bounds below $P$ one number wider (I4, no slack); $t = +\infty$ treated as a point; $0 \cdot \infty$; overflow both ways; the constructor on each kind of given bounds; the conversions; the predicates and comparisons; lines outside `upward()` and `interval()` invalid |
+| `up_gen` | case $i$ alone not case $i$ of its run, a seed not mattering, an invalid case, a stratum of the header without a case, a stratum whose cases have what it is for in fewer than three quarters (the empty set, the whole line, a half-line, a point, a zero bound, a bound near $\Omega$, a subnormal bound, lanes crossing near zero, a zero against an infinity, products about $P$, a special number), zeros of one sign only, in every kernel in `binary64` and `fp:4:-6:1`; the generator's, the checker's and the definitions' readings of `upward()` disagreeing on a pair of lanes of three tiny formats; an enumeration's size other than the definition's count; a restriction dropping NaN, $+\infty$ or the empty set |
+| `up_merging` | the merge of the summaries of two halves of streams of six kernels of the round-up interval differs from the whole |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.
