@@ -179,6 +179,10 @@ class ExtPlan:
             elif r[0] == "interval":
                 self.req.append(("interval", "requires interval(%s, %s)" % (r[1], r[2]),
                                  pl.in_slices[r[1]], pl.in_slices[r[2]]))
+            elif r[0] == "upward":
+                # The stored pair of the round-up interval (upward.py).
+                self.req.append(("upward", "requires upward(%s, %s)" % (r[1], r[2]),
+                                 pl.in_slices[r[1]], pl.in_slices[r[2]]))
             else:
                 self.req.append((r[0], "requires %s(%s)" % (r[0], r[1]), pl.in_slices[r[1]]))
         self.items = []
@@ -265,7 +269,7 @@ class ExtPlan:
                 if ball_state(fmt, x[lo:hi], x[ri]) is None:
                     return r[1]
                 continue
-            if kind in ("interval", "not_nan"):
+            if kind in ("interval", "not_nan", "upward"):
                 # The requirements of the interval kernels (intervals.py).
                 from . import intervals as IV
                 why = IV.requirement_violated(self, x, r)

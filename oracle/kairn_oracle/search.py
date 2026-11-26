@@ -126,7 +126,11 @@ class Problem:
         from . import gen6
         from . import gen7
         from . import gen8
+        from . import genup
         self.valid5 = None
+        if genup.family_of(kernel) is not None:
+            raise SearchError("%s: the kernels of the round-up interval are not searched or shrunk "
+                              "(oracle/README.md, \"The round-up interval\")" % kernel.name)
         try:
             if gen8.family_of(kernel) is not None:
                 # The kernels of the ball vectors and of the accumulator (gen8.py).

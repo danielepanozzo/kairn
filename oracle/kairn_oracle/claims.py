@@ -58,7 +58,7 @@ ROUNDING_MODES = ("nearest", "down", "up")
 RELATIONS = ("lt", "le", "eq")
 KERNEL_FIELDS = {"name", "inputs", "outputs", "value", "requires", "ensures", "min_precision",
                  "status", "theorem", "source", "flops", "instances", "domain", "ieee_status",
-                 "ieee_theorem"}
+                 "ieee_theorem", "rounding"}
 
 
 # ---------------------------------------------------------------------------
@@ -341,6 +341,10 @@ class Entry:
         if self.kind in EXTENDED_KINDS and not kernel.extended:
             raise ClaimsError("%s: this kind belongs to the extended domain, and the kernel has "
                               "no \"domain\": \"extended\"" % where)
+        # same_set, of the round-up interval (upward.py).
+        if self.kind in UP.KNOWN:
+            UP.read_entry(self, kernel, raw, where)
+            return
         # The predicates, comparisons and set operations of a ball (enclosure.py).
         if self.kind in EN.KNOWN:
             EN.read_entry(self, kernel, raw, where)
@@ -872,6 +876,9 @@ class Kernel:
         if self.domain not in DOMAINS:
             raise ClaimsError("%s: unknown domain %r (finite or extended)" % (self.name, self.domain))
         self.extended = self.domain == "extended"
+        # "rounding": "upward", the kernels of the round-up interval (upward.py): read for its form;
+        # it changes no verdict.
+        self.rounding = UP.read_rounding(self, raw)
         self.masks = set()
         self.inputs = self._io(raw.get("inputs"), "inputs")
         self.outputs = self._io(raw.get("outputs"), "outputs")
@@ -907,6 +914,8 @@ class Kernel:
         self.requires = []
         self.ball_requires = []
         self.interval_requires = []
+        # upward(U, N): the stored pairs of the round-up interval (upward.py).
+        self.upward_requires = []
         # format(PROPERTY): requirements on the format, not on an input (format(half): the format
         # contains 1/2, eta <= 1/2).  A format without the property is outside the claims.
         self.format_requires = []
@@ -984,6 +993,8 @@ class Kernel:
                 continue
             if IV.read_requirement(self, r, limbs):
                 continue
+            if UP.read_requirement(self, r, limbs):
+                continue
             if BV.read_requirement(self, r, limbs):
                 # at_most(NAME, K): conv_radius (bvec.py).
                 continue
@@ -993,6 +1004,7 @@ class Kernel:
                               "extended domain canonical(NAME), ball(CENTER, RADIUS))"
                               % (self.name, r))
         IV.finish_requirements(self)
+        UP.finish_requirements(self)
         ens = raw.get("ensures")
         if not isinstance(ens, list):
             raise ClaimsError("%s: ensures must be a list" % self.name)
@@ -1456,3 +1468,8 @@ for _kind, _fields in BV.ADDED_FIELDS.items():
 # (enclosure.py): the kinds certain, trit, ball_set and ball_splits.
 from . import enclosure as EN  # noqa: E402
 Entry.KNOWN.update(EN.KNOWN)
+
+# The round-up interval (upward.py): the kind same_set; the fields it adds to the kinds of the
+# interval kernels are in intervals.KNOWN.
+from . import upward as UP  # noqa: E402
+Entry.KNOWN.update(UP.KNOWN)

@@ -14,7 +14,10 @@ on T", "Interval kernels" and "One enclosure interface".  What is new:
   unit(K), tiny(K), + - * /, parentheses, integer powers) with up(EXPR) inside, the smallest
   number of the format not below EXPR;
 - in the finite domain, an entry about an output group other than the first holds where that
-  group's leading limb is finite (judge_by_groups); an entry with if=MASK is read as before.
+  group's leading limb is finite (judge_by_groups); an entry with if=MASK is read as before;
+- the round-up interval (upward.py): a set named by its stored pair {"upper": U, "nlower": N}
+  (Stored, upward_state) in intervals and as the outputs of encloses_interval, interval_set and
+  makes_interval, and the numbers of encloses_interval.
 
 Members of an interval are real numbers: [1, +inf] does not contain +inf.  The exact range of a
 set over intervals (or balls) is computed by interval arithmetic in the extended reals, each name
@@ -53,11 +56,13 @@ def _error(msg):
 # The kinds this module reads, with their fields, and the fields it adds to kinds that exist.
 KNOWN = {
     "outward": {"kind", "of", "side", "rel", "abs", "exact_when", "zero_factor"},
-    "makes_interval": {"kind", "lower", "upper", "from"},
-    "encloses_interval": {"kind", "lower", "upper", "set", "intervals", "tight", "bounded_when",
-                          "bounded_exactly", "zero_factor"},
+    # nlower (and numbers): the round-up interval's outputs named by their stored pair, upper and
+    # nlower in place of lower and upper, and its numbers (upward.py).
+    "makes_interval": {"kind", "lower", "upper", "nlower", "from"},
+    "encloses_interval": {"kind", "lower", "upper", "nlower", "set", "intervals", "numbers",
+                          "tight", "bounded_when", "bounded_exactly", "zero_factor"},
     "set_bound": {"kind", "of", "side", "set", "balls", "tight"},
-    "interval_set": {"kind", "lower", "upper", "set", "intervals"},
+    "interval_set": {"kind", "lower", "upper", "nlower", "set", "intervals"},
     # The conversions of two limbs (architecture.md, "Claims of the enclosure interface: the
     # conversions of two limbs"): finite_when of ball_of_interval, bounded_when (and the outward
     # tight) of interval_of_ball with bounds of two limbs, rel, abs and smallest_radius of makes_ball
@@ -435,6 +440,33 @@ def _require(raw, fields, where):
             raise _error("%s: missing %s" % (where, f))
 
 
+def _out_fields(raw):
+    """The fields naming the outputs of an interval: lower and upper, or upper and nlower, the
+    stored pair of the round-up interval (upward.py)."""
+    return ("upper", "nlower") if "nlower" in raw else ("lower", "upper")
+
+
+def _bound_outputs(e, kernel, raw, where):
+    """e.lower, e.upper and e.nlower (None but for a stored pair) of the outputs of an interval,
+    and the limbs of the first and of the second."""
+    if "nlower" in raw:
+        from . import upward as UP
+        return UP.stored_outputs(e, kernel, raw, where)
+    e.lower, e.upper, e.nlower = raw["lower"], raw["upper"], None
+    return (_limb_output(kernel, e.lower, where, "lower"),
+            _limb_output(kernel, e.upper, where, "upper"))
+
+
+def _outs_of(e):
+    """The outputs an entry about an interval names, in the order of its fields."""
+    return [e.lower, e.upper] if e.nlower is None else [e.upper, e.nlower]
+
+
+def _outs_text(e):
+    return ("%s, %s" % (e.lower, e.upper) if e.nlower is None
+            else "upper %s, nlower %s" % (e.upper, e.nlower))
+
+
 def _true_flag(raw, field, where):
     """A field written only when it is so: absent, or true."""
     if field not in raw:
@@ -444,8 +476,12 @@ def _true_flag(raw, field, where):
     return True
 
 
-def _interval_of(kernel, spec, where, what="from"):
-    """{lower: L, upper: U}: the inputs of an interval() requirement."""
+def _interval_of(kernel, spec, where, what="from", stored=False):
+    """{lower: L, upper: U}: the inputs of an interval() requirement; with stored, also
+    {upper: U, nlower: N}, the inputs of an upward() requirement (a Stored pair, upward.py)."""
+    if stored and isinstance(spec, dict) and set(spec) == {"upper", "nlower"}:
+        from . import upward as UP
+        return UP.stored_pair(kernel, spec, where, what)
     if not isinstance(spec, dict) or set(spec) != {"lower", "upper"}:
         raise _error("%s: %s must be {\"lower\": INPUT, \"upper\": INPUT}" % (where, what))
     pair = (spec["lower"], spec["upper"])
@@ -466,7 +502,7 @@ def _interval_names(kernel, raw, where, count=None):
     for name, spec in iv.items():
         if not re.fullmatch(NAME, name) or name in ins or name in X.FUNCTIONS:
             raise _error("%s: bad interval name %r (it must not be an input name)" % (where, name))
-        pair = _interval_of(kernel, spec, where, "interval %s" % name)
+        pair = _interval_of(kernel, spec, where, "interval %s" % name, stored=True)
         if pair in out.values():
             raise _error("%s: interval %s is another name of the same bounds" % (where, name))
         out[name] = pair
@@ -627,10 +663,8 @@ def _read_outward(e, kernel, raw, where):
 
 
 def _read_makes_interval(e, kernel, raw, where):
-    _require(raw, ("lower", "upper", "from"), where)
-    e.lower, e.upper = raw["lower"], raw["upper"]
-    lo_l = _limb_output(kernel, e.lower, where, "lower")
-    hi_l = _limb_output(kernel, e.upper, where, "upper")
+    _require(raw, _out_fields(raw) + ("from",), where)
+    lo_l, hi_l = _bound_outputs(e, kernel, raw, where)
     if e.lower == e.upper:
         raise _error("%s: lower and upper are the same output" % where)
     fr = raw["from"]
@@ -648,26 +682,30 @@ def _read_makes_interval(e, kernel, raw, where):
         for n in (e.from_lower, e.from_upper):
             if ("canonical", n) not in kernel.requires:
                 raise _error("%s: the two-limb bound %s must be canonical()" % (where, n))
-    e.of = [e.lower, e.upper]
+    e.of = _outs_of(e)
 
 
 def _read_encloses_interval(e, kernel, raw, where):
-    _require(raw, ("lower", "upper", "set", "intervals", "tight", "bounded_when"), where)
-    e.lower, e.upper = raw["lower"], raw["upper"]
-    lo_l = _limb_output(kernel, e.lower, where, "lower")
-    hi_l = _limb_output(kernel, e.upper, where, "upper")
+    _require(raw, _out_fields(raw) + ("set", "intervals", "tight", "bounded_when"), where)
+    lo_l, hi_l = _bound_outputs(e, kernel, raw, where)
     if e.lower == e.upper or lo_l != hi_l or lo_l not in (1, 2):
         raise _error("%s: lower and upper must be two outputs of one limb each or two each" % where)
     e.intervals = _interval_names(kernel, raw, where)
+    # numbers (the round-up interval, upward.py): one-limb inputs, each the members of
+    # Interval(t), named in the set as the intervals are.
+    e.numbers = []
+    if "numbers" in raw:
+        from . import upward as UP
+        e.numbers = UP.read_numbers(kernel, raw["numbers"], e.intervals, where)
     e.set_text = str(raw["set"]).strip()
-    e.set_tree = _set_over(raw["set"], list(e.intervals), where)
+    e.set_tree = _set_over(raw["set"], list(e.intervals) + e.numbers, where)
     t = raw["tight"]
     if not isinstance(t, dict) or t.get("kind") not in TIGHT_KINDS:
         raise _error("%s: tight must have a kind exact, rounded or outward" % where)
     e.tight = t["kind"]
     e.steps, e.when, e.tight_exact = 0, None, None
     product = (e.set_tree[0] == "*" and e.set_tree[1][0] == "name"
-               and e.set_tree[2][0] == "name")
+               and e.set_tree[2][0] == "name" and not e.numbers)
     if e.tight == "exact":
         if set(t) != {"kind"}:
             raise _error("%s: tight exact has no other field" % where)
@@ -727,7 +765,10 @@ def _read_encloses_interval(e, kernel, raw, where):
     e.zero_factor = _true_flag(raw, "zero_factor", where)
     if e.zero_factor and not product:
         raise _error("%s: zero_factor needs a set that is a product of two intervals" % where)
-    e.of = [e.lower, e.upper]
+    if e.when and any(isinstance(p, Stored) for p in e.intervals.values()):
+        # product_large reads the bounds of the given limbs; a stored pair holds -lower.
+        raise _error("%s: tight: when product_large is not read over stored pairs" % where)
+    e.of = _outs_of(e)
 
 
 def _read_set_bound(e, kernel, raw, where):
@@ -748,10 +789,8 @@ def _read_set_bound(e, kernel, raw, where):
 
 
 def _read_interval_set(e, kernel, raw, where):
-    _require(raw, ("lower", "upper", "set", "intervals"), where)
-    e.lower, e.upper = raw["lower"], raw["upper"]
-    lo_l = _limb_output(kernel, e.lower, where, "lower")
-    hi_l = _limb_output(kernel, e.upper, where, "upper")
+    _require(raw, _out_fields(raw) + ("set", "intervals"), where)
+    lo_l, hi_l = _bound_outputs(e, kernel, raw, where)
     if e.lower == e.upper or lo_l != hi_l:
         raise _error("%s: lower and upper must be two outputs of as many limbs" % where)
     e.op = raw["set"]
@@ -762,7 +801,7 @@ def _read_interval_set(e, kernel, raw, where):
         if kernel.limbs_of(lo) != lo_l:
             raise _error("%s: the outputs have %d limbs and the bounds of %s %d"
                          % (where, lo_l, lo, kernel.limbs_of(lo)))
-    e.of = [e.lower, e.upper]
+    e.of = _outs_of(e)
 
 
 def _read_ball_of_interval(e, kernel, raw, where):
@@ -972,7 +1011,8 @@ READERS = {"outward": _read_outward, "makes_interval": _read_makes_interval,
 
 
 def _iv_text(names):
-    return ", ".join("%s=[%s, %s]" % (n, lo, hi) for n, (lo, hi) in names.items())
+    return ", ".join(("%s=(upper %s, nlower %s)" if isinstance(p, Stored) else "%s=[%s, %s]")
+                     % ((n,) + tuple(p)) for n, p in names.items())
 
 
 def _ball_text(names):
@@ -990,11 +1030,13 @@ def label(e):
             s += ", a zero factor gives zero"
         return s
     if k == "makes_interval":
-        return "makes_interval(%s, %s) from lower %s, upper %s" % (e.lower, e.upper, e.from_lower,
-                                                                  e.from_upper)
+        return "makes_interval(%s) from lower %s, upper %s" % (_outs_text(e), e.from_lower,
+                                                              e.from_upper)
     if k == "encloses_interval":
-        s = "encloses_interval(%s, %s) %s over %s, I1-I5, tight %s" % (
-            e.lower, e.upper, e.set_text, _iv_text(e.intervals), e.tight)
+        s = "encloses_interval(%s) %s over %s, I1-I5, tight %s" % (
+            _outs_text(e), e.set_text, _iv_text(e.intervals), e.tight)
+        if e.numbers:
+            s += ", numbers %s (each the members of Interval(t))" % ", ".join(e.numbers)
         if e.steps:
             s += ", steps %d" % e.steps
         if e.when:
@@ -1017,7 +1059,7 @@ def label(e):
             s += ", tight rounded" + (", steps %d" % e.steps if e.steps else "")
         return s
     if k == "interval_set":
-        return "interval_set(%s, %s) %s of %s" % (e.lower, e.upper, e.op, _iv_text(e.intervals))
+        return "interval_set(%s) %s of %s" % (_outs_text(e), e.op, _iv_text(e.intervals))
     if k == "ball_of_interval":
         s = "ball_of_interval(%s, %s) of [%s, %s], special %s, rel %s, abs %s%s" % (
             e.center, e.radius, e.from_pair[0], e.from_pair[1], e.special, e.consts["rel"][1],
@@ -1113,6 +1155,58 @@ def interval_state(fmt, lo, hi):
     if XT.x_cmp(L, 0, U, 0) > 0:
         return None
     return ("nonempty", L, U)
+
+
+class Stored(tuple):
+    """A set named by its stored pair, the round-up interval's (upward.md, "Claims and the
+    oracle"; upward.py): (U, N), the names (or the slices) of its upper bound and of its lower
+    bound negated, in that order.  A plain tuple is (L, U), the bounds of an interval()."""
+    __slots__ = ()
+
+
+def upward_state(u, n):
+    """("empty", INF, NINF) for the stored pair (NaN, NaN), ("nonempty", -n, u) for that of a
+    nonempty interval, None for any other pair: one NaN lane, a lane -inf, crossed lanes (-n > u)
+    (upward.md, "States"; upward.defect says which)."""
+    if u == NAN and n == NAN:
+        return ("empty", INF, NINF)
+    if NAN in (u, n) or NINF in (u, n):
+        return None
+    lo = XT.x_neg(n)
+    if XT.x_cmp(lo, 0, u, 0) > 0:
+        return None
+    return ("nonempty", lo, u)
+
+
+def _pair_sl(sl, pair):
+    """The slices of a pair of names, a Stored pair staying one."""
+    out = (sl[pair[0]], sl[pair[1]])
+    return Stored(out) if isinstance(pair, Stored) else out
+
+
+def _out_plan(e, os_):
+    """The slices of the outputs of an interval: lower and upper, or the stored pair."""
+    if e.nlower is not None:
+        return {"stored_out": Stored((os_[e.upper], os_[e.nlower]))}
+    return {"lower": os_[e.lower], "upper": os_[e.upper]}
+
+
+def _out_state(fmt, z, c):
+    """The state of the output interval of a plan entry (lower and upper, or a stored pair)."""
+    so = c.get("stored_out")
+    if so is not None:
+        return upward_state(z[so[0][0]], z[so[1][0]])
+    return interval_state(fmt, z[c["lower"][0]:c["lower"][1]], z[c["upper"][0]:c["upper"][1]])
+
+
+def _out_defect(fmt, es, z, c):
+    """Why an output stored pair is not canonical (counted), as the end of a reason; "" for an
+    output of lower and upper."""
+    so = c.get("stored_out")
+    if so is None:
+        return ""
+    from . import upward as UP
+    return UP.defect_text(fmt, es, z[so[0][0]], z[so[1][0]])
 
 
 def interval_class(st):
@@ -1274,12 +1368,14 @@ def plan_entry(pl, e, claims):
         c["operands"] = [sl[n] for n in sorted(set(X.names(pl.kernel.value_tree)),
                                                key=pl.kernel.input_names.index)]
     elif k == "makes_interval":
-        c.update(lower=os_[e.lower], upper=os_[e.upper], given=(sl[e.from_lower], sl[e.from_upper]))
+        c.update(_out_plan(e, os_), given=(sl[e.from_lower], sl[e.from_upper]))
     elif k == "encloses_interval":
-        c.update(lower=os_[e.lower], upper=os_[e.upper], tree=e.set_tree,
-                 ivs={n: (sl[a], sl[b]) for n, (a, b) in e.intervals.items()},
+        c.update(_out_plan(e, os_), tree=e.set_tree,
+                 ivs={n: _pair_sl(sl, pair) for n, pair in e.intervals.items()},
                  tight=e.tight, steps=e.steps, when=e.when, bw=e.bounded_when,
                  bexact=e.bounded_exactly, zero_factor=e.zero_factor)
+        if e.numbers:
+            c["nums"] = {n: sl[n][0] for n in e.numbers}
         if e.tight_exact:
             c["texact"] = {side: compile_conditions(pl, cs) for side, cs in e.tight_exact.items()}
         if e.when:
@@ -1298,8 +1394,8 @@ def plan_entry(pl, e, claims):
                 c["texact"] = {side: compile_conditions(pl, cs)
                                for side, cs in e.tight_exact.items()}
     elif k == "interval_set":
-        c.update(lower=os_[e.lower], upper=os_[e.upper], op=e.op,
-                 ivs=[(sl[a], sl[b]) for a, b in e.intervals.values()])
+        c.update(_out_plan(e, os_), op=e.op,
+                 ivs=[_pair_sl(sl, pair) for pair in e.intervals.values()])
     elif k == "ball_of_interval":
         c.update(center=os_[e.center], radius=os_[e.radius][0], special=e.special,
                  given=(sl[e.from_pair[0]], sl[e.from_pair[1]]), smallest=e.smallest_radius)
@@ -1445,6 +1541,9 @@ def _gather(z, ranges):
 
 
 def _state_of(fmt, x, pair):
+    if isinstance(pair, Stored):
+        # The round-up interval's stored pair (u, n): one limb each.
+        return upward_state(x[pair[0][0]], x[pair[1][0]])
     (alo, ahi), (blo, bhi) = pair
     return interval_state(fmt, x[alo:ahi], x[blo:bhi])
 
@@ -1586,11 +1685,18 @@ def k_encloses_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     es.applicable += 1
     out = []
     fail = XT._failer(es, out)
-    zs = interval_state(fmt, z[c["lower"][0]:c["lower"][1]], z[c["upper"][0]:c["upper"][1]])
+    zs = _out_state(fmt, z, c)
     if zs is None:
-        fail("I1", "the result is not a canonical interval")
+        fail("I1", "the result is not a canonical interval" + _out_defect(fmt, es, z, c))
         return out
     sts = {n: _state_of(fmt, x, pair) for n, pair in c["ivs"].items()}
+    # The numbers (the round-up interval, upward.py): each the members of Interval(t), {t} for a
+    # finite t and every real number otherwise; never empty; a bounded operand when finite.
+    if c.get("nums"):
+        from . import upward as UP
+        nenv = UP.number_env(es, x, c["nums"], q)
+    else:
+        nenv = {}
     es.count(RES_EMPTY if zs[0] == "empty" else RES_BOUNDED if bounded(zs) else RES_UNBOUNDED)
     if any(s[0] == "empty" for s in sts.values()):
         es.count(OPS_EMPTY)
@@ -1601,8 +1707,11 @@ def k_encloses_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         fail("I2", "the empty set from operands that are not empty")
         return out
     bops = all(bounded(s) for s in sts.values())
+    bops = bops and all(type(v[0]) is int for v in nenv.values())
     es.count(OPS_BOUNDED if bops else OPS_UNBOUNDED)
-    lo, hi, s = range_eval(c["tree"], {n: (st_[1], st_[2], q) for n, st_ in sts.items()})
+    env = {n: (st_[1], st_[2], q) for n, st_ in sts.items()}
+    env.update(nenv)
+    lo, hi, s = range_eval(c["tree"], env)
     zl, zu = zs[1], zs[2]
     if _cmp(zl, q, lo, s) > 0:
         fail("I3", "the lower bound %s is above the range's greatest lower bound %s"
@@ -1755,10 +1864,11 @@ def k_makes_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         want = ("empty", INF, NINF)
     else:
         want = ("nonempty", L, U)
-    zs = interval_state(fmt, z[c["lower"][0]:c["lower"][1]], z[c["upper"][0]:c["upper"][1]])
+    zs = _out_state(fmt, z, c)
     if zs is None:
         es.count("failed: not canonical")
-        return ["makes_interval: the result is not a canonical interval"]
+        return ["makes_interval: the result is not a canonical interval"
+                + _out_defect(fmt, es, z, c)]
     if zs != want:
         es.count("failed: not the interval of the given bounds")
         return ["makes_interval: the result is %s, not %s" % (_iv_show(fmt, zs), _iv_show(fmt, want))]
@@ -1954,10 +2064,11 @@ def k_interval_set(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     fmt = pl.fmt
     es.applicable += 1
     a, b = (_state_of(fmt, x, pair) for pair in c["ivs"])
-    zs = interval_state(fmt, z[c["lower"][0]:c["lower"][1]], z[c["upper"][0]:c["upper"][1]])
+    zs = _out_state(fmt, z, c)
     if zs is None:
         es.count("failed: not canonical")
-        return ["interval_set: the result is not a canonical interval"]
+        return ["interval_set: the result is not a canonical interval"
+                + _out_defect(fmt, es, z, c)]
     ne = [t for t in (a, b) if t[0] != "empty"]
     if len(ne) < 2:
         es.count(SET_BOTH_EMPTY if not ne else SET_EMPTY_OPERAND)
@@ -2401,9 +2512,13 @@ FINITE_KINDS = {"outward": finite_outward}
 
 
 def requirement_violated(ep, x, r):
-    """The text of the requirement r = ("interval", text, lo slice, hi slice) or ("not_nan", text,
-    slice) when the operands violate it, or None."""
+    """The text of the requirement r = ("interval", text, lo slice, hi slice), ("upward", text,
+    upper slice, nlower slice) or ("not_nan", text, slice) when the operands violate it, or
+    None."""
     fmt = ep.pl.fmt
+    if r[0] == "upward":
+        # upward(U, N), the round-up interval (upward.py): the stored pair of a canonical state.
+        return r[1] if upward_state(x[r[2][0]], x[r[3][0]]) is None else None
     if r[0] == "interval":
         (alo, ahi), (blo, bhi) = r[2], r[3]
         return r[1] if interval_state(fmt, x[alo:ahi], x[blo:bhi]) is None else None

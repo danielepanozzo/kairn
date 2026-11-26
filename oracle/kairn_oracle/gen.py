@@ -455,7 +455,14 @@ class RandomGen:
         from . import gen7
         from . import genenc
         from . import gen8
-        if gen8.family_of(kernel) is not None:
+        from . import genup
+        if genup.family_of(kernel) is not None:
+            # The kernels of the round-up interval (genup.py), before every other family.
+            self.shape = genup.ShapeUp(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = genup.make_case
+            self.valid = genup.valid_up
+        elif gen8.family_of(kernel) is not None:
             # The kernels of the ball vectors and of the accumulator (gen8.py).
             self.shape = gen8.Shape8(kernel)
             known, schedule = self.shape.strata, self.shape.schedule
@@ -536,9 +543,13 @@ class RandomGen:
         return " ".join(toks)
 
     def header(self, start, count):
-        return ("# kairn-oracle gen event=begin kernel=%s format=%s mode=random seed=%s strata=%s "
+        # rounding=upward: the request lines of a kernel of the round-up interval, whose runner
+        # holds the mode (upward.md, "Claims and the oracle"); absent for every other kernel.
+        r = getattr(self.kernel, "rounding", None)
+        return ("# kairn-oracle gen event=begin kernel=%s format=%s mode=random seed=%s strata=%s%s "
                 "start=%d count=%d" % (self.kernel.name, self.fmt.name, self.seed,
-                                       ",".join(self.strata), start, count))
+                                       ",".join(self.strata), " rounding=%s" % r if r else "",
+                                       start, count))
 
     def lines(self, start, count):
         yield self.header(start, count)
@@ -653,8 +664,11 @@ class ExhaustiveGen:
         if cls is ExhaustiveGen and getattr(kernel, "extended", False):
             from . import gen3
             from . import gen6
-            # The interval kernels take an interval as one operand (gen6.py).
-            cls = gen6.IvExhaustiveGen if gen6.enumerates(kernel) else gen3.ExtExhaustiveGen
+            from . import genup
+            # The interval kernels take an interval as one operand (gen6.py), and those of the
+            # round-up interval a stored pair (genup.py).
+            cls = (genup.UpExhaustiveGen if genup.enumerates(kernel) else
+                   gen6.IvExhaustiveGen if gen6.enumerates(kernel) else gen3.ExtExhaustiveGen)
         return super().__new__(cls)
 
     def __init__(self, kernel, fmt, restrictions=(), index_tags=True):

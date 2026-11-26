@@ -2744,7 +2744,7 @@ PAIRS = {"add_2_2": (0, 2), "add_2_1": (0,), "mul_2_2": (0, 2), "mul_2_1": (0,),
 
 class Runner:
     def __init__(self, variant="correct", center_claims=None, radius="first", bound_claims=None,
-                 bv_claims=None):
+                 bv_claims=None, max_form="sel"):
         if variant not in VARIANTS:
             raise ValueError("unknown variant %r (known: %s)" % (variant, ", ".join(VARIANTS)))
         if radius not in RADIUS_DESIGNS:
@@ -2756,6 +2756,11 @@ class Runner:
         # The claims of the kernels whose unit( ) and tiny( ) the kernels of the ball vectors and of
         # the accumulator name (refbv.py; the fixture claims-wave8.json by default).
         self.bv_claims = bv_claims
+        # The machine form of max_nl in the kernels of the round-up interval (refup.py): sel,
+        # MAXPD's, or nm, FMAXNM's.
+        if max_form not in _refup.MAX_FORMS:
+            raise ValueError("unknown form of max_nl %r (sel or nm)" % max_form)
+        self.max_form = max_form
         self.cache = {}
 
     def kernels(self, fmtname):
@@ -2764,6 +2769,7 @@ class Runner:
             k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant),
                                               self.center_claims, self.radius, self.bound_claims)
             k.bv_claims = self.bv_claims
+            k.max_form = self.max_form
         return k
 
     def map_line(self, line, toks, tag):
@@ -3020,6 +3026,9 @@ class Runner:
 # The kernels and folds of the ball vectors and of the accumulator (refbv.py).
 from . import refbv as _refbv  # noqa: E402
 _refbv.install(sys.modules[__name__])
+# The kernels of the round-up interval (refup.py).
+from . import refup as _refup  # noqa: E402
+_refup.install(sys.modules[__name__])
 
 
 def main(argv):
@@ -3042,6 +3051,9 @@ def main(argv):
     ap.add_argument("--print-constants", metavar="FORMAT",
                     help="print U and V of every center kernel, and E, G and H of every Ball "
                          "kernel (second radius design), for FORMAT and stop")
+    ap.add_argument("--max", default="sel", choices=("sel", "nm"), dest="max_form",
+                    help="the machine form of max_nl in the kernels of the round-up interval: "
+                         "sel, x86's MAXPD (the default), or nm, arm64's FMAXNM")
     ap.add_argument("--radius", default="first", choices=RADIUS_DESIGNS,
                     help="the Ball cores' radius: the first design (steps to the next number up) "
                          "or the second (one inflation at the end); default first")
@@ -3070,7 +3082,7 @@ def main(argv):
             for which, v in zip("EGH", consts):
                 print("%s.%s.%s=%s" % (a.print_constants, kname, which, ar.write(v)))
         return 0
-    Runner(a.variant, a.center_claims, a.radius, a.bound_claims, a.bv_claims).run(sys.stdin,
-                                                                                   sys.stdout)
+    Runner(a.variant, a.center_claims, a.radius, a.bound_claims, a.bv_claims,
+           a.max_form).run(sys.stdin, sys.stdout)
     sys.stdout.flush()
     return 0
