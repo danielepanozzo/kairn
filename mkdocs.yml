@@ -406,4 +406,5 @@ nav:
               - References: developer/design/phase0/references.md
           - Milestone 1 statements: developer/design/milestone1.md
           - Milestone 2 statements: developer/design/milestone2.md
+          - The round-up interval: developer/design/upward.md
           - The original brief: developer/design/brief.md
