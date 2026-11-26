@@ -710,6 +710,16 @@ def holds(e, sets, ins):
     raise AssertionError(rel)
 
 
+_TREES = {}
+
+
+def _tree(text):
+    """The parsed set expression of a claim, parsed once."""
+    if text not in _TREES:
+        _TREES[text] = expr.parse(text)
+    return _TREES[text]
+
+
 def judge(k, e, F, ins, outs):
     """What is wrong with one completed case against the claim e of kernel k, in exact arithmetic, or
     None: I1 to I5 of encloses_interval; interval_set; makes_interval on any two values; same_set;
@@ -731,7 +741,7 @@ def judge(k, e, F, ins, outs):
         for t in e.get('numbers', []):
             v = exact(ins[t])
             env[t] = (v, v) if v is not None and abs(v) != math.inf else (-math.inf, math.inf)
-        lo, hi = range_of(expr.parse(e['set']), env)
+        lo, hi = range_of(_tree(e['set']), env)
         want = (lo, hi) if e['tight']['kind'] == 'exact' else (F.rd(lo), F.ru(hi))
         if z != want:
             return f'I3/I4: the result {z}, the tightest interval of the format around [{lo}, {hi}] is {want}'
