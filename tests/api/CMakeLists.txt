@@ -1489,6 +1489,14 @@ foreach(_form IN LISTS _api_packed_forms)
 endforeach()
 set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)
 
+# --- The round-up interval --------------------------------------------------------------------
+# The tests of <kairn/upward.hpp> (upward/, label upward), registered when KAIRN_UPWARD_TESTS is on
+# (../CMakeLists.txt); they label themselves quick, and use this file's variables for the warnings
+# and the compilations of api.reject.*.
+if(KAIRN_UPWARD_TESTS)
+  add_subdirectory(upward)
+endif()
+
 # Every test here is in the quick tier (../CMakeLists.txt, "The two tiers").
 get_property(_api_tests DIRECTORY PROPERTY TESTS)
 set_property(TEST ${_api_tests} APPEND PROPERTY LABELS quick)

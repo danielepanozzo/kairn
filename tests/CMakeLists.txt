@@ -34,6 +34,10 @@ find_package(Python3 COMPONENTS Interpreter)
 include(CheckCXXSourceCompiles)
 include(CMakePushCheckState)
 
+# The tests of <kairn/upward.hpp>, the round-up interval (api/upward/, label upward): on by default;
+# a job that runs them on its own turns them off in the others.
+option(KAIRN_UPWARD_TESTS "Register the tests of kairn/upward.hpp, the round-up interval (label upward)" ON)
+
 # MSVC and clang-cl take MSVC-style options; everything else here takes GCC-style ones.
 if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR
    (MSVC AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT))
@@ -1482,6 +1486,10 @@ if(_quick_tests)
 endif()
 get_property(_api_tests DIRECTORY api PROPERTY TESTS)
 list(APPEND _quick_tests ${_api_tests})
+if(KAIRN_UPWARD_TESTS)
+  get_property(_upward_tests DIRECTORY api/upward PROPERTY TESTS)
+  list(APPEND _quick_tests ${_upward_tests})
+endif()
 list(LENGTH _quick_tests _n_quick)
 
 function(_kairn_ctest_custom dir left_out pre post)

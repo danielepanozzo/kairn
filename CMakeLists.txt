@@ -81,6 +81,13 @@ else()
   kairn_define_fma_target("${PROJECT_SOURCE_DIR}/include" GLOBAL VERBOSE)
 endif()
 
+# kairn::upward: kairn::kairn and the option of <kairn/upward.hpp>, the round-up interval, which
+# requires the rounding mode upward set by kairn::upward::Scope and the options of
+# docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict); cmake/kairn_upward.cmake.
+# kairn::kairn never gains that option.
+include("${PROJECT_SOURCE_DIR}/cmake/kairn_upward.cmake")
+kairn_define_upward_target(GLOBAL)
+
 # Installation: the headers, a package configuration with a version file under share/cmake/kairn,
 # where find_package(kairn) looks, and the license under share/licenses/kairn. Nothing in it
 # depends on the architecture: the installed configuration chooses kairn::fma's option with the
@@ -108,6 +115,7 @@ if(KAIRN_INSTALL)
     "${PROJECT_BINARY_DIR}/kairnConfig.cmake"
     "${PROJECT_BINARY_DIR}/kairnConfigVersion.cmake"
     cmake/kairn_fma.cmake
+    cmake/kairn_upward.cmake
     DESTINATION "${_kairn_cmake_dir}")
 endif()
 

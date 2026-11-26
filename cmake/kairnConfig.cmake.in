@@ -1,5 +1,6 @@
 # The package configuration of an installed Kairn: find_package(kairn) defines kairn::kairn and,
-# in a project that has enabled C++, kairn::fma (kairn_fma.cmake, next to this file).
+# in a project that has enabled C++, kairn::fma (kairn_fma.cmake, next to this file) and
+# kairn::upward, the option of <kairn/upward.hpp> (kairn_upward.cmake, next to this file).
 @PACKAGE_INIT@
 
 include("${CMAKE_CURRENT_LIST_DIR}/kairnTargets.cmake")
@@ -13,5 +14,7 @@ if(CMAKE_CXX_COMPILER_LOADED)
   else()
     kairn_define_fma_target("${_kairn_include_dir}" VERBOSE)
   endif()
+  include("${CMAKE_CURRENT_LIST_DIR}/kairn_upward.cmake")
+  kairn_define_upward_target()
 endif()
 check_required_components(kairn)

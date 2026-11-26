@@ -87,6 +87,10 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.ball_vector.FORM`, `api.boundary.ball_vector.S`, `api.boundary.ball_vector.unguarded.S` | `BallVector` and its views in each form of `Packed`, and the products of the program passed into them under each contraction setting, with the third kind of form of `api.boundary.S` (`--factor`: the scalings and `axpy` with a product of the program beside a factor the compiler sees, 1, -1 or 2, which must agree with the guards and which the copy without them reports) ([Ball vectors](#ball-vectors)). |
 | `api.boundary.square.FORM.S` | The exception of a square, pinned as the pages state it ([below](#the-exception-of-a-square)): the squares passed straight into nine operations must not differ, but with Clang under `-ffp-contract=fast`, where they are printed; the three ways the page gives to round a square first, and eleven products that are not squares, must not differ in any build (`tests/api/boundary_square.cpp`). |
 | `api.square_probe.S`, `api.square_probe.contract-fast.O1`, `.O3` | The probe of `kairn::self_test()` ([below](#the-exception-of-a-square)): `Status::limitation` is set exactly where the fusion happens, `ok()` stays true (`tests/api/square_probe.cpp`). |
+| `api.upward.scope` | The scopes of `kairn/upward.hpp`, observed from outside through the control register, `<cfenv>` and the hardware's arithmetic ([The round-up interval's environment](#the-round-up-intervals-environment)): `Scope`, `NearestScope` and the register-only scope of the functions on arrays each set their mode with flush to zero off from every starting mode, with flush to zero off and on, and restore the state they found; a scope inside one of the same mode writes nothing; the exception flags raised inside a scope and before it are kept; the C library's mode follows the scopes of the program and not the register-only one; a `NearestScope` inside a `Scope` and the reverse; a thread started inside a scope; the barriers and the pin of the generated kernels, and `pass()`, keep every bit of every value and lane (`tests/api/upward/scope.cpp`). |
+| `api.upward.checks`, `.off`, `.unhonored` | The assertions of a checked build of `kairn/upward.hpp`, through a `KAIRN_ENVIRONMENT_FAILURE` of the program's own that records the reason and returns: with `KAIRN_CHECKS` 1 the assertion before an operation that rounds reports outside any scope, in a `NearestScope` and under flush to zero, the one before an exact operation under flush to zero only, and an upward scope that writes the mode does not report a file built with the options; with `KAIRN_CHECKS` 0 nothing reports; in a file built without the options (where the compiler lets the header be included: Clang as it is, GCC and MSVC with `KAIRN_UPWARD_OPTIONS_UNCHECKED`) each upward scope that writes the mode reports that the file ignores it, and no other scope does (`tests/api/upward/checks.cpp`). |
+| `api.upward.units`, `api.upward.units.ipo`, `api.upward.dll` | A scope in one file and the operation it runs in another, a stand-in for a generated kernel (one product, its first input pinned): linked as they are, with whole-program optimization where CMake supports it (which can inline the operation into the scope's file), and, with MSVC, the operation in a DLL; probes on literal operands, before and inside a scope, in loops, after a `NearestScope` inside a `Scope`, and used only after the scope ended; with MSVC, `kairn::upward::detail::zero` is one object in both files of a program, and another one in the DLL (`tests/api/upward/units_a.cpp`, `units_b.cpp`). |
+| `api.upward.reject.*` | The compile-time guard of `kairn/upward.hpp` (case 119 of `tests/api/reject.cpp`): GCC without `-frounding-math`, MSVC without `/fp:strict` and with `/fp:contract` stop the build with the guard's message, and the same options with `KAIRN_UPWARD_OPTIONS_UNCHECKED` compile. |
 
 The cases of `api.reject.*`: `tests/api/reject.cpp` is compiled once per test with
 `KAIRN_TEST_CASE` set to the test's case (and once more as its control), and each case has one
@@ -121,8 +125,9 @@ registers each name with its number):
 | 111, 112 | the headers, with `KAIRN_CHECKS` | limbs that are not those of a canonical set given to `Interval::from_limbs` (reversed bounds) and `Ball::from_limbs` (a negative radius) in a constant expression (`checks.interval_from_limbs_not_canonical`, `checks.ball_from_limbs_not_canonical`) |
 | 113 | the headers, `batch.hpp` | `kairn::sequential` as the last argument of `sum`, where it is the first (`batch.order_tag_last`) |
 | 114 to 116 | the headers, `packed.hpp` | the arithmetic of `Packed<T, 1>` with an operand that is not a `Packed<T, 1>`: a `T`, an `Expansion<T, 1>`, and `x += y` with `y` of two limbs (`packed.one_limb_number_operand`, `.one_limb_expansion_operand`, `.one_limb_assign_two_limbs`) |
+| 119 | the headers, `upward.hpp` | `upward.hpp` with an option its guard refuses, given to both compilations: GCC with `-fno-rounding-math`, MSVC with `/fp:precise` and with `/fp:contract`; the control defines `KAIRN_UPWARD_OPTIONS_UNCHECKED` (`api.upward.reject.gcc_without_rounding_math`, `.msvc_without_fp_strict`, `.msvc_fp_contract`, registered by `tests/api/upward/CMakeLists.txt`) |
 
-The next case is 119. Cases 19 and 63 to 69 are free.
+The next case is 120. Cases 19 and 63 to 69 are free.
 
 ## The full tier
 
@@ -166,9 +171,11 @@ the label `tools`; but for the generator's, which is labelled `generator` too, t
 compiler, as they did in the quick tier.
 
 Labels select groups in either tier: `-L crosscheck`, `-L compiled`, `-L interp` (with
-`-L restricted` and `-L sampled` among them), `-L emulated`, `-L api` (with `-L oracle`, `-L reject` and
-`-L boundary` among them), `-L objcode`, `-L python`, `-L generator`, `-L tools`; `-R` selects by
-name, for example `ctest --test-dir build -R mul_2_2` for the quick tier's tests of `mul_2_2`.
+`-L restricted` and `-L sampled` among them), `-L emulated`, `-L api` (with `-L oracle`, `-L reject`,
+`-L boundary` and `-L upward` among them), `-L objcode`, `-L python`, `-L generator`, `-L tools`;
+`-R` selects by name, for example `ctest --test-dir build -R mul_2_2` for the quick tier's tests of
+`mul_2_2`. The tests of `kairn/upward.hpp` (label `upward`) are registered when the option
+`KAIRN_UPWARD_TESTS` is on, the default.
 
 ## Cross-checks
 
@@ -2131,6 +2138,43 @@ change no result. On the lines of `ball_make_1`, `ball_make_2_entry` and `ball_m
 test programs keep Microsoft's C runtime from opening a dialog on `abort()`, and Linux from
 writing a core dump, which took 0.3 seconds per case on the Linux machine
 (`tests/api/no_crash_reports.hpp`).
+
+## The round-up interval's environment
+
+`tests/api/upward/` holds the tests of `kairn/upward.hpp`
+([design page](design/upward.md)), which requires the rounding mode upward set by
+`kairn::upward::Scope` and the options of `docs/concepts/upward.md` (GCC and Clang
+`-frounding-math`, MSVC `/fp:strict`): every program there links `kairn::upward`, which adds them,
+but `api.upward.checks.unhonored`, which tests a file built without them. The first are those of
+the header's environment: the scopes, the assertions of a checked build, the barrier per scope of
+MSVC across files and modules, and the compile-time guard; the tests of the interval type, the
+functions on arrays and the self-check join them in the same directory.
+
+The scope test reads and writes the environment without the header (`tests/api/upward/environment.hpp`):
+the control register directly (MXCSR on x86, FPCR on AArch64, where the bits AH and FIZ of FEAT_AFP
+are set and cleared with FZ when they read back as set, as on the Apple M3), `<cfenv>` for the C
+library's mode and the exception flags (on x86 also the flag of MXCSR itself), and the hardware's
+rounding seen through sums of operands read from volatile objects. What it expects of the C
+library inside the register-only scope of the functions on arrays depends on where the C library
+keeps its mode: glibc on x86-64 reads the x87 control word, which that scope does not set, and
+reports the mode it had; Microsoft's C runtime and every C library on AArch64 read the register,
+and report upward; on another platform the value is printed and not checked. That a scope inside
+one of the same mode writes nothing is seen from outside: the mode changed by hand inside the inner
+scope is still changed after it, where a scope that wrote would have restored what it read. A
+thread started inside a scope found the mode upward on the Linux machine and to nearest on the
+Mac and the Windows machine; the test prints which and checks only that the thread's own scopes set
+and restore its mode.
+
+The units tests run their probes on a stand-in for a generated kernel, a product whose first input
+is pinned (`KAIRN_DETAIL_UPWARD_PIN`), until the kernels exist. With MSVC each module of Windows
+has its own `kairn::upward::detail::zero`, which the scopes of another module never write:
+`api.upward.dll` pins that (the program's and the DLL's are two objects) and runs the same probes
+with the scope in the program and the operation in the DLL, where they passed on the Windows
+machine at `/Od`, `/O2` and `/O2 /GL`, the call into the DLL being opaque to the compiler. Built
+against a copy of the header without the pin, the probe of a loop in a scope fails at `/O2 /GL`
+(the product computed at compile time, to nearest); with a `zero` of internal linkage the check that
+both files of a program share it fails; without the refresh of the scopes no probe failed there:
+MSVC 19.52 did not move the product in these shapes even then.
 
 ## The program's names
 

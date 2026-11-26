@@ -106,6 +106,18 @@
 //          on the way (95, 96: the error term is the opposite infinity); each control is the
 //          neighboring operand where it compiles, the largest square or the next number below b,
 //          against the run-time result (api.constexpr checks the same bits at run time)
+//   119    nothing but including upward.hpp, the round-up interval, which requires the rounding mode
+//          upward set by kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and
+//          Clang -frounding-math, MSVC /fp:strict), compiled with an option its guard refuses (GCC
+//          without -frounding-math, MSVC without /fp:strict and with /fp:contract, given to both
+//          compilations by tests/api/upward/CMakeLists.txt, api.upward.reject.*); the control
+//          defines KAIRN_UPWARD_OPTIONS_UNCHECKED
+#if KAIRN_TEST_CASE == 119
+#if defined(KAIRN_TEST_CONTROL)
+#define KAIRN_UPWARD_OPTIONS_UNCHECKED
+#endif
+#include <kairn/upward.hpp>
+#endif
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16 || KAIRN_TEST_CASE == 111 || \
     KAIRN_TEST_CASE == 112
 #if defined(KAIRN_TEST_CONTROL)
