@@ -173,12 +173,14 @@
 /// canonical pair), and its result has no guarantee.
 ///
 /// Define it the same way in every translation unit of a program, or in none, as KAIRN_CHECKS. Kairn
-/// expands it in one function, the report of every check of the environment
-/// (environment.hpp, detail::report_environment), which the compiler is asked never to inline: an
-/// inline function, of which the linker keeps one copy for the whole program, and whose
-/// definitions the language requires to be the same in every unit. A program whose units define
-/// the macro differently gets the statement of one of them in every unit, with no diagnostic. The
-/// statement is compiled in that function, not at the place of the check: a name it uses must be
+/// expands it in two functions, each the report of every check of the environment of its header:
+/// environment.hpp's detail::report_environment, for the default types, and, in a program that
+/// includes the opt-in kairn/upward.hpp, that header's kairn::upward::detail::report. The compiler
+/// is asked never to inline either. Each is an inline function, of which the linker keeps one copy
+/// for the whole program, and whose definitions the language requires to be the same in every
+/// unit. A program whose units define the macro differently gets the statement of one of them in
+/// every unit, with no diagnostic. The
+/// statement is compiled in those functions, not at the place of the check: a name it uses must be
 /// declared before Kairn is included and, in a program of several units, refer to the same entity
 /// in every unit (a function of the program with external linkage, defined once).
 #if !defined(KAIRN_ENVIRONMENT_FAILURE)
@@ -276,8 +278,8 @@
 #endif
 // KAIRN_DETAIL_COLD asks the compiler not to inline a function and to place it with the code that
 // rarely runs, which also makes a branch to its call the unlikely one (GCC and Clang: cold); MSVC
-// has no such attribute, and gets noinline alone. For the report of a check of the environment
-// (environment.hpp, detail::report_environment).
+// has no such attribute, and gets noinline alone. For the reports of the checks of the environment
+// (environment.hpp, detail::report_environment; upward.hpp, kairn::upward::detail::report).
 #if defined(_MSC_VER) && !defined(__clang__)
 #define KAIRN_DETAIL_COLD __declspec(noinline)
 #else

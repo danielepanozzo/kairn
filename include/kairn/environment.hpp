@@ -7,8 +7,10 @@
 /// - kairn::self_test(): what the compiler did with the flags of the translation unit it is
 ///   compiled in, which no register shows, by computing known results and comparing.
 ///
-/// Kairn never reads or writes the rounding mode to do its work and never changes the environment;
-/// both checks only read.
+/// The default types of Kairn never read or write the rounding mode to do their work and never
+/// change the environment; both checks only read. The one exception is the opt-in
+/// kairn/upward.hpp, which kairn/kairn.hpp does not include: its scopes set the mode upward, or to
+/// nearest, for their lifetime, and restore what they found (docs/concepts/upward.md).
 #pragma once
 
 #include "config.hpp"
@@ -197,9 +199,11 @@ KAIRN_FORCEINLINE constexpr bool rounding_to_nearest() noexcept {
 ///
 /// Reads one control register (MXCSR on x86-64, FPCR on AArch64) and checks that the rounding
 /// mode is to nearest and that subnormal numbers are neither flushed to zero as results nor read
-/// as zero as operands. Kairn never changes these itself; other code can (a directed rounding
-/// mode set by an interval library, or flush-to-zero set at startup by any object compiled with
-/// -ffast-math), and a program that does must restore them before calling Kairn. Checked before
+/// as zero as operands. The default types never change these; other code can (a directed rounding
+/// mode set by an interval library or by a scope of the opt-in kairn/upward.hpp, or flush-to-zero
+/// set at startup by any object compiled with -ffast-math), and a program that does must restore
+/// them before calling the default types (inside an upward scope, a kairn::upward::NearestScope
+/// does). Checked before
 /// every operation, and in the constructors that check their operands, when KAIRN_CHECKS is 1,
 /// before the operands; before a function that does not round, such as a comparison, without the
 /// rounding mode, so that a program may call it under a directed one (config.hpp). Only reads.
