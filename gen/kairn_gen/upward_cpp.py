@@ -40,7 +40,6 @@ external linkage) may call. Like the other C++ printers, this one is trusted: it
 bit against the interpreter in every form (gen/tests/test_upward_cxx.py).
 """
 import hashlib
-import math
 
 from . import cpp, interp, ir, upward
 
@@ -140,9 +139,6 @@ class Listing:
         for line, (s0, s1) in self.line_of.items():
             if {s0.op, s1.op} & SIGN_CHANGES and {s0.dsts[0], s1.dsts[0]} & rounded_operands:
                 self.signed_lines.add(line)
-
-    def lanes_of(self, key):
-        return self.pairs[key]
 
     def operand(self, a, b):
         """The form of the operand position (a | b) of a pair line (rule P2): ('reg', key),
@@ -359,7 +355,7 @@ class _Function:
         self.lines.append(self.pad + text)
 
 
-def _sv(a, L, ctype):
+def _sv(a, ctype):
     """A scalar operand of the register or the two-number form: a name or a literal."""
     return _scalar_literal(a.name, ctype) if a.const else a.name
 
@@ -444,12 +440,12 @@ def register_function(k, R, kernels):
             if mask:
                 raise PrintError(f'kernel {k.name}: a mask made of two scalar masks (rule P5)')
             name = f'{a.name if not a.const else "k" + a.name}_{b.name if not b.const else "k" + b.name}_make'
-            text = R.make(_sv(a, L, ctype), _sv(b, L, ctype))
+            text = R.make(_sv(a, ctype), _sv(b, ctype))
         fn.add(f'const {R.mask if mask else R.vec} {fn.name(name)} = {text};')
         fn.derived[key] = name
         return name
 
-    def is_clean(form, expr):
+    def is_clean(form):
         if R.double or not R.x86:
             return True
         if form[0] == 'reg':
@@ -461,7 +457,7 @@ def register_function(k, R, kernels):
             continue
         if st.lane is None:
             d = st.dsts[0]
-            args = [_sv(a, L, ctype) for a in st.args]
+            args = [_sv(a, ctype) for a in st.args]
             text = scalar_expr(st.op, args, ctype)
             vtype = 'bool' if L.kind[d] == ir.MASK else ctype
             if d in L.signed:
@@ -490,7 +486,7 @@ def register_function(k, R, kernels):
                 text = R.bits_op('andnot', materialize(arm_b, False), m)
             elif arm_b[0] == 'const' and arm_b[1:] == (ir.ZERO, ir.ZERO):
                 text = R.bits_op('and', materialize(arm_a, False), m)
-            elif arm_a[0] == 'const' and arm_a[1:] == ('nan', 'nan') and is_clean(forms[0], m):
+            elif arm_a[0] == 'const' and arm_a[1:] == ('nan', 'nan') and is_clean(forms[0]):
                 text = R.bits_op('or', materialize(arm_b, False), m)
             else:
                 text = R.blend(m, materialize(arm_a, False), materialize(arm_b, False))
@@ -504,9 +500,9 @@ def register_function(k, R, kernels):
             text = R.op(s0.op, args)
             if mask and s0.op in ('unord', 'lt'):
                 clean.add(key)
-            elif mask and s0.op == 'and' and any(is_clean(f, x) for f, x in zip(forms, args)):
+            elif mask and s0.op == 'and' and any(is_clean(f) for f in forms):
                 clean.add(key)
-            elif mask and s0.op == 'or' and all(is_clean(f, x) for f, x in zip(forms, args)):
+            elif mask and s0.op == 'or' and all(is_clean(f) for f in forms):
                 clean.add(key)
         vtype = R.mask if mask else R.vec
         barrier = st.line in L.signed_lines or r in k.pair_outputs
@@ -569,7 +565,7 @@ def numbers_function(k, ctype, pair_type, kernels, inline='KAIRN_GEN_FORCEINLINE
     outputs = set(k.output_limbs)
     for st in k.body:
         d = st.dsts[0]
-        args = [_sv(a, L, ctype) for a in st.args]
+        args = [_sv(a, ctype) for a in st.args]
         text = scalar_expr(st.op, args, ctype)
         vtype = 'bool' if L.kind[d] == ir.MASK else ctype
         if barriers and (d in L.signed or (d in outputs and vtype != 'bool')):
@@ -675,7 +671,7 @@ def _invariant(k):
     return out
 
 
-def _tail_call(k, start, pad):
+def _tail_call(k, pad):
     """The loop of the one-register form over the elements from `start` on."""
     args = []
     for g in _groups(k, 'input'):
@@ -739,7 +735,7 @@ def array_function(k, ctype, P):
         for v in k.output_limbs:
             body += [f'{pad}KAIRN_DETAIL_UPWARD_BARRIER({v});', f'{pad}{P.store.format(f"{v}_out + i_", v)};']
         lines += before + [f'    for (; i_ + {P.w} <= n; i_ += {P.w}) {{'] + body + ['    }']
-    lines += [x.replace('{T}', ctype) for x in _tail_call(k, '0', '    ')]
+    lines += [x.replace('{T}', ctype) for x in _tail_call(k, '    ')]
     return lines + ['}']
 
 
