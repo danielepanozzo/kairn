@@ -4,6 +4,9 @@ A format is (p, qmin, qmax): its numbers are m 2^q with integers |m| < 2^p and q
 (architecture.md, "Number formats"). Every operation is computed exactly on integers and rounded
 once, to nearest with ties to even, with gradual underflow, and to infinity when the rounding in
 unbounded range exceeds the largest finite number. Signed zeros, infinities and NaN follow IEEE 754.
+The operations of the round-up interval (docs/developer/design/upward.md, "The operations of the
+IR") round toward +infinity instead (rnd_up, add_ru, mul_ru), and max_nl is computed in the machine
+form the Machine is given: MAXPD's (max_sel) or FMAXNM's on quiet NaNs (max_num).
 
 A value is one of
     (NUM, neg, m, e)   (-1)^neg m 2^e, with m odd, or m = e = 0 for a zero
@@ -223,6 +226,101 @@ def pred(f, x):
 
 
 # ---------------------------------------------------------------------------------------------
+# The operations of the round-up interval (docs/developer/design/upward.md, "The operations of the
+# IR"): IEEE 754's sum and product rounded toward +infinity, in the format with overflow.
+
+def rnd_up(f, neg, m, e):
+    """RU((-1)^neg m 2^e) in format f, for an integer m > 0, with gradual underflow: a positive
+    result below eta is eta, a negative one above -eta is -0; a positive result above the largest
+    finite number is +infinity, a negative one below minus the largest is minus the largest."""
+    q = max(e + m.bit_length() - f.p, f.qmin)   # exponent of the last bit that can be kept
+    if q > e:
+        s = q - e
+        if s >= m.bit_length():
+            # Below the quantum of the smallest numbers (q is qmin): no bit is kept.
+            return (NUM, True, 0, 0) if neg else (NUM, False, 1, f.qmin)
+        rest = m & ((1 << s) - 1)
+        m >>= s
+        if rest and not neg:
+            m += 1                                # up: away from zero above it, toward it below
+        e = q
+    # As in rnd, m has at most p significant bits, and its magnitude exceeds the largest finite
+    # number exactly when it reaches 2^(qmax + p).
+    if e + m.bit_length() > f.qmax + f.p:
+        return largest(f, True) if neg else (INF, False)
+    return canon(neg, m, e)
+
+
+def add_ru(f, x, y):
+    """RU(x + y): a NaN for a NaN operand and for the sum of the two infinities; an exact zero sum of
+    operands of opposite signs is +0, and x + x of a zero x keeps its sign (IEEE 754 rounding toward
+    +infinity)."""
+    if x[0] == NAN or y[0] == NAN:
+        return NaN
+    if x[0] == INF:
+        return NaN if y[0] == INF and y[1] != x[1] else x
+    if y[0] == INF:
+        return y
+    xn, xm, xe = x[1:]
+    yn, ym, ye = y[1:]
+    if xm == 0 and ym == 0:
+        return (NUM, xn and yn, 0, 0)       # -0 + -0 = -0; every other sum of zeros is +0
+    if xm == 0:
+        return rnd_up(f, yn, ym, ye)
+    if ym == 0:
+        return rnd_up(f, xn, xm, xe)
+    e = min(xe, ye)
+    s = ((-xm if xn else xm) << (xe - e)) + ((-ym if yn else ym) << (ye - e))
+    if s == 0:
+        return (NUM, False, 0, 0)           # an exact cancellation is +0 (-0 only toward -infinity)
+    return rnd_up(f, s < 0, -s if s < 0 else s, e)
+
+
+def mul_ru(f, a, b):
+    """RU(a b): a NaN for a NaN operand and for 0 times an infinity; a zero product has the sign of
+    the product of the signs."""
+    if a[0] == NAN or b[0] == NAN:
+        return NaN
+    n = a[1] != b[1]
+    if a[0] == INF or b[0] == INF:
+        return NaN if _is_zero(a) or _is_zero(b) else (INF, n)
+    m = a[2] * b[2]
+    return (NUM, n, 0, 0) if m == 0 else rnd_up(f, n, m, a[3] + b[3])
+
+
+def unord(a, b):
+    """The mask of `unord a b`: a or b is a NaN."""
+    return a[0] == NAN or b[0] == NAN
+
+
+def max_sel(a, b):
+    """max_nl as x86's MAXPD a, b computes it (_mm_max_pd(a, b)), and the two-number form's
+    a > b ? a : b: a when a > b, otherwise b, so b when either is a NaN and when both are zeros."""
+    return a if lt(b, a) else b
+
+
+def max_num(a, b):
+    """max_nl as arm64's FMAXNM computes it (vmaxnmq_f64(a, b), the pseudocode FPMaxNum) on
+    operands whose NaNs are quiet: the other operand when exactly one is a NaN, a NaN when both
+    are; on two zeros +0 unless both are -0; otherwise the greater."""
+    if a[0] == NAN:
+        return b
+    if b[0] == NAN:
+        return a
+    if lt(b, a):
+        return a
+    if lt(a, b):
+        return b
+    if _is_zero(a) and _is_zero(b):
+        return (NUM, a[1] and b[1], 0, 0)
+    return b                                # equal and not zeros: the same number
+
+
+# The machine forms of max_nl, by the name of the command line's --max.
+MAX_FORMS = {'sel': max_sel, 'nm': max_num}
+
+
+# ---------------------------------------------------------------------------------------------
 # Limbs as text: C99 hexadecimal floating-point literals, inf, -inf, nan.
 
 _HEX = re.compile(r'([+-]?)0[xX]([0-9a-fA-F]*)(?:\.([0-9a-fA-F]*))?[pP]([+-]?[0-9]+)')
@@ -276,16 +374,29 @@ class Machine:
     """Evaluates kernels. fused: how muladd executes. consteval: as in C++ constant evaluation,
     where a kernel with a variant runs the variant, prod is a plain product (also in a kernel
     without a variant: the rule of the product), muladd is unfused, guard returns its operand, and
-    a kernel without a variant must contain no fused operation but prod."""
+    a kernel without a variant must contain no fused operation but prod. max_form: how each max_nl
+    of the round-up interval executes, 'sel' (MAXPD's, the default) or 'nm' (FMAXNM's on quiet
+    NaNs); the kernels of that family are those of the set's `upward` (ir.KernelSet)."""
 
-    def __init__(self, kernels, fused=True, consteval=False):
+    def __init__(self, kernels, fused=True, consteval=False, max_form='sel'):
         self.kernels, self.fused, self.consteval = kernels, fused and not consteval, consteval
+        if max_form not in MAX_FORMS:
+            raise InterpError(f'max_nl has the forms {", ".join(MAX_FORMS)}, not {max_form!r}')
+        self.max_form, self.max_nl = max_form, MAX_FORMS[max_form]
         self._consts = {}
 
-    def run(self, name, f, inputs):
+    def kernel(self, name):
+        """The kernel of that name, of the upward family too, or None."""
         k = self.kernels.get(name)
+        return k if k is not None else getattr(self.kernels, 'upward', {}).get(name)
+
+    def run(self, name, f, inputs):
+        k = self.kernel(name)
         if k is None:
             raise InterpError(f'unknown kernel {name!r}')
+        if k.upward and self.consteval:
+            raise InterpError(f'{name} is of the round-up interval, which is not evaluated in constant '
+                              'evaluation (nothing of it is constexpr)')
         if len(inputs) != len(k.input_limbs):
             raise InterpError(f'{name} takes {len(k.input_limbs)} limbs, not {len(inputs)}')
         for v, kind in zip(inputs, k.input_kinds):
@@ -577,7 +688,7 @@ class Machine:
         for st in k.body:
             a = [self._const(f, x.name) if x.const else env[x.name] for x in st.args]
             if st.is_call:
-                env.update(zip(st.dsts, self._eval(self.kernels[st.op], f, a, plain)))
+                env.update(zip(st.dsts, self._eval(self.kernel(st.op), f, a, plain)))
             else:
                 env[st.dsts[0]] = self._op(st.op, f, a, plain)
         return [env[v] for v in k.output_limbs]
@@ -629,6 +740,14 @@ class Machine:
             return a[0] if self.consteval else add(f, a[0], (NUM, False, 0, 0))
         if op == 'times_inf':
             return mul(f, a[0], (INF, False))           # exact: NaN for a NaN or a zero
+        if op == 'add_ru':
+            return add_ru(f, a[0], a[1])
+        if op == 'mul_ru':
+            return mul_ru(f, a[0], a[1])
+        if op == 'unord':
+            return unord(a[0], a[1])
+        if op == 'max_nl':
+            return self.max_nl(a[0], a[1])
         raise InterpError(f'the interpreter does not evaluate {op}')
 
 
@@ -648,7 +767,7 @@ def complete(machine, line, formats):
     fd = getattr(machine.kernels, 'folds', {}).get(name)
     if fd is not None:
         return line + ' -> ' + complete_fold(machine, fd, formats[fmt], fields[2:])
-    k = machine.kernels.get(name)
+    k = machine.kernel(name)
     if k is None:
         raise InterpError(f'unknown kernel {name!r}')
     if len(fields) - 2 != len(k.input_limbs):

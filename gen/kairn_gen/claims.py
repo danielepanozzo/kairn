@@ -43,7 +43,11 @@ def kernel_claims(k, kernels):
     that is proved; one of the finite domain has neither field, as before. A kernel without a
     real-model statement (ir.Kernel.real_model: the full kernels, the full Ball kernels, the
     constructors) says so with `"ieee_only": true` after `domain`; every other kernel has no such
-    field. A kernel that makes a ball from its inputs has no `value`."""
+    field. A kernel that makes a ball from its inputs has no `value`. A kernel of the upward family
+    (the round-up interval, docs/developer/design/upward.md, "Claims and the oracle") says
+    `"rounding": "upward"` after `ieee_only`, a field written only in its entries: every operation
+    of the kernel rounds upward and its runner holds the mode; its pairs are one-limb inputs and
+    outputs named by their lanes."""
     errors = [e for e in k.ensures if e['kind'] == 'error']
     # Always a list, one object per error entry in the order of `ensures` (second wave).
     instances = {name: [instance(e, interp.parse_format(name)) for e in errors]
@@ -53,6 +57,8 @@ def kernel_claims(k, kernels):
         out['domain'] = 'extended'
     if not k.real_model:
         out['ieee_only'] = True
+    if k.upward:
+        out['rounding'] = k.rounding
     out.update(inputs=[_group(g) for g in k.inputs], outputs=[_group(g) for g in k.outputs])
     if k.value is not None:
         out['value'] = k.value
@@ -236,7 +242,12 @@ def fold_claims(fd, kernels):
 
 
 def claims(kernels):
-    doc = {'schema': SCHEMA, 'kernels': [kernel_claims(k, kernels) for k in kernels.values()]}
+    """The document: every kernel in output order, then those of the upward family (ir.KernelSet.upward),
+    in theirs, so that the entries of the other kernels are what they were before the family existed;
+    then the folds."""
+    upward = getattr(kernels, 'upward', {})
+    doc = {'schema': SCHEMA, 'kernels': [kernel_claims(k, kernels) for k in kernels.values()] +
+           [kernel_claims(k, upward) for k in upward.values()]}
     folds = getattr(kernels, 'folds', {})
     if folds:
         doc['folds'] = [(map_claims if fd.is_map else conv_claims if fd.is_conv else bv_claims if fd.is_bv else

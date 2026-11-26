@@ -12,7 +12,8 @@ python3 gen/kairn-gen build     # regenerate every generated file
 python3 gen/kairn-gen check     # fail if a committed generated file is stale or was edited by hand
 python3 gen/kairn-gen test      # the tests below; --full for the long sizes; --shard K/N for
                                 # every N-th test from the K-th; --durations N for the slowest
-python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line protocol
+python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line protocol; --max sel
+                                # or nm for the machine form of max_nl (the round-up interval)
 ```
 
 ## What it writes
@@ -28,6 +29,9 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/IeeeFoldModel.v` | Per fold, its step and combination over tuples of floats (the IEEE models of IeeeModel.v) and its two orders with the finish, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v`; per map, its step, its check and its two orders (`map` of the step, the mask, the second pass); per convolution, its check and `F_conv` |
 | `proofs/gen/IeeeFoldStatements.v` | `F_seq_ieee_spec` and `F_lanes_ieee_spec` per fold (the flag, and the real model's result when it is true) and per map (element by element, and the mask), `F_ieee_spec` per convolution (coefficient by coefficient, and the mask), and `K_ieee_lead_spec` per step and combination of a fold and per step of a map |
 | `proofs/gen/IeeeWith.v` | Per kernel whose C++ dispatches on constant evaluation without a variant (`ieee.with_kernels`: those `constexpr` by the rule of the product, and those without a product that compute a `guard` or `times_inf`, 66), `K_with`: its IEEE-model definition with the operations that constant evaluation runs differently as arguments, `p_` for `prod`, and `g_` for `guard` and `t_` for `times_inf` where the kernel computes them, and those three operations as constant evaluation computes them, `prod_ce`, `guard_ce` and `times_inf_ce` (`ieee.with_model`); and per such kernel `K_two_executions_spec`, the statement of its two executions: on all operands and for any NaN in either, `K_with` at the operations of constant evaluation and `IeeeModel.K` return limbs of the same extended real values (`xval`) and the same masks (`ieee.two_executions_statement`) |
+| `proofs/gen/UpwardModel.v` | The round-up interval ([below](#the-round-up-interval)): one Rocq `Definition` per kernel of the upward family over Flocq's binary floating-point numbers, with `add_ru` and `mul_ru` (`Bplus`, `Bmult` with `mode_UP`) and `unord` of `proofs/theories/IeeeUpwardOperations.v` and the exact operations of `IeeeOperations.v`, in a section whose variables are their NaN functions and `max_nl`; a pair line is its two statements, lane 0 first |
+| `proofs/gen/UpwardStatements.v` | `Definition K_spec : Prop` per kernel of the upward family, from its claims, in the vocabulary of `proofs/theories/IeeeUpwardVocabulary.v`, over every `max_nl` with the property `max_nl_ok` |
+| `proofs/gen/UpwardAudit.v` | For each kernel of the upward family whose `ieee_status` is proved, checks its `ieee_theorem` against its statement and prints its assumptions |
 | `proofs/gen/FoldModel.v` | Per fold, its step and combination over tuples of reals and its two orders, `fold_seq` and `fold_lanes` of `proofs/theories/Folds.v` |
 | `proofs/gen/FoldStatements.v` | `Definition F_seq_spec : Prop` and `F_lanes_spec` per fold, from its claims; the proofs `F_seq_correct` and `F_lanes_correct` must have these types |
 | `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up_bits`, `next_down_bits`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`), the pragmas that every header puts around its declarations so that a program's globals of the same names raise no warning (`KAIRN_GEN_PUSH_WARNINGS`, `KAIRN_GEN_POP_WARNINGS`); refuses x86 without hardware FMA |
@@ -36,7 +40,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats), then every fold's `F_packed`; AArch64 only |
 | `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, and for the form relative to the result `unit_computed`, `tiny_computed`) and its form: `result` (R), `operands` (A) or `terms` (T, the terms of the value: `dot_step_2`); what the public headers gate on and export through `kairn::traits`; then, in `kairn::gen::bounds::loops`, per loop and limb type whether it is proved (its own status and minimum precision, and every kernel it runs), what the functions on arrays gate on |
 | `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
-| `gen/claims.json` | What every kernel and every fold claims, with the constants per format as exact fractions |
+| `gen/claims.json` | What every kernel and every fold claims, with the constants per format as exact fractions; the kernels of the upward family after the others, each with `"rounding": "upward"` |
 | `gen/constant_names.json` | The names of the constants `up(EXPR)` in the Rocq models, read first and only added to (below, "The operations") |
 | `gen/objcode.json` | Per kernel, form of its C++ (scalar with the fix-up inline, scalar with the fix-up a function of its own, packed) and limb type, the fused multiply-adds and plain multiplications its code asks for; per fold, form and limb type, those of each part of its loop: the expectations of the object-code check (`tests/objcode/`) |
 | `gen/tests/runner_kernels.inc` | The table of kernels and folds of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
@@ -66,6 +70,7 @@ is mapped to the logical path `Kairn.Gen`, and `proofs/theories` to
 | `kairn_gen/expr.py` | The parser of the rational expressions of the claims (`3/(1-4*u)`); nothing is ever `eval`-ed |
 | `kairn_gen/rules.py` | The checks every kernel passes before anything is printed |
 | `kairn_gen/rocq.py` | The Rocq printer (trusted) |
+| `kairn_gen/upward.py` | The Rocq printer of the upward family, `proofs/gen/Upward*.v` (trusted), and the mark of the feature's files |
 | `kairn_gen/cpp.py` | The C++ printer (trusted); its functions take the limb type as a parameter: `double`, `float`, or a `cpp.Limb`, a type of a format chosen at run time |
 | `kairn_gen/emulated.py` | `tests/emulated/gen/kernels.hpp`: `cpp.scalar` with the emulated limb type, and the tables of its runner |
 | `kairn_gen/simd.py` | The AVX2 and NEON printers (trusted; tested lane by lane against the scalar code) |
@@ -204,6 +209,56 @@ t        = add(x0, y0)
   exactly when those conditions hold; and of an `upper` entry with a value of its own, `unless=ex`, the
   bound when the mask input `ex` is false, and `exact_when=mask(ex);zero_or_abs_gt(rx*c,eta/(2*u))`, the
   output the value exactly when the conditions hold, `mask(NAME)` a condition that a mask input is true.
+
+## The round-up interval
+
+The kernels of the opt-in round-up interval ([design page](../docs/developer/design/upward.md)) are
+the **upward family**: a description that says `rounding: upward`. Each is `ieee_only`, of the
+extended domain, and an entry kernel; `load` keeps the family apart from the other kernels
+(`ir.KernelSet.upward`), so that every printer of the others, and every test that walks them, sees
+what it saw before the family existed: the family is in `gen/claims.json`, after the other
+kernels, and in `proofs/gen/Upward*.v`, and its C++ is to be a header of its own,
+`include/kairn/gen/upward.hpp` (the design page, "The pair form"). A state of the
+interval is the pair $(u, n) = (b, -a)$ of the upper bound and the negated lower bound, the two
+lanes of one register, the empty set $(\mathrm{NaN}, \mathrm{NaN})$:
+
+```
+kernel:        upward_add_1
+rounding:      upward
+input:         pair stored x = xu xn         a pair: lane 0, then lane 1; each a one-limb input
+input:         pair stored y = yu yn
+output:        pair z = zu zn
+requires:      upward xu xn                  a canonical state, its stored pair in order
+requires:      upward yu yn
+ensures:       encloses_interval zu zn x+y x=xu,xn y=yu,yn tight=rounded bounded_when=abs_le(x+y,omega) bounded_exactly
+min_precision: 1
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+...
+
+zu = add_ru(xu, yu) | zn = add_ru(xn, yn)    a pair line: the two lanes of one instruction
+```
+
+- The IR stays scalar: a pair input or output is a one-limb input or output per lane, named by the
+  lane (`k.pair_inputs`, `k.pair_outputs` record the pairs), and a pair line is two statements,
+  lane 0 on the left (`Stmt.lane`, `Kernel.pair_lines`), which the Rocq printer, the interpreter
+  and the claims read as those two statements; only the printers of the register form read the
+  pairing.
+- In the claims a pair is written in stored order: an output pair of `encloses_interval`,
+  `interval_set` and `makes_interval` is named `"upper"` and `"nlower"`, and so is a set `x=xu,xn`
+  whose operand is required `upward xu xn`; `numbers=t` lists one-limb inputs that each range over
+  the members of `Interval(t)` ($\{t\}$ for a finite $t$, every real otherwise); `same_set A B
+  from=C,D` claims that the output names the set that the input names, each a pair or the bounds
+  of a default interval (`requires: interval xl xu`). The predicates claim `certain` and `trit`,
+  `exact`, of stored pairs.
+- The rules U1 to U7 and P1 to P5 (below, "The rules") are `rules.upward_rules`,
+  `rules.upward_claims` and, for every kernel and fold outside the family, `rules.outside_family`
+  and `rules.fold_outside_family`; R3 does not apply to the family (U4), and every other rule does.
+- Every description of the family says in its first paragraph that it requires the mode upward
+  set by `kairn::upward::Scope` and the options of `docs/concepts/upward.md` (`upward.MARK`).
 
 ## A fold description
 
@@ -363,6 +418,9 @@ have two lengths and two radii (`interp.complete_conv`), and so does the compile
 | `const up(EXPR)` | EXPR rounded up (`consts.value`) | `up_K_i := round … Zceil (EXPR)` | a hexadecimal literal | `_mm256_set1_pd(literal)` | `vdupq_n_f64(literal)` |
 | `const inf`, `const nan` | +∞, a quiet NaN | none: only kernels without a real-model statement name them | `std::numeric_limits<double>::infinity()`, `quiet_NaN()` | `_mm256_set1_pd(` that `)` | `vdupq_n_f64(` that `)` |
 | `K(args)` | evaluated as a call | `let '(…) := K args in` | inlined | inlined | inlined |
+| `add_ru a b`, `mul_ru a b` | RU(a + b), RU(ab): rounded toward +∞ in the format with overflow (`interp.rnd_up`) | `add_ru a b`, `mul_ru a b` of `UpwardModel.v`: `Bplus`, `Bmult` with `mode_UP` | the upward family only: the design page, "The printers" | the same | the same |
+| `unord a b` | a or b is a NaN | `unord a b`: `orb (is_nan a) (is_nan b)` | the same | the same | the same |
+| `max_nl a b` | MAXPD's `a > b ? a : b` (`--max sel`, the default) or FMAXNM's on quiet NaNs (`--max nm`) | `max_nl a b`, a variable of the section, with the hypothesis `max_nl_ok` | the same | the same | the same |
 
 A mask is a `bool` in Rocq and in scalar C++, a lane mask (every bit of a lane set or clear) in
 the packed code: `__m256d`/`__m256` for AVX2, `uint64x2_t`/`uint32x4_t` for NEON. In the line
@@ -546,6 +604,40 @@ rule:
    and `neg(add_up_1(d, neg(x)))`, minus the rounding up of `d - x`, for the rounding down of
    `x - d`, as `mul_dir_2_2`, `add_down_2_2` and `ball_from_interval_2` do. The message says so.
 
+8. The round-up interval ([design page](../docs/developer/design/upward.md#the-rules), "The rules"
+   and "The pair form"), each refused with the rule's name:
+   - **U1.** A kernel of the upward family uses only `add_ru`, `mul_ru`, `max_nl`, `unord`, `neg`,
+     `abs`, `copy`, `lt`, `le`, `eq`, `and`, `or`, `not`, `select`, the constants `0`, `const inf`
+     and `const nan`, and calls of kernels of the family; it is `ieee_only` and of the extended
+     domain, and has no `ce_variant`. No kernel outside the family uses the four operations, a pair,
+     a pair line, the family's vocabulary of claims or a call of one of its kernels, and no fold runs
+     one.
+   - **U2**, the pair lines: **P1**, both statements apply the same operation, but `neg | copy` and
+     `copy | neg`, and a pair line has no call; **P2**, each operand position is one register: a
+     pair (an input or a pair line) in its order, swapped, a broadcast of one of its lanes, two
+     constants, a broadcast of a scalar, or two scalars (a make); **P3**, a pair has two lanes, and
+     its name is no other name of the kernel; **P4**, a scalar enters a pair line only by a
+     broadcast or a make, never beside a lane of a pair; **P5**, a mask of a pair line is the mask
+     of a pair line of comparisons or `unord` (or `and`, `or`, `not` of such masks), or a broadcast
+     of a scalar mask, never two scalar masks.
+   - **U3.** No value is the negation of a result of `add_ru` or `mul_ru`, directly or through
+     `select`, `copy` or `max_nl`, the callees inlined: under the mode upward $-\mathrm{RU}(t)$ is
+     $\mathrm{RD}(-t)$.
+   - **U4.** No `guard` and no `guard_pending`; R3 does not apply (the printer puts a barrier on
+     every input instead).
+   - **U5.** The first operand of every `max_nl` is a result of `mul_ru` or a lane of a pair input,
+     so that every NaN that reaches it is quiet.
+   - **U6.** Every `add_ru` and `mul_ru` has the kernel's first pair input in its data flow.
+   - **U7.** A pair output is the result of one pair line, lane 0 and lane 1 in order; a mask or a
+     number output is the result of a scalar statement.
+
+   And the family's claims (`rules.upward_claims`): every pair input required `upward U N` (a
+   default interval given as two one-limb inputs, `interval L U`); no value; one claim, of
+   `encloses_interval` (tight `rounded` or `exact`, I5 as `bounded_when=abs_le(SET,omega)
+   bounded_exactly`), `interval_set`, `makes_interval`, `same_set`, `certain` or `trit` (exact),
+   its result an output pair named in stored order; the Rocq printer of the family must print each
+   (`rules.upward_printable`).
+
 There are also checks of names (none may shadow what the printers use), kinds, arity, the closed
 vocabulary of the claims (that of architecture.md, "Claims of the second wave", "Claims of the
 non-finite layer", "Claims of Milestone 2" and "Claims of the interval kernels" included, each kind in its domain; the
@@ -681,6 +773,23 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
   interpreter on every pair of lengths up to 5 and random ones; the line protocol with two lengths;
   `conv_terms` of the model against its definition; the printers.
 
+- the round-up interval (`test_upward.py`): the family and its descriptions, each listing the
+  design page's statement for statement and each carrying the mark; a refusal of each rule U1 to U7
+  and P1 to P5 and of the family's claims; `add_ru` and `mul_ru` against the number of the format
+  found by search, on every pair of values of small formats (overflow and the signs of zeros
+  included), and both forms of `max_nl` against MAXPD's and FMAXNM's definitions and against
+  `max_nl_ok`; `interp --max`; the claims' entries and the two the design page writes out; the
+  statement of the sum the page writes out, word for word, and the binders of `max_nl`; every
+  generated file of the other kernels the same with the family and without it, and their pinned
+  digests (of `gen/claims.json` without the family's entries); and every kernel through the
+  interpreter on every pair of canonical states (every state and every value, for a kernel with a
+  number) of formats of the statements, in both forms of `max_nl`, judged by a reading of its
+  claims in exact arithmetic (I1 to I5, the set operations, the constructor, the conversions, the
+  predicates): three formats of precision 1 and 2 in the quick suite, four of precision 2 and 3
+  with `--full`, two of precision 4 with `KAIRN_GEN_UPWARD_PRECISION=4` (a run for a machine with
+  many processors), and the same lines judged by the oracle's command line with
+  `KAIRN_GEN_UPWARD_ORACLE=1`.
+
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.
 `-k TEXT` runs only the tests whose name (`module.Class.test`) contains TEXT, and `--skip TEXT`
@@ -710,4 +819,6 @@ same). `add_down_2_2` now computes the rounding down of `z1 - dd` as minus the r
 `dd - z1`, and negates no radius.
 
 The Rocq output is checked by hand on a machine with Rocq 9.0.1 and Flocq 4.2.2: `make -C proofs`
-builds `Model.v`, `Statements.v` and the proofs, and runs the audit.
+builds `Model.v`, `Statements.v` and the proofs, and runs the audit. `UpwardModel.v` and
+`UpwardStatements.v` import `proofs/theories/IeeeUpwardOperations.v` and `IeeeUpwardVocabulary.v`,
+whose names they use as the design page writes them ("Statements").

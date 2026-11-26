@@ -99,6 +99,9 @@ class Claims(unittest.TestCase):
         ks = common.kernels()
         cls.doc = json.loads(claims.claims(ks))
         cls.by = {k['name']: k for k in cls.doc['kernels']}
+        # The entries of the upward family (the round-up interval) have a vocabulary of their own,
+        # which test_upward.py checks.
+        cls.entries = [k for k in cls.doc['kernels'] if 'rounding' not in k]
 
     def test_committed_claims_are_these(self):
         with open(os.path.join(common.GEN, 'claims.json'), encoding='utf-8') as f:
@@ -162,7 +165,7 @@ class Claims(unittest.TestCase):
         self.assertEqual(self.doc['schema'], 1)
         keys = ['name', 'inputs', 'outputs', 'value', 'requires', 'ensures', 'min_precision', 'status',
                 'theorem', 'source', 'flops', 'instances']
-        for k in self.doc['kernels']:
+        for k in self.entries:
             extended = k.get('domain') == 'extended'
             want = list(keys)
             if extended:          # the domain after the name, the IEEE-model status after the status
@@ -678,7 +681,7 @@ class Claims(unittest.TestCase):
         # owner's decision of 2026-11-23 for the ball): their cores' listings on the guarded limbs.
         constructors |= {'ball_make_2_entry'}
         milestone2 |= {'interval_make_2_entry'}
-        self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
+        self.assertEqual({k['name'] for k in self.entries if 'ieee_only' in k},
                          full | full_ball | constructors | finishes | milestone2)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))
         self.assertEqual(list(self.by['ball_add_1_full'])[:3], ['name', 'domain', 'ieee_only'])

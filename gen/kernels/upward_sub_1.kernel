@@ -1,0 +1,25 @@
+# The difference of two intervals of the round-up interval (docs/developer/design/upward.md, "Sum,
+# difference, negation"): x + swap(y), each lane rounded toward +infinity, so that the upper bound is
+# RU(b - c) and the negated lower bound RU(-a + d), minus RD(a - d), for x = [a, b] and y = [c, d]:
+# the tightest interval of T; the empty set when an operand is empty. Requires the rounding mode
+# upward set by kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang
+# -frounding-math, MSVC /fp:strict).
+kernel:        upward_sub_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         pair stored y = yu yn
+output:        pair z = zu zn
+requires:      upward xu xn
+requires:      upward yu yn
+ensures:       encloses_interval zu zn x-y x=xu,xn y=yu,yn tight=rounded bounded_when=abs_le(x-y,omega) bounded_exactly
+min_precision: 1
+source:        the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   each lane is a bound of its own, and a lane that is not finite is part of a state (an unbounded interval, or with the other lane the empty set); encloses_interval states what comes out
+
+zu = add_ru(xu, yn) | zn = add_ru(xn, yu)       # x + swap(y)

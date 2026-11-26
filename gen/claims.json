@@ -15440,6 +15440,1606 @@
         "binary64": [],
         "binary32": []
       }
+    },
+    {
+      "name": "upward_add_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "x+y",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x+y",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sums of the lanes rounded upward (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_add_num_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "x+t",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "numbers": [
+            "t"
+          ],
+          "tight": {
+            "kind": "rounded"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x+t",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_contains_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "member",
+          "args": [
+            "t",
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_empty_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "empty",
+          "args": [
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the upper bound tested for a NaN (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_entire_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "entire",
+          "args": [
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "both lanes compared with +inf (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "eq",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared with the negated lanes (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_from_interval_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "same_set",
+          "of": {
+            "upper": "zu",
+            "nlower": "zn"
+          },
+          "from": {
+            "lower": "xl",
+            "upper": "xu"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the upper bound and the negated lower bound, the empty set after a test (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_hull_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "union",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the larger lanes, the empty set its identity (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_intersection_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "intersection",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the smaller lanes, the empty set if they cross (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_less_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared with the other lanes negated (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_less_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared with the other lanes negated (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_make_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "lo",
+          "limbs": 1
+        },
+        {
+          "name": "hi",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "makes_interval",
+          "upper": "zu",
+          "nlower": "zn",
+          "from": {
+            "lower": "lo",
+            "upper": "hi"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_mul_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "x*y",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x*y",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 8,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_mul_num_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "x*t",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "numbers": [
+            "t"
+          ],
+          "tight": {
+            "kind": "rounded"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x*t",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_neg_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "-x",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "tight": {
+            "kind": "exact"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "-x",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the two lanes exchanged (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_negative_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "0"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the upper bound compared with 0 (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_positive_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "0",
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the negated lower bound compared with 0 (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_rel_disjoint_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "disjoint",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_rel_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "equal",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared, and tests of emptiness (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_rel_interior_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "interior",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared, and a test of emptiness (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_sub_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zu",
+          "limbs": 1
+        },
+        {
+          "name": "zn",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "upper": "zu",
+          "nlower": "zn",
+          "set": "x-y",
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x-y",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_subset_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        },
+        {
+          "name": "yn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)",
+        "upward(yu, yn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "subset",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            },
+            "y": {
+              "upper": "yu",
+              "nlower": "yn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lanes compared, and a test of emptiness (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_to_interval_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "same_set",
+          "of": {
+            "lower": "zl",
+            "upper": "zu"
+          },
+          "from": {
+            "upper": "xu",
+            "nlower": "xn"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "upward_zero_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "rounding": "upward",
+      "inputs": [
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "xn",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "upward(xu, xn)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "0"
+          ],
+          "intervals": {
+            "x": {
+              "upper": "xu",
+              "nlower": "xn"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "both lanes compared with 0 (the listing of the round-up interval)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
     }
   ],
   "folds": [

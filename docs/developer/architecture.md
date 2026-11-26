@@ -125,6 +125,9 @@ of the format) or masks.
 | `const up(EXPR)` | the smallest number of the format not below `EXPR`, an exact expression over $u$, $\eta$, integers and the constants `unit(K)`, `tiny(K)` of a proved kernel's bound | an exact literal per type |
 | `times_inf a` | $a \times \infty$: a NaN for a NaN or a zero, otherwise the infinity with the sign of $a$ | a plain multiplication by infinity; its result may only be compared or selected |
 | `call K args` | another kernel | inlined in C++, kept as a call in Rocq |
+| `add_ru a b`, `mul_ru a b` | $\mathrm{RU}(a + b)$, $\mathrm{RU}(ab)$: IEEE 754's sum and product rounded toward $+\infty$ (the round-up interval only: [below](#the-round-up-interval)) | an addition, a multiplication, under the mode upward |
+| `unord a b` | a mask: $a$ or $b$ is a NaN | a NaN test |
+| `max_nl a b` | the greater of $a$ and $b$, $b$ when $a$ is a NaN | x86's `MAXPD`, arm64's `FMAXNM` |
 
 Rules the generator enforces on every kernel, and refuses to generate otherwise:
 
@@ -1784,6 +1787,51 @@ and for `acc_radius_k`, `finite r -> (ok = true -> ... <= val r) /\ (ok = true -
 1 / 2)`. A kernel whose claims are all about its first group keeps the statement it had. No
 accumulator kernel has a bridge (`ieee: bridge`): the bridge says that a finite output limb 0
 means a finite run of the whole program, which `b` breaks.
+
+### The round-up interval
+
+The opt-in round-up interval (the [design page](design/upward.md) is its contract) is a family of
+kernels of its own, the **upward family**: a description that says `rounding: upward`. A state of
+the interval $[a, b]$ is the pair $(u, n) = (b, -a)$, the two lanes of one register, lane 0 the
+upper bound; the empty set is $(\mathrm{NaN}, \mathrm{NaN})$. Its kernels round toward $+\infty$
+with `add_ru` and `mul_ru`, and use none of the operations that round to nearest.
+
+**The IR stays scalar.** A description declares pairs, `input: pair stored x = xu xn` and
+`output: pair z = zu zn`, and writes a **pair line**, two statements separated by ` | `, lane 0 on
+the left, where the two are the two lanes of one instruction:
+
+```
+nyu = neg(yu)          | nyn = neg(yn)
+q1u = mul_ru(xu, yu)   | q1n = mul_ru(xn, yu)          x * bcast0(y)
+m2u = max_nl(q2u, m1u) | m2n = max_nl(q2n, m1n)        a NaN candidate loses
+```
+
+Each lane of a pair is a one-limb input or output of its own, named by the lane, and a pair line
+is its two statements: the interpreter, the Rocq printer and the claims read it so, and only the
+printers of the register form read the pairing (`ir.Kernel.pair_inputs`, `pair_outputs`,
+`pair_lines`). The generator keeps the family apart from the other kernels (`ir.KernelSet.upward`):
+every generated file of the others is what it was without the family, which is in
+`gen/claims.json`, after the other kernels, and has files of its own, `proofs/gen/UpwardModel.v`,
+`UpwardStatements.v` and `UpwardAudit.v` (printed by `gen/kairn_gen/upward.py`) and the header of
+its C++. `max_nl` has two machine forms, x86's `MAXPD` and arm64's `FMAXNM`, which differ in the
+sign of a zero: the interpreter computes the one its command line names (`kairn-gen interp --max
+sel`, the default, or `--max nm`), and the Rocq model takes `max_nl` as a variable, so that each
+statement is about every `max_nl` with the property `max_nl_ok` that both forms have.
+
+**The rules of the family**, refused by name ([the design page](design/upward.md#the-rules)):
+U1, the family's operations (`add_ru`, `mul_ru`, `max_nl`, `unord`, `neg`, `abs`, `copy`, the
+comparisons, `and`, `or`, `not`, `select`), its constants (`0`, `const inf`, `const nan`) and calls
+of its own kernels only, `ieee_only` and the extended domain, and nothing of the family outside
+it; U2, the pair lines, P1 to P5: one operation in both lanes but `neg | copy` and `copy | neg`,
+each operand position one register (a pair in its order, swapped or broadcast, constants, a
+broadcast or a make of scalars), a pair of two lanes, a scalar beside no lane of a pair, a mask of
+a pair line made by a pair line of comparisons or `unord` or broadcast from a scalar mask; U3, no
+negation of a rounded result, directly or through `select`, `copy` or `max_nl`; U4, no `guard`,
+and R3 does not apply: the printer puts a barrier on every input instead; U5, the first operand of
+every `max_nl` is a result of `mul_ru` or a lane of a pair input, so that its NaNs are quiet; U6,
+every rounded operation depends on the kernel's first pair input; U7, a pair output is the result
+of one pair line, and a mask or a number output of a scalar statement. Every other rule of this
+section holds of the family too (the cone, R1, R2, rule 5, the names).
 
 ## Kernels of the first wave
 
@@ -3560,6 +3608,49 @@ those of `ball_to_interval_2` (whose constants are those of `interval_add_2`, th
 Two listings differ from the page's in form, not in value: the page writes the radius of `ball_to_interval_2` as the 2-limb numbers $(-r, 0)$ and $(r, 0)$, and the listing makes them by `make_2` (whose guard leaves a radius as it is), so that no limb is added to a literal zero, which the C++ printer would write as an addition of $+0$, the form of a guard; `ball_split_2`, above, does the same with $\mp h$.
 
 **In the formal models.** IEEE model only. `ball_of_interval` with `ieee1788` and a center of two limbs: `canonical_2 m0 m1`, the first conjunct, with no hypothesis beyond the requirement `interval_2` of $X$. `ball_of_interval` with `finite_when`: for `ieee1788`, `(interval_bounded_n X -> finite c /\ l <= c <= h /\ Rabs (c - m) <= ... /\ (r = infinity prec emax false \/ (finite r /\ forall z : R, in_interval_n X z -> Rabs (z - c) <= val r)) /\ (C -> finite r))`; for `ball`, `(interval_bounded_n X -> forall z : R, in_interval_n X z -> in_ball_n B z)` and `(interval_bounded_n X -> C -> ball_finite_n B /\ ...)`, C the conditions `Rabs (val xl0 + val xl1) <= bpow radix2 (emax - 2)` and the same of the upper bound. `interval_of_ball` of two limbs: the shape of the outward tightness of `encloses_interval` (`range_lower S (XFin lo)`, `range_upper S (XFin hi)`, the exact bound as `xval_2 zl0 zl1 = XFin lo`, and an infinite bound of the set as the infinity of $Z$), under `ball_finite_n` of the ball, and `bounded_when` as I5. `makes_ball` with `rel`: one conjunct more, for `xnonempty` finite bounds, `val lo <= c <= val hi /\ Rabs (c - m) <= ...` and the radius as `RU`.
+
+### Claims of the round-up interval
+
+The kernels of the upward family ([above](#the-round-up-interval); the design page, ["Claims and the
+oracle"](design/upward.md#claims-and-the-oracle)) have entries of `gen/claims.json` after every
+other kernel's, and only theirs carry `"rounding": "upward"`, after `ieee_only`: every operation of
+the kernel rounds upward, and its runner holds the mode. A pair is two one-limb inputs or outputs,
+named by its lanes, and the vocabulary adds to the kinds of the interval kernels:
+
+- the requirement `upward(U, N)`: the one-limb inputs U and N are the stored pair of a canonical
+  state, $(\mathrm{NaN}, \mathrm{NaN})$ or $(b, -a)$ with neither lane a NaN or $-\infty$ and
+  $a \le b$;
+- a set named by its stored pair, `{"upper": U, "nlower": N}` in `intervals`, its members those of
+  the state; and the output pair of `encloses_interval`, `interval_set` and `makes_interval`
+  named `"upper"` and `"nlower"` in place of `"lower"` and `"upper"`, the empty set two NaN and the
+  lower bound $-$ `nlower`;
+- `numbers`, a list of one-limb inputs of an `encloses_interval` entry, after `intervals`: each
+  ranges over the members of `Interval(t)`, $\{t\}$ for a finite $t$ and every real otherwise,
+  is never empty, and is bounded when finite;
+- `same_set`, with `of` (the output) and `from` (the input), each a stored pair or the bounds of a
+  default interval: the output is canonical, empty exactly when the input is, and has the same
+  members and so the same bounds (the signs of zeros are not claimed).
+
+A description writes every pair in stored order, lane 0 first, and the parser names it: an output
+pair where a claim has the two numbers of its result, and a set `x=xu,xn` whose operand is required
+`upward xu xn` (`ir._stored_names`). For example:
+
+```json
+{"kind": "encloses_interval", "upper": "zu", "nlower": "zn", "set": "x+t",
+ "intervals": {"x": {"upper": "xu", "nlower": "xn"}}, "numbers": ["t"], "tight": {"kind": "rounded"},
+ "bounded_when": [{"abs_le": "x+t", "omega": true}], "bounded_exactly": true}
+{"kind": "same_set", "of": {"lower": "zl", "upper": "zu"}, "from": {"upper": "xu", "nlower": "xn"}}
+```
+
+**In the formal model.** IEEE model only, in `proofs/gen/UpwardStatements.v`: one statement
+`K_spec` per kernel in the shape of the interval kernels' (`interval_add_1_spec`), in the vocabulary
+of `proofs/theories/IeeeUpwardVocabulary.v` (`upward_1`, `upward_empty_1`, `upward_nonempty_1`,
+`in_upward_1`, `upward_bounded_1`, `in_number_1`), the lower bound of a result `xopp (xval zn)`; a
+kernel that computes `max_nl` has the binders `(max_nl : ...) (max_nl_ok_ : max_nl_ok prec emax
+max_nl)` after its NaN functions, and its I4 is the sum's, each bound exactly the rounding of the
+bound of the exact range. A number $t$ is bound as the real `t'`, a member of `in_number_1 t`. The
+line protocol is the default's: the limbs in the order of the kernel's inputs, a state its two
+lanes as stored (`upward_add_1 binary64 XU XN YU YN -> ZU ZN`), the empty set `nan nan`.
 
 ## The line protocol
 

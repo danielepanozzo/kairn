@@ -1,0 +1,30 @@
+# Whether two intervals of the round-up interval have no member in common (IEEE 1788 disjoint): an
+# operand empty, or one above the other; the default interval_rel_disjoint_1 on the meanings. Exact,
+# in every rounding mode (docs/developer/design/upward.md, "Predicates and comparisons"). Requires
+# the rounding mode upward set by kairn::upward::Scope and the options of docs/concepts/upward.md
+# (GCC and Clang -frounding-math, MSVC /fp:strict).
+kernel:        upward_rel_disjoint_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         pair stored y = yu yn
+output:        mask m
+requires:      upward xu xn
+requires:      upward yu yn
+ensures:       certain m disjoint x y x=xu,xn y=yu,yn exact
+min_precision: 1
+source:        the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+ee = unord(xu, yu)
+nx = neg(xn)
+ny = neg(yn)
+da = lt(xu, ny)
+db = lt(yu, nx)
+dd = or(da, db)
+m = or(ee, dd)

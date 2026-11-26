@@ -2,7 +2,7 @@
 import os
 import re
 
-from . import claims, cpp, ieee, ir, library, objcode, rocq, rules, simd
+from . import claims, cpp, ieee, ir, library, objcode, rocq, rules, simd, upward
 from . import emulated
 
 # Every file in these directories must be one that build writes.
@@ -18,6 +18,9 @@ def load(root, kernel_dir=None):
 
 
 def outputs(kernels):
+    """Every generated file and its text. The kernels of the upward family (ir.KernelSet.upward) are
+    in gen/claims.json, after the others, and in proofs/gen/Upward*.v, files of their own; every
+    other printer reads the other kernels only, as it did before the family existed."""
     return {
         'proofs/gen/Model.v': rocq.model(kernels),
         'proofs/gen/Statements.v': rocq.statements(kernels),
@@ -30,6 +33,10 @@ def outputs(kernels):
         'proofs/gen/IeeeFoldModel.v': ieee.fold_model(kernels),
         'proofs/gen/IeeeFoldStatements.v': ieee.fold_statements(kernels),
         'proofs/gen/IeeeWith.v': ieee.with_model(kernels),
+        # The round-up interval (docs/developer/design/upward.md, "Statements").
+        'proofs/gen/UpwardModel.v': upward.model(kernels),
+        'proofs/gen/UpwardStatements.v': upward.statements(kernels),
+        'proofs/gen/UpwardAudit.v': upward.audit(kernels),
         'include/kairn/gen/prelude.hpp': cpp.prelude(kernels),
         'include/kairn/gen/scalar.hpp': cpp.scalar(kernels),
         'include/kairn/gen/avx2.hpp': simd.header(simd.AVX2, kernels),
@@ -251,4 +258,12 @@ def summary(kernels):
         f'accepted by R3 only through a pending guard: {through_text or "none"}',
         f'folds: {len(kernels.folds)} ({", ".join(kernels.folds) or "none"})',
         f'folds UNVERIFIED: {", ".join(n for n, f in kernels.folds.items() if f.status == "unverified") or "none"}',
-    ] + exposed_report(kernels)
+    ] + upward_summary(kernels) + exposed_report(kernels)
+
+
+def upward_summary(kernels):
+    """The lines about the upward family (the round-up interval), which the lines above leave out."""
+    family = getattr(kernels, 'upward', {})
+    return [f'upward family (rounding upward; proofs/gen/Upward*.v): {len(family)} kernels',
+            f'upward family IEEE model UNVERIFIED: '
+            f'{", ".join(n for n, k in family.items() if k.ieee_status != "proved") or "none"}']

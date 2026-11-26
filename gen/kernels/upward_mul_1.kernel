@@ -1,0 +1,39 @@
+# The product of two intervals of the round-up interval (docs/developer/design/upward.md, "The
+# product"): for x = [a, b], y = [c, d], stored (b, -a) and (d, -c), lane 0 takes the candidates of the
+# upper bound, bd, ac, ad, bc, and lane 1 those of the negated lower bound, -ad, -bc, -bd, -ac, eight
+# products rounded upward in four multiplications of two lanes; the operands are negated, never a
+# product (rule U3). The seed Q1 has its NaN lanes (0 times infinity) made +0, the other three are
+# folded in by max_nl, in which a NaN candidate loses, and an empty operand makes the empty set.
+# Exactly rounded: each bound is the rounding of the bound of the exact range, 0 times infinity being
+# 0. Requires the rounding mode upward set by kairn::upward::Scope and the options of
+# docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict).
+kernel:        upward_mul_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         pair stored y = yu yn
+output:        pair z = zu zn
+requires:      upward xu xn
+requires:      upward yu yn
+ensures:       encloses_interval zu zn x*y x=xu,xn y=yu,yn tight=rounded bounded_when=abs_le(x*y,omega) bounded_exactly
+min_precision: 1
+source:        the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are the greatest of rounded products, a NaN candidate dropped, and the empty set is selected after an explicit test; encloses_interval states what comes out
+
+nyu = neg(yu)                    | nyn = neg(yn)                     # neg(y)
+q1u = mul_ru(xu, yu)             | q1n = mul_ru(xn, yu)              # x * bcast0(y): (bd, -ad)
+q2u = mul_ru(xn, yn)             | q2n = mul_ru(xu, yn)              # swap(x) * bcast1(y): (ac, -bc)
+q3u = mul_ru(xn, nyu)            | q3n = mul_ru(xu, nyu)             # swap(x) * bcast0(-y): (ad, -bd)
+q4u = mul_ru(xu, nyn)            | q4n = mul_ru(xn, nyn)             # x * bcast1(-y): (bc, -ac)
+e1u = unord(q1u, q1u)            | e1n = unord(q1n, q1n)
+m1u = select(e1u, 0, q1u)        | m1n = select(e1n, 0, q1n)         # the seed: Q1, a NaN lane +0
+m2u = max_nl(q2u, m1u)           | m2n = max_nl(q2n, m1n)            # a NaN candidate loses
+m3u = max_nl(q3u, m2u)           | m3n = max_nl(q3n, m2n)
+m4u = max_nl(q4u, m3u)           | m4n = max_nl(q4n, m3n)
+eu  = unord(xu, yu)              | en  = unord(xn, yn)               # an operand is empty
+zu  = select(eu, const nan, m4u) | zn  = select(en, const nan, m4n)

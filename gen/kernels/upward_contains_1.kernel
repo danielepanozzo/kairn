@@ -1,0 +1,30 @@
+# Whether a number t of T is a member of an interval of the round-up interval: -n <= t <= u and t
+# finite, written on the lanes as stored (a comparison with a NaN is false, so the empty set
+# contains nothing); the default interval_contains_1 on the meaning. Exact, in every rounding mode
+# (docs/developer/design/upward.md, "Predicates and comparisons"). Requires the rounding mode upward
+# set by kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang
+# -frounding-math, MSVC /fp:strict).
+kernel:        upward_contains_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         t
+output:        mask m
+requires:      upward xu xn
+ensures:       certain m member t x x=xu,xn exact
+min_precision: 1
+source:        the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+a = le(t, xu)
+nt = neg(t)
+b = le(nt, xn)
+ta = abs(t)
+ft = lt(ta, const inf)
+ab = and(a, b)
+m = and(ab, ft)

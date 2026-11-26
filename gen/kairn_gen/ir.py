@@ -155,8 +155,29 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     ordinary_inline: free text        optional: the C++ is an ordinary inline function, not forced
                                       inline though it has at most two limbs, and why
     unused:        x1 free text       optional: an input the computation does not need, and why
+    rounding:      upward             optional: the kernel is of the upward family, the round-up
+                                      interval (docs/developer/design/upward.md): it rounds toward
+                                      +infinity, with add_ru and mul_ru, and rules U1 to U7 and P1
+                                      to P5 apply (rules.py)
+    input:         pair stored x = xu xn
+                                      a pair: two one-limb values held in one register, lane 0
+                                      first (for a state, its upper bound and its negated lower
+                                      bound); each lane is a one-limb input of its own
+    output:        pair z = zu zn     (pair outputs likewise)
+    requires:      upward xu xn       the stored pair of a canonical state of the round-up interval
+    ensures:       encloses_interval zu zn x+t x=xu,xn numbers=t tight=rounded [bounded_when=...]
+                                      in the upward family a pair is written in stored order: an
+                                      output pair is named upper and nlower, and so is a set whose
+                                      operand is required upward; numbers= lists one-limb inputs,
+                                      each ranging over the members of Interval(t)
+    ensures:       same_set zl zu from=xu,xn
+                                      the output names the set that the input names (each a pair, or
+                                      the bounds of a default interval): the same members
 
     sh = add(x0, y0)                  one operation per line
+    zu = add_ru(xu, yu) | zn = add_ru(xn, yn)
+                                      a pair line: two statements, lane 0 on the left, the two lanes
+                                      of one instruction
     (s, e) = two_sum(a, b)            a call of another kernel
     g = prod(const splitter, a)       a format-dependent constant as an operand
     d = rmul(const unit_computed(add_2_2), mz)
@@ -352,7 +373,25 @@ OPS = {
     # A plain multiplication. It is accepted by the parser only so that rule R1 refuses it with a
     # reason; no printer and no interpreter knows it.
     'mul': ((LIMB, LIMB), LIMB),
+    # The round-up interval (docs/developer/design/upward.md, "The operations of the IR"): IEEE 754's
+    # sum and product rounded toward +infinity, a NaN test, and the greater of two values in which a
+    # NaN first operand loses. Only the kernels of the upward family (`rounding: upward`) use them,
+    # and those use no operation that rounds to nearest (rules.py, U1).
+    'add_ru': ((LIMB, LIMB), LIMB),
+    'mul_ru': ((LIMB, LIMB), LIMB),
+    'unord': ((LIMB, LIMB), MASK),
+    'max_nl': ((LIMB, LIMB), LIMB),
 }
+
+# The operations of the round-up interval, which no kernel outside the upward family uses; those
+# of them that round (toward +infinity); and the `rounding:` of the family.
+UPWARD_OPS = frozenset({'add_ru', 'mul_ru', 'unord', 'max_nl'})
+ROUNDED_UP = frozenset({'add_ru', 'mul_ru'})
+UPWARD = 'upward'
+# How the claims name the two numbers of a set: a stored pair of the round-up interval (the upper
+# bound and the negated lower bound, lane 0 first), and the bounds of a default interval.
+STORED = ('upper', 'nlower')
+BOUNDS = ('lower', 'upper')
 
 # Operations emitted as a fused multiply-add instruction, which constant evaluation does not have.
 FUSED = frozenset({'fma', 'fms', 'fnma', 'prod'})
@@ -418,6 +457,10 @@ class Stmt:
     op: str       # a key of OPS, or the name of the called kernel
     args: tuple   # Operands
     line: int
+    # A statement of a pair line (the round-up interval: docs/developer/design/upward.md, "The pair
+    # form") is lane 0 or lane 1 of one instruction; its partner is the statement of the same line.
+    # None for every other statement.
+    lane: int = None
 
     @property
     def is_call(self):
@@ -475,10 +518,34 @@ class Kernel:
     # The record of the names of the constants up(EXPR) of the set the kernel was loaded with
     # (load_kernels), shared by its kernels: {EXPR: name}. None for a kernel read on its own.
     constant_names: dict = field(default=None, repr=False, compare=False)
+    # The round-up interval (docs/developer/design/upward.md): `rounding: upward` puts the kernel in
+    # the upward family, which the rules check by U1 to U7 and P1 to P5 and which load_kernels keeps
+    # apart from the other kernels (KernelSet.upward). A pair is two one-limb values held in one
+    # register, lane 0 first; the IR stays scalar, so a pair input or output is a one-limb group per
+    # lane, named by the lane, and the pair is recorded here: {pair name: (lane 0, lane 1)}.
+    rounding: str = None
+    pair_inputs: dict = field(default_factory=dict)
+    pair_outputs: dict = field(default_factory=dict)
 
     @property
     def extended(self):
         return self.domain == 'extended'
+
+    @property
+    def upward(self):
+        """Whether the kernel is of the upward family (`rounding: upward`)."""
+        return self.rounding == UPWARD
+
+    def pair_lines(self):
+        """The pair lines of the listing, in order: [(lane-0 statement, lane-1 statement)]."""
+        out, open_ = [], {}
+        for st in self.body:
+            if st.lane is None:
+                continue
+            open_.setdefault(st.line, []).append(st)
+            if len(open_[st.line]) == 2:
+                out.append(tuple(open_.pop(st.line)))
+        return out
 
     @property
     def real_model(self):
@@ -567,6 +634,29 @@ def _group(text, where, classes=()):
                                f'{", after stored or supplied" if classes else ""}, got {text!r}')
     limbs = tuple(m.group(2).split()) if m.group(2) else (m.group(1),)
     return Group(m.group(1), limbs), cls
+
+
+def _add_pair(k, side, text, where):
+    """`input: pair [stored] x = xu xn` or `output: pair z = zu zn` (the round-up interval): one
+    one-limb group per lane, named by the lane, and the pair recorded in k.pair_inputs or
+    k.pair_outputs. That a pair has exactly two lanes is rule P3's (rules.py), not the parser's."""
+    g, cls = _group(text, where, INPUT_CLASSES if side == 'input' else ())
+    if g.kind != LIMB:
+        raise DescriptionError(f'{where}: a pair holds two limbs, not a mask')
+    table = k.pair_inputs if side == 'input' else k.pair_outputs
+    if g.name in k.pair_inputs or g.name in k.pair_outputs:
+        raise DescriptionError(f'{where}: pair {g.name} is declared twice')
+    table[g.name] = g.limbs
+    for v in g.limbs:
+        (k.inputs if side == 'input' else k.outputs).append(Group(v, (v,)))
+        if cls:
+            getattr(k, cls).add(v)
+
+
+def _pair_words(text):
+    """The declaration after the word `pair`, or None when the declaration is not of a pair."""
+    words = text.split()
+    return text.strip()[len('pair'):] if len(words) > 1 and words[0] == 'pair' else None
 
 
 def _finite_from(text, where):
@@ -681,10 +771,44 @@ def _set_kinds(e, k):
     sets = e.pop('sets')
     balls = bool(sets) and all(('ball', s['a'], s['b']) in k.requires for s in sets.values())
     key, names = ('balls', ('center', 'radius')) if balls else ('intervals', ('lower', 'upper'))
+    # The round-up interval: a set named by its stored pair (upper bound, negated lower bound).
+    if bool(sets) and all((UPWARD, s['a'], s['b']) in k.requires for s in sets.values()):
+        names = STORED
     out = {x: v for x, v in e.items() if x not in ('exact', 'exact_when')}
     out[key] = {x: {names[0]: s['a'], names[1]: s['b']} for x, s in sets.items()}
     out.update({x: v for x, v in e.items() if x in ('exact', 'exact_when')})
     return out
+
+
+def _stored_names(k, e):
+    """An entry of the claims with the pairs of the round-up interval named as they are stored.
+    A description writes every pair in stored order, lane 0 first: where an entry has the two
+    numbers of its result, an output pair (zu, zn) is {"upper": zu, "nlower": zn} instead of
+    {"lower", "upper"}; a set NAME=A,B whose operand is required `upward A B` is {"upper": A,
+    "nlower": B}; and the output and the input of same_set are named so, or as the bounds of a default
+    interval. Every other entry is returned as it is, and so is every entry of a kernel outside the
+    family but same_set, a claim of the family that the rules then refuse there (rules.outside_family)."""
+    outs = set(k.pair_outputs.values())
+
+    def named(a, b, stored):
+        return dict(zip(STORED if stored else BOUNDS, (a, b)))
+    if e['kind'] == 'same_set':
+        return {'kind': e['kind'], 'of': named(e['of']['a'], e['of']['b'], (e['of']['a'], e['of']['b']) in outs),
+                'from': named(e['from']['a'], e['from']['b'], (UPWARD, e['from']['a'], e['from']['b']) in k.requires)}
+    if not k.upward:
+        return e
+    if e['kind'] in ('encloses_interval', 'interval_set', 'makes_interval') and (e['lower'], e['upper']) in outs:
+        out = {}
+        for key, v in e.items():
+            if key == 'lower':
+                out.update(named(e['lower'], e['upper'], True))
+            elif key != 'upper':
+                out[key] = v
+        e = out
+    if e['kind'] in ('encloses_interval', 'interval_set'):
+        e['intervals'] = {x: named(b['lower'], b['upper'], (UPWARD, b['lower'], b['upper']) in k.requires)
+                          for x, b in e['intervals'].items()}
+    return e
 
 
 def _pairs(words, where, what, keys):
@@ -755,6 +879,14 @@ def _ensures(words, where):
             entry = {key: v for key, v in entry.items() if key not in ('rel', 'abs', 'smallest_radius')} | \
                 {'midpoint_when': conds} | {key: v for key, v in entry.items() if key in ('rel', 'abs', 'smallest_radius')}
         return entry
+    if kind == 'same_set' and len(words) == 4:
+        # The round-up interval: the output names the set the input names, both given in stored
+        # order (an output pair: upper, negated lower; a default interval: lower, upper), which
+        # parse_kernel names from the declarations (_stored_names).
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m:
+            raise DescriptionError(f'{where}: expected "same_set A B from=C,D"')
+        return {'kind': kind, 'of': {'a': words[1], 'b': words[2]}, 'from': {'a': m.group(1), 'b': m.group(2)}}
     if kind == 'makes_interval' and len(words) == 4:
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
         if not m:
@@ -865,7 +997,7 @@ def _ensures(words, where):
         names, opts = [], {}
         for w in words[4:]:
             key, eq, val = w.partition('=')
-            if key in ('tight', 'exact_lower', 'exact_upper', 'bounded_when') and eq:
+            if key in ('tight', 'exact_lower', 'exact_upper', 'bounded_when', 'numbers') and eq:
                 if key in opts:
                     raise DescriptionError(f'{where}: {key} given twice')
                 opts[key] = val
@@ -883,6 +1015,13 @@ def _ensures(words, where):
             return entry
         entry = {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
                  'intervals': _pairs(names, where, 'interval', ('lower', 'upper'))}
+        if 'numbers' in opts:
+            # The round-up interval: one-limb inputs that each range over the members of
+            # Interval(t), {t} for a finite t and every real otherwise; written only when given.
+            numbers = opts['numbers'].split(',')
+            if not all(VALUE_NAME.match(n) for n in numbers) or len(set(numbers)) != len(numbers):
+                raise DescriptionError(f'{where}: numbers=NAME,...: the names of one-limb inputs, each once')
+            entry['numbers'] = numbers
         if 'tight' not in opts:
             raise DescriptionError(f'{where}: an encloses_interval entry needs tight=')
         entry['tight'] = _tight(opts['tight'], where)
@@ -1191,7 +1330,7 @@ def parse_kernel(text, path):
     k = Kernel(name=None, path=path)
     single = {'kernel', 'value', 'min_precision', 'theorem', 'source', 'license', 'status',
               'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry', 'ieee_only',
-              'ieee', 'ieee_finite', 'ieee_finite_result', 'ordinary_inline'} | set(IEEE_THEOREM_KEYS)
+              'ieee', 'ieee_finite', 'ieee_finite_result', 'ordinary_inline', 'rounding'} | set(IEEE_THEOREM_KEYS)
     seen = set()
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
@@ -1200,6 +1339,16 @@ def parse_kernel(text, path):
             continue
         header = re.fullmatch(r'([a-z_]+):\s*(.*)', line)
         if not header:
+            if '|' in line:
+                # A pair line (the round-up interval): two statements, lane 0 on the left, the two
+                # lanes of one instruction.
+                parts = line.split('|')
+                if len(parts) != 2 or not all(p.strip() for p in parts):
+                    raise DescriptionError(f'{where}: a pair line is two statements separated by " | ", got {line!r}')
+                for lane, part in enumerate(parts):
+                    st = _stmt(part.strip(), where, lineno)
+                    k.body.append(Stmt(st.dsts, st.op, st.args, st.line, lane))
+                continue
             k.body.append(_stmt(line, where, lineno))
             continue
         key, val = header.group(1), header.group(2).strip()
@@ -1209,6 +1358,8 @@ def parse_kernel(text, path):
             seen.add(key)
         if key == 'kernel':
             k.name = val
+        elif key in ('input', 'output') and _pair_words(val) is not None:
+            _add_pair(k, key, _pair_words(val), where)
         elif key == 'input':
             g, cls = _group(val, where, INPUT_CLASSES)
             k.inputs.append(g)
@@ -1216,6 +1367,11 @@ def parse_kernel(text, path):
                 getattr(k, cls).add(g.name)
         elif key == 'output':
             k.outputs.append(_group(val, where)[0])
+        elif key == 'rounding':
+            if val != UPWARD:
+                raise DescriptionError(f'{where}: expected "rounding: {UPWARD}" (leave the line out otherwise: '
+                                       'the other kernels round to nearest)')
+            k.rounding = val
         elif key == 'value':
             k.value = val
         elif key == 'requires':
@@ -1273,6 +1429,7 @@ def parse_kernel(text, path):
     for i, e in enumerate(k.ensures):
         if e['kind'] in ('certain', 'trit'):
             k.ensures[i] = _set_kinds(e, k)
+        k.ensures[i] = _stored_names(k, k.ensures[i])
     if not KERNEL_NAME.match(k.name):
         raise DescriptionError(f'{path}: bad kernel name {k.name!r}')
     if not k.inputs or not k.outputs:
@@ -1283,11 +1440,18 @@ def parse_kernel(text, path):
 class KernelSet(dict):
     """{name: Kernel} in output order, and the folds of the same directory, {name: Fold} by name,
     in `folds`. Printers read the folds from here, so that a set of kernels without folds (the
-    test kernels, a dict built by hand) prints exactly what it printed before folds existed."""
+    test kernels, a dict built by hand) prints exactly what it printed before folds existed.
 
-    def __init__(self, *args, folds=None):
+    The kernels of the upward family (`rounding: upward`, docs/developer/design/upward.md) are in
+    `upward`, {name: Kernel} in output order, and not among the items: every printer of the other
+    kernels, and everything that walks them, sees what it saw before the family existed; the
+    family's own printers (upward.py), its claims (claims.py), its rules and the interpreter read
+    them from here. An upward kernel calls only upward kernels, and no other kernel calls one."""
+
+    def __init__(self, *args, folds=None, upward=None):
         super().__init__(*args)
         self.folds = dict(folds or {})
+        self.upward = dict(upward or {})
 
 
 # The two orders of a fold (proofs/theories/Folds.v): fold_seq and fold_lanes.
@@ -1627,15 +1791,23 @@ def load_kernels(directory):
     for name in folds:
         if name in kernels:
             raise DescriptionError(f'{name}.fold: {name} is also the name of a kernel')
-    return ordered(kernels, folds)
+    # The upward family apart (KernelSet.upward), each part in output order. A call across the two
+    # parts is refused by the rules (U1), not here.
+    upward = {n: k for n, k in kernels.items() if k.upward}
+    out = ordered({n: k for n, k in kernels.items() if not k.upward}, folds)
+    out.upward = dict(ordered(upward))
+    return out
 
 
-def ordered(kernels, folds=None):
+def ordered(kernels, folds=None, upward=None):
     """Callees before callers (Rocq needs it), otherwise by input limb count, then by name. The
-    folds are kept: those given, or those of `kernels` if it is a KernelSet."""
+    folds are kept: those given, or those of `kernels` if it is a KernelSet; and so are the kernels
+    of the upward family (KernelSet.upward), which are not ordered with the others."""
     if folds is None:
         folds = getattr(kernels, 'folds', {})
-    out = KernelSet(folds=folds)
+    if upward is None:
+        upward = getattr(kernels, 'upward', {})
+    out = KernelSet(folds=folds, upward=upward)
 
     def visit(name, path):
         if name in out:
@@ -1735,6 +1907,6 @@ def constants(kernel):
 
 def flops(kernel, kernels):
     """Floating-point operations after inlining; an FMA counts as one, and so do a guard and a
-    multiplication by infinity."""
-    arith = {'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'guard', 'times_inf'}
+    multiplication by infinity, and a sum and a product rounded upward (the round-up interval)."""
+    arith = {'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'guard', 'times_inf'} | ROUNDED_UP
     return sum(1 for p in prims(kernel, kernels) if p.op in arith)
