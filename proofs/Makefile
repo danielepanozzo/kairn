@@ -47,12 +47,18 @@ audit: build
 	@if grep -q "Print Assumptions" gen/IeeeAudit.v; \
 	  then $(PYTHON) $(AUDIT) assumptions gen/IeeeAudit.v audit/IeeeAudit.out $(ALLOWED); \
 	  else echo "  none yet"; fi
+	@echo "== assumptions of the theorem of every kernel of the round-up interval"
+	@$(ROCQ) compile $(LIBS) gen/UpwardAudit.v > audit/UpwardAudit.out
+	@if grep -q "Print Assumptions" gen/UpwardAudit.v; \
+	  then $(PYTHON) $(AUDIT) assumptions gen/UpwardAudit.v audit/UpwardAudit.out $(ALLOWED); \
+	  else echo "  none yet"; fi
 	@echo "== audit passed"
 
-# The generated model and statement files and the files they import. (gen/Audit.v and
-# gen/IeeeAudit.v name the theorems, so they need the whole build: the audit compiles them.)
+# The generated model and statement files and the files they import. (gen/Audit.v, gen/IeeeAudit.v
+# and gen/UpwardAudit.v name the theorems, so they need the whole build: the audit compiles them.)
 GENERATED := gen/Model.vo gen/Statements.vo gen/IeeeModel.vo gen/IeeeStatements.vo gen/FoldModel.vo \
-             gen/FoldStatements.vo gen/IeeeFoldModel.vo gen/IeeeFoldStatements.vo gen/IeeeWith.vo
+             gen/FoldStatements.vo gen/IeeeFoldModel.vo gen/IeeeFoldStatements.vo gen/IeeeWith.vo \
+             gen/UpwardModel.vo gen/UpwardStatements.vo
 
 gen: Makefile.rocq
 	+$(MAKE) --no-print-directory -f Makefile.rocq $(GENERATED)

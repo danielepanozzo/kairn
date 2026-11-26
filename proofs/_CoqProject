@@ -122,6 +122,8 @@ theories/IeeeBallHull.v
 theories/IeeeMakeEntry.v
 theories/IeeeUpwardOperations.v
 theories/IeeeUpwardVocabulary.v
+gen/UpwardModel.v
+gen/UpwardStatements.v
 theories/IeeeUpwardMax.v
 theories/IeeeUpwardOps.v
 theories/IeeeUpwardProduct.v
