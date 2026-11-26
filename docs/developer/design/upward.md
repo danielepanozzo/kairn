@@ -364,8 +364,8 @@ upward_add_num_1(x = xu xn, t) -> z = zu zn
   nt = neg(t)
   su = add_ru(xu, t)          | sn = add_ru(xn, nt)          x + (t, -t)          make
   wu = add_ru(xu, const inf)  | wn = add_ru(xn, const inf)   x + (inf, inf): the whole line, or empty
-  at = abs(t)
-  ft = lt(at, const inf)                                     t is finite
+  ta = abs(t)
+  ft = lt(ta, const inf)                                     t is finite
   zu = select(ft, su, wu)     | zn = select(ft, sn, wn)      ft broadcast
 
 upward_mul_num_1(x = xu xn, t) -> z = zu zn
@@ -381,8 +381,8 @@ upward_mul_num_1(x = xu xn, t) -> z = zu zn
   su  = add_ru(axu, axn)      | sn  = add_ru(axn, axu)       |x_u| + |x_n| in both lanes
   gu  = lt(0, su)             | gn  = lt(0, sn)
   wu  = select(gu, const inf, su) | wn = select(gn, const inf, sn)   x * whole line
-  at  = abs(t)
-  ft  = lt(at, const inf)                                    t is finite
+  ta  = abs(t)
+  ft  = lt(ta, const inf)                                    t is finite
   zu  = select(ft, fu, wu)    | zn  = select(ft, fn, wn)
 ```
 
