@@ -2,6 +2,7 @@
 // The kernels of the round-up interval that gen/tests/upward_runner.cpp runs: name, input and
 // output kinds (l: limb, m: mask), the call; then the array forms (KAIRN_UPWARD_ARRAY): name,
 // the number of arrays read, of numbers and of arrays written, the call.
+// Requires the rounding mode upward set by kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict).
 KAIRN_UPWARD_KERNEL(upward_add_1, "llll", "ll", P z_; upward_add_1(pair_make(in[0], in[1]), pair_make(in[2], in[3]), z_); out[0] = pair_upper(z_); out[1] = pair_nlower(z_);)
 KAIRN_UPWARD_KERNEL(upward_add_num_1, "lll", "ll", P z_; upward_add_num_1(pair_make(in[0], in[1]), in[2], z_); out[0] = pair_upper(z_); out[1] = pair_nlower(z_);)
 KAIRN_UPWARD_KERNEL(upward_contains_1, "lll", "m", bool m_; upward_contains_1(pair_make(in[0], in[1]), in[2], m_); mo[0] = m_;)

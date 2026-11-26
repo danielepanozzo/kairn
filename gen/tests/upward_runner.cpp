@@ -16,8 +16,10 @@
 // array form (K_arrays) are completed through it, those of one kernel and format together, in chunks of
 // the lengths of CHUNKS in turn (so that the loop of registers and the remainder after it both run,
 // with every length of a remainder), every other chunk in place (the arrays written are the arrays of
-// the first pair read); the requests of the other kernels as without --arrays. The limbs printed are
-// the interpreter's (kairn-gen interp): normalized hexadecimal literals, every NaN nan.
+// the first pair read); the requests of the other kernels as without --arrays. Built with
+// -DKAIRN_UPWARD_RUNNER_ARRAYS, it runs so without the option (tests/CMakeLists.txt, which gives a
+// runner none). The limbs printed are the interpreter's (kairn-gen interp): normalized hexadecimal
+// literals, every NaN nan.
 //
 // Built with -DKAIRN_UPWARD_RUNNER_EMULATED (and linked with tests/emulated/number.cpp), it runs the
 // kernels of tests/emulated/gen/upward.hpp on kairn::emulated::Number instead, on any format of the
@@ -300,7 +302,11 @@ std::vector<std::string> split(const std::string& line) {
 }  // namespace
 
 int main(int argc, char** argv) {
+#if defined(KAIRN_UPWARD_RUNNER_ARRAYS)
+    bool use_arrays = true;   // a build for the cross-checks, which give a runner no option
+#else
     bool use_arrays = false;
+#endif
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--describe") {

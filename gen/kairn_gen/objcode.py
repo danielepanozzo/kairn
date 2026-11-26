@@ -40,6 +40,9 @@ For each form and limb type:
 The listings of double and float differ only in their constants, which can make `fma_distinct`
 differ (two constants of different expressions may be the same number in one format and not in the
 other): every count is given per limb type.
+
+The kernels of the round-up interval (ir.KernelSet.upward) have a section of their own after the
+folds, "upward" (upward_lines, below), which no other kernel's entry changes.
 """
 import json
 
@@ -276,5 +279,70 @@ def objcode(kernels):
                 lines.append(f'   {json.dumps(form)}: {{{row}}}{"," if j + 1 < len(forms) else ""}')
             lines.append(f'  }}{"," if i + 1 < len(names) else ""}')
         lines.append(' }')
+    family = getattr(kernels, 'upward', {})
+    if family:
+        lines[-1] += ','
+        lines += upward_lines(family)
     lines.append('}')
     return '\n'.join(lines) + '\n'
+
+
+# The round-up interval (docs/developer/design/upward.md, "Object code"): its kernels are printed by
+# upward_cpp.py in forms of their own, and the check is of other instructions. Per kernel, form and
+# limb type, the multiplications and the maxima its code asks for:
+#
+# - `sse2`, `neon`: the one-register form; one multiplication per pair line of mul_ru, one maximum
+#   (MAXPD or VMAXPD, FMAXNM) per pair line of max_nl;
+# - `numbers`: the two-number form; one multiplication per mul_ru, and no count of maxima (max_nl is
+#   `a > b ? a : b`, which a compiler may emit as a maximum, a selection or a branch): null;
+# - `avx2`, `neon_arrays`: the array forms, a loop of registers of W lanes and the rest of the
+#   elements by the one-register form, as parts [part, least, mul, max]: the loop's statement by
+#   statement (one multiplication per mul_ru, one maximum per max_nl), and the one-register form's,
+#   each at least once in the function (a compiler may unroll either loop).
+#
+# Every form has, whatever the options, no fused multiply-add, no negated multiplication, no maximum
+# that returns a NaN (arm64's FMAX) and no call outside the object; the rule is the check's
+# (tests/objcode/objcode.py, --upward).
+UPWARD_FORMS = ('sse2', 'neon', 'numbers', 'avx2', 'neon_arrays')
+UPWARD_COUNTS = ('mul', 'max')
+UPWARD_PARTS = ('part', 'least') + UPWARD_COUNTS
+
+
+def upward_counts(k):
+    """{form: counts} of one kernel of the family; the array forms only for those that have one."""
+    from . import upward_cpp
+    lines = k.pair_lines()
+    reg = [sum(1 for s0, _ in lines if s0.op == 'mul_ru'), sum(1 for s0, _ in lines if s0.op == 'max_nl')]
+    stmts = [sum(1 for st in k.body if st.op == 'mul_ru'), sum(1 for st in k.body if st.op == 'max_nl')]
+    out = {'sse2': reg, 'neon': reg, 'numbers': [stmts[0], None]}
+    if k.name in upward_cpp.ARRAYS:
+        parts = [['packed', 1] + stmts, ['tail', 1] + reg]
+        out['avx2'] = parts
+        out['neon_arrays'] = parts
+    return out
+
+
+def upward_lines(family):
+    """The lines of gen/objcode.json's section of the round-up interval, after the folds."""
+    lines = [f' "upward_forms": {json.dumps(list(UPWARD_FORMS))},',
+             f' "upward_counts": {json.dumps(list(UPWARD_COUNTS))},',
+             f' "upward_parts": {json.dumps(list(UPWARD_PARTS))},',
+             ' "upward": {']
+    names = list(family)
+    for i, name in enumerate(names):
+        counts = upward_counts(family[name])
+        lines.append(f'  {json.dumps(name)}: {{')
+        forms = [f for f in UPWARD_FORMS if f in counts]
+        for j, form in enumerate(forms):
+            row = ', '.join(f'{json.dumps(t)}: {json.dumps(counts[form])}' for t in LIMB_TYPES)
+            lines.append(f'   {json.dumps(form)}: {{{row}}}{"," if j + 1 < len(forms) else ""}')
+        lines.append(f'  }}{"," if i + 1 < len(names) else ""}')
+    lines.append(' }')
+    return lines
+
+
+def without_family(text):
+    """gen/objcode.json as it is without the round-up interval: its section, after the folds, taken
+    out (test_upward.py compares it with the file of the other kernels)."""
+    at = text.find(',\n "upward_forms"')
+    return text if at < 0 else text[:at] + '\n}\n'

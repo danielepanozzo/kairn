@@ -277,6 +277,85 @@ class Mnemonics(unittest.TestCase):
                          ('vfmadd231sd', '%xmm1,%xmm2,%xmm3'))
 
 
+class Upward(unittest.TestCase):
+    """The rule of the round-up interval (objcode.py --upward, judge_upward) and its expectations."""
+
+    def count(self, muls=0, maxima=0, fused=0, fmax=0, negmul=0, calls=()):
+        c = disasm.Count()
+        c.mul = [('f', 'mul')] * muls
+        c.maximum = [('f', 'maxpd')] * maxima
+        c.fma = [('f', 'fma')] * fused
+        c.fmax = [('f', 'fmax')] * fmax
+        c.negmul = [('f', 'fnmul')] * negmul
+        c.calls = list(calls)
+        return c
+
+    def test_the_mnemonics(self):
+        for m, want in (('maxpd', True), ('vmaxpd', True), ('vmaxps', True), ('fmaxnm', True), ('fmaxnm.2d', True),
+                        ('maxsd', False), ('vmaxsd', False), ('fmax', False), ('fminnm', False)):
+            self.assertEqual(bool(disasm.MAXIMUM.match(m)), want, m)
+        for m, want in (('fmax', True), ('fmax.2d', True), ('fmaxnm', False), ('fmaxnm.2s', False)):
+            self.assertEqual(bool(disasm.NAN_MAXIMUM.match(m)), want, m)
+        self.assertTrue(disasm.NEGATED_MUL.match('fnmul.2d') and disasm.NEGATED_MUL.match('fnmul'))
+        self.assertFalse(disasm.NEGATED_MUL.match('fmul'))
+        p = disasm.Program('Disassembly of section .text:\n\n0000000000000000 <a>:\n'
+                           '   0:\tfmaxnm.2d\tv0, v1, v2\n   4:\tfnmul\td0, d1, d2\n   8:\tfmax\td0, d0, d1\n'
+                           '   c:\tret\n')
+        c = p.count(p.find('a'))
+        self.assertEqual((len(c.maximum), len(c.negmul), len(c.fmax), len(c.mul)), (1, 1, 1, 1))
+
+    def test_one_function(self):
+        e = {'mul': 4, 'max': 3}
+        self.assertIsNone(objcode.judge_upward(self.count(4, 3), e, False))
+        self.assertIn('5 multiplications, expected 4', objcode.judge_upward(self.count(5, 3), e, False))
+        self.assertIn('2 maxima, expected 3', objcode.judge_upward(self.count(4, 2), e, False))
+        self.assertIn('fused multiply-adds', objcode.judge_upward(self.count(4, 3, fused=1), e, False))
+        self.assertIn('negated multiplications', objcode.judge_upward(self.count(4, 3, negmul=1), e, False))
+        self.assertIn('fmax', objcode.judge_upward(self.count(4, 3, fmax=1), e, False))
+        # The two-number form does not count its maxima; where it branches, a product may be copied
+        # onto the paths of a branch, and the multiplications are at least those asked for.
+        self.assertIsNone(objcode.judge_upward(self.count(8, 7), {'mul': 8, 'max': None}, False))
+        self.assertIn('12 multiplications, expected 8', objcode.judge_upward(self.count(12), {'mul': 8, 'max': None},
+                                                                               False))
+        self.assertIsNone(objcode.judge_upward(self.count(12), {'mul': 8, 'max': None}, False, duplicated=True))
+        self.assertIn('expected at least 8', objcode.judge_upward(self.count(7), {'mul': 8, 'max': None}, False,
+                                                                  duplicated=True))
+
+    def test_calls(self):
+        e = {'mul': 0, 'max': 0}
+        kernel = '__ZN5kairn3gen6upward12_GLOBAL__N_112upward_add_1EDv2_dS2_RS2_'
+        arrays = '__ZN5kairn3gen6upward12_GLOBAL__N_119upward_add_1_arraysEPKdS4_S4_S4_PdS5_m'
+        msvc = '?upward_hull_1@upward@gen@kairn@@YAXT__m128d@@0AEAT1@@Z'
+        self.assertIn('a kernel is not inlined', objcode.judge_upward(self.count(calls=[kernel]), e, False))
+        self.assertIn('a kernel is not inlined', objcode.judge_upward(self.count(calls=[msvc]), e, False))
+        self.assertIsNone(objcode.judge_upward(self.count(calls=[kernel]), e, True))
+        self.assertIsNone(objcode.judge_upward(self.count(calls=[arrays, '__ZNSt3__18bit_castB9']), e, False))
+
+    def test_parts(self):
+        parts = [{'part': 'packed', 'least': 1, 'mul': 4, 'max': 3}, {'part': 'tail', 'least': 1, 'mul': 4, 'max': 3}]
+        for muls, maxima in ((8, 6), (12, 9), (16, 12)):
+            self.assertIsNone(objcode.judge_upward(self.count(muls, maxima), parts, False))
+        self.assertIn('which no number of copies', objcode.judge_upward(self.count(4, 3), parts, False))
+        self.assertIn('which no number of copies', objcode.judge_upward(self.count(9, 6), parts, False))
+
+    def test_the_expectations(self):
+        expected = objcode.load_upward_expected(os.path.join(objcode.ROOT, 'gen', 'objcode.json'))
+        self.assertEqual(len(expected), 24)
+        arrays = {'upward_add_1', 'upward_sub_1', 'upward_mul_1', 'upward_neg_1', 'upward_add_num_1', 'upward_mul_num_1'}
+        for k, forms in expected.items():
+            want = {'sse2', 'neon', 'numbers'} | ({'avx2', 'neon_arrays'} if k in arrays else set())
+            self.assertEqual(set(forms), want, k)
+        self.assertEqual(expected['upward_mul_1']['sse2']['double'], {'mul': 4, 'max': 3})
+        self.assertEqual(expected['upward_mul_1']['numbers']['float'], {'mul': 8, 'max': None})
+        self.assertEqual(expected['upward_mul_num_1']['avx2']['double'],
+                         [{'part': 'packed', 'least': 1, 'mul': 4, 'max': 2},
+                          {'part': 'tail', 'least': 1, 'mul': 2, 'max': 1}])
+        for family in ('gnu', 'msvc', 'clang-cl'):
+            full = objcode.upward_configurations(family, 'full')
+            for c in objcode.upward_configurations(family, 'quick'):
+                self.assertIn(c, full, (family, c))
+
+
 class Matrix(unittest.TestCase):
     def test_tiers(self):
         for family, size in (('gnu', 24), ('msvc', 9), ('clang-cl', 24)):

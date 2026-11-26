@@ -638,15 +638,18 @@ have no constant but `0`, `const inf` and `const nan`, so every format qualifies
 `gen/objcode.json` gets, per upward kernel, form (the register form on x86-64 and on arm64, two
 numbers, the two array forms) and limb type, the expected counts, and `tests/objcode/objcode.py`
 checks them on the flag matrix of each compiler with the options of the target `kairn::upward`
-(contraction off, on and fast; `-O0` to `-O3`; `/Od`, `/O2`, `/O2 /GL`):
+(contraction off, on and fast; `-O0` to `-O3`; `/Od`, `/O2`; an object built with `/GL` holds no
+machine code, so `/O2 /GL` is left to the runners):
 
 - **no fused multiply-add** of any kind (`vfmadd*`, `fmla`, `fmadd`, ...): there is none in the IR;
 - **no negated multiplication** (`fnmul`, `vfnmadd*`, `fnmadd`, ...): rule U3's reason, in the code;
 - **the multiplications**: one per pair line of `mul_ru` in the register form, one per statement in
-  the two-number and the array forms;
-- **the maxima**: one `maxpd` (`vmaxpd`) or `fmaxnm` per `max_nl`, and no `fmax`, which returns the
-  NaN and would make the product wrong;
-- **no call**: every kernel is inlined into its caller.
+  the two-number and the array forms (in the two-number form at least one, where the function
+  branches: Clang 18 at `-O3` copies a product onto the paths of the branches of its selections);
+- **the maxima**: one `maxpd` (`vmaxpd`) or `fmaxnm` per `max_nl` in the register and the array
+  forms (the two-number form's `a > b ? a : b` may be a selection or a branch), and no `fmax`, which
+  returns the NaN and would make the product wrong;
+- **no call**: every kernel is inlined into its caller (but with MSVC at `/Od`, which inlines nothing).
 
 ## Statements
 

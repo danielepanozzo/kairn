@@ -10,6 +10,10 @@ Of the instructions it knows three kinds:
   packed), `vfmaddsub`, `vfmsubadd`; AArch64 `fmadd`, `fmsub`, `fnmadd`, `fnmsub`, `fmla`, `fmls`;
 - plain floating-point multiplications: x86 `mulsd`, `mulss`, `mulpd`, `mulps` and their `v` forms,
   x87 `fmul`; AArch64 `fmul`, `fnmul`, `fmulx`;
+- for the round-up interval (objcode.py --upward), three more, beside those: maxima of a vector
+  register, x86 `maxpd`, `maxps` and their `v` forms and AArch64 `fmaxnm`; AArch64's `fmax`, the
+  maximum that returns a NaN; and AArch64's negated product `fnmul` (also counted as a
+  multiplication);
 - calls and jumps. Where one goes is read from the relocation on the instruction when there is
   one (in an object file, a call to another function always has one, which GNU and LLVM objdump
   print with -r and dumpbin prints as the operand), and otherwise from the target the disassembler
@@ -32,6 +36,10 @@ from dataclasses import dataclass, field
 FUSED = re.compile(r'^(v?fn?m(add|sub)(132|213|231)?[sp][sd]|vfm(addsub|subadd)(132|213|231)?p[sd]'
                    r'|fn?m(add|sub)|fml[as]l?2?)(\.\w+)?$')
 MUL = re.compile(r'^(v?mul[sp][sd]|fmulp?|fimul|fn?mulx?)(\.\w+)?$')
+# The round-up interval: the maxima of max_nl, the maximum that returns a NaN, a negated product.
+MAXIMUM = re.compile(r'^(v?maxp[sd]|fmaxnm)(\.\w+)?$')
+NAN_MAXIMUM = re.compile(r'^fmax(\.\w+)?$')
+NEGATED_MUL = re.compile(r'^fnmul(\.\w+)?$')
 CALL = re.compile(r'^(callq?|bl|blr)$')
 JUMP = re.compile(r'^(jmpq?|j[a-z]{1,4}|b|br|b\.[a-z]{2}|cbn?z|tbn?z)$')
 PREFIXES = frozenset({'notrack', 'bnd', 'rep', 'repz', 'repe', 'repnz', 'repne', 'lock', 'data16',
@@ -94,9 +102,13 @@ class Count:
     external: list = field(default_factory=list)     # (function, symbol) outside the object
     unknown: list = field(default_factory=list)      # (function, instruction): indirect, unresolved
     calls: list = field(default_factory=list)        # names of the functions it calls, per site
+    # The round-up interval: maxima, maxima that return a NaN, negated products.
+    maximum: list = field(default_factory=list)
+    fmax: list = field(default_factory=list)
+    negmul: list = field(default_factory=list)
 
     def add(self, other):
-        for name in ('fma', 'mul', 'external', 'unknown', 'calls'):
+        for name in ('fma', 'mul', 'external', 'unknown', 'calls', 'maximum', 'fmax', 'negmul'):
             getattr(self, name).extend(getattr(other, name))
 
 
@@ -325,8 +337,12 @@ class Program:
             name = part.names[0]
             for insn in part.insns:
                 k = kind(insn.mnemonic)
+                text = f'{insn.mnemonic} {insn.operands}'.strip()
+                for pattern, where in ((MAXIMUM, c.maximum), (NAN_MAXIMUM, c.fmax), (NEGATED_MUL, c.negmul)):
+                    if pattern.match(insn.mnemonic):
+                        where.append((name, text))
                 if k in ('fma', 'mul'):
-                    getattr(c, k).append((name, f'{insn.mnemonic} {insn.operands}'.strip()))
+                    getattr(c, k).append((name, text))
                 elif k in ('call', 'jump'):
                     what, t = self.target(part, insn)
                     if what == 'function':

@@ -28,7 +28,7 @@ from concurrent.futures import ProcessPoolExecutor
 from fractions import Fraction
 
 import common
-from kairn_gen import build, claims, expr, interp, ir, rules, upward
+from kairn_gen import build, claims, expr, interp, ir, objcode, rules, upward
 
 NAMES = sorted(f'upward_{n}_1' for n in (
     'add', 'sub', 'neg', 'mul', 'add_num', 'mul_num', 'hull', 'intersection', 'make', 'from_interval',
@@ -490,17 +490,19 @@ class Claims(unittest.TestCase):
 # ---------------------------------------------------------------------------------------------
 # The Rocq printer, and the files of the other kernels
 
-# The generated files of the other kernels, which the family leaves as they are; gen/claims.json is
-# that too, but for the family's entries after the others (test_claims_of_the_others_unchanged).
+# The generated files of the other kernels, which the family leaves as they are; gen/claims.json and
+# gen/objcode.json are that too, but for the family's entries after the others (test_the_family_
+# changes_no_other_file).
 UNTOUCHED = ('proofs/gen/Model.v', 'proofs/gen/Statements.v', 'proofs/gen/Audit.v', 'proofs/gen/FoldModel.v',
              'proofs/gen/FoldStatements.v', 'proofs/gen/IeeeModel.v', 'proofs/gen/IeeeStatements.v',
              'proofs/gen/IeeeAudit.v', 'proofs/gen/IeeeFoldModel.v', 'proofs/gen/IeeeFoldStatements.v',
              'proofs/gen/IeeeWith.v', 'include/kairn/gen/prelude.hpp', 'include/kairn/gen/scalar.hpp',
              'include/kairn/gen/avx2.hpp', 'include/kairn/gen/neon.hpp', 'include/kairn/gen/bounds.hpp',
-             'include/kairn/gen/selftest.hpp', 'gen/constant_names.json', 'gen/objcode.json',
-             'gen/tests/runner_kernels.inc', 'tests/emulated/gen/kernels.hpp')
-# Their SHA-256 when the family was added (and of gen/claims.json without the family's entries). A
-# change of the other kernels changes them, and the pins with it; a change of the family never does.
+             'include/kairn/gen/selftest.hpp', 'gen/constant_names.json', 'gen/tests/runner_kernels.inc',
+             'tests/emulated/gen/kernels.hpp')
+# Their SHA-256 when the family was added (and of gen/claims.json and gen/objcode.json without the
+# family's entries). A change of the other kernels changes them, and the pins with it; a change of the
+# family never does.
 PINNED = {
     'proofs/gen/Model.v': 'ba9387f5dddf7286b534e79bdace65db14e81b7c73029f1d4c951060668ab43b',
     'proofs/gen/Statements.v': 'a7b30e41e8c83632303ec5ef808e54ba574b2df381aaf819559ae7ee458fbeb7',
@@ -546,17 +548,21 @@ class Files(unittest.TestCase):
         cls.without = build.outputs(ir.KernelSet(ks, folds=ks.folds, upward={}))
 
     def test_the_family_changes_no_other_file(self):
-        # The files that existed before the family, but for gen/claims.json, are the same with it
-        # and without it; claims.json gains the family's entries after the others, and nothing else.
+        # The files that existed before the family, but for gen/claims.json and gen/objcode.json, are
+        # the same with it and without it; claims.json gains the family's entries after the others,
+        # objcode.json the family's section after the folds, and nothing else.
         self.assertEqual(sorted(set(self.with_family) - set(self.without)), [])
         for rel in UNTOUCHED:
             self.assertEqual(self.with_family[rel], self.without[rel], rel)
         self.assertEqual(_without_family(self.with_family['gen/claims.json']), self.without['gen/claims.json'])
+        self.assertEqual(objcode.without_family(self.with_family['gen/objcode.json']), self.without['gen/objcode.json'])
+        self.assertNotEqual(self.with_family['gen/objcode.json'], self.without['gen/objcode.json'])
         self.assertNotEqual(self.with_family['proofs/gen/UpwardModel.v'], self.without['proofs/gen/UpwardModel.v'])
 
     def test_the_pinned_digests(self):
         got = {rel: _sha(self.with_family[rel]) for rel in UNTOUCHED}
         got['gen/claims.json'] = _sha(_without_family(self.with_family['gen/claims.json']))
+        got['gen/objcode.json'] = _sha(objcode.without_family(self.with_family['gen/objcode.json']))
         self.assertEqual(got, PINNED)
 
 
