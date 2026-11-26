@@ -120,3 +120,9 @@ theories/IeeeIntervalConvert2.v
 theories/IeeeBallContains2.v
 theories/IeeeBallHull.v
 theories/IeeeMakeEntry.v
+theories/IeeeUpwardOperations.v
+theories/IeeeUpwardVocabulary.v
+theories/IeeeUpwardMax.v
+theories/IeeeUpwardOps.v
+theories/IeeeUpwardProduct.v
+theories/IeeeUpwardRange.v
