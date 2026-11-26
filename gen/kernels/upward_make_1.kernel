@@ -1,0 +1,33 @@
+# An interval of the round-up interval from two values of T given by the program
+# (docs/developer/design/upward.md, "Constructor and conversions"), with the cases of interval_make_1:
+# the whole line (+inf, +inf) for a NaN bound and for the same infinity twice, the empty set (NaN, NaN)
+# for reversed bounds, (hi, -lo) otherwise. No guard: the barrier on its inputs takes the place of
+# rule R3 (rule U4). Interval(t) is this kernel on (t, t). Requires the rounding mode upward set by
+# kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math,
+# MSVC /fp:strict).
+kernel:        upward_make_1
+rounding:      upward
+input:         lo
+input:         hi
+output:        pair z = zu zn
+ensures:       makes_interval zu zn from=lo,hi
+min_precision: 1
+source:        constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   both lanes are selected after explicit tests of the two values; makes_interval states what comes out for every pair of values
+
+ok  = le(lo, hi)                                               # false with a NaN
+nl  = lt(lo, const inf)
+mi  = neg(const inf)
+nu  = lt(mi, hi)
+va  = and(ok, nl)
+v   = and(va, nu)                                              # the pair describes an interval
+rv  = lt(hi, lo)                                               # reversed; false with a NaN
+nlo = neg(lo)
+ou  = select(rv, const nan, const inf) | on = select(rv, const nan, const inf)   # rv broadcast
+zu  = select(v, hi, ou)                | zn = select(v, nlo, on)                 # (hi, -lo): a make

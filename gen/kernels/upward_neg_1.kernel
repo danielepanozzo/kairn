@@ -1,0 +1,22 @@
+# The negation of an interval of the round-up interval (docs/developer/design/upward.md, "Sum,
+# difference, negation"): the two lanes exchanged, -[a, b] = [-b, -a] stored as (a, -b); exact, in
+# every rounding mode; the empty set stays empty. Requires the rounding mode upward set by
+# kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math,
+# MSVC /fp:strict).
+kernel:        upward_neg_1
+rounding:      upward
+input:         pair stored x = xu xn
+output:        pair z = zu zn
+requires:      upward xu xn
+ensures:       encloses_interval zu zn -x x=xu,xn tight=exact bounded_when=abs_le(-x,omega) bounded_exactly
+min_precision: 1
+source:        the two lanes exchanged (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the lanes exchanged, each a bound of its own; encloses_interval states what comes out for every canonical state
+
+zu = copy(xn) | zn = copy(xu)                   # swap(x)

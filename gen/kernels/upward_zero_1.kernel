@@ -1,0 +1,23 @@
+# Whether an interval of the round-up interval is [0, 0]: both lanes zeros; the default
+# interval_zero_1 on the meaning. Exact, in every rounding mode (docs/developer/design/upward.md,
+# "Predicates and comparisons"). Requires the rounding mode upward set by kairn::upward::Scope and
+# the options of docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict).
+kernel:        upward_zero_1
+rounding:      upward
+input:         pair stored x = xu xn
+output:        mask m
+requires:      upward xu xn
+ensures:       certain m eq x 0 x=xu,xn exact
+min_precision: 1
+source:        both lanes compared with 0 (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+a = eq(xn, 0)
+b = eq(xu, 0)
+m = and(a, b)

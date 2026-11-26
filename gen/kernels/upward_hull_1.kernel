@@ -1,0 +1,26 @@
+# The hull of two intervals of the round-up interval (docs/developer/design/upward.md, "Hull and
+# intersection"): the larger lane of each, max(b, d) and max(-a, -c) = -min(a, c), the empty set its
+# identity: an empty x gives y, and an empty y gives x through max_nl, whose NaN first operand loses.
+# Exact, in every rounding mode. Requires the rounding mode upward set by kairn::upward::Scope and the
+# options of docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict).
+kernel:        upward_hull_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         pair stored y = yu yn
+output:        pair z = zu zn
+requires:      upward xu xn
+requires:      upward yu yn
+ensures:       interval_set zu zn union x=xu,xn y=yu,yn
+min_precision: 1
+source:        the larger lanes, the empty set its identity (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the lanes are selected among the lanes of the operands; interval_set states what comes out for every pair of canonical states
+
+eu = unord(xu, xu)      | en = unord(xn, xn)       # x is empty
+tu = max_nl(yu, xu)     | tn = max_nl(yn, xn)      # y empty: x
+zu = select(eu, yu, tu) | zn = select(en, yn, tn)

@@ -1,0 +1,40 @@
+# The product of an interval of the round-up interval and a number t of T
+# (docs/developer/design/upward.md, "Operations with a number"): for a finite t, x * [t, t], two
+# candidates per lane, the seed P1 with its NaN lanes made +0 and P2 folded in by max_nl, the empty set
+# for an empty x; for a t that is infinite or a NaN, x * Interval(t), x times the whole line: [0, 0] for
+# x = [0, 0], the empty set for an empty x, the whole line otherwise, which the sum of the absolute
+# values of the lanes tells (0, a NaN, or positive). Requires the rounding mode upward set by
+# kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math,
+# MSVC /fp:strict).
+kernel:        upward_mul_num_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         t
+output:        pair z = zu zn
+requires:      upward xu xn
+ensures:       encloses_interval zu zn x*t x=xu,xn numbers=t tight=rounded bounded_when=abs_le(x*t,omega) bounded_exactly
+min_precision: 1
+source:        the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are the greater of rounded products, a NaN candidate dropped, selected after explicit tests of the empty set and of a finite t; encloses_interval states what comes out
+
+nt  = neg(t)
+p1u = mul_ru(xu, t)             | p1n = mul_ru(xn, t)                # x * (t, t): (bt, -at)
+p2u = mul_ru(xn, nt)            | p2n = mul_ru(xu, nt)               # swap(x) * (-t, -t): (at, -bt)
+e1u = unord(p1u, p1u)           | e1n = unord(p1n, p1n)
+m1u = select(e1u, 0, p1u)       | m1n = select(e1n, 0, p1n)          # the seed: P1, a NaN lane +0
+mu  = max_nl(p2u, m1u)          | mn  = max_nl(p2n, m1n)
+eu  = unord(xu, xu)             | en  = unord(xn, xn)                # x is empty
+fu  = select(eu, const nan, mu) | fn  = select(en, const nan, mn)
+axu = abs(xu)                   | axn = abs(xn)
+su  = add_ru(axu, axn)          | sn  = add_ru(axn, axu)             # |xu| + |xn| in both lanes
+gu  = lt(0, su)                 | gn  = lt(0, sn)
+wu  = select(gu, const inf, su) | wn  = select(gn, const inf, sn)    # x * whole line
+ta  = abs(t)
+ft  = lt(ta, const inf)                                              # t is finite
+zu  = select(ft, fu, wu)        | zn  = select(ft, fn, wn)

@@ -114,7 +114,7 @@ def _shard(text):
 
 def cmd_interp(args):
     kernels = _load(args.kernels)
-    machine = interp.Machine(kernels, fused=args.muladd == 'fused', consteval=args.ce)
+    machine = interp.Machine(kernels, fused=args.muladd == 'fused', consteval=args.ce, max_form=args.max)
     sys.exit(interp.serve(machine, sys.stdin, sys.stdout, sys.stderr))
 
 
@@ -148,6 +148,9 @@ def main():
     i.add_argument('--ce', action='store_true',
                    help='as in C++ constant evaluation: kernels run their constant-evaluation '
                         'variant, prod is a plain product, muladd is unfused')
+    i.add_argument('--max', choices=('sel', 'nm'), default='sel',
+                   help='how each max_nl of the round-up interval executes: sel, as x86 MAXPD (the '
+                        'default), or nm, as arm64 FMAXNM on quiet NaNs')
     i.add_argument('--kernels', help='a directory of kernel descriptions other than gen/kernels')
     i.set_defaults(run=cmd_interp)
     args = parser.parse_args()

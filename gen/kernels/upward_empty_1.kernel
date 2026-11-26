@@ -1,0 +1,23 @@
+# Whether an interval of the round-up interval is the empty set: its upper bound is a NaN (the empty
+# set is (NaN, NaN), and no lane of a nonempty state is one); the default interval_empty_1 on the
+# meaning. Exact, in every rounding mode (docs/developer/design/upward.md, "Predicates and
+# comparisons"). Requires the rounding mode upward set by kairn::upward::Scope and the options of
+# docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict).
+kernel:        upward_empty_1
+rounding:      upward
+input:         pair stored x = xu xn
+output:        mask m
+requires:      upward xu xn
+ensures:       certain m empty x x=xu,xn exact
+min_precision: 1
+source:        the upper bound tested for a NaN (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+unused:        xn the upper bound alone tells the empty set (NaN, NaN) from a nonempty state, whose lanes are no NaN
+
+m = unord(xu, xu)

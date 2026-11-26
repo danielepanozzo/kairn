@@ -1,0 +1,27 @@
+# A state of the round-up interval as a default interval Interval<T, 1> (docs/developer/design/upward.md,
+# "Conversions"): [-n, u], and the empty set (NaN, NaN) as the default empty set (+inf, -inf). Exact,
+# in every rounding mode: the same set, the signs of zero bounds aside. Requires the rounding mode
+# upward set by kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang
+# -frounding-math, MSVC /fp:strict).
+kernel:        upward_to_interval_1
+rounding:      upward
+input:         pair stored x = xu xn
+output:        zl
+output:        zu
+requires:      upward xu xn
+ensures:       same_set zl zu from=xu,xn
+min_precision: 1
+source:        the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   both bounds are selected after a test of the empty set; same_set states what comes out for every canonical state
+
+e  = unord(xu, xu)
+nl = neg(xn)
+mi = neg(const inf)
+zl = select(e, const inf, nl)
+zu = select(e, mi, xu)

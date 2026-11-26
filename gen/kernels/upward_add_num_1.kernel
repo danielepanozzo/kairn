@@ -1,0 +1,29 @@
+# The sum of an interval of the round-up interval and a number t of T (docs/developer/design/upward.md,
+# "Operations with a number"): for a finite t, x + [t, t], the lanes added to (t, -t) rounded upward;
+# for a t that is infinite or a NaN, x + Interval(t), the whole line, which adding +infinity to each
+# lane gives (the whole line, or the empty set for an empty x). x - t is this kernel on -t. Requires
+# the rounding mode upward set by kairn::upward::Scope and the options of docs/concepts/upward.md
+# (GCC and Clang -frounding-math, MSVC /fp:strict).
+kernel:        upward_add_num_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         t
+output:        pair z = zu zn
+requires:      upward xu xn
+ensures:       encloses_interval zu zn x+t x=xu,xn numbers=t tight=rounded bounded_when=abs_le(x+t,omega) bounded_exactly
+min_precision: 1
+source:        the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the lanes are selected after an explicit test that t is finite, and a lane that is not finite is part of a state; encloses_interval states what comes out
+
+nt = neg(t)
+su = add_ru(xu, t)         | sn = add_ru(xn, nt)            # x + (t, -t): a make
+wu = add_ru(xu, const inf) | wn = add_ru(xn, const inf)     # x + (inf, inf): the whole line, or empty
+ta = abs(t)
+ft = lt(ta, const inf)                                      # t is finite
+zu = select(ft, su, wu)    | zn = select(ft, sn, wn)        # ft broadcast

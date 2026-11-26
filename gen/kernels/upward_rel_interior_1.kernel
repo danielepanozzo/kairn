@@ -1,0 +1,37 @@
+# Whether an interval x of the round-up interval is in the interior of y (IEEE 1788 interior): x
+# empty, or each bound of x strictly inside that of y, or both that bound infinite; the default
+# interval_rel_interior_1 on the meanings. Exact, in every rounding mode
+# (docs/developer/design/upward.md, "Predicates and comparisons"). Requires the rounding mode upward
+# set by kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang
+# -frounding-math, MSVC /fp:strict).
+kernel:        upward_rel_interior_1
+rounding:      upward
+input:         pair stored x = xu xn
+input:         pair stored y = yu yn
+output:        mask m
+requires:      upward xu xn
+requires:      upward yu yn
+ensures:       certain m interior x y x=xu,xn y=yu,yn exact
+min_precision: 1
+source:        the lanes compared, and a test of emptiness (the listing of the round-up interval)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_only:     yes
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+ex = unord(xu, xu)
+la = lt(xn, yn)
+lb = eq(yn, const inf)
+lc = eq(xn, const inf)
+ld = and(lb, lc)
+lo = or(la, ld)
+ua = lt(xu, yu)
+ub = eq(xu, const inf)
+uc = eq(yu, const inf)
+ud = and(ub, uc)
+hi = or(ua, ud)
+lu = and(lo, hi)
+m = or(ex, lu)

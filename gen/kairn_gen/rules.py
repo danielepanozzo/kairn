@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from fractions import Fraction
 
-from . import consts, cpp, expr, ieee, ir, rocq, simd
+from . import consts, cpp, expr, ieee, ir, rocq, simd, upward
 
 RULE1 = 'rule 1 (static single assignment)'
 RULE_R1 = 'rule 2 (R1: products)'
@@ -21,6 +21,19 @@ DOMAIN = 'domain'
 CONSTEVAL = 'constant-evaluation variant'
 COMPUTED = 'computed constants'
 NEGATED_FUSED = 'negated fused result'
+# The rules of the round-up interval (docs/developer/design/upward.md, "The rules" and "The pair
+# form"): U1 to U7, U2 being P1 to P5.
+RULE_U1 = 'rule U1 (the upward family)'
+RULE_U3 = 'rule U3 (no negated rounded result)'
+RULE_U4 = 'rule U4 (barriers instead of guards)'
+RULE_U5 = 'rule U5 (the operands of max_nl)'
+RULE_U6 = 'rule U6 (every rounded operation depends on the first input)'
+RULE_U7 = 'rule U7 (outputs of the upward family)'
+RULE_P1 = 'rule U2/P1 (a pair line applies one operation)'
+RULE_P2 = 'rule U2/P2 (the operands of a pair line)'
+RULE_P3 = 'rule U2/P3 (a pair is the two lanes of one register)'
+RULE_P4 = 'rule U2/P4 (scalars and pair lines)'
+RULE_P5 = 'rule U2/P5 (masks in pair lines)'
 
 STATUSES = ('unverified', 'proved')
 
@@ -33,10 +46,12 @@ FORWARDING = {'neg': (0,), 'abs': (0,), 'select': (1, 2), 'copy': (0,)}
 OUTPUT_OPS = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'select', 'neg', 'abs',
                         'succ', 'pred', 'copy', 'guard'})
 MASK_OPS = frozenset(op for op, (_, result) in ir.OPS.items() if result == ir.MASK)
+# R2 in the upward family: an output may also be a rounded sum or product, or a maximum.
+UPWARD_OUTPUT_OPS = OUTPUT_OPS | {'add_ru', 'mul_ru', 'max_nl'}
 # Rule 4: operations that map any non-finite operand to a non-finite result. Not select (it may
 # drop the operand), not succ/pred (succ(-inf) is finite), not comparisons.
 PROPAGATING = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'neg', 'abs', 'mul',
-                         'copy', 'guard', 'times_inf'})
+                         'copy', 'guard', 'times_inf', 'add_ru', 'mul_ru'})
 # R1: the result of times_inf, a plain multiplication (exact), may only be compared or selected.
 TIMES_INF_USES = {'lt': (0, 1), 'le': (0, 1), 'eq': (0, 1), 'select': (1, 2)}
 # The closed vocabulary of the claims (architecture.md, "Claims", "Claims of the second wave" and
@@ -100,16 +115,33 @@ class RuleError(Exception):
 
 
 def check_all(kernels):
-    """Every refusal for a set of kernels, as a list of RuleError (empty: all accepted)."""
+    """Every refusal for a set of kernels, as a list of RuleError (empty: all accepted). The kernels of
+    the upward family (ir.KernelSet.upward) pass the rules of every kernel, with their own claims
+    (upward_claims), U1 to U7 and P1 to P5 (upward_rules); every other kernel and every fold passes
+    U1's part about them (outside_family), so that nothing outside the family uses what is its own."""
     errors = []
+    family = getattr(kernels, 'upward', {})
+    every = dict(kernels, **family)
     for k in kernels.values():
         errors += well_formed(k, kernels)
+        errors += outside_family(k, kernels)
+    for k in family.values():
+        errors += well_formed(k, every)
+        errors += family_calls(k, kernels)
+    for fd in getattr(kernels, 'folds', {}).values():
+        errors += fold_outside_family(fd, kernels)
     if errors:
         return errors   # the other rules flatten calls, which needs well-formed callees
     for k in kernels.values():
         for rule in (products, outputs, nonfinite_cone, theorem, entry_values, claims, domains,
                      consteval_variant, computed_constants, negated_fused):
             errors += rule(k, kernels)
+    for k in family.values():
+        for rule in (products, outputs, nonfinite_cone, theorem, entry_values, upward_claims, domains,
+                     consteval_variant, computed_constants, negated_fused, upward_rules):
+            errors += rule(k, family)
+    if not errors:
+        errors += upward_printable(family)
     if not errors:
         errors += ieee_printable(kernels)
     if not errors:
@@ -322,16 +354,17 @@ def doubling(k, kernels):
 def outputs(k, kernels):
     """R2: no output is an expression the compiler could fuse into the caller."""
     errs = []
+    allowed = UPWARD_OUTPUT_OPS if k.upward else OUTPUT_OPS
     defs = {d: st for st in k.body for d in st.dsts}
     for v in k.output_limbs:
         st = defs.get(v)
         if st is None:
             errs.append(RuleError(k.name, v, RULE_R2, f'output {v} is an input; an output must be '
                                                       'computed by an operation (copy, for an input)'))
-        elif not st.is_call and st.op not in OUTPUT_OPS | MASK_OPS:
+        elif not st.is_call and st.op not in allowed | MASK_OPS:
             errs.append(RuleError(k.name, v, RULE_R2,
                                   f'output {v} is the result of {st.op} (line {st.line}); outputs are '
-                                  f'results of {", ".join(sorted(OUTPUT_OPS))}, never of muladd'))
+                                  f'results of {", ".join(sorted(allowed))}, never of muladd'))
     return errs
 
 
@@ -525,7 +558,9 @@ def entry_values(k, kernels):
             err(v, f'guard_pending {v}: only an entry kernel has values that enter from the program')
         elif v not in program:
             err(v, f'guard_pending {v}: {v} is not an input that enters from the program')
-    if errs or not k.entry:
+    # R3 does not apply to the upward family (rule U4): its kernels have no guard, and the printer
+    # puts a barrier on every input instead.
+    if errs or not k.entry or k.upward:
         return errs
     hits, relied, out = r3_analysis(k, kernels, frozenset(program))
     for v, origins in out.items():
@@ -3351,4 +3386,437 @@ def _fold_theorem(fd):
         err('a terms_theorem names the theorems of the statements of conv_terms, which only a convolution names')
     if fd.terms_theorem and not (fd.terms_theorem.startswith('proofs/theories/') and fd.terms_theorem.endswith('.v')):
         err(f'the terms_theorem file must be proofs/theories/*.v, not {fd.terms_theorem}')
+    return errs
+
+
+# ---------------------------------------------------------------------------------------------
+# The round-up interval (docs/developer/design/upward.md, "The rules", "The pair form" and "Claims
+# and the oracle"): the kernels of the upward family, `rounding: upward` (ir.KernelSet.upward).
+
+# U1: the operations and the constants of the family.
+FAMILY_OPS = frozenset({'add_ru', 'mul_ru', 'max_nl', 'unord', 'neg', 'abs', 'copy', 'lt', 'le', 'eq', 'and',
+                        'or', 'not', 'select'})
+FAMILY_CONSTANTS = (ir.ZERO, 'inf', 'nan')
+# U3: the operations through which a rounded result passes as it is.
+ROUNDED_FORWARDING = {'select': (1, 2), 'copy': (0,), 'max_nl': (0, 1)}
+# P1: two different operations that are one instruction, a sign change of one lane.
+SIGN_PAIRS = ({'neg', 'copy'},)
+# The claims of the family: their kinds; each kernel has one.
+UPWARD_ENSURES = ('encloses_interval', 'interval_set', 'makes_interval', 'same_set', 'certain', 'trit')
+
+
+def _family_vocabulary(k):
+    """What of k's claims belongs to the upward family: a requirement upward, a set or an output
+    named by its stored pair, numbers, same_set."""
+    found = [f'requires {" ".join(r)}' for r in k.requires if r[0] == ir.UPWARD]
+    for e in k.ensures:
+        if e['kind'] == 'same_set':
+            found.append('ensures same_set')
+        if 'numbers' in e:
+            found.append(f'ensures {e["kind"]} numbers=')
+        if 'nlower' in e or any('nlower' in b for b in e.get('intervals', {}).values()):
+            found.append(f'ensures {e["kind"]} of a stored pair')
+    return found
+
+
+def outside_family(k, kernels):
+    """U1 for a kernel outside the upward family: none of the four operations of the round-up
+    interval, no pair and no pair line, no call of a kernel of the family, nothing of the family's
+    vocabulary of claims."""
+    errs = []
+
+    def err(value, msg):
+        errs.append(RuleError(k.name, value, RULE_U1, msg))
+    family = getattr(kernels, 'upward', {})
+    for st in k.body:
+        if st.op in ir.UPWARD_OPS:
+            err(st.dsts[0], f'line {st.line}: {st.op} is an operation of the round-up interval, which only a '
+                            'kernel of the upward family ("rounding: upward") uses')
+        elif st.is_call and st.op in family:
+            err(st.dsts[0], f'line {st.line}: {st.op} is of the upward family, and only a kernel of the family '
+                            'calls one')
+        if st.lane == 0:
+            err(st.dsts[0], f'line {st.line}: a pair line belongs to the upward family ("rounding: upward")')
+    for name in list(k.pair_inputs) + list(k.pair_outputs):
+        err(name, f'pair {name}: a pair belongs to the upward family ("rounding: upward")')
+    for what in _family_vocabulary(k):
+        err('-', f'{what}: a claim of the round-up interval, which only a kernel of the upward family makes')
+    return errs
+
+
+def family_calls(k, kernels):
+    """U1: a kernel of the upward family calls only kernels of the family (`kernels`: the others)."""
+    return [RuleError(k.name, st.dsts[0], RULE_U1, f'line {st.line}: {st.op} is not of the upward family, and a '
+                                                    'kernel of the family calls only kernels of the family')
+            for st in k.body if st.is_call and st.op in kernels]
+
+
+def fold_outside_family(fd, kernels):
+    """U1: no fold, map or loop runs a kernel of the upward family."""
+    family = getattr(kernels, 'upward', {})
+    calls = [fd.step, fd.combine, fd.finish, fd.radius, fd.bound] + list(fd.records) + list(fd.combines)
+    names = {c[0] for c in calls if c} | ({fd.check} if fd.check else set())
+    return [RuleError(fd.name, n, RULE_U1, f'{n} is of the upward family, which no fold runs')
+            for n in sorted(names) if n in family]
+
+
+def _lanes(k):
+    """{value: (pair, lane)} of every lane of a pair of k's own listing: the lanes of the pair inputs,
+    ('input', NAME), and the values of the pair lines, ('line', LINE)."""
+    out = {}
+    for name, lanes in k.pair_inputs.items():
+        for lane, v in enumerate(lanes):
+            out[v] = (('input', name), lane)
+    for pair in k.pair_lines():
+        for lane, st in enumerate(pair):
+            for d in st.dsts:
+                out[d] = (('line', st.line), lane)
+    return out
+
+
+def upward_rules(k, family):
+    """U1 and U3 to U7, and U2 (P1 to P5), of a kernel of the upward family (docs/developer/design/
+    upward.md, "The rules" and "The pair form"); `family` is the set of the family's kernels."""
+    errs = []
+
+    def err(value, rule, msg):
+        errs.append(RuleError(k.name, value, rule, msg))
+    # U1: the family; U4: no guard.
+    if not k.ieee_only:
+        err('-', RULE_U1, 'a kernel of the upward family has no real-model statement: "ieee_only: yes"')
+    if not k.extended:
+        err('-', RULE_U1, 'a kernel of the upward family is of the extended domain: "domain: extended"')
+    if k.ce_variant:
+        err('-', RULE_U1, 'nothing of the round-up interval is constexpr: a kernel of the family has no ce_variant')
+    for v in k.guard_pending:
+        err(v, RULE_U4, 'a kernel of the upward family has no guard: the printer puts a barrier on every input '
+                        'instead, and rule R3 does not apply (no guard_pending)')
+    for st in k.body:
+        if st.op == 'guard':
+            err(st.dsts[0], RULE_U4, f'line {st.line}: a kernel of the upward family has no guard: the printer puts '
+                                     'a barrier on every input instead')
+        elif not st.is_call and st.op not in FAMILY_OPS:
+            err(st.dsts[0], RULE_U1, f'line {st.line}: {st.op} is not an operation of the upward family, which uses '
+                                     f'only {", ".join(sorted(FAMILY_OPS))} and calls of kernels of the family '
+                                     '(nothing that rounds to nearest, no succ or pred)')
+        for a in st.args:
+            if a.const and a.name not in FAMILY_CONSTANTS:
+                err(a.name, RULE_U1, f'line {st.line}: const {a.name}: the upward family has no constant but 0, '
+                                     'const inf and const nan')
+    values = set(k.input_limbs) | {d for st in k.body for d in st.dsts}
+    for v in sorted(values & upward.RESERVED):
+        err(v, WELL_FORMED, f'{v} is a name the model of the round-up interval gives a meaning to (upward.RESERVED)')
+    # P3: a pair is the two lanes of one register; its name is no other name of the kernel.
+    reserved = rocq.RESERVED | cpp.RESERVED | simd.RESERVED | upward.RESERVED
+    for side, pairs in (('input', k.pair_inputs), ('output', k.pair_outputs)):
+        for name, lanes in pairs.items():
+            if len(lanes) != 2:
+                err(name, RULE_P3, f'pair {side} {name} has {len(lanes)} lane{"s" if len(lanes) != 1 else ""}: a pair '
+                                   f'is the two lanes of one register, "{side}: pair {name} = A B"')
+            if name in values or name in k.output_limbs or name in family or name in reserved or '_' in name:
+                err(name, RULE_P3, f'pair {name}: the name of a pair is a value name of its own, no value of the kernel, '
+                                   'no kernel and no name the printers use')
+    if errs:
+        return errs   # the rules below read the pairs and the operations as the family has them
+    errs += _pair_line_rules(k, family)
+    errs += _upward_outputs(k)
+    errs += _upward_flow(k, family)
+    return errs
+
+
+def _pair_line_rules(k, family):
+    """P1, P2, P4 and P5 on each pair line: one operation (or a sign change of one lane), and each
+    operand position a pair of one register in one of the forms of P2."""
+    errs = []
+    lanes = _lanes(k)
+
+    def form(a):
+        if a.const:
+            return ('const', a.name)
+        if a.name in lanes:
+            return ('lane',) + lanes[a.name]
+        return ('scalar', a.name)
+
+    def show(p):
+        return f'{p[0]} {p[1]}' if p[0] == 'input' else f'of the pair line of line {p[1]}'
+    for s0, s1 in k.pair_lines():
+        where = f'line {s0.line}'
+        if s0.is_call or s1.is_call:
+            errs.append(RuleError(k.name, s0.dsts[0], RULE_P1, f'{where}: a pair line applies one operation of the '
+                                                                'IR in each lane, one instruction; a call is a '
+                                                                'statement of its own'))
+            continue
+        if s0.op != s1.op and {s0.op, s1.op} not in SIGN_PAIRS:
+            errs.append(RuleError(k.name, s0.dsts[0], RULE_P1, f'{where}: lane 0 applies {s0.op} and lane 1 {s1.op}; '
+                                                                'the two statements of a pair line apply one operation, '
+                                                                'but neg | copy and copy | neg (the sign of one lane '
+                                                                'changed)'))
+            continue
+        for i, (a, b) in enumerate(zip(s0.args, s1.args)):
+            fa, fb = form(a), form(b)
+            text = f'{where}: operand {i + 1}, ({a} | {b})'
+            if fa[0] == 'const' and fb[0] == 'const':
+                continue                  # a broadcast of a constant, or a constant register
+            if fa[0] == 'lane' and fb[0] == 'lane':
+                if fa[1] != fb[1]:
+                    errs.append(RuleError(k.name, s0.dsts[0], RULE_P2,
+                                          f'{text}, names lane {fa[2]} of the pair {show(fa[1])} and lane {fb[2]} of '
+                                          f'the pair {show(fb[1])}: an operand of a pair line is one register, a pair '
+                                          'in its order, swapped, or a broadcast of one of its lanes'))
+                continue
+            if 'lane' in (fa[0], fb[0]):
+                lane, other = (fa, b) if fa[0] == 'lane' else (fb, a)
+                errs.append(RuleError(k.name, s0.dsts[0], RULE_P4,
+                                      f'{text}, puts {other} beside lane {lane[2]} of the pair {show(lane[1])}: a '
+                                      'scalar enters a pair line only as a broadcast (s | s) or as a make of two '
+                                      'scalars (s | t)'))
+                continue
+            if ir.OPS[s0.op][0][i] == ir.MASK and a.name != b.name:
+                errs.append(RuleError(k.name, s0.dsts[0], RULE_P5,
+                                      f'{text}, makes a mask of two scalar masks: a mask in a pair line is the mask '
+                                      'register of a pair line of comparisons or unord (and, or, not and select act '
+                                      'on it lane by lane), or a broadcast of one scalar mask'))
+    return errs
+
+
+def _upward_outputs(k):
+    """U7: a pair output is the result of one pair line, lane 0 and lane 1 in order; a mask or a
+    number output is the result of a scalar statement."""
+    errs = []
+    defs = {d: st for st in k.body for d in st.dsts}
+    for name, (z0, z1) in k.pair_outputs.items():
+        s0, s1 = defs.get(z0), defs.get(z1)
+        if s0 is None or s1 is None or s0.lane != 0 or s1.lane != 1 or s0.line != s1.line:
+            errs.append(RuleError(k.name, name, RULE_U7, f'pair output {name} = {z0} {z1} is the result of one pair '
+                                                          f'line: {z0} its lane 0 and {z1} its lane 1'))
+    paired = {v for lanes in k.pair_outputs.values() for v in lanes}
+    for v in k.output_limbs:
+        st = defs.get(v)
+        if v not in paired and st is not None and st.lane is not None:
+            errs.append(RuleError(k.name, v, RULE_U7, f'output {v} is no pair and is lane {st.lane} of the pair line '
+                                                       f'of line {st.line}: a mask or a number output is the result '
+                                                       'of a scalar statement'))
+    return errs
+
+
+def _upward_flow(k, family):
+    """U3, U5 and U6, on the listing with its calls inlined (callees of the family)."""
+    errs = []
+    flat = ir.prims(k, family)
+    defs = {p.dst: p for p in flat}
+    # U3: no negation of a rounded result, directly or through select, copy or max_nl.
+    rounded = set()
+    for p in flat:
+        if p.op in ir.ROUNDED_UP or any(not p.args[i].const and p.args[i].name in rounded
+                                         for i in ROUNDED_FORWARDING.get(p.op, ())):
+            rounded.add(p.dst)
+        if p.op == 'neg' and not p.args[0].const and p.args[0].name in rounded:
+            errs.append(RuleError(k.name, p.dst, RULE_U3,
+                                  f'{p.dst} = neg({p.args[0].name}) negates a result of add_ru or mul_ru (directly or '
+                                  'through select, copy or max_nl): under the mode upward -RU(t) is RD(-t), a bound on '
+                                  'the other side, and compilers rewrite a negation next to a product in ways valid '
+                                  'only to nearest; negate an operand instead'))
+    # U5: the first operand of max_nl is a result of mul_ru or a lane of a pair input.
+    lanes = {v for ls in k.pair_inputs.values() for v in ls}
+    for p in flat:
+        if p.op != 'max_nl':
+            continue
+        a = p.args[0]
+        if a.const or not (a.name in lanes or (a.name in defs and defs[a.name].op == 'mul_ru')):
+            errs.append(RuleError(k.name, p.dst, RULE_U5,
+                                  f'{p.dst} = max_nl({a}, ...): the first operand of max_nl is a result of mul_ru or a '
+                                  'lane of a pair input, so that every NaN that reaches it is quiet (arm64\'s FMAXNM '
+                                  'returns a NaN for a signaling one)'))
+    # U6: every rounded operation has the first pair input in its data flow.
+    first = next(iter(k.pair_inputs.items()), None)
+    deps = {v: {v} for v in k.input_limbs}
+    for p in flat:
+        deps[p.dst] = set().union(*(deps.get(a.name, set()) for a in p.args if not a.const))
+        if p.op not in ir.ROUNDED_UP:
+            continue
+        if first is None:
+            errs.append(RuleError(k.name, p.dst, RULE_U6, f'{p.dst} = {p.op}(...) rounds, and the kernel has no pair '
+                                                           'input: every add_ru and mul_ru has the first pair input '
+                                                           'in its data flow, through which the barrier of a scope '
+                                                           'reaches it on MSVC'))
+        elif not deps[p.dst] & set(first[1]):
+            errs.append(RuleError(k.name, p.dst, RULE_U6, f'{p.dst} = {p.op}(...) does not depend on the first pair '
+                                                           f'input, {first[0]}: on MSVC the barrier of a scope '
+                                                           'reaches the operations through that input alone'))
+    return errs
+
+
+def upward_claims(k, kernels):
+    """The claims of a kernel of the upward family, in the vocabulary of the design page's "Claims and
+    the oracle": the requirements `upward U N` of each pair input (and `interval L U` of a default
+    interval given as two one-limb inputs); no value; one claim, of a kind of UPWARD_ENSURES, its
+    result an output pair named in stored order (or the bounds of a default interval, for same_set),
+    its sets stored pairs of `upward` requirements, its numbers one-limb inputs that are no lane."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(k.name, '-', CLAIMS, msg))
+    ins = {g.name: g for g in k.inputs}
+    outs = {g.name: g for g in k.outputs}
+    in_lanes = {v for ls in k.pair_inputs.values() for v in ls}
+    out_lanes = {v for ls in k.pair_outputs.values() for v in ls}
+    scalars = {n for n, g in ins.items() if g.kind == ir.LIMB and n not in in_lanes}
+    pairs_in = set(k.pair_inputs.values())
+    pairs_out = set(k.pair_outputs.values())
+    stored = set()
+    for r in k.requires:
+        if r[0] == ir.UPWARD and len(r) == 3 and (r[1], r[2]) in pairs_in:
+            stored.add((r[1], r[2]))
+        elif not (r[0] == 'interval' and len(r) == 3 and r[1] in scalars and r[2] in scalars and r[1] != r[2]):
+            err(f'requires {" ".join(r)!r}: the requirements of the round-up interval are "upward U N" of a pair input, '
+                'its lanes in order, and "interval L U" of two one-limb inputs that are no lanes of a pair')
+    for lanes in sorted(pairs_in - stored):
+        err(f'pair input {" ".join(lanes)}: a state is required canonical, "requires: upward {" ".join(lanes)}"')
+    if k.value is not None:
+        err('a kernel of the round-up interval has no value: its claims name their own sets')
+    if k.min_precision is not None and k.min_precision < 1:
+        err('min_precision must be at least 1')
+    if len(k.ensures) != 1 or k.ensures[0]['kind'] not in UPWARD_ENSURES:
+        err(f'a kernel of the round-up interval has one claim, of the kinds {", ".join(UPWARD_ENSURES)}')
+        return errs
+    e = k.ensures[0]
+    kind = e['kind']
+
+    def result_pair():
+        if 'nlower' not in e or (e['upper'], e['nlower']) not in pairs_out:
+            err(f'{kind}: the result is an output pair, written in stored order (its upper bound, then its negated '
+                'lower bound)')
+
+    def sets(n):
+        """The stored sets of the entry, each required upward, no lane in two; n of them (None: any)."""
+        found, taken = e.get('intervals', {}), set()
+        for name, b in found.items():
+            if name in ins or name in outs or not ir.VALUE_NAME.match(name):
+                err(f'{kind}: set name {name!r} is the name of a lane, an input or an output, or not a value name')
+            lanes = (b.get('upper'), b.get('nlower')) if 'nlower' in b else (b.get('lower'), b.get('upper'))
+            if 'nlower' not in b or lanes not in stored:
+                err(f'{kind} set {name}: its operand is a state, required canonical and named by its stored pair: '
+                    f'"requires: upward {" ".join(map(str, lanes))}"')
+            if taken & set(lanes):
+                err(f'{kind} set {name}: a lane belongs to two sets')
+            taken |= set(lanes)
+        if n is not None and len(found) != n:
+            err(f'{kind} names {n} set{"s" if n > 1 else ""}')
+        return found, taken
+    if kind == 'encloses_interval':
+        result_pair()
+        found, taken = sets(None)
+        if not found:
+            err('encloses_interval names at least one state')
+        numbers = e.get('numbers', [])
+        for n in numbers:
+            if n not in scalars or n in found:
+                err(f'encloses_interval numbers: {n!r} is a one-limb input that is no lane of a pair')
+        try:
+            tree = expr.parse(e['set'])
+        except expr.ExprError as x:
+            err(f'encloses_interval set: {x}')
+            tree = None
+        if tree is not None:
+            names = expr.names(tree)
+            if names - set(found) - set(numbers) or not _only(tree, VALUE_TREES):
+                err(f'encloses_interval set {e["set"]!r}: + - *, unary minus and abs( ) of the names of its sets and '
+                    'numbers')
+            elif set(found) | set(numbers) != names or len(names) not in (1, 2):
+                err(f'encloses_interval set {e["set"]!r}: one or two operands (range_1 and range_2 of the '
+                    'statements), each a set or a number of the entry')
+        if e['tight'] not in ({'kind': 'rounded'}, {'kind': 'exact'}):
+            err('encloses_interval: in the round-up interval tight is rounded (each bound the rounding of the bound '
+                'of the exact range) or exact')
+        for c in e['bounded_when']:
+            same = False
+            try:
+                same = expr.parse(c['abs_le']) == expr.parse(e['set'])
+            except expr.ExprError:
+                pass
+            if not same or not c.get('omega'):
+                err(f'bounded_when {c["abs_le"]!r}: the condition of the round-up interval is abs_le(SET,omega) of the '
+                    'set of the claim')
+        if e.get('bounded_exactly') and not e['bounded_when']:
+            err('bounded_exactly needs a condition of bounded_when')
+        if e['bounded_when'] and not e.get('bounded_exactly'):
+            err('bounded_when: the round-up interval claims I5 as an equivalence, bounded_exactly')
+        if e.get('zero_factor') or 'exact_when' in e['tight']:
+            err('encloses_interval: zero_factor and exact_lower, exact_upper are not claims of the round-up interval '
+                '([0, 0] times a set is in I3 and I4)')
+    elif kind == 'interval_set':
+        result_pair()
+        if e['set'] not in SET_OPERATIONS:
+            err(f'interval_set {e["set"]!r}: the set operation is {" or ".join(SET_OPERATIONS)}')
+        sets(2)
+    elif kind == 'makes_interval':
+        result_pair()
+        lo, hi = e['from'].get('lower'), e['from'].get('upper')
+        if lo not in scalars or hi not in scalars or lo == hi:
+            err('makes_interval from: two one-limb inputs that are no lanes of a pair, the lower bound and the upper')
+    elif kind == 'same_set':
+        of, src = e['of'], e['from']
+        if 'nlower' in of:
+            if (of['upper'], of['nlower']) not in pairs_out:
+                err('same_set: a result named by its stored pair is an output pair')
+        elif not all(of.get(s) in outs and outs[of[s]].kind == ir.LIMB and of[s] not in out_lanes for s in ir.BOUNDS) \
+                or of.get('lower') == of.get('upper'):
+            err('same_set: a result named by its bounds is two one-limb outputs that are no lanes of a pair')
+        if 'nlower' in src:
+            if (src['upper'], src['nlower']) not in stored:
+                err(f'same_set from: a state, required "upward {src["upper"]} {src["nlower"]}"')
+        elif ('interval', src.get('lower'), src.get('upper')) not in k.requires:
+            err(f'same_set from: a default interval, required "interval {src.get("lower")} {src.get("upper")}"')
+        if 'nlower' not in of and 'nlower' not in src:
+            err('same_set: the result or the operand is a state of the round-up interval')
+    else:   # certain, trit
+        masks = [e['yes'], e['no']] if kind == 'trit' else [e['of']]
+        for m in masks:
+            if m not in outs or outs[m].kind != ir.MASK:
+                err(f'{kind}: {m!r} is not a mask output')
+        if len(set(masks)) != len(masks):
+            err(f'{kind}: yes and no are two masks')
+        rel = e['rel']
+        allowed = TRIT_RELATIONS if kind == 'trit' else CERTAIN_RELATIONS
+        if 'balls' in e:
+            err(f'{kind}: the sets of the round-up interval are states')
+        if rel not in allowed:
+            err(f'{kind} relation {rel!r}: it is {", ".join(allowed)}')
+            return errs
+        found, taken = sets(None)
+        args = e['args']
+        if len(args) != ir.SET_RELATION_ARITY[rel]:
+            err(f'{kind} {rel}: {ir.SET_RELATION_ARITY[rel]} arguments')
+            return errs
+        if rel in ORDER_RELATIONS:
+            if any(a not in found and a != ir.ZERO for a in args) or all(a == ir.ZERO for a in args):
+                err(f'{kind} {rel}: each argument is a set or 0, and one is a set')
+        elif rel == 'member':
+            p, s = args
+            if p not in scalars or p in taken:
+                err(f'{kind} member: the point {p!r} is a one-limb input that is no lane of a pair')
+            if s not in found:
+                err(f'{kind} member: {s!r} is not a set of the entry')
+        elif any(a not in found for a in args) or len(set(args)) != len(args):
+            err(f'{kind} {rel}: the arguments are {"a set" if len(args) == 1 else "two distinct sets"} of the entry')
+        if set(found) - {a for a in args if a in found}:
+            err(f'{kind}: set {", ".join(sorted(set(found) - set(args)))} is named by no argument')
+        if e.get('exact') is not True or 'exact_when' in e:
+            err(f'{kind}: the predicates of the round-up interval are exact')
+    return errs
+
+
+def upward_printable(family):
+    """What the Rocq printer of the round-up interval refuses (upward.PrintError)."""
+    errs = []
+    for fn in (upward.model, upward.audit):
+        try:
+            fn(family)
+        except upward.PrintError as e:
+            errs.append(RuleError('-', '-', DOMAIN, str(e)))
+    for k in family.values():
+        try:
+            upward.kernel_statement(k, family)
+        except upward.PrintError as e:
+            errs.append(RuleError(k.name, '-', DOMAIN, str(e)))
     return errs
