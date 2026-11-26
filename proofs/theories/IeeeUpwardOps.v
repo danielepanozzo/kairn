@@ -454,9 +454,10 @@ Theorem mul_ru_nan_cases :
   nan (mul_ru a b) <->
   nan a \/ nan b \/ (zero a /\ exists s : bool, b = infinity prec emax s) \/
   ((exists s : bool, a = infinity prec emax s) /\ zero b).
-Proof.
+Proof using prec_gt_0_ prec_lt_emax_ nan_mult.
 intros a b. rewrite <- (upward_xval_nan prec emax), mul_ru_xval, xru_nan, xmul_nan_iff.
-rewrite 2!(upward_xval_nan prec emax), 2!xval_zero_iff, 2!xval_infinite_iff. tauto.
+rewrite 2!(upward_xval_nan prec emax), 2!xval_zero_iff, 2!xval_infinite_iff.
+split; intros H; exact H.
 Qed.
 
 (* A NaN operand gives a NaN. *)
@@ -488,9 +489,10 @@ Qed.
 
 (* A sum is never -infinity when no operand is. *)
 Corollary add_ru_not_ninf : forall a b : float, a <> ninf -> b <> ninf -> add_ru a b <> ninf.
-Proof.
+Proof using prec_gt_0_ prec_lt_emax_ nan_plus.
 intros a b Ha Hb E. apply add_ru_ninf in E.
-destruct (xadd_ninf _ _ E) as [K|K]; apply (upward_xval_inf prec emax) in K; tauto.
+destruct (xadd_ninf _ _ E) as [K|K]; apply (upward_xval_inf prec emax) in K;
+  first [exact (Ha K)|exact (Hb K)].
 Qed.
 
 (* A product of finite numbers is never -infinity: a negative overflow is -Omega. *)
