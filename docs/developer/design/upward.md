@@ -1184,8 +1184,9 @@ on random cases of every stratum and on the special operands; the existing gener
 digests unchanged; the counts of the object-code check.
 
 **The quick tier**: `crosscheck.compiled.upward_K.F` (each kernel through the compiled runners,
-judged by the oracle); `api.upward.oracle.K.F` (every public operation through a runner of the line
-protocol over `<kairn/upward.hpp>`); `api.upward.differential` (each operation against the default
+judged by the oracle); `api.oracle.upward_K.F` (every public operation through a runner of the line
+protocol over `<kairn/upward.hpp>`, under the name every kernel's test of the public interface
+has); `api.upward.differential` (each operation against the default
 `Interval<T, 1>` on the same operands, random and the special pairs of every combination of special
 intervals: equal bounds but zero signs for the sums, the exact kernels and the conversions; for the
 product, inside the default's and equal to it outside the range below $P$; and every result judged by
