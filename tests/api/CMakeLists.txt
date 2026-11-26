@@ -8,9 +8,12 @@
 #   with contraction forced on, two runners on the same cases. full.api.oracle.KERNEL.FORMAT, in
 #   the full tier (../full/), does the same on more cases, with the debug build's runner (flags/)
 #   on the first form of each kernel, and full.api.flags.oracle.KERNEL.FORMAT every form through
-#   the runner of every flag set of flags/.
+#   the runner of every flag set of flags/. The kernels of the round-up interval ("rounding":
+#   "upward" in gen/claims.json) are left to upward/, whose runner computes them through
+#   <kairn/upward.hpp> (api.oracle.upward_K.FORMAT, when KAIRN_UPWARD_TESTS is on).
 # - api.oracle.coverage: every kernel of gen/claims.json is reached by a public form of the
-#   runner (by packed forms only for the arithmetic of Packed<T, 1>), or is a building block, or is
+#   runner (by packed forms only for the arithmetic of Packed<T, 1>; a kernel of the round-up
+#   interval by a form of the runner of <kairn/upward.hpp>), or is a building block, or is
 #   an entry kernel on the runner's short list of those not public yet; no entry kernel is a
 #   building block; and the lists below agree.
 # - api.boundary.*: a product the program computes and passes in gives the result of the same
@@ -268,9 +271,18 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
   set(_api_mapped "")
+  set(_api_upward_kernels "")
   foreach(_i RANGE ${_api_last})
     string(JSON _kernel GET "${_api_json}" kernels ${_i} name)
     if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public OR _kernel IN_LIST _api_loop_parts)
+      continue()
+    endif()
+    # The kernels of the round-up interval ("rounding": "upward"): no operation of kairn/kairn.hpp
+    # calls them; upward/ registers api.oracle.K.F for them with the runner of <kairn/upward.hpp>,
+    # when KAIRN_UPWARD_TESTS is on.
+    string(JSON _rounding ERROR_VARIABLE _no_rounding GET "${_api_json}" kernels ${_i} rounding)
+    if(NOT _no_rounding AND _rounding STREQUAL "upward")
+      list(APPEND _api_upward_kernels ${_kernel})
       continue()
     endif()
     # The kernels the oracle does not judge yet (KAIRN_NOT_YET_CROSS_CHECKED, ../CMakeLists.txt),
@@ -401,10 +413,16 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} ${_oracle_claims_arg}
     PARENT_SCOPE)
   set(_api_unlisted ${KAIRN_NOT_YET_CROSS_CHECKED} ${KAIRN_NOT_PUBLIC_YET})
+  # The runner of <kairn/upward.hpp> (upward/runner.cpp), whose forms reach the kernels of the round-up
+  # interval; without the tests of that header, coverage.cmake counts those kernels as not checked.
+  set(_api_upward_runner "")
+  if(KAIRN_UPWARD_TESTS)
+    set(_api_upward_runner "-DUPWARD_RUNNER=$<TARGET_FILE:kairn-api-upward-runner>")
+  endif()
   # The runner's lists against the listings of gen/kernels and every kernel of gen/claims.json,
   # whatever claims the oracle reads (KAIRN_ORACLE_CLAIMS): the runner is built from them all.
   add_test(NAME api.oracle.coverage
-    COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>"
+    COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" ${_api_upward_runner}
       "-DCLAIMS=${PROJECT_SOURCE_DIR}/gen/claims.json"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
       "-DNOT_PUBLIC=${_api_not_public}" "-DPACKED_ONLY=${_api_packed_only}" "-DNOT_CHECKED=${_api_unlisted}"

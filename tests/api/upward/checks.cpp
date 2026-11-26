@@ -9,7 +9,16 @@
 //   Scope or the register-only scope; with flush to zero set by hand inside a Scope it reports, and
 //   so does the assertion before an exact operation (detail::check_exact), which reports nothing
 //   else; an upward scope that writes the mode checks that this file's build honors it, which it
-//   does: no report.
+//   does: no report. And the checks of the interval type and the functions on arrays (type_reports
+//   below): an operation that rounds reports outside any scope and in a NearestScope, once per
+//   operation, and nothing in a Scope; the exact operations and the functions on arrays report
+//   nothing outside a scope; a default type that rounds reports inside a Scope (its own check,
+//   unchanged), and not in a NearestScope inside it; a state that is not canonical (one NaN lane, a
+//   lane -inf, crossed lanes, signaling NaNs) reports when from_limbs builds it and when an
+//   operation, exact or not, takes it, and a canonical one (the empty set, the whole line) does not;
+//   so does a default interval that is not canonical given to the conversion; a function on arrays
+//   reports views of different lengths, an array written that overlaps one read or the other one
+//   written, and an element that is not canonical, and not the same view written and read.
 // - api.upward.checks.off (KAIRN_CHECKS 0, KAIRN_TEST_CHECKS_OFF): none of them reports, and every
 //   assertion says that the operation's checks may go on.
 // - api.upward.checks.unhonored (KAIRN_CHECKS 1, KAIRN_TEST_UNHONORED, compiled without the options,
@@ -125,6 +134,135 @@ void assertions() {
     assertion("check_upward() outside any scope, rounding downward", check_upward, r, not_upward);
     set_register_mode(FE_TONEAREST);
 }
+
+// The checks of the interval type, the functions on arrays and the default types inside a scope.
+// Every operation is written with the marker, which compiles whatever gen/upward.hpp says of its
+// kernel. A result is stored to a volatile object, so that the operation is not removed.
+using I = kairn::upward::Interval<double>;
+using D = kairn::Interval<double, 1>;
+using kairn::unverified;
+volatile double sink = 0;
+void keep(const I& z) {
+    double p[2] = {};
+    z.to_limbs(p);
+    sink = p[0] + p[1];
+}
+const char* const not_canonical = "not canonical";
+
+// The interval of the limbs (u, n), and whether building it reported (expected 0 or 1).
+I limbs(const char* what, double u, double n, int expected) {
+    const double p[2] = {u, n};
+    const int before = calls;
+    const I x = I::from_limbs(p);
+    expect_reports(what, before, expected, "from_limbs");
+    return x;
+}
+
+void type_reports() {
+    const int r = checks_on ? 1 : 0;
+    volatile double v1 = 1, v2 = 2;
+    const I x = limbs("from_limbs of [1, 2]", 2.0, -1.0, 0), y = limbs("from_limbs of [-1, 3]", 3.0, 1.0, 0);
+    int before = calls;
+    keep(unverified(x) + y);
+    expect_reports("an interval sum outside any scope", before, r, not_upward);
+    before = calls;
+    keep(unverified(x) * 2.0);
+    expect_reports("an interval times a number outside any scope", before, r, not_upward);
+    before = calls;
+    keep(1.0 - unverified(x));
+    expect_reports("a number minus an interval outside any scope", before, r, not_upward);
+    before = calls;
+    keep(-unverified(x));
+    keep(x.hull(unverified(y)));
+    keep(x.intersection(unverified(y)));
+    keep(I(unverified(double(v1)), double(v2)));
+    sink = unverified(x).is_empty() ? 1.0 : 0.0;
+    sink = unverified(x).certainly_positive() ? 1.0 : 0.0;
+    sink = x.contains(unverified(1.5)) ? 1.0 : 0.0;
+    sink = kairn::upward::less(unverified(x), y) == kairn::Trit::yes ? 1.0 : 0.0;
+    sink = kairn::upward::ieee1788::disjoint(unverified(x), y) ? 1.0 : 0.0;
+    sink = unverified(x).lower();
+    sink = unverified(x).to_interval().upper().limb[0];
+    expect_reports("the exact operations outside any scope", before, 0, "");
+    {
+        Scope s;
+        before = calls;
+        keep(unverified(x) + y);
+        keep(unverified(x) - y);
+        keep(unverified(x) * y);
+        keep(unverified(x) + 0.5);
+        keep(0.5 - unverified(x));
+        keep(unverified(x) * 3.0);
+        expect_reports("the operations that round, in a Scope", before, 0, "");
+        {
+            NearestScope n;
+            before = calls;
+            keep(unverified(x) * y);
+            expect_reports("an interval product in a NearestScope inside a Scope", before, r, not_upward);
+            before = calls;
+            sink = D(unverified(double(v1)), double(v2)).midpoint().limb[0];
+            expect_reports("a default interval's midpoint in a NearestScope inside a Scope", before, 0, "");
+        }
+        before = calls;
+        sink = D(unverified(double(v1)), double(v2)).midpoint().limb[0];
+        expect_reports("a default interval's midpoint inside a Scope (its own check)", before, r, "not to nearest");
+    }
+
+    // States that are not canonical, and the canonical ones next to them.
+    const double inf = std::numeric_limits<double>::infinity(), nan = std::numeric_limits<double>::quiet_NaN();
+    const double snan = std::numeric_limits<double>::signaling_NaN();
+    limbs("from_limbs of the empty set (NaN, NaN)", nan, nan, 0);
+    limbs("from_limbs of the whole line (+inf, +inf)", inf, inf, 0);
+    limbs("from_limbs of (+inf, -1), [1, +inf]", inf, -1.0, 0);
+    limbs("from_limbs of one NaN lane", 1.0, nan, r);
+    limbs("from_limbs of a lane -inf", -inf, 0.0, r);
+    limbs("from_limbs of signaling NaNs", snan, snan, r);
+    const I crossed = limbs("from_limbs of crossed lanes, -n > u", 1.0, -3.0, r);
+    {
+        Scope s;
+        before = calls;
+        keep(unverified(crossed) + y);
+        expect_reports("an interval sum of a state that is not canonical, in a Scope", before, r, not_canonical);
+        before = calls;
+        keep(y * unverified(crossed));
+        expect_reports("an interval product with a state that is not canonical, in a Scope", before, r, not_canonical);
+    }
+    before = calls;
+    sink = unverified(crossed).is_empty();
+    expect_reports("is_empty() of a state that is not canonical", before, r, not_canonical);
+    before = calls;
+    keep(x.hull(unverified(crossed)));
+    expect_reports("the hull with a state that is not canonical", before, r, not_canonical);
+    before = calls;
+    keep(I(unverified(D(kairn::detail::kernel_result, kairn::Expansion<double, 1>(2.0), kairn::Expansion<double, 1>(1.0)))));
+    expect_reports("the conversion of a default interval [2, 1], not canonical", before, r, "converted is not canonical");
+
+    // The functions on arrays: from code that rounds to nearest, so that their own scopes set the mode.
+    double au[4] = {2, 3, inf, nan}, an[4] = {-1, 1, inf, nan}, zu[4] = {}, zn[4] = {};
+    const kairn::upward::View<const double> a(au, an, 4), a3(au, an, 3);
+    const kairn::upward::View<double> z(zu, zn, 4);
+    before = calls;
+    kairn::upward::add(z, unverified(a), a);
+    kairn::upward::mul(z, unverified(a), 2.0);
+    kairn::upward::neg(z, unverified(a));
+    double bu[4] = {2, 3, inf, nan}, bn[4] = {-1, 1, inf, nan};
+    const kairn::upward::View<double> b(bu, bn, 4);
+    kairn::upward::sub(b, unverified(kairn::upward::View<const double>(b)), a);
+    expect_reports("the functions on arrays, from rounding to nearest, and in place", before, 0, "");
+    before = calls;
+    kairn::upward::add(z, unverified(a3), a);
+    expect_reports("a function on arrays with views of different lengths", before, r, "different lengths");
+    before = calls;
+    kairn::upward::neg(kairn::upward::View<double>(au + 1, zn, 3), unverified(kairn::upward::View<const double>(au, an, 3)));
+    expect_reports("a function on arrays whose array written overlaps one read", before, r, "overlaps");
+    before = calls;
+    kairn::upward::neg(kairn::upward::View<double>(zu, zu + 1, 2), unverified(kairn::upward::View<const double>(au, an, 2)));
+    expect_reports("a function on arrays whose two arrays written overlap", before, r, "overlaps");
+    double cu[2] = {1, 2}, cn[2] = {-3, -1};  // (1, -3) crossed
+    before = calls;
+    kairn::upward::add(kairn::upward::View<double>(zu, zn, 2), unverified(kairn::upward::View<const double>(cu, cn, 2)), 1.0);
+    expect_reports("a function on arrays with an element that is not canonical", before, r, "not a canonical state");
+}
 #else
 const char* const ignored = "-frounding-math";
 
@@ -173,6 +311,7 @@ int main() {
     return summary("api.upward.checks.unhonored");
 #else
     assertions();
+    type_reports();
     return summary(checks_on ? "api.upward.checks" : "api.upward.checks.off");
 #endif
 }

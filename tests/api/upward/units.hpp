@@ -6,9 +6,11 @@
 // kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math,
 // MSVC /fp:strict).
 //
-// The operation is a stand-in for a generated kernel (the kernels come with the interval type): one
-// multiplication, its first input pinned (KAIRN_DETAIL_UPWARD_PIN), the other input and the result
-// behind barriers (KAIRN_DETAIL_UPWARD_BARRIER), as the printers of the design page emit them.
+// The operation is the product of two points through kairn::upward::Interval<double>: the generated
+// kernel upward_mul_1, its first input pinned (KAIRN_DETAIL_UPWARD_PIN), the other input and the
+// result behind barriers (KAIRN_DETAIL_UPWARD_BARRIER), and the upper bound of the result. The
+// programs are built with KAIRN_CHECKS 0: some probes run the operation outside any scope on
+// purpose, to see the result to nearest, which a checked build reports.
 #pragma once
 
 #if defined(UPWARD_TEST_DLL) && defined(_WIN32)
