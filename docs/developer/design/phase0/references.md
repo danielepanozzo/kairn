@@ -9,7 +9,10 @@ Items the agents could not confirm from a primary source are listed at the end. 
 [Classical algorithms and results](#classical-algorithms-and-results) were added on 2026-11-21:
 works that the source fields of the kernels and the pages cite and that this page lacked. Their
 bibliographic data were checked against the Crossref records of their DOIs where they have one
-(Dekker, Møller, IEEE 754); the works themselves were not re-read that day.
+(Dekker, Møller, IEEE 754); the works themselves were not re-read that day. The entries of
+[The round-up interval](#the-round-up-interval), and the additions to those of IEEE 754 and Flocq
+that it names, were added on 2026-11-26 from the references of its
+[design page](../upward.md#references), as that page gives them.
 
 **License rule.** Algorithms are taken from papers and cited. Code is reused only from MIT-,
 BSD- or Apache-licensed sources and only with attribution; nothing is taken from GPL code.
@@ -43,7 +46,9 @@ proofs and the [Milestone 2 statements](../milestone2.md#limbs-of-another-type) 
 <a id="ieee-754"></a>**IEEE 754.** IEEE Std 754-2019, *IEEE Standard for Floating-Point
 Arithmetic*. IEEE, 2019. [doi:10.1109/IEEESTD.2019.8766229](https://doi.org/10.1109/IEEESTD.2019.8766229).
 The binary formats, rounding to nearest with ties to even, and the operations
-`nextUp` and `nextDown`, which `next_up` and `next_down` compute on the bit pattern.
+`nextUp` and `nextDown`, which `next_up` and `next_down` compute on the bit pattern; for the
+round-up interval, rounding toward $+\infty$, the sign of an exact zero sum under each rounding
+direction, and the quiet NaN that an operation delivers.
 
 ## Double-word arithmetic
 
@@ -207,11 +212,43 @@ from the drafts.
 and **CRlibm**: prior art for elementary functions with proofs; the first client's current source
 of interval functions.
 
+## The round-up interval
+
+The references of the [design page of the round-up interval](../upward.md#references), the opt-in
+`<kairn/upward.hpp>`.
+
+<a id="lambov08"></a>**Lambov 2008.** B. Lambov. *Interval Arithmetic Using SSE-2.* In W. Luther,
+P. Hertling, C. M. Hoffmann, N. Revol (eds.), *Reliable Implementation of Real Number Algorithms:
+Theory and Practice*, Lecture Notes in Computer Science 5045, Springer, 2008, pp. 102–113; first in
+Dagstuhl Seminar Proceedings 06021, 2006,
+[doi:10.4230/DagSemProc.06021.6](https://doi.org/10.4230/DagSemProc.06021.6) (the version read). An
+interval in one SSE2 register as $\langle \ell, -h \rangle$ under rounding toward $-\infty$, set once
+for a computation: a sum is one addition, a negation one swap, the hull one minimum; the product
+selects four of the eight products by the signs of a bound. The storage of the round-up interval is
+the mirror image (the lower bound negated, rounding upward); its product has no branch and handles
+$0 \cdot \infty$ and the empty set. The paper also notes that compilers fold the pairs of negations
+that such code relies on, which rule U3 and the barriers of the design page address.
+
+<a id="attene20"></a>**Attene 2020.** M. Attene. *Indirect Predicates for Geometric Constructions.*
+Computer-Aided Design 126, 2020, [doi:10.1016/j.cad.2020.102856](https://doi.org/10.1016/j.cad.2020.102856).
+The paper that the library NFG ("Numbers For Geometry",
+[github.com/MarcoAttene/NFG](https://github.com/MarcoAttene/NFG), LGPL) asks to cite. The owner's
+request of 2026-11-24 named NFG's storage of an interval in one register as the model to adopt if
+worth it. No code of NFG is used or copied.
+
+<a id="intel-sdm"></a>**Intel SDM.** *Intel 64 and IA-32 Architectures Software Developer's Manual*,
+volume 2, `MAXPD` (the second operand returned when either operand is a NaN or both are zeros), and
+volume 1 for MXCSR.
+
+<a id="arm-arm"></a>**Arm ARM.** *Arm Architecture Reference Manual for A-profile*, `FMAXNM`
+(vector) and its pseudocode `FPMaxNum`, and FPCR.
+
 ## Proof tools
 
 <a id="proof-assistants"></a>**Flocq.** S. Boldo, G. Melquiond.
 [gitlab.inria.fr/flocq/flocq](https://gitlab.inria.fr/flocq/flocq), LGPL v3 or later, 4.2.2
-(February 2026). **Gappa** 1.8 and its Rocq support library; **CoqInterval** 4.11 (CeCILL-C).
+(February 2026); the statements of the round-up interval use its `Bplus` and `Bmult` with
+`mode_UP`, and `round_opp`. **Gappa** 1.8 and its Rocq support library; **CoqInterval** 4.11 (CeCILL-C).
 **Rocq** 9.3 is current; Phase 0 used the 9.0 container image. Lean 4 candidates surveyed:
 FloatSpec, flean, FloatLib. Isabelle: the AFP entry IEEE_Floating_Point.
 

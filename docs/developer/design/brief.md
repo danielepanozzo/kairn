@@ -98,6 +98,13 @@ are about. Namespace `kairn`, CMake target `kairn::kairn`.
   run if the device rounds toward zero or breaks any other assumption.
 - CUDA: no --use_fast_math; -ftz=false -prec-div=true -prec-sqrt=true.
 
+**Note of 2026-11-26.** The owner's decision of 2026-11-24 makes an exception to the first item of
+this section, "No fesetround or dynamic rounding modes", for one opt-in header only,
+`<kairn/upward.hpp>`: an interval of one limb computed under the rounding mode upward, for speed,
+which the header's scopes set and restore, in files that the program compiles with the options the
+header names ([the design page](upward.md); [The round-up interval](../../concepts/upward.md)). The
+default types are unchanged: they round to nearest and never change the floating-point environment.
+
 ## Architecture
 - Single source of truth: each kernel is written once as a branch-free straight-line
   network of add/sub/mul/fma (minimal control flow only where proven necessary) in a
