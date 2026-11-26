@@ -312,8 +312,14 @@ class Upward(unittest.TestCase):
         self.assertIn('fused multiply-adds', objcode.judge_upward(self.count(4, 3, fused=1), e, False))
         self.assertIn('negated multiplications', objcode.judge_upward(self.count(4, 3, negmul=1), e, False))
         self.assertIn('fmax', objcode.judge_upward(self.count(4, 3, fmax=1), e, False))
-        # The two-number form does not count its maxima.
+        # The two-number form does not count its maxima; where it branches, a product may be copied
+        # onto the paths of a branch, and the multiplications are at least those asked for.
         self.assertIsNone(objcode.judge_upward(self.count(8, 7), {'mul': 8, 'max': None}, False))
+        self.assertIn('12 multiplications, expected 8', objcode.judge_upward(self.count(12), {'mul': 8, 'max': None},
+                                                                               False))
+        self.assertIsNone(objcode.judge_upward(self.count(12), {'mul': 8, 'max': None}, False, duplicated=True))
+        self.assertIn('expected at least 8', objcode.judge_upward(self.count(7), {'mul': 8, 'max': None}, False,
+                                                                  duplicated=True))
 
     def test_calls(self):
         e = {'mul': 0, 'max': 0}

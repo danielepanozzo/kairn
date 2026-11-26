@@ -77,7 +77,9 @@ section "upward" of gen/objcode.json (gen/kairn_gen/objcode.py, upward_counts), 
 returns a NaN (fmax); the multiplications exactly those asked for, and the maxima (maxpd, vmaxpd,
 maxps, vmaxps, fmaxnm) exactly those asked for where the form counts them (not in the two-number
 form, whose a > b ? a : b may be a selection or a branch); an array form as the sums of copies of its
-parts, each at least once (the rule of the folds); no call outside the object, and no call of a
+parts, each at least once (the rule of the folds); in the two-number form, where the function
+branches, at least the multiplications asked for (a compiler may copy a product onto the paths of a
+branch: Clang 18 at -O3; judge_upward); no call outside the object, and no call of a
 kernel (every kernel is forced inline into its caller) but with MSVC at /Od, which inlines nothing;
 the calls of other functions of the object are followed, as for the other kernels.
 /O2 /GL is not in the matrix: an object compiled for link-time code generation holds no machine code.
@@ -1077,8 +1079,12 @@ def load_upward_expected(path):
 KERNEL_CALL = re.compile(r'upward_[a-z_]+_1(?!_arrays)(?![a-z_])')
 
 
-def judge_upward(count, e, calls_allowed):
-    """The failure text of one function of the round-up interval, or None (the rule of --upward)."""
+def judge_upward(count, e, calls_allowed, duplicated=False):
+    """The failure text of one function of the round-up interval, or None (the rule of --upward).
+    With `duplicated` (a function of the two-number form that branches), at least the
+    multiplications asked for: a compiler may copy a product onto the paths of a branch (Clang 18
+    at -O3 copies those of upward_mul_1 and upward_mul_num_1 after the branches of its selections, 12
+    instructions for 8 products, each path computing each product once)."""
     problems = []
     if count.fma:
         problems.append(f'{len(count.fma)} fused multiply-adds, expected none')
@@ -1089,14 +1095,18 @@ def judge_upward(count, e, calls_allowed):
     m, x = len(count.mul), len(count.maximum)
     if isinstance(e, list):
         described = ', '.join(f'{p["part"]} {p["mul"]} and {p["max"]} at least {p["least"]} times' for p in e)
-        if m not in _sums(e, 'mul', 'mul', m):
+        least = sum(p['mul'] * p['least'] for p in e)
+        if duplicated:
+            if m < least:
+                problems.append(f'{m} multiplications, fewer than the {least} of the parts ({described})')
+        elif m not in _sums(e, 'mul', 'mul', m):
             problems.append(f'{m} multiplications, which no number of copies of the parts makes ({described})')
         counted = [p for p in e if p['max'] is not None]
         if len(counted) == len(e) and x not in _sums(e, 'max', 'max', x):
             problems.append(f'{x} maxima, which no number of copies of the parts makes ({described})')
     else:
-        if m != e['mul']:
-            problems.append(f'{m} multiplications, expected {e["mul"]}')
+        if (m < e['mul']) if duplicated else (m != e['mul']):
+            problems.append(f'{m} multiplications, expected {"at least " if duplicated else ""}{e["mul"]}')
         if e['max'] is not None and x != e['max']:
             problems.append(f'{x} maxima, expected {e["max"]}')
     for fn, sym in count.external:
@@ -1114,6 +1124,16 @@ def judge_upward(count, e, calls_allowed):
         if items:
             detail.append(f'{what}: ' + '; '.join(f'{fn}: {i}' for fn, i in items))
     return '; '.join(problems) + ''.join(f'\n        {d}' for d in detail)
+
+
+# An unconditional jump: every other jump is a branch.
+UNCONDITIONAL = frozenset({'jmp', 'jmpq', 'b', 'br'})
+
+
+def branches(program, f):
+    """Whether a function (or a part of it) has a conditional jump."""
+    return any(disasm.JUMP.match(i.mnemonic) and i.mnemonic not in UNCONDITIONAL
+               for part in program.parts.get(id(f), [f]) for i in part.insns)
 
 
 def upward_forms(program):
@@ -1139,7 +1159,8 @@ def check_upward_program(program, expected, limb_types, calls_allowed):
                 failures.append(f'{form} {t} {kernel}: no function {name} in the disassembly')
                 continue
             n += 1
-            text = judge_upward(program.count(f), forms[form][t], calls_allowed)
+            text = judge_upward(program.count(f), forms[form][t], calls_allowed,
+                                form == 'numbers' and branches(program, f))
             if text:
                 failures.append(f'{form} {t} {kernel}: {text}')
             if 'avx2' not in forms:
@@ -1156,7 +1177,7 @@ def check_upward_program(program, expected, limb_types, calls_allowed):
                 e = [{'part': 'tail', 'least': 1, 'mul': c['mul'], 'max': c['max']}]
             else:
                 e = forms['avx2' if arrays == 'avx2' else 'neon_arrays'][t]
-            text = judge_upward(program.count(f), e, calls_allowed)
+            text = judge_upward(program.count(f), e, calls_allowed, form == 'numbers' and branches(program, f))
             if text:
                 failures.append(f'arrays {arrays} {t} {kernel}: {text}')
     for fn in program.functions:
