@@ -198,7 +198,7 @@ def _scalar_literal(name, ctype):
 
 def scalar_expr(op, args, ctype):
     if op == 'unord':
-        return _unord(args)
+        return f'unord({args[0]}, {args[1]})' if isinstance(ctype, cpp.Limb) else _unord(args)
     return scalar_spell(ctype)[op].format(*args)
 
 
@@ -533,9 +533,9 @@ def register_function(k, R, kernels):
 # ---------------------------------------------------------------------------------------------
 # The two-number form: every statement scalar, a pair two numbers.
 
-def numbers_function(k, ctype, pair_type, kernels, inline='KAIRN_GEN_FORCEINLINE'):
+def numbers_function(k, ctype, pair_type, kernels, inline='KAIRN_GEN_FORCEINLINE', barriers=True):
     """One kernel in the two-number form for limb type ctype (double, float or a cpp.Limb), a pair
-    being a `pair_type` {u, n}."""
+    being a `pair_type` {u, n}; without `barriers` (the emulated type, which needs no mode), none."""
     L = Listing(k)
     fn = _Function()
     used = {a.name for st in k.body for a in st.args if not a.const}
@@ -552,6 +552,7 @@ def numbers_function(k, ctype, pair_type, kernels, inline='KAIRN_GEN_FORCEINLINE
         else:
             for v in g.limbs:
                 outs.append(f'{"bool" if g.kind == ir.MASK else ctype}& {fn.name(v + "_out")}')
+    const = '' if barriers else 'const '
     for g in _groups(k, 'input'):
         if g.kind == ir.MASK:
             continue
@@ -559,9 +560,10 @@ def numbers_function(k, ctype, pair_type, kernels, inline='KAIRN_GEN_FORCEINLINE
         if g.name in k.pair_inputs:
             for v, field in zip(g.limbs, ('u', 'n')):
                 if v in used:
-                    fn.add(f'{ctype} {fn.name(v)} = {g.name}.{field};')
-                    fn.add(f'KAIRN_DETAIL_UPWARD_{"PIN" if pin else "BARRIER"}({v});')
-        else:
+                    fn.add(f'{const}{ctype} {fn.name(v)} = {g.name}.{field};')
+                    if barriers:
+                        fn.add(f'KAIRN_DETAIL_UPWARD_{"PIN" if pin else "BARRIER"}({v});')
+        elif barriers:
             for v in g.limbs:
                 fn.add(f'KAIRN_DETAIL_UPWARD_BARRIER({v});')
     outputs = set(k.output_limbs)
@@ -570,14 +572,14 @@ def numbers_function(k, ctype, pair_type, kernels, inline='KAIRN_GEN_FORCEINLINE
         args = [_sv(a, L, ctype) for a in st.args]
         text = scalar_expr(st.op, args, ctype)
         vtype = 'bool' if L.kind[d] == ir.MASK else ctype
-        if d in L.signed or (d in outputs and vtype != 'bool'):
+        if barriers and (d in L.signed or (d in outputs and vtype != 'bool')):
             fn.add(f'{vtype} {fn.name(d)} = {text};')
             if d in L.signed:
                 fn.add(f'KAIRN_DETAIL_UPWARD_BARRIER({d});')
         else:
             fn.add(f'const {vtype} {fn.name(d)} = {text};')
     for g in _groups(k, 'output'):
-        if g.kind != ir.MASK:
+        if g.kind != ir.MASK and barriers:
             for v in g.limbs:
                 fn.add(f'KAIRN_DETAIL_UPWARD_BARRIER({v});')
         if g.name in k.pair_outputs:
@@ -1223,4 +1225,117 @@ def header(kernels):
                   '    return nullptr;', '}']
     lines += ['', '}  // namespace', '}  // namespace selftest', '', '}  // namespace kairn::gen::upward',
               'KAIRN_GEN_POP_WARNINGS']
+    return '\n'.join(lines) + '\n'
+
+
+# ---------------------------------------------------------------------------------------------
+# The emulated limb type (tests/emulated/gen/upward.hpp), and the table of the runner.
+
+EMULATED = 'kairn::emulated::Number'
+
+
+def emulated_limb():
+    """The emulated limb type for the two-number printer: only its name and +inf and NaN are used
+    (the family has no constant but 0, which is Number(), +0)."""
+    return cpp.Limb(EMULATED, 'kairn::emulated::constant({0})', {}, 'kairn::emulated::constant_evaluation()',
+                    'kairn::emulated::pow2(64)')
+
+
+def emulated_header(kernels):
+    """Every kernel of the family in the two-number form for kairn::emulated::Number
+    (tests/emulated/number.hpp, a format chosen at run time), by numbers_function with that type:
+    the same statements as the two-number form for double, add_ru, mul_ru, unord and max_nl being the
+    type's own (max_nl in the form its runner sets), and no barrier: the type computes with integers
+    and needs no mode. A test file, not shipped."""
+    family = _kernels(kernels)
+    limb = emulated_limb()
+    lines = [HEADER, '//',
+             '// The kernels of the round-up interval for the emulated limb type kairn::emulated::Number',
+             '// (tests/emulated/number.hpp), in the two-number form of include/kairn/gen/upward.hpp, printed',
+             '// by the same printer (gen/kairn_gen/upward_cpp.py, numbers_function) with that type: add_ru,',
+             "// mul_ru, unord and max_nl are the type's (computed with integers; max_nl in the form that",
+             '// kairn::emulated::set_max_form sets), and there is no barrier, since nothing here depends on the',
+             '// rounding mode of the machine. A test file (docs/developer/testing.md, "The emulated formats"),',
+             '// not shipped. The kernels of include/kairn/gen/upward.hpp that it stands for:',
+             f'// {upward.MARK}',
+             '#pragma once', '',
+             '#include "../prelude.hpp"', '',
+             'namespace kairn::emulated::upward {', '',
+             '// A state: the upper bound u and the negated lower bound n.',
+             'template <class T>',
+             'struct numbers {',
+             '    T u;',
+             '    T n;',
+             '};',
+             'template <class T>',
+             'using pair = numbers<T>;',
+             f'inline numbers<{EMULATED}> pair_make({EMULATED} u, {EMULATED} n) noexcept {{ return {{u, n}}; }}',
+             f'inline {EMULATED} pair_upper(numbers<{EMULATED}> v) noexcept {{ return v.u; }}',
+             f'inline {EMULATED} pair_nlower(numbers<{EMULATED}> v) noexcept {{ return v.n; }}']
+    for k in family.values():
+        lines += [''] + _description(k)
+        lines += numbers_function(k, limb, f'numbers<{EMULATED}>', kernels, inline='inline', barriers=False)
+    lines += ['', '}  // namespace kairn::emulated::upward']
+    return '\n'.join(lines) + '\n'
+
+
+RUNNER_TABLE = 'gen/tests/upward_kernels.inc'
+
+
+def runner_table(kernels):
+    """gen/tests/upward_kernels.inc: the kernels of the family for gen/tests/upward_runner.cpp: name,
+    the kinds of the input and output values (l a limb, m a mask), and the call, in which in[i] and
+    out[i] are the limbs and mi[i] and mo[i] the masks by position among the inputs and outputs, a
+    pair made by pair_make and read by pair_upper and pair_nlower, P its type; then, for a runner that
+    defines KAIRN_UPWARD_ARRAY, the call of each array form, a[i] the arrays of the lanes of the pairs
+    read, s[i] the numbers, w[i] the arrays written, n the length."""
+    family = _kernels(kernels)
+    lines = ['// Generated by gen/kairn-gen. Do not edit.',
+             '// The kernels of the round-up interval that gen/tests/upward_runner.cpp runs: name, input and',
+             '// output kinds (l: limb, m: mask), the call; then the array forms (KAIRN_UPWARD_ARRAY): name,',
+             '// the number of arrays read, of numbers and of arrays written, the call.']
+    for k in family.values():
+        pos = {v: i for i, v in enumerate(k.input_limbs)}
+        args, body = [], []
+        for g in _groups(k, 'input'):
+            if g.name in k.pair_inputs:
+                u, n = g.limbs
+                args.append(f'pair_make(in[{pos[u]}], in[{pos[n]}])')
+            else:
+                args += [f'{"mi" if g.kind == ir.MASK else "in"}[{pos[v]}]' for v in g.limbs]
+        opos = {v: i for i, v in enumerate(k.output_limbs)}
+        stores = []
+        for g in _groups(k, 'output'):
+            if g.name in k.pair_outputs:
+                u, n = g.limbs
+                body.append(f'P {g.name}_;')
+                args.append(f'{g.name}_')
+                stores += [f'out[{opos[u]}] = pair_upper({g.name}_);', f'out[{opos[n]}] = pair_nlower({g.name}_);']
+            else:
+                for v in g.limbs:
+                    t = 'bool' if g.kind == ir.MASK else 'T'
+                    body.append(f'{t} {v}_;')
+                    args.append(f'{v}_')
+                    stores.append(f'{"mo" if g.kind == ir.MASK else "out"}[{opos[v]}] = {v}_;')
+        kinds_in = ''.join('m' if kind == ir.MASK else 'l' for kind in k.input_kinds)
+        kinds_out = ''.join('m' if kind == ir.MASK else 'l' for kind in k.output_kinds)
+        call = ' '.join(body + [f'{k.name}({", ".join(args)});'] + stores)
+        lines.append(f'KAIRN_UPWARD_KERNEL({k.name}, "{kinds_in}", "{kinds_out}", {call})')
+    lines.append('#if defined(KAIRN_UPWARD_ARRAY)')
+    for k in family.values():
+        if k.name not in ARRAYS:
+            continue
+        a = s = 0
+        args = []
+        for g in _groups(k, 'input'):
+            if g.name in k.pair_inputs:
+                args += [f'a[{a}]', f'a[{a + 1}]']
+                a += 2
+            else:
+                args += [f's[{s + i}]' for i in range(len(g.limbs))]
+                s += len(g.limbs)
+        args += [f'w[{i}]' for i in range(len(k.output_limbs))] + ['n']
+        lines.append(f'KAIRN_UPWARD_ARRAY({k.name}, {a}, {s}, {len(k.output_limbs)}, '
+                     f'{k.name}_arrays({", ".join(args)}))')
+    lines.append('#endif')
     return '\n'.join(lines) + '\n'

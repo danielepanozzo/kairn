@@ -432,6 +432,103 @@ Number times_inf_ce(Number t) noexcept {
 
 Number pow2(int k) noexcept { return round(false, wide(1), k); }
 
+// --- The round-up interval ----------------------------------------------------------------------------
+
+namespace {
+
+MaxForm max_form_ = MaxForm::sel;
+
+// RU((-1)^negative n 2^e) in the current format, n > 0: round of the bits dropped, upward (away from
+// zero above it, toward zero below it); a positive result below eta is eta, a negative one above
+// -eta is -0; above the largest number +infinity, below minus the largest minus the largest.
+Number round_up(bool negative, const Wide& n, int e) noexcept {
+    const int p = current.p;
+    const int top = e + n.bits() - 1;
+    int q = top - p + 1 > current.qmin ? top - p + 1 : current.qmin;
+    std::uint64_t m;
+    if (q <= e) {
+        m = n.w[0] << (e - q);
+    } else {
+        const int s = q - e;
+        m = bits_from(n, s);
+        if (!negative && (bit(n, s - 1) || any_below(n, s - 1))) {
+            ++m;
+            if (m == std::uint64_t{1} << p) {
+                m >>= 1;
+                ++q;
+            }
+        }
+    }
+    if (m == 0) return zero(negative);
+    if (q > current.qmax)
+        return negative ? Access::finite(true, (std::uint64_t{1} << p) - 1, current.qmax) : Number::infinity(false);
+    return Access::finite(negative, m, q);
+}
+
+// The exact sum of two finite nonzero values, rounded upward; an exact cancellation is +0.
+Number round_sum_up(bool sa, const Wide& na, int ea, bool sb, const Wide& nb, int eb) noexcept {
+    const int e = ea < eb ? ea : eb;
+    Wide a, b;
+    shift_left(na, ea - e, a);
+    shift_left(nb, eb - e, b);
+    if (sa == sb) {
+        add(a, b, a);
+        return round_up(sa, a, e);
+    }
+    const int c = compare(a, b);
+    if (c == 0) return Number();
+    if (c > 0) {
+        sub(a, b, a);
+        return round_up(sa, a, e);
+    }
+    sub(b, a, b);
+    return round_up(sb, b, e);
+}
+
+}  // namespace
+
+Number add_ru(Number a, Number b) noexcept {
+    if (a.is_nan() || b.is_nan()) return Number::nan();
+    if (a.kind() == Number::Kind::infinite) {
+        if (b.kind() == Number::Kind::infinite && b.negative() != a.negative()) return Number::nan();
+        return a;
+    }
+    if (b.kind() == Number::Kind::infinite) return b;
+    if (a.is_zero() && b.is_zero()) return zero(a.negative() && b.negative());
+    if (a.is_zero()) return b;
+    if (b.is_zero()) return a;
+    return round_sum_up(a.negative(), wide(a.significand()), a.exponent(), b.negative(), wide(b.significand()),
+                        b.exponent());
+}
+
+Number mul_ru(Number a, Number b) noexcept {
+    if (a.is_nan() || b.is_nan()) return Number::nan();
+    const bool negative = a.negative() != b.negative();
+    if (a.kind() == Number::Kind::infinite || b.kind() == Number::Kind::infinite) {
+        if (a.is_zero() || b.is_zero()) return Number::nan();
+        return Number::infinity(negative);
+    }
+    if (a.is_zero() || b.is_zero()) return zero(negative);
+    Wide n;
+    set_product(n, a.significand(), b.significand());
+    return round_up(negative, n, a.exponent() + b.exponent());
+}
+
+bool unord(Number a, Number b) noexcept { return a.is_nan() || b.is_nan(); }
+
+Number max_nl(Number a, Number b) noexcept {
+    if (max_form_ == MaxForm::sel) return b < a ? a : b;   // MAXPD a, b
+    if (a.is_nan()) return b;                              // FMAXNM on quiet NaNs
+    if (b.is_nan()) return a;
+    if (b < a) return a;
+    if (a < b) return b;
+    if (a.is_zero() && b.is_zero()) return zero(a.negative() && b.negative());
+    return b;
+}
+
+void set_max_form(MaxForm form) noexcept { max_form_ = form; }
+MaxForm max_form() noexcept { return max_form_; }
+
 // --- The line protocol ------------------------------------------------------------------------------
 
 bool parse(const std::string& text, Number& out, std::string* why) {

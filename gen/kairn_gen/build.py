@@ -47,6 +47,8 @@ def outputs(kernels):
         # The C++ of the round-up interval: its own header (docs/developer/design/upward.md, "The pair
         # form"), which include/kairn/upward.hpp includes after its barriers.
         upward_cpp.PATH: upward_cpp.header(kernels),
+        upward_cpp.EMULATED_PATH: upward_cpp.emulated_header(kernels),
+        upward_cpp.RUNNER_TABLE: upward_cpp.runner_table(kernels),
         'gen/claims.json': claims.claims(kernels),
         'gen/constant_names.json': rocq.constant_names_file(kernels),
         'gen/objcode.json': objcode.objcode(kernels),
