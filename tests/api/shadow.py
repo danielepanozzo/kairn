@@ -56,9 +56,10 @@ KEYWORDS = frozenset('''
 # The tokens that can end a type, before the name it declares.
 TYPE_WORDS = frozenset('auto bool char double float int long short signed unsigned void'.split())
 # Names that a program cannot give a global variable, since the C library declares them in the
-# global namespace (MSVC's <cstdlib> brings in <math.h>): the Bessel functions y0 and y1, and nan
-# and ldexp, which GCC also knows as builtins. Kairn's namespaces, and std, cannot be either.
-NOT_A_GLOBAL = frozenset('y0 y1 nan ldexp kairn std'.split())
+# global namespace (MSVC's <cstdlib> brings in <math.h>): the Bessel functions y0, y1 and yn (yn, a
+# lane of the round-up interval's kernels, which Apple's <math.h> declares), and nan and ldexp,
+# which GCC also knows as builtins. Kairn's namespaces, and std, cannot be either.
+NOT_A_GLOBAL = frozenset('y0 y1 yn nan ldexp kairn std'.split())
 PREFIX = 'use_'  # the names of tests/api/shadow.cpp
 
 TOKEN = re.compile(r'[A-Za-z_]\w*|\d[\w.]*(?:[eEpP][+-]\d+)?|::|->|&&|\|\||\.\.\.|[<>=!+\-*/%&|^]=|<<|>>|\S')
