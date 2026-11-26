@@ -1446,5 +1446,142 @@
    "lanes": {"double": [["step", 2, 0, 0, 0, 0, 0, 0], ["combine", 1, 0, 0, 0, 0, 0, 0], ["finish", 1, 0, 0, 0, 0, 0, 0]], "float": [["step", 2, 0, 0, 0, 0, 0, 0], ["combine", 1, 0, 0, 0, 0, 0, 0], ["finish", 1, 0, 0, 0, 0, 0, 0]]},
    "packed": {"double": [["packed step", 1, 0, 0, 0, 0, 0, 0], ["combine", 1, 0, 0, 0, 0, 0, 0], ["step", 1, 0, 0, 0, 0, 0, 0], ["finish", 1, 0, 0, 0, 0, 0, 0]], "float": [["packed step", 1, 0, 0, 0, 0, 0, 0], ["combine", 1, 0, 0, 0, 0, 0, 0], ["step", 1, 0, 0, 0, 0, 0, 0], ["finish", 1, 0, 0, 0, 0, 0, 0]]}
   }
+ },
+ "upward_forms": ["sse2", "neon", "numbers", "avx2", "neon_arrays"],
+ "upward_counts": ["mul", "max"],
+ "upward_parts": ["part", "least", "mul", "max"],
+ "upward": {
+  "upward_add_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]},
+   "avx2": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]},
+   "neon_arrays": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]}
+  },
+  "upward_add_num_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]},
+   "avx2": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]},
+   "neon_arrays": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]}
+  },
+  "upward_contains_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_empty_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_entire_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_equal_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_from_interval_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_hull_1": {
+   "sse2": {"double": [0, 1], "float": [0, 1]},
+   "neon": {"double": [0, 1], "float": [0, 1]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_intersection_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_less_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_less_equal_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_make_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_mul_1": {
+   "sse2": {"double": [4, 3], "float": [4, 3]},
+   "neon": {"double": [4, 3], "float": [4, 3]},
+   "numbers": {"double": [8, null], "float": [8, null]},
+   "avx2": {"double": [["packed", 1, 8, 6], ["tail", 1, 4, 3]], "float": [["packed", 1, 8, 6], ["tail", 1, 4, 3]]},
+   "neon_arrays": {"double": [["packed", 1, 8, 6], ["tail", 1, 4, 3]], "float": [["packed", 1, 8, 6], ["tail", 1, 4, 3]]}
+  },
+  "upward_mul_num_1": {
+   "sse2": {"double": [2, 1], "float": [2, 1]},
+   "neon": {"double": [2, 1], "float": [2, 1]},
+   "numbers": {"double": [4, null], "float": [4, null]},
+   "avx2": {"double": [["packed", 1, 4, 2], ["tail", 1, 2, 1]], "float": [["packed", 1, 4, 2], ["tail", 1, 2, 1]]},
+   "neon_arrays": {"double": [["packed", 1, 4, 2], ["tail", 1, 2, 1]], "float": [["packed", 1, 4, 2], ["tail", 1, 2, 1]]}
+  },
+  "upward_neg_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]},
+   "avx2": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]},
+   "neon_arrays": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]}
+  },
+  "upward_negative_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_positive_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_rel_disjoint_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_rel_equal_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_rel_interior_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_sub_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]},
+   "avx2": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]},
+   "neon_arrays": {"double": [["packed", 1, 0, 0], ["tail", 1, 0, 0]], "float": [["packed", 1, 0, 0], ["tail", 1, 0, 0]]}
+  },
+  "upward_subset_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_to_interval_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  },
+  "upward_zero_1": {
+   "sse2": {"double": [0, 0], "float": [0, 0]},
+   "neon": {"double": [0, 0], "float": [0, 0]},
+   "numbers": {"double": [0, null], "float": [0, null]}
+  }
  }
 }

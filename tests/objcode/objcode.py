@@ -5,6 +5,7 @@
         [--style gnu|msvc] [--compiler-id ID] [--flags "..."] [--packed neon|avx2|none]
         [--packed-flags "..."] [--disassembler PATH] [--jobs N]
     python3 tests/objcode/objcode.py --controls ...      the negative controls (below)
+    python3 tests/objcode/objcode.py --upward ...        the round-up interval (below)
 
 For each configuration of a compiler's flag matrix, compiles unit.cpp, which has one function per
 kernel and limb type, scalar and packed, disassembles the object file, and checks every kernel
@@ -64,6 +65,23 @@ The negative controls (--controls), each in every configuration of the tier:
   interval_mul_1 among others, for the packing of FMAs alone (control_packing); with another
   compiler what it does is reported.
 
+The round-up interval (--upward; docs/developer/design/upward.md, "Object code"): upward_unit.cpp,
+one function per kernel of the family and limb type and one per array form, compiled with the
+options of the CMake target kairn::upward (-frounding-math with GCC and Clang, /fp:strict with MSVC,
+which refuses the header without it) on the matrix of UPWARD_MATRIX (UPWARD_QUICK in the quick tier),
+each configuration in the form the target chooses (one register: SSE2 or NEON; with the packed
+options its array form, AVX2 or NEON), in the two-number form forced (and its loop of arrays), and on
+x86-64 also without the packed options (the loop of the one-register form). Judged against the
+section "upward" of gen/objcode.json (gen/kairn_gen/objcode.py, upward_counts), by this rule
+(judge_upward): no fused multiply-add of any kind, no negated multiplication (fnmul), no maximum that
+returns a NaN (fmax); the multiplications exactly those asked for, and the maxima (maxpd, vmaxpd,
+maxps, vmaxps, fmaxnm) exactly those asked for where the form counts them (not in the two-number
+form, whose a > b ? a : b may be a selection or a branch); an array form as the sums of copies of its
+parts, each at least once (the rule of the folds); no call outside the object, and no call of a
+kernel (every kernel is forced inline into its caller) but with MSVC at /Od, which inlines nothing;
+the calls of other functions of the object are followed, as for the other kernels.
+/O2 /GL is not in the matrix: an object compiled for link-time code generation holds no machine code.
+
 Standard library only. Exits 1 on any failure, with what was found; a compiler or disassembler that
 cannot be run is a failure, never a skip.
 """
@@ -86,6 +104,7 @@ sys.dont_write_bytecode = True   # nothing of a run is written into the source t
 import disasm  # noqa: E402
 
 UNIT = os.path.join(HERE, 'unit.cpp')
+UPWARD_UNIT = os.path.join(HERE, 'upward_unit.cpp')
 FIXTURE = os.path.join(HERE, 'fixture.cpp')
 ENCLOSURE_UNIT = os.path.join(HERE, 'enclosure_unit.cpp')
 
@@ -1005,6 +1024,199 @@ def controls(tools, args, expected, limb_types, folds=None):
     return ok
 
 
+# --- The round-up interval -------------------------------------------------------------------------
+
+# The flag matrix of the round-up interval: optimization levels and contraction, with the options of
+# the CMake target kairn::upward. MSVC refuses the header without /fp:strict, which excludes
+# contraction; clang-cl's settings are those of the matrix above, never run here.
+UPWARD_MATRIX = {
+    'gnu': {'levels': ['-O0', '-O1', '-O2', '-O3'],
+            'contraction': [('-ffp-contract=off',), ('-ffp-contract=on',), ('-ffp-contract=fast',)],
+            'options': ('-frounding-math',)},
+    'msvc': {'levels': ['/Od', '/O2'], 'contraction': [('/fp:strict',)], 'options': ()},
+    'clang-cl': {'levels': ['/Od', '/O2'], 'contraction': [('/fp:strict',), ('/clang:-ffp-contract=fast',)],
+                 'options': ('/clang:-frounding-math',)},
+}
+UPWARD_QUICK = {
+    'gnu': [('-O0', ('-ffp-contract=fast',)), ('-O2', ('-ffp-contract=off',)), ('-O2', ('-ffp-contract=on',)),
+            ('-O2', ('-ffp-contract=fast',)), ('-O3', ('-ffp-contract=fast',))],
+    'msvc': [('/Od', ('/fp:strict',)), ('/O2', ('/fp:strict',))],
+    'clang-cl': [('/Od', ('/fp:strict',)), ('/O2', ('/clang:-ffp-contract=fast',))],
+}
+NUMBERS = 'KAIRN_UPWARD_FORM=KAIRN_UPWARD_FORM_NUMBERS'
+
+
+def upward_configurations(family, tier):
+    """[(level, contraction options)] of a tier for the round-up interval."""
+    if tier == 'quick':
+        return UPWARD_QUICK[family]
+    m = UPWARD_MATRIX[family]
+    return [(level, c) for level in m['levels'] for c in m['contraction']]
+
+
+def load_upward_expected(path):
+    """{kernel: {form: {limb type: counts}}} of gen/objcode.json ("upward"): for the forms of one
+    function {'mul', 'max'} (max None where it is not counted), for the array forms a list of parts
+    {'part', 'least', 'mul', 'max'}."""
+    with open(path, encoding='utf-8') as f:
+        doc = json.load(f)
+    names, parts = doc.get('upward_counts', []), doc.get('upward_parts', [])
+    out = {}
+    for k, forms in doc.get('upward', {}).items():
+        out[k] = {}
+        for form, types in forms.items():
+            out[k][form] = {t: ([dict(zip(parts, p)) for p in row] if row and isinstance(row[0], list)
+                                else dict(zip(names, row))) for t, row in types.items()}
+    return out
+
+
+# A call of a kernel of the family (not of an array form, an ordinary inline function that a compiler
+# that does not optimize calls), in any mangling: the kernels are forced inline everywhere but with
+# MSVC at /Od. Other calls of functions of the object (the standard library's bit_cast and
+# numeric_limits at -O0) are followed and counted with the function, as for every kernel.
+KERNEL_CALL = re.compile(r'upward_[a-z_]+_1(?!_arrays)(?![a-z_])')
+
+
+def judge_upward(count, e, calls_allowed):
+    """The failure text of one function of the round-up interval, or None (the rule of --upward)."""
+    problems = []
+    if count.fma:
+        problems.append(f'{len(count.fma)} fused multiply-adds, expected none')
+    if count.negmul:
+        problems.append(f'{len(count.negmul)} negated multiplications, expected none (rule U3)')
+    if count.fmax:
+        problems.append(f'{len(count.fmax)} maxima that return a NaN (fmax), expected none: max_nl is FMAXNM')
+    m, x = len(count.mul), len(count.maximum)
+    if isinstance(e, list):
+        described = ', '.join(f'{p["part"]} {p["mul"]} and {p["max"]} at least {p["least"]} times' for p in e)
+        if m not in _sums(e, 'mul', 'mul', m):
+            problems.append(f'{m} multiplications, which no number of copies of the parts makes ({described})')
+        counted = [p for p in e if p['max'] is not None]
+        if len(counted) == len(e) and x not in _sums(e, 'max', 'max', x):
+            problems.append(f'{x} maxima, which no number of copies of the parts makes ({described})')
+    else:
+        if m != e['mul']:
+            problems.append(f'{m} multiplications, expected {e["mul"]}')
+        if e['max'] is not None and x != e['max']:
+            problems.append(f'{x} maxima, expected {e["max"]}')
+    for fn, sym in count.external:
+        problems.append(f'calls {sym} outside the object (in {fn})')
+    for fn, insn in count.unknown:
+        problems.append(f'a call or jump whose target is not known (in {fn}: {insn})')
+    kernels = sorted({c for c in count.calls if KERNEL_CALL.search(c)})
+    if kernels and not calls_allowed:
+        problems.append(f'calls {", ".join(kernels)}: a kernel is not inlined')
+    if not problems:
+        return None
+    detail = []
+    for what, items in (('fused', count.fma), ('multiplications', count.mul), ('maxima', count.maximum),
+                        ('fmax', count.fmax)):
+        if items:
+            detail.append(f'{what}: ' + '; '.join(f'{fn}: {i}' for fn, i in items))
+    return '; '.join(problems) + ''.join(f'\n        {d}' for d in detail)
+
+
+def upward_forms(program):
+    """(form of the kernels, form of the arrays) of an object of upward_unit.cpp, from its markers."""
+    form = [f for f in ('sse2', 'neon', 'numbers') if program.find(f'kairn_objcode_upward_form_{f}')]
+    arrays = [f for f in ('avx2', 'neon', 'loop') if program.find(f'kairn_objcode_upward_arrays_form_{f}')]
+    if len(form) != 1 or len(arrays) != 1:
+        raise Failure('the unit of the round-up interval has not one marker of each of its forms')
+    return form[0], arrays[0]
+
+
+def check_upward_program(program, expected, limb_types, calls_allowed):
+    """(failures, functions checked, forms) of one object of upward_unit.cpp."""
+    form, arrays = upward_forms(program)
+    failures, n = [], 0
+    known = set()
+    for kernel, forms in expected.items():
+        for t in limb_types:
+            name = f'kairn_objcode_upward_kernel_{t}_{kernel}'
+            known.add(name)
+            f = program.find(name)
+            if f is None:
+                failures.append(f'{form} {t} {kernel}: no function {name} in the disassembly')
+                continue
+            n += 1
+            text = judge_upward(program.count(f), forms[form][t], calls_allowed)
+            if text:
+                failures.append(f'{form} {t} {kernel}: {text}')
+            if 'avx2' not in forms:
+                continue
+            name = f'kairn_objcode_upward_arrays_{t}_{kernel}'
+            known.add(name)
+            f = program.find(name)
+            if f is None:
+                failures.append(f'arrays {arrays} {t} {kernel}: no function {name} in the disassembly')
+                continue
+            n += 1
+            if arrays == 'loop':
+                c = forms[form][t]
+                e = [{'part': 'tail', 'least': 1, 'mul': c['mul'], 'max': c['max']}]
+            else:
+                e = forms['avx2' if arrays == 'avx2' else 'neon_arrays'][t]
+            text = judge_upward(program.count(f), e, calls_allowed)
+            if text:
+                failures.append(f'arrays {arrays} {t} {kernel}: {text}')
+    for fn in program.functions:
+        for name in fn.names:
+            plain = name[1:] if name.startswith('_kairn_objcode_') else name
+            if re.match(r'^kairn_objcode_upward_(kernel|arrays)_(double|float)_', plain) and plain not in known:
+                failures.append(f'{plain}: a function of the unit with no counts in gen/objcode.json')
+    return failures, n, (form, arrays)
+
+
+def check_upward_configuration(tools, config, index, workdir, expected, limb_types):
+    """[(text, ok)] of one configuration: the target's form with the packed options, the two-number
+    form, and on x86-64 the one-register form without them (its arrays the loop)."""
+    level, contraction = config
+    options = (level,) + contraction + UPWARD_MATRIX[tools.family]['options']
+    calls_allowed = tools.family == 'msvc' and level == '/Od'
+    variants = [('', [], tools.packed != 'none'), ('numbers', [NUMBERS], False)]
+    if tools.packed == 'avx2':
+        variants.append(('without the packed options', [], False))
+    out = []
+    for j, (what, defines, packed) in enumerate(variants):
+        obj = os.path.join(workdir, f'upward-{index}-{j}.{"obj" if tools.msvc_style else "o"}')
+        t0 = time.time()
+        try:
+            cmd_defines = list(defines) + (['NDEBUG'] if not tools.msvc_style else [])
+            tools.compile(UPWARD_UNIT, obj, options, cmd_defines, packed, workdir)
+            program = disasm.Program(tools.disassemble(obj, workdir))
+            failures, n, (form, arrays) = check_upward_program(program, expected, limb_types, calls_allowed)
+        except (Failure, ValueError) as e:
+            out.append((f'{" ".join(options)} {what}: FAILED: {e}', False))
+            continue
+        took = f'{time.time() - t0:.1f} s'
+        head = f'{" ".join(options)}, form {form}, arrays {arrays}'
+        if failures:
+            out.append((f'{head}: FAILED, {len(failures)} of {n} functions ({took}):', False))
+            out += [(f'    {text}', False) for text in failures]
+        else:
+            out.append((f'{head}: {n} functions: ok ({took})', True))
+    return out
+
+
+def check_upward(tools, args, expected, limb_types):
+    configs = upward_configurations(tools.family, args.tier)
+    print(f'objcode --upward: {tools.cxx_path} ({tools.name}, {tools.family} matrix, {args.tier} tier: '
+          f'{len(configs)} configurations, options {" ".join(UPWARD_MATRIX[tools.family]["options"]) or "none"}); '
+          f'disassembler {tools.disassembler} ({tools.flavor}); packed: {tools.packed}', flush=True)
+    if not expected:
+        print('objcode --upward: gen/objcode.json has no section "upward"')
+        return False
+    ok = True
+    with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
+        jobs = [pool.submit(check_upward_configuration, tools, c, i, args.workdir, expected, limb_types)
+                for i, c in enumerate(configs)]
+        for job in jobs:
+            for text, good in job.result():
+                print('  ' + text, flush=True)
+                ok = ok and good
+    return ok
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split('\n\n')[0],
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -1021,6 +1233,7 @@ def main():
     p.add_argument('--jobs', type=int, default=2)
     p.add_argument('--expected', default=os.path.join(ROOT, 'gen', 'objcode.json'))
     p.add_argument('--controls', action='store_true', help='run the negative controls instead')
+    p.add_argument('--upward', action='store_true', help='check the kernels of the round-up interval instead')
     p.add_argument('--emulator', default='', help='a command that runs the controls\' program, for a '
                    'compiler whose programs this machine cannot run (qemu-aarch64 -L SYSROOT)')
     args = p.parse_args()
@@ -1030,8 +1243,11 @@ def main():
     try:
         tools = Tools(args)
         expected, limb_types = load_expected(args.expected)
-        folds = load_fold_expected(args.expected)
-        ok = (controls if args.controls else check)(tools, args, expected, limb_types, folds)
+        if args.upward:
+            ok = check_upward(tools, args, load_upward_expected(args.expected), limb_types)
+        else:
+            folds = load_fold_expected(args.expected)
+            ok = (controls if args.controls else check)(tools, args, expected, limb_types, folds)
     except Failure as e:
         print(f'objcode: FAILED: {e}')
         return 1
