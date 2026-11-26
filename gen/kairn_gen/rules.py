@@ -3518,13 +3518,13 @@ def upward_rules(k, family):
                                    'no kernel and no name the printers use')
     if errs:
         return errs   # the rules below read the pairs and the operations as the family has them
-    errs += _pair_line_rules(k, family)
+    errs += _pair_line_rules(k)
     errs += _upward_outputs(k)
     errs += _upward_flow(k, family)
     return errs
 
 
-def _pair_line_rules(k, family):
+def _pair_line_rules(k):
     """P1, P2, P4 and P5 on each pair line: one operation (or a sign change of one lane), and each
     operand position a pair of one register in one of the forms of P2."""
     errs = []

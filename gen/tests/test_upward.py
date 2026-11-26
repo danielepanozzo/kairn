@@ -602,7 +602,7 @@ class Rocq(unittest.TestCase):
     def test_the_audit(self):
         self.assertIn('(* No statement of the round-up interval has a theorem yet. *)', self.audit)
         ks = common.kernels()
-        k = ir.parse_kernel(open(os.path.join(common.GEN, 'kernels', 'upward_neg_1.kernel')).read()
+        k = ir.parse_kernel(open(os.path.join(common.GEN, 'kernels', 'upward_neg_1.kernel'), encoding='utf-8').read()
                             .replace('status:        unverified', 'status:        proved')
                             .replace('ieee_status:   unverified', 'ieee_status:   proved\n'
                                      'ieee_theorem:  proofs/theories/IeeeUpward.v upward_neg_1_correct'), '-')
