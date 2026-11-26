@@ -297,7 +297,7 @@ READERS = {"certain": _read_relation, "trit": _read_relation, "ball_set": _read_
 
 def _sets_text(e):
     if e.over == "intervals":
-        return ", ".join("%s=[%s, %s]" % (n, lo, hi) for n, (lo, hi) in e.sets.items())
+        return IV._iv_text(e.sets)
     return ", ".join("%s=[%s +- %s]" % (n, c, r) for n, (c, r) in e.sets.items())
 
 
@@ -330,6 +330,10 @@ def plan_entry(pl, e, claims):
     if e.kind in ("certain", "trit"):
         sets = {}
         for n, (a, b) in e.sets.items():
+            if isinstance(e.sets[n], IV.Stored):
+                # A set named by its stored pair, the round-up interval's (upward.py).
+                sets[n] = ("up", sl[a], sl[b])
+                continue
             sets[n] = ("iv", sl[a], sl[b]) if e.over == "intervals" else ("ball", sl[a], sl[b][0])
         c.update(rel=e.rel, args=list(e.args), sets=sets, exact=e.exact,
                  point=sl[e.point] if e.point else None)
@@ -378,9 +382,11 @@ def set_of(fmt, x, spec):
     """(set, class, finite, special, ball) of a set operand: EMPTY or ("nonempty", L, U); its
     class for the statistics; finite: a bounded interval or a finite ball; special: the empty set
     or the whole line; ball: (center value, radius) of a finite ball, else None."""
-    if spec[0] == "iv":
+    if spec[0] in ("iv", "up"):
         _k, (alo, ahi), (blo, bhi) = spec
-        st = IV.interval_state(fmt, x[alo:ahi], x[blo:bhi])
+        # "up": the stored pair (u, n) of the round-up interval (upward.py), [-n, u] or empty.
+        st = (IV.interval_state(fmt, x[alo:ahi], x[blo:bhi]) if spec[0] == "iv"
+              else IV.upward_state(x[alo], x[blo]))
         if st[0] == "empty":
             return EMPTY, "empty", False, True, None
         L, U = st[1], st[2]

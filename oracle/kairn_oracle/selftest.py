@@ -905,7 +905,7 @@ def brute_driver(ctx):
 # maxima, convolutions; selftest9), and those of the ball vectors and the accumulator
 # (selftest10), those of their folds (selftest11), and those of the enclosure interface's
 # predicates, comparisons, set operations of a ball and conversions of two limbs
-# (selftest_enc) last.
+# (selftest_enc), and those of the round-up interval (selftest_up) last.
 from . import selftest2  # noqa: E402,F401
 from . import selftest3  # noqa: E402,F401
 from . import selftest4  # noqa: E402,F401
@@ -917,6 +917,7 @@ from . import selftest9  # noqa: E402,F401
 from . import selftest10  # noqa: E402,F401
 from . import selftest11  # noqa: E402,F401
 from . import selftest_enc  # noqa: E402,F401
+from . import selftest_up  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

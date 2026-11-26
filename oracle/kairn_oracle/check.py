@@ -21,6 +21,7 @@ from . import folds as FO
 from . import intervals as IV
 from . import enclosure as EN
 from . import rational as RAT
+from . import upward as UP
 from .claims import ClaimsError, ew_condition_text, format_u_eta
 
 SUMMARY_VERSION = 1
@@ -617,6 +618,9 @@ class Plan:
             if getattr(e, "encl", False):
                 # The predicates, comparisons and set operations of a ball (enclosure.py).
                 c.update(EN.plan_entry(self, e, claims))
+            if getattr(e, "up", False):
+                # same_set, of the round-up interval (upward.py).
+                c.update(UP.plan_entry(self, e, claims))
             self.entries.append(c)
         # In the finite domain, a kernel with an entry about an output group other than the first
         # is judged entry by entry, each where its own group's leading limb is finite.

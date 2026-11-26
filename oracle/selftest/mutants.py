@@ -1263,6 +1263,71 @@ MUTANTS.update({
 })
 LONG_ENCLOSURE = ("enc_exhaustive", "enc_planted")
 
+# The round-up interval (upward.py, the hooks of intervals.py and enclosure.py, genup.py, refup.py).
+MUTANTS.update({
+    "upward: the lower bound read without its negation": (
+        "intervals.py", "    lo = XT.x_neg(n)\n", "    lo = n\n"),
+    "upward: one NaN lane read as the empty set": (
+        "intervals.py", "    if u == NAN and n == NAN:\n        return (\"empty\", INF, NINF)",
+        "    if u == NAN or n == NAN:\n        return (\"empty\", INF, NINF)"),
+    "upward: a lane -inf accepted": (
+        "intervals.py", "    if NAN in (u, n) or NINF in (u, n):", "    if NAN in (u, n):"),
+    "upward: (-inf, -inf) read as the empty set": (
+        "intervals.py", "    if u == NAN and n == NAN:\n        return (\"empty\", INF, NINF)",
+        "    if (u == NAN and n == NAN) or (u == NINF and n == NINF):\n"
+        "        return (\"empty\", INF, NINF)"),
+    "upward: crossed lanes accepted": (
+        "intervals.py", "    if XT.x_cmp(lo, 0, u, 0) > 0:", "    if False:"),
+    "upward: the requirement upward() not checked": (
+        "intervals.py", "        return r[1] if upward_state(x[r[2][0]], x[r[3][0]]) is None else None",
+        "        return None"),
+    "upward: an output pair read with its lanes exchanged": (
+        "intervals.py", "Stored((os_[e.upper], os_[e.nlower]))", "Stored((os_[e.nlower], os_[e.upper]))"),
+    "upward: an operand pair read with its lanes exchanged": (
+        "intervals.py", "        return upward_state(x[pair[0][0]], x[pair[1][0]])",
+        "        return upward_state(x[pair[1][0]], x[pair[0][0]])"),
+    "upward: when product_large accepted over stored pairs": (
+        "intervals.py", "    if e.when and any(isinstance(p, Stored) for p in e.intervals.values()):",
+        "    if False:"),
+    "upward: certain and trit read a stored pair as lower and upper": (
+        "enclosure.py", "              else IV.upward_state(x[alo], x[blo]))",
+        "              else IV.interval_state(fmt, x[alo:ahi], x[blo:bhi]))"),
+    "numbers: an infinite number read as a point": (
+        "upward.py", "        env[name] = (v, v, q) if type(v) is int else (NINF, INF, q)",
+        "        env[name] = (v, v, q) if type(v) is int or v != NAN else (NINF, INF, q)"),
+    "numbers: a finite number read as the whole line": (
+        "upward.py", "        env[name] = (v, v, q) if type(v) is int else (NINF, INF, q)",
+        "        env[name] = (NINF, INF, q)"),
+    "numbers: a number that is not finite a bounded operand": (
+        "intervals.py", "    bops = bops and all(type(v[0]) is int for v in nenv.values())",
+        "    bops = bops"),
+    "numbers: an input of a set accepted": (
+        "upward.py", "        if n in bounds:", "        if False:"),
+    "same_set: the members not compared": (
+        "upward.py", "    if got != given:", "    if False:"),
+    "same_set: the empty set not compared": (
+        "upward.py", "    if (got[0] == \"empty\") != (given[0] == \"empty\"):", "    if False:"),
+    "rounding: another value accepted": (
+        "upward.py", "    if r not in ROUNDINGS:", "    if False:"),
+    "upward(): an input of two limbs accepted": (
+        "upward.py", "    if limbs[u] != 1 or limbs[n] != 1:", "    if False:"),
+    "genup: the stratum empty without the empty set": (
+        "genup.py", "    if kind == \"empty\":\n        return EMPTY",
+        "    if kind == \"empty\":\n        return (NINF, INF)"),
+    "genup: the enumeration without the empty set": (
+        "genup.py", "                dom = [(NAN, NAN)]", "                dom = []"),
+    "genup: crossed lanes generated": (
+        "genup.py", "    return -n <= u", "    return True"),
+    "genup: zeros of one sign": (
+        "genup.py", "        if limbs[0] == 0 and rng.bits(1):", "        if False:"),
+    "genup: aroundp of the product aimed elsewhere": (
+        "genup.py", "def _aroundp(fmt, rng):\n    A, B = G4._prod_operands(fmt, rng, \"aroundp\")",
+        "def _aroundp(fmt, rng):\n    A, B = G4._prod_operands(fmt, rng, \"uniform\")"),
+    "refup: a positive value rounded toward zero": (
+        "refup.py", "            if m << k != a:", "            if False:"),
+})
+LONG_UPWARD = ("up_exhaustive", "up_definition")
+
 
 # The selftest's longest tests (the exhaustive ones, the planted faults on every case), which
 # --fail-fast runs after the others: a mutant is caught at the first test that fails, and most
@@ -1270,7 +1335,7 @@ LONG_ENCLOSURE = ("enc_exhaustive", "enc_planted")
 LONG = ("correct_runner_toy_exhaustive", "exhaustive_wave2", "injected_wave2_exhaustive",
         "injected_wave3_exhaustive", "exhaustive_wave3", "iv_planted", "fold_planted",
         "injected_wave3", "injected_exhaustive", "fold_brackets", "fold_reference", "iv_exhaustive")
-LONG = LONG + LONG_ENCLOSURE
+LONG = LONG + LONG_ENCLOSURE + LONG_UPWARD
 FAIL_FAST = False
 
 
