@@ -12,10 +12,11 @@ ensures:       certain m lt 0 x x=xu,xn exact
 min_precision: 1
 source:        the negated lower bound compared with 0 (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardPredicates.v upward_positive_1_correct
 entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
 unused:        xu the negated lower bound alone tells: every member is at least -xn, and the state is empty exactly when it is a NaN

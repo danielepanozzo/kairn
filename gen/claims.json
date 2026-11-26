@@ -15507,9 +15507,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardArith.v",
+        "name": "upward_add_1_correct"
+      },
       "source": {
         "cite": "the sums of the lanes rounded upward (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -15580,9 +15584,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardArith.v",
+        "name": "upward_add_num_1_correct"
+      },
       "source": {
         "cite": "the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -15641,9 +15649,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_contains_1_correct"
+      },
       "source": {
         "cite": "the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -15697,9 +15709,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_empty_1_correct"
+      },
       "source": {
         "cite": "the upper bound tested for a NaN (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -15753,9 +15769,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_entire_1_correct"
+      },
       "source": {
         "cite": "both lanes compared with +inf (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -15829,9 +15849,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_equal_1_correct"
+      },
       "source": {
         "cite": "the lanes compared with the negated lanes (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -15884,9 +15908,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardExact.v",
+        "name": "upward_from_interval_1_correct"
+      },
       "source": {
         "cite": "the upper bound and the negated lower bound, the empty set after a test (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -15953,9 +15981,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardExact.v",
+        "name": "upward_hull_1_correct"
+      },
       "source": {
         "cite": "the larger lanes, the empty set its identity (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16022,9 +16054,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardExact.v",
+        "name": "upward_intersection_1_correct"
+      },
       "source": {
         "cite": "the smaller lanes, the empty set if they cross (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16098,9 +16134,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_less_1_correct"
+      },
       "source": {
         "cite": "the lanes compared with the other lanes negated (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16174,9 +16214,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_less_equal_1_correct"
+      },
       "source": {
         "cite": "the lanes compared with the other lanes negated (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16225,9 +16269,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardExact.v",
+        "name": "upward_make_1_correct"
+      },
       "source": {
         "cite": "constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16304,9 +16352,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardArith.v",
+        "name": "upward_mul_1_correct"
+      },
       "source": {
         "cite": "the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16377,9 +16429,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardArith.v",
+        "name": "upward_mul_num_1_correct"
+      },
       "source": {
         "cite": "the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16443,9 +16499,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardArith.v",
+        "name": "upward_neg_1_correct"
+      },
       "source": {
         "cite": "the two lanes exchanged (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16500,9 +16560,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_negative_1_correct"
+      },
       "source": {
         "cite": "the upper bound compared with 0 (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16557,9 +16621,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_positive_1_correct"
+      },
       "source": {
         "cite": "the negated lower bound compared with 0 (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16627,9 +16695,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_rel_disjoint_1_correct"
+      },
       "source": {
         "cite": "the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16697,9 +16769,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_rel_equal_1_correct"
+      },
       "source": {
         "cite": "the lanes compared, and tests of emptiness (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16767,9 +16843,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_rel_interior_1_correct"
+      },
       "source": {
         "cite": "the lanes compared, and a test of emptiness (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16846,9 +16926,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardArith.v",
+        "name": "upward_sub_1_correct"
+      },
       "source": {
         "cite": "the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16916,9 +17000,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_subset_1_correct"
+      },
       "source": {
         "cite": "the lanes compared, and a test of emptiness (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -16971,9 +17059,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardExact.v",
+        "name": "upward_to_interval_1_correct"
+      },
       "source": {
         "cite": "the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"
@@ -17028,9 +17120,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeUpwardPredicates.v",
+        "name": "upward_zero_1_correct"
+      },
       "source": {
         "cite": "both lanes compared with 0 (the listing of the round-up interval)",
         "license": "algorithm and proof: MIT"

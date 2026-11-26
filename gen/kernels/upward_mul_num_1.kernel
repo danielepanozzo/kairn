@@ -16,10 +16,11 @@ ensures:       encloses_interval zu zn x*t x=xu,xn numbers=t tight=rounded bound
 min_precision: 1
 source:        the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardArith.v upward_mul_num_1_correct
 entry:         yes
 cone_exempt:   the bounds are the greater of rounded products, a NaN candidate dropped, selected after explicit tests of the empty set and of a finite t; encloses_interval states what comes out
 

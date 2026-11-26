@@ -12,10 +12,11 @@ ensures:       encloses_interval zu zn -x x=xu,xn tight=exact bounded_when=abs_l
 min_precision: 1
 source:        the two lanes exchanged (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardArith.v upward_neg_1_correct
 entry:         yes
 cone_exempt:   the lanes exchanged, each a bound of its own; encloses_interval states what comes out for every canonical state
 

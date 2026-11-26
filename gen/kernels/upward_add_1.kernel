@@ -16,10 +16,11 @@ ensures:       encloses_interval zu zn x+y x=xu,xn y=yu,yn tight=rounded bounded
 min_precision: 1
 source:        the sums of the lanes rounded upward (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardArith.v upward_add_1_correct
 entry:         yes
 cone_exempt:   each lane is a bound of its own, and a lane that is not finite is part of a state (an unbounded interval, or with the other lane the empty set); encloses_interval states what comes out
 

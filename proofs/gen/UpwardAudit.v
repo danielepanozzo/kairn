@@ -4,5 +4,78 @@
    theorem has exactly the generated statement as its type, and the axioms it depends on are
    printed, for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import UpwardStatements.
+From Kairn Require Import IeeeUpwardArith.
+From Kairn Require Import IeeeUpwardExact.
+From Kairn Require Import IeeeUpwardPredicates.
 
-(* No statement of the round-up interval has a theorem yet. *)
+Definition upward_add_1_audit : upward_add_1_spec := upward_add_1_correct.
+Print Assumptions upward_add_1_correct.
+
+Definition upward_add_num_1_audit : upward_add_num_1_spec := upward_add_num_1_correct.
+Print Assumptions upward_add_num_1_correct.
+
+Definition upward_contains_1_audit : upward_contains_1_spec := upward_contains_1_correct.
+Print Assumptions upward_contains_1_correct.
+
+Definition upward_empty_1_audit : upward_empty_1_spec := upward_empty_1_correct.
+Print Assumptions upward_empty_1_correct.
+
+Definition upward_entire_1_audit : upward_entire_1_spec := upward_entire_1_correct.
+Print Assumptions upward_entire_1_correct.
+
+Definition upward_equal_1_audit : upward_equal_1_spec := upward_equal_1_correct.
+Print Assumptions upward_equal_1_correct.
+
+Definition upward_from_interval_1_audit : upward_from_interval_1_spec := upward_from_interval_1_correct.
+Print Assumptions upward_from_interval_1_correct.
+
+Definition upward_hull_1_audit : upward_hull_1_spec := upward_hull_1_correct.
+Print Assumptions upward_hull_1_correct.
+
+Definition upward_intersection_1_audit : upward_intersection_1_spec := upward_intersection_1_correct.
+Print Assumptions upward_intersection_1_correct.
+
+Definition upward_less_1_audit : upward_less_1_spec := upward_less_1_correct.
+Print Assumptions upward_less_1_correct.
+
+Definition upward_less_equal_1_audit : upward_less_equal_1_spec := upward_less_equal_1_correct.
+Print Assumptions upward_less_equal_1_correct.
+
+Definition upward_make_1_audit : upward_make_1_spec := upward_make_1_correct.
+Print Assumptions upward_make_1_correct.
+
+Definition upward_mul_1_audit : upward_mul_1_spec := upward_mul_1_correct.
+Print Assumptions upward_mul_1_correct.
+
+Definition upward_mul_num_1_audit : upward_mul_num_1_spec := upward_mul_num_1_correct.
+Print Assumptions upward_mul_num_1_correct.
+
+Definition upward_neg_1_audit : upward_neg_1_spec := upward_neg_1_correct.
+Print Assumptions upward_neg_1_correct.
+
+Definition upward_negative_1_audit : upward_negative_1_spec := upward_negative_1_correct.
+Print Assumptions upward_negative_1_correct.
+
+Definition upward_positive_1_audit : upward_positive_1_spec := upward_positive_1_correct.
+Print Assumptions upward_positive_1_correct.
+
+Definition upward_rel_disjoint_1_audit : upward_rel_disjoint_1_spec := upward_rel_disjoint_1_correct.
+Print Assumptions upward_rel_disjoint_1_correct.
+
+Definition upward_rel_equal_1_audit : upward_rel_equal_1_spec := upward_rel_equal_1_correct.
+Print Assumptions upward_rel_equal_1_correct.
+
+Definition upward_rel_interior_1_audit : upward_rel_interior_1_spec := upward_rel_interior_1_correct.
+Print Assumptions upward_rel_interior_1_correct.
+
+Definition upward_sub_1_audit : upward_sub_1_spec := upward_sub_1_correct.
+Print Assumptions upward_sub_1_correct.
+
+Definition upward_subset_1_audit : upward_subset_1_spec := upward_subset_1_correct.
+Print Assumptions upward_subset_1_correct.
+
+Definition upward_to_interval_1_audit : upward_to_interval_1_spec := upward_to_interval_1_correct.
+Print Assumptions upward_to_interval_1_correct.
+
+Definition upward_zero_1_audit : upward_zero_1_spec := upward_zero_1_correct.
+Print Assumptions upward_zero_1_correct.
