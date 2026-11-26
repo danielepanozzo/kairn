@@ -887,8 +887,12 @@ class NearestScope { /* the same, to nearest */ };
   [MSVC](#msvc); then, in a checked build and when the entry wrote the mode, the check that this
   file's build honors it ([Checks](#checks)).
 - **Exit.** A barrier; the C library's mode restored if the entry changed it; the register restored
-  if the entry wrote it, keeping the exception flags raised inside (MXCSR bits 0 to 5 carried over;
-  on arm64 the flags are in FPSR, which no scope touches).
+  if the entry wrote it or changed the C library's mode (glibc's `std::fesetround` writes MXCSR's
+  rounding control too), keeping the exception flags raised inside (MXCSR bits 0 to 5 carried over;
+  on arm64 the flags are in FPSR, which no scope touches); then, on MSVC, when the exit wrote the
+  register, the refresh of [MSVC](#msvc) again, so that an operation after the end of a
+  `NearestScope` inside an upward scope, and a value given to `pass()` after a scope, depend on a
+  read made after the restoring write.
 - **Targets without either register**: the C library's mode alone; flush to zero is left as it is.
 - The array functions hold an internal scope of the same kind that writes the register only.
 - A nested `NearestScope` inside a `Scope` is how a program calls the default types in an upward
