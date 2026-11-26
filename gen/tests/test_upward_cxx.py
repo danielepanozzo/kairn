@@ -42,7 +42,7 @@ import test_upward
 ENV = os.environ.get('KAIRN_GEN_CXX')
 COMPILERS = ENV.split() if ENV is not None else [c for c in ('c++', 'g++-16') if shutil.which(c)]
 X86 = platform.machine().lower() in ('x86_64', 'amd64')
-BASE = ['-std=c++20', '-Wall', '-Wextra', '-Wpedantic', '-Wstrict-aliasing', '-Werror'] + (['-mfma'] if X86 else [])
+BASE = ['-std=c++20', '-Wall', '-Wextra', '-Wpedantic', '-Wstrict-aliasing', '-Wshadow', '-Werror'] + (['-mfma'] if X86 else [])
 RUNNER = os.path.join(common.TESTS, 'upward_runner.cpp')
 INCLUDE = os.path.join(common.ROOT, 'include')
 EMULATED_NUMBER = os.path.join(common.ROOT, 'tests', 'emulated', 'number.cpp')

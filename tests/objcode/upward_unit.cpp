@@ -44,8 +44,8 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_upward_arrays_form_loop() n
     [[maybe_unused]] const L* in, [[maybe_unused]] L* out, [[maybe_unused]] const bool* mi, [[maybe_unused]] bool* mo
 #define KAIRN_OBJCODE_KERNEL(L, NAME, ...)                                                                     \
     extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_upward_kernel_##L##_##NAME(KAIRN_OBJCODE_ARGS(L)) noexcept { \
-        using T = L;                                                                                         \
-        using P = pair<L>;                                                                                   \
+        using T [[maybe_unused]] = L;                                                                        \
+        using P [[maybe_unused]] = pair<L>;                                                                  \
         __VA_ARGS__                                                                                          \
     }
 #define KAIRN_UPWARD_KERNEL(NAME, IN, OUT, ...) \
