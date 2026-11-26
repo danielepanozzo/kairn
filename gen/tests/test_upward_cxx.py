@@ -42,7 +42,7 @@ import test_upward
 ENV = os.environ.get('KAIRN_GEN_CXX')
 COMPILERS = ENV.split() if ENV is not None else [c for c in ('c++', 'g++-16') if shutil.which(c)]
 X86 = platform.machine().lower() in ('x86_64', 'amd64')
-BASE = ['-std=c++20', '-Wall', '-Wextra', '-Wpedantic', '-Werror'] + (['-mfma'] if X86 else [])
+BASE = ['-std=c++20', '-Wall', '-Wextra', '-Wpedantic', '-Wstrict-aliasing', '-Werror'] + (['-mfma'] if X86 else [])
 RUNNER = os.path.join(common.TESTS, 'upward_runner.cpp')
 INCLUDE = os.path.join(common.ROOT, 'include')
 EMULATED_NUMBER = os.path.join(common.ROOT, 'tests', 'emulated', 'number.cpp')
@@ -422,6 +422,91 @@ class Compiled(unittest.TestCase):
         self.assertTrue(differ)
         for a, b in differ:
             self.assertEqual(a.replace('-0x0p+0', '0x0p+0'), b.replace('-0x0p+0', '0x0p+0'))
+
+
+# The accesses to memory of the header: pair_load and pair_store, and the array forms, beside
+# accesses of the same arrays by the program, in functions that are not inlined, so that an access
+# through a pointer of another type (which a compiler that applies the rules of aliasing reorders or
+# drops: GCC's _mm_load_sd and _mm_store_sd, an access of a double) shows. Each check prints a line;
+# the program fails when one is wrong.
+ALIASING = r'''
+#include <cstdio>
+#include "kairn/upward.hpp"
+#include "kairn/gen/upward.hpp"
+using namespace kairn::gen::upward;
+
+template <class T>
+__attribute__((noinline)) T store_then_read(T* buf, pair<T> v) {
+    buf[0] = T(7);
+    buf[1] = T(8);
+    pair_store(buf, v);
+    return buf[0] + 10 * buf[1];
+}
+template <class T>
+__attribute__((noinline)) T write_then_load(T* buf) {
+    buf[0] = T(3);
+    buf[1] = T(4);
+    const pair<T> v = pair_load(buf);
+    buf[0] = T(5);
+    return pair_upper(v) + 10 * pair_nlower(v);
+}
+template <class T>
+__attribute__((noinline)) T neg_in_place(T* u, T* n, std::size_t len) {
+    for (std::size_t i = 0; i < len; ++i) {
+        u[i] = T(i);
+        n[i] = T(100);
+    }
+    upward_neg_1_arrays(u, n, u, n, len);
+    return u[len - 1] + n[len - 1];
+}
+template <class T>
+int check(const char* type) {
+    int bad = 0;
+    T buf[4] = {T(1), T(2), T(-1), T(-1)};
+    const T a = store_then_read<T>(buf, pair_make(T(3), T(4)));
+    const T b = write_then_load<T>(buf);
+    T u[37], n[37];
+    const T c = neg_in_place<T>(u, n, 37);
+    if (a != T(43) || buf[2] != T(-1)) bad = 1;
+    if (b != T(43)) bad = 1;
+    if (c != T(136)) bad = 1;
+    std::printf("%s %g %g %g %g\n", type, double(a), double(b), double(c), double(buf[2]));
+    return bad;
+}
+int main() { return check<double>("double") + check<float>("float"); }
+'''
+
+
+@unittest.skipUnless(COMPILERS, 'no C++ compiler (set KAIRN_GEN_CXX)')
+class Aliasing(unittest.TestCase):
+    def test_the_accesses_to_memory(self):
+        # pair_load, pair_store and an array form, with each compiler at -O2 and -O3 (where GCC
+        # applies the rules of aliasing), in the target's form and in the two-number form, with
+        # -Wstrict-aliasing among the warnings that are errors.
+        d = common.scratch('upward-aliasing')
+        src = os.path.join(d, 'aliasing.cpp')
+        with open(src, 'w') as f:
+            f.write(ALIASING)
+        jobs = []
+        for cxx in COMPILERS:
+            for level in ('-O2', '-O3'):
+                for form in ([], ['-DKAIRN_UPWARD_FORM=KAIRN_UPWARD_FORM_NUMBERS']):
+                    for isa in ([[], ['-mavx2']] if X86 and not form else [[]]):
+                        exe = os.path.join(d, f'aliasing{len(jobs)}')
+                        jobs.append((f'{cxx} {level} {" ".join(form + isa)}',
+                                     [cxx] + BASE + [level, '-frounding-math', '-Wstrict-aliasing'] + form + isa +
+                                     ['-I', INCLUDE, src, '-o', exe], exe))
+        with ThreadPoolExecutor(common.JOBS) as ex:
+            results = list(ex.map(compile_, [cmd for _, cmd, _ in jobs]))
+        failures = []
+        for (label, _, exe), (status, err) in zip(jobs, results):
+            if status:
+                failures.append(f'{label}: does not compile:\n{err[-2000:]}')
+                continue
+            r = subprocess.run([exe], capture_output=True, text=True)
+            if r.returncode:
+                failures.append(f'{label}: {r.stdout}{r.stderr}')
+        self.assertEqual(failures, [], '\n'.join(failures))
 
 
 # ---------------------------------------------------------------------------------------------

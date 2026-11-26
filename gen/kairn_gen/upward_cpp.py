@@ -982,12 +982,15 @@ def _pair_helpers(form):
                         'KAIRN_GEN_FORCEINLINE double pair_nlower(__m128d v) noexcept { return _mm_cvtsd_f64(_mm_unpackhi_pd(v, v)); }']
             else:
                 out += ['template <> struct form<float> { using pair = __m128; };',
-                        '// The two floats in lanes 0 and 1, lanes 2 and 3 +0 (a load of 64 bits clears them).',
+                        '// The two floats in lanes 0 and 1, lanes 2 and 3 +0 (a load of 64 bits clears them),',
+                        '// through a pointer to __m128i, which may alias any type: GCC defines _mm_load_sd',
+                        '// and _mm_store_sd as an access of a double, through which a float array does not',
+                        '// alias its own accesses (an earlier store of a float then read back past the store).',
                         'KAIRN_GEN_FORCEINLINE __m128 pair_load(const float* p) noexcept {',
-                        '    return _mm_castpd_ps(_mm_load_sd(reinterpret_cast<const double*>(p)));',
+                        '    return _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(p)));',
                         '}',
                         'KAIRN_GEN_FORCEINLINE void pair_store(float* p, __m128 v) noexcept {',
-                        '    _mm_store_sd(reinterpret_cast<double*>(p), _mm_castps_pd(v));',
+                        '    _mm_storel_epi64(reinterpret_cast<__m128i*>(p), _mm_castps_si128(v));',
                         '}',
                         'KAIRN_GEN_FORCEINLINE __m128 pair_make(float u, float n) noexcept { return _mm_set_ps(0.0f, 0.0f, n, u); }',
                         'KAIRN_GEN_FORCEINLINE float pair_upper(__m128 v) noexcept { return _mm_cvtss_f32(v); }',
