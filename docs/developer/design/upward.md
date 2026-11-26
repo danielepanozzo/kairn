@@ -910,8 +910,8 @@ this design cannot give barriers (they do not change). So *(a choice of the auth
   `NearestScope` is computed on there;
 - the concept page asks a program to bring values into a `NearestScope`, and out of an upward region,
   through memory, `to_interval()` or `pass()`, and the self-check and the tests probe both directions
-  ([The self-check](#the-self-check)). Whether this is enough, or the default types must stay out of
-  functions that hold a scope, is [open question 1](#open-questions).
+  ([The self-check](#the-self-check)). That this is what the first delivery has, and not a rule
+  that keeps the default types out of functions that hold a scope, is [question 1](#open-questions).
 
 ### MSVC
 
@@ -1250,7 +1250,7 @@ parallel; at most four at once.
 
 | Package | Inputs | Owns | Gate | After |
 |---|---|---|---|---|
-| **U0. Rulings** | this page | none | the open questions answered | none |
+| **U0. Rulings** | this page | none | the open questions answered ([done](#open-questions)) | none |
 | **U1. Generator: IR, rules, interpreter, claims, Rocq printer** | this page, U0 | `gen/kairn_gen/` (`ir.py`, `rules.py`, `interp.py`, `claims.py`, `rocq.py` or a module of its own, `build.py`), `gen/kernels/upward_*.kernel`, the generated `gen/claims.json` entries and `proofs/gen/Upward*.v`, `gen/tests/test_upward.py`, `gen/README.md` and the IR and claims sections of `architecture.md` | the generator's suite; the existing generated files byte for byte unchanged; the exhaustive interpreter runs on precision 1 to 4 judged by U3's oracle with no violation; every refusal tested | U0; the oracle's part of the gate needs U3 |
 | **U2. Generator: C++ printers** | U1 | the C++ printers (`cpp.py`, `simd.py` or a module of their own), `emulated.py`, `objcode.py`, `library.py`, the generated `include/kairn/gen/upward.hpp`, `tests/emulated/number.hpp` (the new operations) and `tests/emulated/gen/upward.hpp`, `gen/tests/upward_runner.cpp`, `gen/objcode.json`, `tests/objcode/` | the compiled runners in every form bit for bit the interpreter's, on the generator's matrix with the options; the emulated runs identical to the interpreter's; the object-code counts on every compiler at hand | U1 |
 | **U3. Oracle** | this page | `oracle/`, `oracle/README.md` | its self-test, the injected faults caught; it reads every new entry | none (wave 1) |
@@ -1281,22 +1281,25 @@ Waves: U1, U3, U4's lemmas and U5 first; then U2 and U4's theorems; then U6; the
 
 ## Open questions
 
-1. **Code around a scope.** Are `pass()`, the barriers on `to_interval()` and the concept page's rule
-   enough, or must the default types and an upward scope never share a function (or is
-   `NearestScope` left out of the first delivery)? The tests of U7 measure it; the ruling decides what
-   the page and the concept page promise.
-2. **The scope's check of the build** in a checked build only (this page, by the owner's rule on
-   assertions) or in every build (the earlier plan)?
-3. **`-ffp-contract=off`**: not required here; the earlier plan required it.
-4. **Linkage**: external linkage of the class and of its exact members, internal linkage of everything
-   that rounds, against "every function of the header has internal linkage".
-5. **The operations with a number** (the default type has none, on purpose: `Interval(a)`), and
-   $x - t$, $t - x$ as compositions rather than kernels.
-6. **Arrays**: two arrays only, the array of pairs served by the scalar type.
-7. **Where the feature goes** in the plan's table and the README's list: a row between Milestones 2
-   and 3, not a milestone number; the version 0.4.0.
-8. **MSVC and DLLs**: unsupported until tested, or a test in U7 before the draft pull request?
-9. **The names** of [Choices of the authors](#choices-of-the-authors), item 1.
+The questions this page left open when it was written, each settled before the implementation
+started. Every answer is a choice of the authors, listed with the others for the owner's review.
+
+1. **Code around a scope.** `pass()`, the barriers on `to_interval()` and the concept page's rule
+   are what the first delivery has, and `NearestScope` is part of it. The header promises nothing
+   about code without barriers that shares a function with a scope beyond that rule; the tests
+   `api.upward.moves` measure the movement on every compiler, and the report records what they find.
+2. **The scope's check of the build** is made in a checked build only ([Checks](#checks)).
+3. **`-ffp-contract=off`** is not required ([Contraction](#contraction)).
+4. **Linkage**: as [Linkage](#linkage) says: the class and its exact members of external linkage,
+   everything that rounds of internal linkage.
+5. **The operations with a number** exist, with $x - t$ and $t - x$ as compositions.
+6. **Arrays**: two arrays only; an array of pairs is served by the scalar type.
+7. **Where the feature goes**: a row between Milestones 2 and 3 in the plan's table and in the
+   README's list, named "The round-up interval", with no milestone number; the version 0.4.0.
+8. **MSVC and DLLs**: the tests get a case with the scope in the program and the operations in a DLL.
+   Until it passes in CI, the concept page asks that the scopes and the operations be in the same
+   module, and says that the other arrangement is not supported.
+9. **The names** are those of [Choices of the authors](#choices-of-the-authors), item 1.
 
 ## References
 
@@ -1314,8 +1317,7 @@ Waves: U1, U3, U4's lemmas and U5 first; then U2 and U4's theorems; then U6; the
   [doi:10.1016/j.cad.2020.102856](https://doi.org/10.1016/j.cad.2020.102856). The paper that the
   library NFG ("Numbers For Geometry", [github.com/MarcoAttene/NFG](https://github.com/MarcoAttene/NFG),
   LGPL) asks to cite. The owner's request of 2026-11-24 named NFG's storage of an interval in one
-  register as the model to adopt if worth it; the measurement step compared against it. No code of
-  NFG is used or copied, and its results are not part of the repository.
+  register as the model to adopt if worth it. No code of NFG is used or copied.
 - IEEE Std 754-2019 ([references](phase0/references.md#ieee-754)): rounding toward $+\infty$, the
   sign of an exact zero sum under each rounding direction, the quiet NaN that an operation delivers.
 - <a id="intel-sdm"></a>Intel 64 and IA-32 Architectures Software Developer's Manual, volume 2, `MAXPD`
