@@ -30,6 +30,24 @@
 /// register, the scopes, the checks of a checked build, and pass() for T and for the default
 /// Interval<T, 1>. Then the interval type, its operations, the functions on arrays and the
 /// self-check, which use the first part.
+///
+/// The scopes, pass(), the functions on arrays and self_test() are in an unnamed namespace of
+/// kairn::upward, which Doxygen lists as kairn::upward::anonymous_namespace{upward.hpp}; a program
+/// names them kairn::upward::Scope, kairn::upward::pass() and so on.
+///
+/// @par The macro KAIRN_UPWARD_OPTIONS_UNCHECKED
+/// Defined by a program, before including this header, to say that it takes the options of the
+/// rounding mode upward on itself: a compiler the header does not know, or an option set by a
+/// pragma the header cannot see. It turns off the two rows of the compile-time guard, GCC's (no
+/// -frounding-math: __ROUNDING_MATH__ not defined) and MSVC's (no /fp:strict: _M_FP_STRICT not
+/// defined, or /fp:contract: _M_FP_CONTRACT defined), and nothing else: config.hpp's refusals
+/// (fast-math, finite-math-only, reassociation, ...) hold with it. Clang, Apple clang and clang-cl
+/// define no macro for -frounding-math or for contraction, so the header never stops their build.
+/// Without the options the compiler may compute operations of the program at compile time or move
+/// them as if the mode were to nearest; the header's own operations are right on GCC and Clang
+/// without them (their barriers), but not on MSVC, and in a checked build (KAIRN_CHECKS 1) an
+/// upward scope that writes the mode reports a file whose build ignores it. Kairn never defines
+/// it, so Doxygen, which documents the macros a header defines, does not list it as a macro.
 #pragma once
 
 #include "config.hpp"
@@ -41,15 +59,9 @@
 
 // --- The compile-time guard -----------------------------------------------------------------------
 //
-// @def KAIRN_UPWARD_OPTIONS_UNCHECKED
-// Defined by a program, before including this header, to say that it takes the options of the
-// rounding mode upward on itself: a compiler the header does not know, or an option set by a
-// pragma the header cannot see. It turns off the two rows of the guard below, GCC's and MSVC's,
-// and nothing else: config.hpp's refusals (fast-math, finite-math-only, reassociation, ...) hold
-// with it. Without the options the compiler may compute operations of the program at compile time
-// or move them as if the mode were to nearest; the header's own operations are right on GCC and
-// Clang without them (their barriers), but not on MSVC, and a checked build's scope reports a file
-// whose build ignores the mode.
+// KAIRN_UPWARD_OPTIONS_UNCHECKED, which a program defines (before including this header) and Kairn
+// never does, turns off the two rows of the guard below, GCC's and MSVC's, and nothing else (the
+// file comment above, "The macro KAIRN_UPWARD_OPTIONS_UNCHECKED", documents it):
 //
 // - GCC: -frounding-math defines __ROUNDING_MATH__.
 // - MSVC (not clang-cl): /fp:strict defines _M_FP_STRICT, and /fp:contract defines _M_FP_CONTRACT
@@ -126,6 +138,13 @@
 #endif
 
 KAIRN_GEN_PUSH_WARNINGS
+/// The round-up interval of kairn/upward.hpp: the interval type kairn::upward::Interval<T>, its
+/// operators, comparisons and relations (kairn::upward::ieee1788), the views kairn::upward::View<T>
+/// of the functions on arrays, the scopes kairn::upward::Scope and kairn::upward::NearestScope,
+/// kairn::upward::pass() and kairn::upward::self_test(). Every operation that rounds needs the
+/// rounding mode upward set by kairn::upward::Scope and the options of docs/concepts/upward.md (GCC
+/// and Clang -frounding-math, MSVC /fp:strict). The namespace kairn::upward::detail is not part of
+/// the interface.
 namespace kairn::upward {
 
 namespace detail {
@@ -293,17 +312,20 @@ KAIRN_FORCEINLINE bool check_exact() noexcept {
 // not the header's, which its barriers make right: so it is an assertion, made in a checked build
 // only (the owner's decision of 2026-11-24 for this header: the checks that are not strictly needed
 // are assertions).
+/// @cond
 namespace {
 KAIRN_DETAIL_UPWARD_OPAQUE inline bool build_honors_mode() noexcept {
     const double one = 1.0, tiny = 0x1p-60;
     return one + tiny > one;
 }
 }  // namespace
+/// @endcond
 
 // --- The scopes -------------------------------------------------------------------------------------
 
 enum class Direction { upward, nearest };
 
+/// @cond
 namespace {
 
 // The work of every scope (the design page, "The scopes"), for the mode of D; with Library, the
@@ -407,6 +429,7 @@ private:
 using RegisterScope = BasicScope<Direction::upward, false>;
 
 }  // namespace
+/// @endcond
 }  // namespace detail
 
 namespace {
@@ -801,6 +824,7 @@ KAIRN_FORCEINLINE ::kairn::Trit member(std::type_identity_t<T> t, const Interval
 // a proved kernel and an exact negation, argued and not machine-checked as one statement; t + x and
 // t x are the kernels with the operands exchanged. The number t passes through a barrier before it
 // is negated, so that a product of the program that computed it is not rewritten with the negation.
+/// @cond
 namespace {
 #define KAIRN_DETAIL_UPWARD_ROUNDED(NAME, KERNEL)                                                    \
     template <class T>                                                                               \
@@ -848,6 +872,7 @@ KAIRN_FORCEINLINE Interval<T> mul(std::type_identity_t<T> t, const Interval<T>& 
     return detail::mul<T>(x, t);
 }
 }  // namespace
+/// @endcond
 
 }  // namespace detail
 
@@ -1092,12 +1117,19 @@ struct Unverified<upward::Interval<T>> {
     /// x.to_interval(), x.lower(), x.upper(), x.is_empty(), x.is_whole(), x.certainly_positive(),
     /// x.certainly_negative(), x.certainly_zero() of the operand, in every state of their kernels.
     ::kairn::Interval<T, 1> to_interval() const noexcept { return upward::detail::to_interval(value); }
+    /// x.lower() of the operand.
     T lower() const noexcept { return upward::detail::lower(value); }
+    /// x.upper() of the operand.
     T upper() const noexcept { return upward::detail::upper(value); }
+    /// x.is_empty() of the operand.
     bool is_empty() const noexcept { return upward::detail::is_empty(value); }
+    /// x.is_whole() of the operand.
     bool is_whole() const noexcept { return upward::detail::is_whole(value); }
+    /// x.certainly_positive() of the operand.
     bool certainly_positive() const noexcept { return upward::detail::positive(value); }
+    /// x.certainly_negative() of the operand.
     bool certainly_negative() const noexcept { return upward::detail::negative(value); }
+    /// x.certainly_zero() of the operand.
     bool certainly_zero() const noexcept { return upward::detail::is_zero(value); }
 };
 /// Marks x as an operand of an operation whose proof is not checked yet; see kairn::Unverified.
@@ -1171,13 +1203,14 @@ template <class T>
 static KAIRN_FORCEINLINE Interval<T> operator*(const Interval<T>& x, const Interval<T>& y) noexcept {
     return detail::mul(x, y);
 }
-/// X + t and t + X (kernel upward_add_num_1): the whole line for a t that is not finite (the empty
-/// set for an empty X). Rounds.
+/// X + t (kernel upward_add_num_1): the whole line for a t that is not finite (the empty set for an
+/// empty X). Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_add_num_1, T>
 static KAIRN_FORCEINLINE Interval<T> operator+(const Interval<T>& x, std::type_identity_t<T> t) noexcept {
     return detail::add<T>(x, t);
 }
+/// t + X (kernel upward_add_num_1, the operands exchanged): X + t. Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_add_num_1, T>
 static KAIRN_FORCEINLINE Interval<T> operator+(std::type_identity_t<T> t, const Interval<T>& x) noexcept {
@@ -1195,13 +1228,14 @@ template <class T>
 static KAIRN_FORCEINLINE Interval<T> operator-(std::type_identity_t<T> t, const Interval<T>& x) noexcept {
     return detail::sub<T>(t, x);
 }
-/// X * t and t * X (kernel upward_mul_num_1): for a t that is not finite, [0, 0] for X = [0, 0],
-/// the empty set for an empty X, the whole line otherwise. Rounds.
+/// X * t (kernel upward_mul_num_1): for a t that is not finite, [0, 0] for X = [0, 0], the empty
+/// set for an empty X, the whole line otherwise. Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_mul_num_1, T>
 static KAIRN_FORCEINLINE Interval<T> operator*(const Interval<T>& x, std::type_identity_t<T> t) noexcept {
     return detail::mul<T>(x, t);
 }
+/// t * X (kernel upward_mul_num_1, the operands exchanged): X * t. Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_mul_num_1, T>
 static KAIRN_FORCEINLINE Interval<T> operator*(std::type_identity_t<T> t, const Interval<T>& x) noexcept {
@@ -1213,74 +1247,83 @@ template <class T>
 static KAIRN_FORCEINLINE Interval<T> operator-(const Interval<T>& x) noexcept {
     return detail::neg(x);
 }
-/// X = X + Y, X = X - Y, X = X * Y, and the same with a number. Round.
+/// X = X + Y (kernel upward_add_1). Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_add_1, T>
 static KAIRN_FORCEINLINE Interval<T>& operator+=(Interval<T>& x, const Interval<T>& y) noexcept {
     return x = detail::add(x, y);
 }
+/// X = X - Y (kernel upward_sub_1). Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_sub_1, T>
 static KAIRN_FORCEINLINE Interval<T>& operator-=(Interval<T>& x, const Interval<T>& y) noexcept {
     return x = detail::sub(x, y);
 }
+/// X = X * Y (kernel upward_mul_1). Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_mul_1, T>
 static KAIRN_FORCEINLINE Interval<T>& operator*=(Interval<T>& x, const Interval<T>& y) noexcept {
     return x = detail::mul(x, y);
 }
+/// X = X + t (kernel upward_add_num_1). Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_add_num_1, T>
 static KAIRN_FORCEINLINE Interval<T>& operator+=(Interval<T>& x, std::type_identity_t<T> t) noexcept {
     return x = detail::add<T>(x, t);
 }
+/// X = X - t: X + (-t) (kernel upward_add_num_1 and an exact negation). Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_add_num_1, T>
 static KAIRN_FORCEINLINE Interval<T>& operator-=(Interval<T>& x, std::type_identity_t<T> t) noexcept {
     return x = detail::sub<T>(x, t);
 }
+/// X = X * t (kernel upward_mul_num_1). Rounds.
 template <class T>
     requires detail::proved<detail::status::upward_mul_num_1, T>
 static KAIRN_FORCEINLINE Interval<T>& operator*=(Interval<T>& x, std::type_identity_t<T> t) noexcept {
     return x = detail::mul<T>(x, t);
 }
 
-/// X + Y, X - Y, X * Y (with an interval or a number) and -X with a marked operand: the same
-/// operations as without the marker.
+/// X + Y, X + t and t + X with a marked operand: the same operation as without the marker.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 static KAIRN_FORCEINLINE auto operator+(const X& x, const Y& y) noexcept
     -> decltype(detail::add(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::add(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// X - Y, X - t and t - X with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 static KAIRN_FORCEINLINE auto operator-(const X& x, const Y& y) noexcept
     -> decltype(detail::sub(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::sub(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// X * Y, X * t and t * X with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 static KAIRN_FORCEINLINE auto operator*(const X& x, const Y& y) noexcept
     -> decltype(detail::mul(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::mul(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// -X with a marked operand. Exact.
 template <class X>
     requires(::kairn::detail::marked<X> && detail::upward_interval<X>)
 static KAIRN_FORCEINLINE auto operator-(const X& x) noexcept -> decltype(detail::neg(::kairn::detail::unmark(x))) {
     return detail::neg(::kairn::detail::unmark(x));
 }
-/// X = X + Y, X - Y, X * Y with a marked right operand.
+/// X = X + Y, or X + t, with a marked right operand.
 template <class X, class Y>
     requires detail::marked_rhs<X, Y>
 static KAIRN_FORCEINLINE auto operator+=(X& x, const Y& y) noexcept -> decltype(x = detail::add(x, ::kairn::detail::unmark(y))) {
     return x = detail::add(x, ::kairn::detail::unmark(y));
 }
+/// X = X - Y, or X - t, with a marked right operand.
 template <class X, class Y>
     requires detail::marked_rhs<X, Y>
 static KAIRN_FORCEINLINE auto operator-=(X& x, const Y& y) noexcept -> decltype(x = detail::sub(x, ::kairn::detail::unmark(y))) {
     return x = detail::sub(x, ::kairn::detail::unmark(y));
 }
+/// X = X * Y, or X * t, with a marked right operand.
 template <class X, class Y>
     requires detail::marked_rhs<X, Y>
 static KAIRN_FORCEINLINE auto operator*=(X& x, const Y& y) noexcept -> decltype(x = detail::mul(x, ::kairn::detail::unmark(y))) {
@@ -1337,43 +1380,49 @@ KAIRN_FORCEINLINE ::kairn::Trit member(std::type_identity_t<T> t, const Interval
     return detail::member<T>(t, x);
 }
 
-/// The comparisons and member(t, X) with a marked operand.
+/// less(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto less(const X& x, const Y& y) noexcept
     -> decltype(detail::less(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::less(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// less_equal(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto less_equal(const X& x, const Y& y) noexcept
     -> decltype(detail::less_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::less_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// greater(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto greater(const X& x, const Y& y) noexcept
     -> decltype(detail::greater(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::greater(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// greater_equal(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto greater_equal(const X& x, const Y& y) noexcept
     -> decltype(detail::greater_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::greater_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// equal(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto equal(const X& x, const Y& y) noexcept
     -> decltype(detail::equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// not_equal(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto not_equal(const X& x, const Y& y) noexcept
     -> decltype(detail::not_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::not_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// member(t, X) with a marked operand.
 template <class P, class X>
     requires detail::marked_member<P, X>
 KAIRN_FORCEINLINE auto member(const P& t, const X& x) noexcept
@@ -1409,25 +1458,28 @@ template <class T>
 KAIRN_FORCEINLINE bool disjoint(const Interval<T>& x, const Interval<T>& y) noexcept {
     return detail::rel_disjoint(x, y);
 }
-/// The same with a marked operand.
+/// ieee1788::equal(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto equal(const X& x, const Y& y) noexcept
     -> decltype(detail::rel_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::rel_equal(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// ieee1788::subset(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto subset(const X& x, const Y& y) noexcept
     -> decltype(detail::subset(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::subset(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// ieee1788::interior(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto interior(const X& x, const Y& y) noexcept
     -> decltype(detail::rel_interior(::kairn::detail::unmark(x), ::kairn::detail::unmark(y))) {
     return detail::rel_interior(::kairn::detail::unmark(x), ::kairn::detail::unmark(y));
 }
+/// ieee1788::disjoint(X, Y) with a marked operand.
 template <class X, class Y>
     requires detail::marked_pair<X, Y>
 KAIRN_FORCEINLINE auto disjoint(const X& x, const Y& y) noexcept
@@ -1493,6 +1545,7 @@ KAIRN_FORCEINLINE std::size_t checked_length(const View<T>& z, const View<const 
     return n;
 }
 
+/// @cond
 namespace {
 // The functions on arrays without their markers and constraints: each holds the register-only
 // scope for its call (RegisterScope: upward, flush to zero and denormals-are-zero off, written only
@@ -1528,6 +1581,7 @@ inline void arrays_neg(View<T> z, View<const T> x) noexcept {
     kernels::upward_neg_1_arrays(x.upper, x.nlower, z.upper, z.nlower, n);
 }
 }  // namespace
+/// @endcond
 }  // namespace detail
 
 namespace {
@@ -1541,66 +1595,82 @@ KAIRN_FORCEINLINE Interval<T> pass(const Interval<T>& x) noexcept {
     return detail::access::make<T>(v);
 }
 
-/// The functions on arrays (the design page, "Arrays"): z = x + y, x - y, x * y, -x, x + t, x * t,
+/// z = x + y, element by element (kernel upward_add_1, its form on arrays): the first of the
+/// functions on arrays (the design page, "Arrays"), z = x + y, x - y, x * y, -x, x + t, x * t,
 /// element by element, on views of two plain arrays, the upper bounds and the negated lower bounds.
 /// Each holds its own scope for the call (upward, the register only: the C library's mode is not
 /// set), so a program may call it from code that rounds to nearest; inside a kairn::upward::Scope
-/// that scope costs one read. The views have the same length; z may be x or y (in place), and
-/// otherwise the arrays written overlap no array read; every element read is canonical (each
-/// checked when KAIRN_CHECKS is 1, and reported through KAIRN_ENVIRONMENT_FAILURE). Each element is
-/// what the operator of Interval<T> gives on it. Internal linkage; called by their qualified names
-/// (kairn::upward::add(z, x, y)): argument-dependent lookup does not see an unnamed namespace. With
-/// a marked first input when the kernel is not proved: kairn::upward::add(z, kairn::unverified(x), y).
+/// that scope costs one read. The views have the same length; for each view read, z has the same
+/// two arrays (in place) or arrays that overlap neither of them, and the two arrays of z do not
+/// overlap each other; every element read is canonical (each checked when KAIRN_CHECKS is 1, and
+/// reported through KAIRN_ENVIRONMENT_FAILURE). Each element is the set that the operator of
+/// Interval<T> gives on it (the bits of the NaNs of an empty set may differ). Internal linkage;
+/// called by their qualified names (kairn::upward::add(z, x, y)): argument-dependent lookup does not
+/// see an unnamed namespace. With a marked first input when the kernel is not proved:
+/// kairn::upward::add(z, kairn::unverified(x), y).
 template <class T>
     requires detail::proved<detail::status::upward_add_1, T>
 inline void add(View<T> z, std::type_identity_t<View<const T>> x, std::type_identity_t<View<const T>> y) noexcept {
     detail::arrays_add<T>(z, x, y);
 }
+/// The same with a marked first input.
 template <class T>
 inline void add(View<T> z, const ::kairn::Unverified<View<const T>>& x, std::type_identity_t<View<const T>> y) noexcept {
     detail::arrays_add<T>(z, x.value, y);
 }
+/// z = x - y, element by element (kernel upward_sub_1, its form on arrays), as kairn::upward::add.
 template <class T>
     requires detail::proved<detail::status::upward_sub_1, T>
 inline void sub(View<T> z, std::type_identity_t<View<const T>> x, std::type_identity_t<View<const T>> y) noexcept {
     detail::arrays_sub<T>(z, x, y);
 }
+/// The same with a marked first input.
 template <class T>
 inline void sub(View<T> z, const ::kairn::Unverified<View<const T>>& x, std::type_identity_t<View<const T>> y) noexcept {
     detail::arrays_sub<T>(z, x.value, y);
 }
+/// z = x * y, element by element (kernel upward_mul_1, its form on arrays), as kairn::upward::add.
 template <class T>
     requires detail::proved<detail::status::upward_mul_1, T>
 inline void mul(View<T> z, std::type_identity_t<View<const T>> x, std::type_identity_t<View<const T>> y) noexcept {
     detail::arrays_mul<T>(z, x, y);
 }
+/// The same with a marked first input.
 template <class T>
 inline void mul(View<T> z, const ::kairn::Unverified<View<const T>>& x, std::type_identity_t<View<const T>> y) noexcept {
     detail::arrays_mul<T>(z, x.value, y);
 }
+/// z = -x, element by element (kernel upward_neg_1, its form on arrays), as kairn::upward::add.
 template <class T>
     requires detail::proved<detail::status::upward_neg_1, T>
 inline void neg(View<T> z, std::type_identity_t<View<const T>> x) noexcept {
     detail::arrays_neg<T>(z, x);
 }
+/// The same with a marked input.
 template <class T>
 inline void neg(View<T> z, const ::kairn::Unverified<View<const T>>& x) noexcept {
     detail::arrays_neg<T>(z, x.value);
 }
+/// z = x + t, element by element, one number t for every element (kernel upward_add_num_1, its form on arrays),
+/// as kairn::upward::add.
 template <class T>
     requires detail::proved<detail::status::upward_add_num_1, T>
 inline void add(View<T> z, std::type_identity_t<View<const T>> x, std::type_identity_t<T> t) noexcept {
     detail::arrays_add_number<T>(z, x, t);
 }
+/// The same with a marked first input.
 template <class T>
 inline void add(View<T> z, const ::kairn::Unverified<View<const T>>& x, std::type_identity_t<T> t) noexcept {
     detail::arrays_add_number<T>(z, x.value, t);
 }
+/// z = x * t, element by element, one number t for every element (kernel upward_mul_num_1, its form on arrays),
+/// as kairn::upward::add.
 template <class T>
     requires detail::proved<detail::status::upward_mul_num_1, T>
 inline void mul(View<T> z, std::type_identity_t<View<const T>> x, std::type_identity_t<T> t) noexcept {
     detail::arrays_mul_number<T>(z, x, t);
 }
+/// The same with a marked first input.
 template <class T>
 inline void mul(View<T> z, const ::kairn::Unverified<View<const T>>& x, std::type_identity_t<T> t) noexcept {
     detail::arrays_mul_number<T>(z, x.value, t);
@@ -1611,6 +1681,7 @@ inline void mul(View<T> z, const ::kairn::Unverified<View<const T>>& x, std::typ
 // --- The self-check -------------------------------------------------------------------------------
 
 namespace detail {
+/// @cond
 namespace {
 
 // The values of the probes, for each T: p = 1 + u, whose square 1 + 2u + u^2 is p2_down rounded to
@@ -2106,6 +2177,7 @@ KAIRN_DETAIL_NOINLINE inline const char* selftest_advice() noexcept {
 }
 
 }  // namespace
+/// @endcond
 }  // namespace detail
 
 namespace {

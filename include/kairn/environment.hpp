@@ -218,19 +218,23 @@ inline bool environment_ok() noexcept {
     return (detail::environment_state() & detail::environment_mask(true)) == 0;
 }
 
-/// The result of kairn::self_test().
+/// The result of kairn::self_test(), and of kairn::upward::self_test() (kairn/upward.hpp).
 struct Status {
     /// nullptr when every check passed; otherwise the first check that failed, in words.
     const char* failure = nullptr;
-    /// For a failure of a generated kernel, which kernel and limb type, such as "mul_2_2 (float)";
-    /// otherwise nullptr.
+    /// Of kairn::self_test(): for a failure of a generated kernel, which kernel and limb type, such
+    /// as "mul_2_2 (float)"; otherwise nullptr. Of kairn::upward::self_test(): the case of every
+    /// failure, such as a kernel and limb type with the operands it was given, or the scope that
+    /// failed.
     const char* kernel = nullptr;
     /// A limitation of this translation unit's build that is not an error, in words; nullptr when
-    /// the self-test saw none. One is known: a square that the program passes straight into an
-    /// operation is not rounded first, because the compiler fused it into the operation's first
-    /// addition (Clang under -ffp-contract=fast; docs/getting-started/guarantees.md, "The exception:
-    /// a square"). A program within the guarantees despite it (one that never passes a square
-    /// straight in) is not in error, so ok() does not depend on it.
+    /// the self-test saw none. Of kairn::self_test(), one is known: a square that the program passes
+    /// straight into an operation is not rounded first, because the compiler fused it into the
+    /// operation's first addition (Clang under -ffp-contract=fast; docs/getting-started/guarantees.md,
+    /// "The exception: a square"). A program within the guarantees despite it (one that never passes
+    /// a square straight in) is not in error, so ok() does not depend on it. Of
+    /// kairn::upward::self_test(), its advice about the file's own code, which does not make the
+    /// header's results wrong (docs/concepts/upward.md, "The self-check").
     const char* limitation = nullptr;
 
     /// Whether every check passed. A limitation does not count.

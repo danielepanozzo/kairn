@@ -155,8 +155,17 @@ script refuses a summary whose commit the file does not have.
 
 The pages under `api/` of the site are Doxygen's HTML, generated from the comments of the public
 headers, `include/kairn/*.hpp`. The generated headers of `include/kairn/gen/`, the namespaces
-`kairn::detail` and `kairn::gen` and the macros named `KAIRN_DETAIL_*` are left out: they are not
-part of the interface. The configuration is `docs/Doxyfile`, and the first page is
+`kairn::detail`, `kairn::gen` and `kairn::upward::detail` and the macros named `KAIRN_DETAIL_*`
+are left out: they are not part of the interface. The opt-in `kairn/upward.hpp` gives internal
+linkage to everything whose result can depend on the options of a file: its operators that round
+are `static` function templates, and its scopes, `pass()`, its functions on arrays and its
+`self_test()` are in an unnamed namespace, which Doxygen lists as
+`kairn::upward::anonymous_namespace{upward.hpp}`; the Doxyfile extracts both (`EXTRACT_STATIC`,
+`EXTRACT_ANON_NSPACES`), and the unnamed namespaces inside `kairn::upward::detail`, which
+`EXCLUDE_SYMBOLS` does not reach, are between `@cond` and `@endcond` in the header. A macro that a
+program defines and no header defines, such as `KAIRN_UPWARD_OPTIONS_UNCHECKED`, cannot be
+documented with `@def` (Doxygen refuses a macro it does not see defined): the header's file comment
+describes it, under `@par`. The configuration is `docs/Doxyfile`, and the first page is
 `docs/api/mainpage.md`. Doxygen writes into `site/api/`, over the page that MkDocs makes there
 from `docs/api/index.md`, so it runs after MkDocs, from the repository root:
 
