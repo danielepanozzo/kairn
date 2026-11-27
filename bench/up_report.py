@@ -238,6 +238,11 @@ def conversion_tables(c):
             ('`S + X`, converted minus native (one conversion in)', diff('upw/sum/interval_add_1/conv', 'upw/sum/interval_add_1/native')),
             ('det3, converted minus native (12 in, one out)', diff('upw/tp/det3_i1/conv', 'upw/tp/det3_i1/native'))]
     table(c, 'What the conversions cost (ns per operation)', rows, 'diff')
+    rows = [('`X + Y`: Interval<T, 1> over the type converted in the loop', ratio('m2/tp/interval_add_1/op', 'upw/tp/interval_add_1/conv')),
+            ('`X * Y`: Interval<T, 1> over the type converted in the loop', ratio('m2/tp/interval_mul_1/op', 'upw/tp/interval_mul_1/conv')),
+            ('`S + X`: Interval<T, 1> over the type converted in the loop', ratio('m2/sum/interval_add_1/op', 'upw/sum/interval_add_1/conv')),
+            ('det3: Interval<T, 1> over the type converted in the loop', ratio('m2/tp/det3_i1/op', 'upw/tp/det3_i1/conv'))]
+    table(c, 'The default type against the type converted in the loop', rows)
 
 
 def array_tables(c):
@@ -450,14 +455,31 @@ def spread_table(items):
 
 
 def attempts_table(directory):
-    print('\n| Configuration, item | Attempts | Set aside, and why |')
-    print('|---|---:|---|')
+    """Per configuration and item: the attempts, the kept runs, and those set aside by reason, with
+    the range of their spreads at the median function or of their sibling's busiest sample."""
+    print('\n| Configuration, item | Runs made | Kept | Set aside: for the spread at the median function; for a busy sibling (its busiest 5 s) |')
+    print('|---|---:|---:|---|')
     for path in sorted(glob.glob(os.path.join(directory, 'attempts-*.json'))):
         with open(path) as f:
             a = json.load(f)
-        bad = [x for x in a if x.get('reason') != 'kept']
-        why = '; '.join('`%s` (%s)' % (x['file'], x['reason']) for x in bad) or 'none'
-        print('| %s | %d | %s |' % (os.path.basename(path)[len('attempts-'):-len('.json')], len(a), why))
+        name = os.path.basename(path)[len('attempts-'):-len('.json')]
+        config, item = name.rsplit('-', 1)
+        kept = glob.glob(os.path.join(directory, '%s-%s-*r[0-9]*.json' % (item, config)))
+        spread = [x['spread'] for x in a if 'spread' in x.get('reason', '') and 'sibling' not in x.get('reason', '')]
+        busy = [x for x in a if 'sibling' in x.get('reason', '')]
+        parts = []
+        if spread:
+            parts.append('%d, spread %.3f to %.3f' % (len(spread), min(spread), max(spread)))
+        if busy:
+            b = [x.get('sibling_busy_max', 0) for x in busy]
+            parts.append('%d, sibling %.0f%% to %.0f%%' % (len(busy), 100 * min(b), 100 * max(b)))
+        other = [x for x in a if x.get('reason') != 'kept' and x not in busy and 'spread' not in x.get('reason', '')]
+        if other:
+            parts.append('%d, %s' % (len(other), '; '.join(sorted(set(x['reason'] for x in other)))))
+        partners = len(a) - len(kept) - len(spread) - len(busy) - len(other)
+        if partners:
+            parts.append('%d kept alone, set aside with the other run of their pair' % partners)
+        print('| %s | %d | %d | %s |' % (name, len(a), len(kept), '; '.join(parts) or 'none'))
 
 
 SECTIONS = {'type': type_tables, 'chains': chain_tables, 'poly': poly_tables, 'conversions': conversion_tables,
