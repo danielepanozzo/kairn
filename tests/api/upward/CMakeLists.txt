@@ -169,6 +169,34 @@ else()
   endforeach()
 endif()
 
+# What the compiler does to code next to a scope's boundary (moves.cpp): at each optimization level
+# in levels/; here the other forms with the build's flags (the two-number form, and the AVX2 form of
+# the functions on arrays where the build's flags do not give it), a checked build whose
+# KAIRN_ENVIRONMENT_FAILURE records each report, and, with Clang, a build without the options, where
+# the header's own operations must still be right and the rest is reported.
+foreach(_form IN LISTS _upward_forms)
+  if(NOT _form STREQUAL "build")
+    _kairn_upward_program(kairn-api-upward-moves-${_form} moves.cpp)
+    target_compile_options(kairn-api-upward-moves-${_form} PRIVATE ${_upward_form_${_form}_options})
+    target_compile_definitions(kairn-api-upward-moves-${_form} PRIVATE KAIRN_CHECKS=0
+      "UPWARD_TEST_LEVEL=\"the build's, the ${_form} form\"")
+    add_test(NAME api.upward.moves.${_form} COMMAND kairn-api-upward-moves-${_form})
+  endif()
+endforeach()
+_kairn_upward_program(kairn-api-upward-moves-checked moves.cpp)
+target_compile_definitions(kairn-api-upward-moves-checked PRIVATE KAIRN_CHECKS=1 UPWARD_TEST_MOVES_CHECKED
+  "UPWARD_TEST_LEVEL=\"the build's, checked\"")
+add_test(NAME api.upward.moves.checked COMMAND kairn-api-upward-moves-checked)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_executable(kairn-api-upward-moves-without-options moves.cpp)
+  target_link_libraries(kairn-api-upward-moves-without-options PRIVATE kairn::kairn kairn::fma)
+  target_compile_definitions(kairn-api-upward-moves-without-options PRIVATE KAIRN_CHECKS=0
+    UPWARD_TEST_WITHOUT_OPTIONS "UPWARD_TEST_LEVEL=\"the build's, without the options\"")
+  target_compile_options(kairn-api-upward-moves-without-options PRIVATE ${_api_warnings})
+  add_test(NAME api.upward.moves.without_options COMMAND kairn-api-upward-moves-without-options)
+endif()
+add_subdirectory(levels)
+
 # The runners of the line protocol over the header, as --runner LABEL EXECUTABLE for
 # ../../crosscheck.py api. The runner with the build's flags also answers api.oracle.coverage
 # (--list), which ../CMakeLists.txt registers.
