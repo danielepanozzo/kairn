@@ -120,8 +120,9 @@ jobs:
   # jobs above leave out: the quick tier's (the cross-checks of the family's runners, the object
   # code, the scopes, the checks, the units, what must not compile) and the full tier's that depend
   # on the compiler (its flag matrix of the runners: /Od, /O1, /O2, /O2 /GL, KAIRN_CHECKS 0 and 1,
-  # and with clang-cl each contraction setting and a build without the option; the object code on
-  # the whole matrix; the emulated kernels). It builds the target kairn-upward-tests, the programs
+  # and with clang-cl each contraction setting and a build without the option, for the kernels'
+  # runners and for the public type's runner and programs; the object code on the whole matrix; the
+  # emulated kernels). It builds the target kairn-upward-tests, the programs
   # those tests run, and nothing else. The full tier's tests of the family in exact arithmetic
   # (label python) run in full.yml, on Linux.
   #

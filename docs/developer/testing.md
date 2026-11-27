@@ -2550,6 +2550,22 @@ By the rule of four, on the hosted runners: the family's tests add about two min
 to the generator's suite of each compiler, half in each shard (of 60); the job "Windows x64, upward"
 takes some 12 to 15 minutes (of 30), and the other Windows jobs nothing more. Nothing had to leave a
 tier.
+**The full tier of the round-up interval's type**, added on 2026-11-27: `full.api.oracle.upward_K.F`,
+`full.api.flags.oracle.upward_K.F` and `full.api.upward.flags.S.*`, 117 tests with Apple clang and
+Clang 18, 114 with GCC and 108 with MSVC (the sets of each compiler). Their test time: on the Mac 133
+seconds with Apple clang (75 the 48 `full.api.oracle.upward_*`, 33 the 48 of the sets, 25 the 21
+programs of the sets) and 90 with GCC 16; on the Linux machine 153 with GCC 13 and 165 with Clang 18;
+on the Windows machine 158 with MSVC. The full tier's tests labelled `upward` then took 87 seconds on
+the Mac with Apple clang (190 tests, `--parallel 4`) and 55 with GCC 16 (187), 33 and 36 on 16 threads
+of the Linux machine with GCC 13 and Clang 18 (187 and 190); and the commands of the job "Windows x64,
+upward" with MSVC on the Windows machine: configuring 50 seconds, building `kairn-upward-tests` 49 (27
+before, the difference the 16 programs of the sets), the quick tier's 154 tests labelled `upward` 35,
+the full tier's 181 that depend on the compiler 109 (51 before). By the rule of four, on the hosted
+runners: about a minute and a half more to build and four more to test in the job "Windows x64,
+upward" with MSVC, some 18 to 21 minutes of its 30, and, with its six sets to MSVC's four, a little
+more with clang-cl, whose job was not timed here; on Linux and macOS about a minute more to build in
+each job of `build.yml` and `full.yml`, and two to three minutes of test time spread over the shards
+of `full.yml`.
 `tests/brute/upward.py` judged 430 000 lines a second with 46 processes on the second socket of the
 Linux machine, and the 190 mutants of `kernel_mutants.py --upward` took 55 minutes with four jobs on
 the Mac.

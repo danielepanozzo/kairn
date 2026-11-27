@@ -16,8 +16,8 @@
 #   system, and not here.
 #
 # The full tier's tests of kairn/upward.hpp, the round-up interval (label upward: the flag matrix of
-# its runners, the object code on its whole matrix, its emulated kernels, the interpreter on its
-# toy formats), run in these jobs on Linux and macOS. The Windows jobs configure
+# its runners and of its public type's tests, the object code on its whole matrix, its emulated
+# kernels, the interpreter on its toy formats), run in these jobs on Linux and macOS. The Windows jobs configure
 # -DKAIRN_UPWARD_TESTS=OFF: the jobs "Windows x64, upward" of build.yml run the family's tests that
 # depend on the compiler with MSVC and clang-cl, and the python jobs below its enumerations.
 name: Full tier
