@@ -2,7 +2,7 @@
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
 ([report](../developer/results/milestone1.md)), and Milestone 2 is complete and was reviewed by the
-owner on 2026-11-23 ([report](../developer/results/milestone2.md#the-owners-review)), in version 0.3.2 of the development line. In the public headers of this version: numbers of one and two limbs of
+owner on 2026-11-23 ([report](../developer/results/milestone2.md#the-owners-review)); version 0.4.0 of the development line adds the opt-in round-up interval. In the public headers of this version: numbers of one and two limbs of
 type `float` or `double`, balls and intervals around them with the
 [interface the two share](#intervals-and-balls), the [building blocks](#building-blocks) on `T`,
 [constants](#constants-from-fractions) built at compile time from an integer or a fraction, and the
@@ -416,9 +416,9 @@ undefined function-like macro in an `#if` does not compile; `KAIRN_VERSION`, whi
 defines, can also be compared directly (`#if KAIRN_VERSION >= 200`). The building blocks are in
 0.2.0; the functions on arrays, the ball vectors, `from_bounds` and `from_limbs` of a set and the
 whole enclosure interface are in 0.3.0 (`KAIRN_VERSION_AT_LEAST(0, 3, 0)`); the operators of
-`Packed<T, 1>` and the guards of the constructors of two limbs are in 0.3.1, and
-`Status::limitation` in 0.3.2; `version.hpp`
-lists what each version has.
+`Packed<T, 1>` and the guards of the constructors of two limbs are in 0.3.1,
+`Status::limitation` in 0.3.2, and the round-up interval, `kairn/upward.hpp`, in 0.4.0
+(`KAIRN_VERSION_AT_LEAST(0, 4, 0)`); `version.hpp` lists what each version has.
 
 ## What you need
 
@@ -562,8 +562,9 @@ headers, the package under `share/cmake/kairn` and the license as `share/license
 ```
 
 The installed package accepts a request for a version with the same major and minor number that is
-not newer than itself. The development line of Milestone 2 is 0.3.0 to 0.3.2: a request for 0.2 is not
-accepted by it (`include/kairn/version.hpp` says what each version has).
+not newer than itself. The development line of Milestone 2 was 0.3.0 to 0.3.2, and 0.4.0 adds the
+round-up interval: a request for 0.3 is not accepted by it (`include/kairn/version.hpp` says what
+each version has).
 
 Added with `add_subdirectory` or `FetchContent`, Kairn keeps to itself: it adds no install rule,
 so that `cmake --install` of the project installs the project's files and not Kairn's, unless the
