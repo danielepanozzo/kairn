@@ -1,0 +1,52 @@
+[
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0065,
+  "reason": "kept",
+  "file": "msvc-windows-msvc-O2-r1.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:18:16"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0735,
+  "reason": "spread 1.073 at the median function",
+  "file": "msvc-windows-msvc-O2-r2.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:18:22"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0702,
+  "reason": "spread 1.070 at the median function",
+  "file": "msvc-windows-msvc-O2-r2.json",
+  "attempt": 2,
+  "time": "2026-11-26 22:18:28"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0107,
+  "reason": "kept",
+  "file": "msvc-windows-msvc-O2-r2.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:18:40"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0109,
+  "reason": "kept",
+  "file": "msvc-windows-msvc-O2-r3.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:18:46"
+ }
+]
