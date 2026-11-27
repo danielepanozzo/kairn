@@ -1,0 +1,54 @@
+[
+ {
+  "cpu": 15,
+  "sibling": 79,
+  "samples": 3,
+  "spread": 1.0061,
+  "sibling_busy_max": 0.004,
+  "sibling_busy_mean": 0.003,
+  "cpu_busy_mean": 0.999,
+  "reason": "kept",
+  "file": "main-linux-gcc-O3-r1.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:16:16"
+ },
+ {
+  "cpu": 12,
+  "sibling": 76,
+  "samples": 3,
+  "spread": 1.0048,
+  "sibling_busy_max": 0.004,
+  "sibling_busy_mean": 0.002,
+  "cpu_busy_mean": 0.999,
+  "reason": "kept",
+  "file": "main-linux-gcc-O3-r2.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:16:37"
+ },
+ {
+  "cpu": 12,
+  "sibling": 76,
+  "samples": 3,
+  "spread": 1.0048,
+  "sibling_busy_max": 0.002,
+  "sibling_busy_mean": 0.001,
+  "cpu_busy_mean": 0.999,
+  "reason": "kept",
+  "file": "main-linux-gcc-O3-r3.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:16:58"
+ },
+ {
+  "cpu": 12,
+  "sibling": 76,
+  "samples": 3,
+  "spread": 1.0045,
+  "sibling_busy_max": 0.002,
+  "sibling_busy_mean": 0.001,
+  "cpu_busy_mean": 0.999,
+  "reason": "kept",
+  "file": "main-linux-gcc-O3-r4.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:17:19"
+ }
+]

@@ -1,0 +1,32 @@
+[
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0046,
+  "reason": "kept",
+  "file": "main-mac-appleclang-O2-r1.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:25:17"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0034,
+  "reason": "kept",
+  "file": "main-mac-appleclang-O2-r2.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:25:34"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0016,
+  "reason": "kept",
+  "file": "main-mac-appleclang-O2-r3.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:25:52"
+ }
+]

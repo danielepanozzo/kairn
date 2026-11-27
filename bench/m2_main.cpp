@@ -37,6 +37,12 @@
 #ifndef KAIRN_BENCH_SETTING
 #define KAIRN_BENCH_SETTING "inline"
 #endif
+// The program, recorded in the JSON: kairn-bench-m2, or kairn-bench-up, the same driver with the
+// units of the round-up interval (bench/up_data.hpp), which also records the flags of its units
+// that include kairn/upward.hpp (KAIRN_BENCH_UPWARD_FLAGS).
+#ifndef KAIRN_BENCH_WHAT
+#define KAIRN_BENCH_WHAT "kairn-bench-m2"
+#endif
 // KAIRN_CHECKS of the program, which every translation unit of it has (bench/CMakeLists.txt): 1 in
 // kairn-bench-m2-checks-LEVEL; otherwise not defined here, and 0 in the others under NDEBUG.
 #if defined(KAIRN_CHECKS) && KAIRN_CHECKS
@@ -393,7 +399,7 @@ int main(int argc, char** argv) {
 
     using u::esc;
     using u::num;
-    std::string out = "{\n  \"schema\": 1,\n  \"what\": \"kairn-bench-m2\",\n";
+    std::string out = "{\n  \"schema\": 1,\n  \"what\": \"" KAIRN_BENCH_WHAT "\",\n";
     out += "  \"date\": \"" + esc(date) + "\",\n";
     out += "  \"commit\": \"" + esc(commit) + "\",\n";
     out += "  \"machine\": {\"description\": \"" + esc(machine) + "\", \"cpu\": \"" + esc(u::cpu_brand()) + "\", \"os\": \"" +
@@ -403,6 +409,9 @@ int main(int argc, char** argv) {
     out += "  \"compiler\": \"" + esc(u::compiler()) + "\",\n";
     out += "  \"flags\": \"" + esc(KAIRN_BENCH_FLAGS) + "\",\n";
     out += "  \"fenv_flags\": \"" + esc(KAIRN_BENCH_FENV_FLAGS) + "\",\n";
+#ifdef KAIRN_BENCH_UPWARD_FLAGS
+    out += "  \"upward_flags\": \"" + esc(KAIRN_BENCH_UPWARD_FLAGS) + "\",\n";
+#endif
     out += "  \"setting\": \"" + esc(KAIRN_BENCH_SETTING) + "\",\n";
     out += "  \"kairn_checks\": " + std::to_string(kChecks) + ",\n";
     if (!filters.empty()) {

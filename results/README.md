@@ -28,6 +28,11 @@ is an input of the library, of the generator, or of the proofs.
   kernel and format the best line of every quantity with its value, one file per run: from the
   strata alone, and with every seed through the interpreter and through a compiled runner;
   `docs/developer/results/brute-milestone2.md` reports it ("The adversarial search").
+- `upward/bench/`: benchmark measurements of the round-up interval (`<kairn/upward.hpp>`), one JSON
+  file per run of `kairn-bench-up` made by `bench/up_run.py` (`main-`, `checks-...-cK-`, `msvc-`, named
+  by the machine, the compiler and the optimization level), and the record of every attempt, kept or
+  set aside (`attempts-*.json`); `bench/up_report.py` prints the tables of
+  `docs/developer/results/bench-upward.md` from them.
 - `brute-code.json`: for every commit that a summary under `*/brute/` names as the code of its
   runs, the SHA-256 of the code and of the claims of every kernel and loop at that commit, written
   from the repository's history by `docs/tools/brute_code.py`. A kernel's reference page shows the
