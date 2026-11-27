@@ -122,7 +122,7 @@ rounded down in about fifteen operations
 which compares it with changing the mode). The opt-in round-up interval of `kairn/upward.hpp` is the
 alternative for speed: an interval of one limb computed under the rounding mode upward, which its
 scopes set, in files compiled with the options it names ([The round-up interval](upward.md)); in a
-loop inside one scope its sum was 3.6 to 6.0 times, and its product 4.7 to 8.4 times, faster than
+loop inside one scope its sum was 2.5 to 7.5 times, and its product 4.3 to 8.5 times, faster than
 the default interval's on the two test machines
 ([Benchmarks](../developer/results/bench-upward.md#1-the-type-against-the-default-interval)).
 

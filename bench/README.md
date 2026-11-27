@@ -422,6 +422,14 @@ packed arrays are not (`sxi[0]` and `sout[0]` 32 bytes apart modulo 4 KB, so tha
 loads alias the previous iteration's stores), which is why the packed kernels are timed again here on
 the placed arrays, and the `m2p` functions kept beside them.
 
+**Pointers in locals.** Each timed function copies the pointers of its arrays from the structure
+that holds them (`TypeData`, `ArrayData`, `Bounds` of `up_data.hpp`) into locals on entry, as a
+program's loop holds the pointers of its arrays. Reached through the structure, a structure in
+memory, they were loaded again in the loops of the program of the first version of the results page
+(at `4710839b`): by Apple clang and Clang in every iteration of the type's loops, by every compiler in
+every iteration of the packed loops after each store through an intrinsic, and after each call of the
+loops of calls; the page says what that cost ("What changed").
+
 ```sh
 cmake -S . -B build-bench -G Ninja -DCMAKE_BUILD_TYPE=Release -DKAIRN_BUILD_TESTS=OFF -DKAIRN_BUILD_BENCHMARKS=ON \
       -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror" [-DCMAKE_CXX_COMPILER=g++]
@@ -433,7 +441,11 @@ python3 bench/up_run.py runs --program build-bench/bench/kairn-bench-up-O2 --nam
 python3 bench/up_run.py pairs --program build-bench/bench/kairn-bench-up-O2 --other build-bench/bench/kairn-bench-up-checks-O2 \
     --item checks --name linux-gcc-O2 --runs 4 --cpus 4-7 --machine "..." --commit "..." --out results/upward/bench
 python3 bench/up_run.py runs --program build\bench\kairn-bench-up-O2.exe --item msvc --name windows-msvc-O2 --runs 3 ...
+python3 bench/up_run.py runs --program build-bench/bench/kairn-bench-up-O2 --name mac-appleclang-O2 --runs 3 \
+    --attempts 6 --max-load 6 --machine "..." --commit "..." --out results/upward/bench     # the M3
 python3 bench/up_report.py results/upward/bench     # the tables of the results page
+python3 bench/up_report.py results/upward/bench --earlier results/upward/bench/4710839b \
+    --fill docs/developer/results/bench-upward.md   # write them into the page
 ```
 
 `up_run.py runs` makes the kept runs of one program with the filter of an item (`main`: everything
@@ -446,9 +458,14 @@ run is pinned (`taskset`, `--cpu`) to the CPU of `--cpus` whose usage and its SM
 run whose sibling was busy (above 10% in a sample) or whose spread at the median function (the median
 over the functions of the median over the minimum of their samples) is above 5% is set aside and made
 again, up to `--attempts` times (four on Zen 2 and six on the M3 for the stored runs); elsewhere only
-the spread decides. On the M3 the stored runs were started when the 1-minute load average was under 6. Every attempt, kept or set aside, is
+the spread decides. On the M3 each attempt of the stored runs started when the 1-minute load average
+was under 6 (`--max-load 6`, which waits for it). Every attempt, kept or set aside, is
 listed in `attempts-MACHINE-COMPILER-LEVEL-ITEM.json`, and each kept run's JSON gets the same record
-as `run_conditions`.
+as `run_conditions`. `up_report.py --earlier DIR` adds the times of an earlier campaign beside these
+(the section `changed` of the page, from `results/upward/bench/4710839b/`); its sections `unord` and
+`placement` give the ratios of two programs of the same configuration run alternately, the order
+swapped every pair, from the summaries stored in `results/upward/bench/unord/` and `placement/`
+(the results page, "What changed").
 
 ## Other costs
 

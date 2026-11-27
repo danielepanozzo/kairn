@@ -1,0 +1,147 @@
+{
+ "what": "kairn-bench-up on Zen 2: the program of the earlier runs (A, built from 4710839b) and the program of these runs (B, built from e4328d39), with the same compiler and flags, run alternately on one logical CPU of the second socket (taskset -c 36, its SMT sibling 100 idle when they started), the order swapped every pair; per function the ratio B/A of the minimum times of each pair, its median, lowest and highest over the pairs, and the lowest and highest minimum time of each program",
+ "date": "2026-11-27",
+ "tag": "linux-gcc-scopes-O3",
+ "machine": {
+  "description": "M3 A/B",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "os": "Linux",
+  "arch": "x86-64",
+  "pinning": "not pinned"
+ },
+ "compiler": "GCC 13.3.0",
+ "flags": "-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)",
+ "upward_flags": "-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma) -frounding-math",
+ "reps": 31,
+ "sample_ms": 4,
+ "commits": {
+  "A": "4710839b",
+  "B": "e4328d39"
+ },
+ "pairs": 4,
+ "filter": "upws/",
+ "runs": [
+  {
+   "pair": 0,
+   "program": "A",
+   "spread": 1.0031
+  },
+  {
+   "pair": 0,
+   "program": "B",
+   "spread": 1.0044
+  },
+  {
+   "pair": 1,
+   "program": "B",
+   "spread": 1.0044
+  },
+  {
+   "pair": 1,
+   "program": "A",
+   "spread": 1.0045
+  },
+  {
+   "pair": 2,
+   "program": "A",
+   "spread": 1.0026
+  },
+  {
+   "pair": 2,
+   "program": "B",
+   "spread": 1.0031
+  },
+  {
+   "pair": 3,
+   "program": "B",
+   "spread": 1.0041
+  },
+  {
+   "pair": 3,
+   "program": "A",
+   "spread": 1.0047
+  }
+ ],
+ "summary": {
+  "upws/call/nearest_add_1/change": {
+   "ratio_median": 0.9955,
+   "ratio_min": 0.989,
+   "ratio_max": 0.9971,
+   "a_min": 62.64,
+   "a_max": 62.78,
+   "b_min": 62.05,
+   "b_max": 62.47,
+   "pairs": 4
+  },
+  "upws/call/nearest_add_1/nested": {
+   "ratio_median": 0.9851,
+   "ratio_min": 0.9843,
+   "ratio_max": 0.9868,
+   "a_min": 19.7,
+   "a_max": 19.77,
+   "b_min": 19.4,
+   "b_max": 19.48,
+   "pairs": 4
+  },
+  "upws/call/nearest_add_1/none": {
+   "ratio_median": 0.9828,
+   "ratio_min": 0.9436,
+   "ratio_max": 0.998,
+   "a_min": 9.832,
+   "a_max": 9.964,
+   "b_min": 9.4,
+   "b_max": 9.944,
+   "pairs": 4
+  },
+  "upws/call/regscope_add_1/change": {
+   "ratio_median": 0.9976,
+   "ratio_min": 0.9956,
+   "ratio_max": 0.9991,
+   "a_min": 22.45,
+   "a_max": 22.53,
+   "b_min": 22.42,
+   "b_max": 22.46,
+   "pairs": 4
+  },
+  "upws/call/regscope_add_1/nested": {
+   "ratio_median": 0.9246,
+   "ratio_min": 0.9226,
+   "ratio_max": 0.9274,
+   "a_min": 8.427,
+   "a_max": 8.472,
+   "b_min": 7.808,
+   "b_max": 7.816,
+   "pairs": 4
+  },
+  "upws/call/scope_add_1/change": {
+   "ratio_median": 2.3846,
+   "ratio_min": 2.3803,
+   "ratio_max": 2.4039,
+   "a_min": 56.95,
+   "a_max": 57.43,
+   "b_min": 136.6,
+   "b_max": 136.9,
+   "pairs": 4
+  },
+  "upws/call/scope_add_1/nested": {
+   "ratio_median": 0.9953,
+   "ratio_min": 0.9931,
+   "ratio_max": 0.9969,
+   "a_min": 15.88,
+   "a_max": 15.94,
+   "b_min": 15.81,
+   "b_max": 15.84,
+   "pairs": 4
+  },
+  "upws/call/scope_add_1/none": {
+   "ratio_median": 1.1067,
+   "ratio_min": 1.0646,
+   "ratio_max": 1.1334,
+   "a_min": 2.707,
+   "a_max": 2.723,
+   "b_min": 2.899,
+   "b_max": 3.068,
+   "pairs": 4
+  }
+ }
+}

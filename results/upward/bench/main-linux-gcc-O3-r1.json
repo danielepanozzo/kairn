@@ -2,7 +2,7 @@
  "schema": 1,
  "what": "kairn-bench-up",
  "date": "2026-11-27",
- "commit": "4710839b",
+ "commit": "e4328d39",
  "machine": {
   "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU of the first socket, its SMT sibling idle; shared with other jobs",
   "cpu": "AMD EPYC 7452 32-Core Processor",
@@ -12,14 +12,14 @@
  },
  "load_average": {
   "start": [
-   27.8,
-   30.48,
-   32.83
+   4.512,
+   2.413,
+   2.234
   ],
   "end": [
-   28.48,
-   30.46,
-   32.78
+   5.055,
+   2.677,
+   2.326
   ]
  },
  "compiler": "GCC 13.3.0",
@@ -851,1006 +851,1006 @@
   {
    "name": "m2/tp/interval_add_1/kairn",
    "lanes": 1,
-   "ns_min": 3.536,
-   "ns_median": 3.568,
-   "ns_max": 3.619
+   "ns_min": 3.534,
+   "ns_median": 3.556,
+   "ns_max": 3.617
   },
   {
    "name": "m2/tp/interval_add_1/op",
    "lanes": 1,
-   "ns_min": 3.54,
-   "ns_median": 3.58,
-   "ns_max": 3.627
+   "ns_min": 3.527,
+   "ns_median": 3.56,
+   "ns_max": 3.645
   },
   {
    "name": "m2/tp/interval_sub_1/kairn",
    "lanes": 1,
-   "ns_min": 3.656,
-   "ns_median": 3.677,
-   "ns_max": 3.748
+   "ns_min": 3.641,
+   "ns_median": 3.676,
+   "ns_max": 3.771
   },
   {
    "name": "m2/tp/interval_sub_1/op",
    "lanes": 1,
-   "ns_min": 3.656,
-   "ns_median": 3.688,
-   "ns_max": 3.829
+   "ns_min": 3.651,
+   "ns_median": 3.68,
+   "ns_max": 3.739
   },
   {
    "name": "m2/tp/interval_mul_1/kairn",
    "lanes": 1,
-   "ns_min": 9.873,
-   "ns_median": 9.922,
-   "ns_max": 10.37
+   "ns_min": 9.843,
+   "ns_median": 9.896,
+   "ns_max": 10.11
   },
   {
    "name": "m2/tp/interval_mul_1/op",
    "lanes": 1,
-   "ns_min": 9.865,
-   "ns_median": 9.935,
-   "ns_max": 10.47
+   "ns_min": 9.862,
+   "ns_median": 9.913,
+   "ns_max": 10.06
   },
   {
    "name": "m2/tp/pair_add_1/kairn",
    "lanes": 1,
-   "ns_min": 0.3234,
-   "ns_median": 0.3244,
-   "ns_max": 0.3289
+   "ns_min": 0.3232,
+   "ns_median": 0.3241,
+   "ns_max": 0.3335
   },
   {
    "name": "m2/tp/pair_add_1/plain",
    "lanes": 1,
-   "ns_min": 0.3234,
-   "ns_median": 0.3243,
-   "ns_max": 0.3293
+   "ns_min": 0.323,
+   "ns_median": 0.3249,
+   "ns_max": 0.342
   },
   {
    "name": "m2/tp/plain4_mul_1/kairn",
    "lanes": 1,
-   "ns_min": 0.9531,
-   "ns_median": 1.016,
-   "ns_max": 1.06
+   "ns_min": 0.9526,
+   "ns_median": 1.002,
+   "ns_max": 1.054
   },
   {
    "name": "m2/tp/plain4_mul_1/plain",
    "lanes": 1,
-   "ns_min": 1.016,
+   "ns_min": 1.012,
    "ns_median": 1.018,
-   "ns_max": 1.032
+   "ns_max": 1.04
   },
   {
    "name": "m2/sum/interval_add_1/kairn",
    "lanes": 1,
-   "ns_min": 5.639,
-   "ns_median": 5.654,
-   "ns_max": 5.76
+   "ns_min": 5.632,
+   "ns_median": 5.682,
+   "ns_max": 5.83
   },
   {
    "name": "m2/sum/interval_add_1/op",
    "lanes": 1,
    "ns_min": 5.635,
-   "ns_median": 5.66,
-   "ns_max": 5.779
+   "ns_median": 5.644,
+   "ns_max": 5.738
   },
   {
    "name": "m2/prod/interval_mul_1/kairn",
    "lanes": 1,
-   "ns_min": 18.62,
-   "ns_median": 18.86,
-   "ns_max": 19.33
+   "ns_min": 18.54,
+   "ns_median": 18.75,
+   "ns_max": 19.12
   },
   {
    "name": "m2/prod/interval_mul_1/op",
    "lanes": 1,
-   "ns_min": 18.59,
-   "ns_median": 18.84,
-   "ns_max": 19.33
+   "ns_min": 18.61,
+   "ns_median": 18.99,
+   "ns_max": 19.61
   },
   {
    "name": "m2/tp/horner_i1/kairn",
    "lanes": 1,
-   "ns_min": 245.1,
-   "ns_median": 249.6,
-   "ns_max": 255
+   "ns_min": 244.1,
+   "ns_median": 250.1,
+   "ns_max": 254
   },
   {
    "name": "m2/tp/horner_i1/op",
    "lanes": 1,
-   "ns_min": 247.7,
-   "ns_median": 251.8,
-   "ns_max": 258.4
+   "ns_min": 247.1,
+   "ns_median": 251.2,
+   "ns_max": 254.1
   },
   {
    "name": "m2/lat/horner_i1/kairn",
    "lanes": 1,
-   "ns_min": 240.8,
-   "ns_median": 245.7,
-   "ns_max": 252
+   "ns_min": 239.2,
+   "ns_median": 244.3,
+   "ns_max": 252.6
   },
   {
    "name": "m2/lat/horner_i1/op",
    "lanes": 1,
-   "ns_min": 247.8,
-   "ns_median": 254.7,
-   "ns_max": 258.4
+   "ns_min": 249,
+   "ns_median": 253.5,
+   "ns_max": 257.9
   },
   {
    "name": "m2f/tp/interval_add_1/kairn",
    "lanes": 1,
-   "ns_min": 1.767,
-   "ns_median": 1.774,
-   "ns_max": 1.806
+   "ns_min": 1.769,
+   "ns_median": 1.777,
+   "ns_max": 1.805
   },
   {
    "name": "m2f/tp/interval_add_1/op",
    "lanes": 1,
-   "ns_min": 1.761,
-   "ns_median": 1.769,
-   "ns_max": 1.81
+   "ns_min": 1.763,
+   "ns_median": 1.767,
+   "ns_max": 1.792
   },
   {
    "name": "m2f/tp/interval_mul_1/kairn",
    "lanes": 1,
-   "ns_min": 4.906,
-   "ns_median": 4.923,
-   "ns_max": 5.16
+   "ns_min": 4.899,
+   "ns_median": 4.914,
+   "ns_max": 4.983
   },
   {
    "name": "m2f/tp/interval_mul_1/op",
    "lanes": 1,
-   "ns_min": 4.909,
-   "ns_median": 4.934,
-   "ns_max": 5.258
+   "ns_min": 4.896,
+   "ns_median": 4.916,
+   "ns_max": 5.009
   },
   {
    "name": "m2s/tp/interval_add_1/kairn",
    "lanes": 1,
-   "ns_min": 2.985,
-   "ns_median": 2.996,
-   "ns_max": 3.051
+   "ns_min": 2.975,
+   "ns_median": 2.991,
+   "ns_max": 3.057
   },
   {
    "name": "m2s/tp/interval_mul_1/kairn",
    "lanes": 1,
-   "ns_min": 9.231,
-   "ns_median": 9.261,
-   "ns_max": 9.452
+   "ns_min": 9.21,
+   "ns_median": 9.276,
+   "ns_max": 9.373
   },
   {
    "name": "m2/tp/interval_add_1/fenv_loop",
    "lanes": 1,
-   "ns_min": 1.469,
-   "ns_median": 1.478,
-   "ns_max": 1.513
+   "ns_min": 1.473,
+   "ns_median": 1.477,
+   "ns_max": 1.505
   },
   {
    "name": "m2/tp/interval_sub_1/fenv_loop",
    "lanes": 1,
    "ns_min": 1.459,
    "ns_median": 1.465,
-   "ns_max": 1.481
+   "ns_max": 1.503
   },
   {
    "name": "m2/tp/interval_mul_1/fenv_loop",
    "lanes": 1,
-   "ns_min": 1.784,
-   "ns_median": 1.791,
-   "ns_max": 1.822
+   "ns_min": 1.781,
+   "ns_median": 1.794,
+   "ns_max": 1.969
   },
   {
    "name": "m2/sum/interval_add_1/fenv_loop",
    "lanes": 1,
-   "ns_min": 1.587,
+   "ns_min": 1.585,
    "ns_median": 1.591,
-   "ns_max": 1.611
+   "ns_max": 1.627
   },
   {
    "name": "m2/prod/interval_mul_1/fenv_loop",
    "lanes": 1,
-   "ns_min": 3.693,
-   "ns_median": 3.706,
-   "ns_max": 3.816
+   "ns_min": 3.701,
+   "ns_median": 3.712,
+   "ns_max": 3.765
   },
   {
    "name": "m2/tp/horner_i1/fenv_loop",
    "lanes": 1,
-   "ns_min": 45.51,
-   "ns_median": 45.66,
-   "ns_max": 46.59
+   "ns_min": 45.42,
+   "ns_median": 45.6,
+   "ns_max": 47.17
   },
   {
    "name": "m2/lat/horner_i1/fenv_loop",
    "lanes": 1,
-   "ns_min": 33.97,
-   "ns_median": 34.08,
-   "ns_max": 34.98
+   "ns_min": 33.87,
+   "ns_median": 34,
+   "ns_max": 36.67
   },
   {
    "name": "m2f/tp/interval_add_1/fenv_loop",
    "lanes": 1,
    "ns_min": 1.22,
-   "ns_median": 1.231,
-   "ns_max": 1.248
+   "ns_median": 1.23,
+   "ns_max": 1.316
   },
   {
    "name": "m2f/tp/interval_mul_1/fenv_loop",
    "lanes": 1,
-   "ns_min": 1.466,
-   "ns_median": 1.498,
-   "ns_max": 1.529
+   "ns_min": 1.477,
+   "ns_median": 1.499,
+   "ns_max": 1.555
   },
   {
    "name": "m2p/tp/interval_add_1/kairn",
    "lanes": 4,
-   "ns_min": 1.611,
-   "ns_median": 1.618,
-   "ns_max": 1.639
+   "ns_min": 1.613,
+   "ns_median": 1.622,
+   "ns_max": 1.646
   },
   {
    "name": "m2p/tp/interval_mul_1/kairn",
    "lanes": 4,
-   "ns_min": 4.645,
-   "ns_median": 4.656,
-   "ns_max": 4.762
+   "ns_min": 4.637,
+   "ns_median": 4.657,
+   "ns_max": 4.779
   },
   {
    "name": "m2p/tp/interval_add_1/fenv_loop",
    "lanes": 4,
-   "ns_min": 1.033,
+   "ns_min": 1.034,
    "ns_median": 1.041,
-   "ns_max": 1.055
+   "ns_max": 1.058
   },
   {
    "name": "m2p/tp/interval_mul_1/fenv_loop",
    "lanes": 4,
-   "ns_min": 1.296,
-   "ns_median": 1.312,
-   "ns_max": 1.344
+   "ns_min": 1.298,
+   "ns_median": 1.309,
+   "ns_max": 1.323
   },
   {
    "name": "m2/prod/interval_mul_1/fenv_loop_x16",
    "lanes": 1,
-   "ns_min": 3.069,
-   "ns_median": 3.081,
-   "ns_max": 3.146
+   "ns_min": 3.071,
+   "ns_median": 3.078,
+   "ns_max": 3.528
   },
   {
    "name": "m2/sum/interval_add_1/fenv_loop_x16",
    "lanes": 1,
-   "ns_min": 0.943,
-   "ns_median": 0.9457,
-   "ns_max": 1.011
+   "ns_min": 0.941,
+   "ns_median": 0.944,
+   "ns_max": 0.9565
   },
   {
    "name": "m2/tp/det3_b1/kairn",
    "lanes": 1,
-   "ns_min": 58.74,
-   "ns_median": 58.96,
-   "ns_max": 60.78
+   "ns_min": 58.62,
+   "ns_median": 58.84,
+   "ns_max": 84.76
   },
   {
    "name": "m2/tp/det3_b1/op",
    "lanes": 1,
-   "ns_min": 58.53,
-   "ns_median": 58.78,
-   "ns_max": 60.67
+   "ns_min": 58.38,
+   "ns_median": 58.67,
+   "ns_max": 86.95
   },
   {
    "name": "m2/tp/det3_b2/kairn",
    "lanes": 1,
-   "ns_min": 154.7,
-   "ns_median": 155,
-   "ns_max": 156.9
+   "ns_min": 154.3,
+   "ns_median": 154.9,
+   "ns_max": 199.4
   },
   {
    "name": "m2/tp/det3_b2/op",
    "lanes": 1,
-   "ns_min": 148.9,
-   "ns_median": 149.2,
-   "ns_max": 151.2
+   "ns_min": 148.6,
+   "ns_median": 149,
+   "ns_max": 180.5
   },
   {
    "name": "m2/tp/det3_i1/fenv_loop",
    "lanes": 1,
-   "ns_min": 26.28,
-   "ns_median": 26.41,
-   "ns_max": 26.97
+   "ns_min": 26.27,
+   "ns_median": 26.37,
+   "ns_max": 26.92
   },
   {
    "name": "m2/tp/det3_i1/kairn",
    "lanes": 1,
-   "ns_min": 482.9,
-   "ns_median": 491.6,
-   "ns_max": 524.5
+   "ns_min": 488,
+   "ns_median": 494.4,
+   "ns_max": 508.6
   },
   {
    "name": "m2/tp/det3_i1/op",
    "lanes": 1,
-   "ns_min": 488.5,
-   "ns_median": 494.9,
-   "ns_max": 555.4
+   "ns_min": 491.8,
+   "ns_median": 500.7,
+   "ns_max": 514.7
   },
   {
    "name": "m2/tp/det3_i2/kairn",
    "lanes": 1,
-   "ns_min": 1303,
-   "ns_median": 1312,
-   "ns_max": 1353
+   "ns_min": 1296,
+   "ns_median": 1308,
+   "ns_max": 1332
   },
   {
    "name": "m2/tp/det3_i2/op",
    "lanes": 1,
-   "ns_min": 1298,
-   "ns_median": 1306,
-   "ns_max": 1351
+   "ns_min": 1295,
+   "ns_median": 1301,
+   "ns_max": 1346
   },
   {
    "name": "m2/tp/det3_t/kairn",
    "lanes": 1,
-   "ns_min": 3.959,
-   "ns_median": 3.979,
-   "ns_max": 4.035
+   "ns_min": 3.952,
+   "ns_median": 3.972,
+   "ns_max": 4.046
   },
   {
    "name": "m2/tp/det3_t/plain",
    "lanes": 1,
-   "ns_min": 3.251,
-   "ns_median": 3.265,
+   "ns_min": 3.249,
+   "ns_median": 3.259,
    "ns_max": 3.33
   },
   {
    "name": "m2/tp/interval_add_1/fenv_loop_x16",
    "lanes": 1,
-   "ns_min": 0.8119,
-   "ns_median": 0.8181,
-   "ns_max": 0.8306
+   "ns_min": 0.8179,
+   "ns_median": 0.8189,
+   "ns_max": 0.8383
   },
   {
    "name": "m2/tp/interval_mul_1/fenv_loop_x16",
    "lanes": 1,
-   "ns_min": 1.127,
-   "ns_median": 1.15,
-   "ns_max": 1.177
+   "ns_min": 1.135,
+   "ns_median": 1.148,
+   "ns_max": 1.173
   },
   {
    "name": "m2/tp/interval_sub_1/fenv_loop_x16",
    "lanes": 1,
-   "ns_min": 0.8056,
-   "ns_median": 0.8081,
-   "ns_max": 0.8243
+   "ns_min": 0.8048,
+   "ns_median": 0.8073,
+   "ns_max": 0.8281
   },
   {
    "name": "upw/lat/horner_i1/conv",
    "lanes": 1,
-   "ns_min": 41.77,
-   "ns_median": 41.91,
-   "ns_max": 42.68
+   "ns_min": 42.1,
+   "ns_median": 42.19,
+   "ns_max": 43.18
   },
   {
    "name": "upw/lat/horner_i1/native",
    "lanes": 1,
-   "ns_min": 40.44,
-   "ns_median": 40.54,
-   "ns_max": 41.33
+   "ns_min": 40.4,
+   "ns_median": 40.5,
+   "ns_max": 41.16
   },
   {
    "name": "upw/prod/interval_mul_1/conv",
    "lanes": 1,
-   "ns_min": 3.895,
-   "ns_median": 3.919,
-   "ns_max": 4.003
+   "ns_min": 3.88,
+   "ns_median": 3.893,
+   "ns_max": 3.938
   },
   {
    "name": "upw/prod/interval_mul_1/native",
    "lanes": 1,
-   "ns_min": 3.325,
-   "ns_median": 3.356,
-   "ns_max": 3.55
+   "ns_min": 3.26,
+   "ns_median": 3.284,
+   "ns_max": 3.344
   },
   {
    "name": "upw/prod/interval_mul_1/native_x16",
    "lanes": 1,
-   "ns_min": 3.041,
-   "ns_median": 3.066,
-   "ns_max": 3.153
+   "ns_min": 3.023,
+   "ns_median": 3.049,
+   "ns_max": 3.206
   },
   {
    "name": "upw/sum/interval_add_1/conv",
    "lanes": 1,
-   "ns_min": 1.362,
-   "ns_median": 1.37,
-   "ns_max": 1.402
+   "ns_min": 1.363,
+   "ns_median": 1.374,
+   "ns_max": 1.409
   },
   {
    "name": "upw/sum/interval_add_1/native",
    "lanes": 1,
-   "ns_min": 1.013,
-   "ns_median": 1.014,
-   "ns_max": 1.033
+   "ns_min": 1.01,
+   "ns_median": 1.017,
+   "ns_max": 1.042
   },
   {
    "name": "upw/sum/interval_add_1/native_x16",
    "lanes": 1,
-   "ns_min": 0.9094,
-   "ns_median": 0.9106,
-   "ns_max": 0.9314
+   "ns_min": 0.9081,
+   "ns_median": 0.9102,
+   "ns_max": 0.9364
   },
   {
    "name": "upw/tp/det3_i1/conv",
    "lanes": 1,
-   "ns_min": 33.26,
+   "ns_min": 33.32,
    "ns_median": 33.45,
-   "ns_max": 34.5
+   "ns_max": 34.04
   },
   {
    "name": "upw/tp/det3_i1/native",
    "lanes": 1,
-   "ns_min": 22.27,
-   "ns_median": 22.35,
-   "ns_max": 22.68
+   "ns_min": 22.23,
+   "ns_median": 22.32,
+   "ns_max": 22.72
   },
   {
    "name": "upw/tp/from_interval_1/op",
    "lanes": 1,
-   "ns_min": 1.087,
-   "ns_median": 1.096,
-   "ns_max": 1.111
+   "ns_min": 1.094,
+   "ns_median": 1.102,
+   "ns_max": 1.135
   },
   {
    "name": "upw/tp/horner_i1/conv",
    "lanes": 1,
-   "ns_min": 33.1,
-   "ns_median": 33.24,
-   "ns_max": 33.83
+   "ns_min": 33.04,
+   "ns_median": 33.12,
+   "ns_max": 33.76
   },
   {
    "name": "upw/tp/horner_i1/native",
    "lanes": 1,
-   "ns_min": 27.09,
-   "ns_median": 27.26,
-   "ns_max": 27.65
+   "ns_min": 27.1,
+   "ns_median": 27.16,
+   "ns_max": 27.74
   },
   {
    "name": "upw/tp/interval_add_1/conv",
    "lanes": 1,
-   "ns_min": 2.911,
-   "ns_median": 2.935,
-   "ns_max": 2.99
+   "ns_min": 2.912,
+   "ns_median": 2.938,
+   "ns_max": 2.982
   },
   {
    "name": "upw/tp/interval_add_1/native",
    "lanes": 1,
-   "ns_min": 0.5926,
-   "ns_median": 0.5951,
-   "ns_max": 0.6055
+   "ns_min": 1.407,
+   "ns_median": 1.411,
+   "ns_max": 1.446
   },
   {
    "name": "upw/tp/interval_add_1/native_x16",
    "lanes": 1,
-   "ns_min": 0.3992,
-   "ns_median": 0.4055,
-   "ns_max": 0.4167
+   "ns_min": 0.4184,
+   "ns_median": 0.422,
+   "ns_max": 0.428
   },
   {
    "name": "upw/tp/interval_mul_1/conv",
    "lanes": 1,
-   "ns_min": 6.001,
-   "ns_median": 6.028,
-   "ns_max": 6.179
+   "ns_min": 5.644,
+   "ns_median": 5.696,
+   "ns_max": 5.82
   },
   {
    "name": "upw/tp/interval_mul_1/native",
    "lanes": 1,
-   "ns_min": 1.98,
-   "ns_median": 1.995,
-   "ns_max": 2.029
+   "ns_min": 1.977,
+   "ns_median": 1.985,
+   "ns_max": 2.01
   },
   {
    "name": "upw/tp/interval_mul_1/native_x16",
    "lanes": 1,
-   "ns_min": 1.796,
-   "ns_median": 1.809,
-   "ns_max": 1.852
+   "ns_min": 1.793,
+   "ns_median": 1.802,
+   "ns_max": 1.83
   },
   {
    "name": "upw/tp/interval_sub_1/conv",
    "lanes": 1,
-   "ns_min": 3.044,
+   "ns_min": 3.059,
    "ns_median": 3.081,
-   "ns_max": 3.147
+   "ns_max": 3.137
   },
   {
    "name": "upw/tp/interval_sub_1/native",
    "lanes": 1,
-   "ns_min": 0.94,
-   "ns_median": 0.9453,
-   "ns_max": 0.9614
+   "ns_min": 1.409,
+   "ns_median": 1.415,
+   "ns_max": 1.447
   },
   {
    "name": "upw/tp/interval_sub_1/native_x16",
    "lanes": 1,
-   "ns_min": 0.6638,
-   "ns_median": 0.6685,
-   "ns_max": 0.6914
+   "ns_min": 0.6371,
+   "ns_median": 0.6396,
+   "ns_max": 0.6598
   },
   {
    "name": "upw/tp/to_interval_1/op",
    "lanes": 1,
-   "ns_min": 0.6296,
-   "ns_median": 0.6347,
-   "ns_max": 0.6636
+   "ns_min": 0.6363,
+   "ns_median": 0.6413,
+   "ns_max": 0.6508
   },
   {
    "name": "upwa/call/add_1024/nearest",
    "lanes": 4,
-   "ns_min": 465.3,
-   "ns_median": 470.9,
-   "ns_max": 478.5
+   "ns_min": 468.7,
+   "ns_median": 469.7,
+   "ns_max": 477.5
   },
   {
    "name": "upwa/call/add_1024/nested",
    "lanes": 4,
-   "ns_min": 464.9,
-   "ns_median": 470.3,
-   "ns_max": 479.7
+   "ns_min": 468.8,
+   "ns_median": 470.4,
+   "ns_max": 479.6
   },
   {
    "name": "upwa/call/add_1024/none",
    "lanes": 4,
-   "ns_min": 468.1,
-   "ns_median": 469.7,
-   "ns_max": 480.7
+   "ns_min": 469.3,
+   "ns_median": 471,
+   "ns_max": 482.5
   },
   {
    "name": "upwa/call/add_16/nearest",
    "lanes": 4,
-   "ns_min": 23,
-   "ns_median": 23.08,
-   "ns_max": 23.62
+   "ns_min": 22.99,
+   "ns_median": 23.05,
+   "ns_max": 23.68
   },
   {
    "name": "upwa/call/add_16/nested",
    "lanes": 4,
-   "ns_min": 9.224,
-   "ns_median": 9.278,
-   "ns_max": 9.502
+   "ns_min": 11.45,
+   "ns_median": 11.51,
+   "ns_max": 11.67
   },
   {
    "name": "upwa/call/add_16/none",
    "lanes": 4,
-   "ns_min": 4.979,
-   "ns_median": 5.009,
-   "ns_max": 5.138
+   "ns_min": 4.372,
+   "ns_median": 4.383,
+   "ns_max": 4.508
   },
   {
    "name": "upwa/call/add_256/nearest",
    "lanes": 4,
-   "ns_min": 65.41,
-   "ns_median": 66.24,
-   "ns_max": 68.45
+   "ns_min": 65.51,
+   "ns_median": 66.44,
+   "ns_max": 67.76
   },
   {
    "name": "upwa/call/add_256/nested",
    "lanes": 4,
-   "ns_min": 59.39,
-   "ns_median": 59.52,
-   "ns_max": 60.83
+   "ns_min": 59.3,
+   "ns_median": 59.64,
+   "ns_max": 60.41
   },
   {
    "name": "upwa/call/add_256/none",
    "lanes": 4,
-   "ns_min": 59.27,
-   "ns_median": 59.4,
-   "ns_max": 107.6
+   "ns_min": 59.23,
+   "ns_median": 59.39,
+   "ns_max": 60.5
   },
   {
    "name": "upwa/call/add_4/nearest",
    "lanes": 4,
-   "ns_min": 21.61,
-   "ns_median": 21.67,
-   "ns_max": 22
+   "ns_min": 21.6,
+   "ns_median": 21.69,
+   "ns_max": 21.99
   },
   {
    "name": "upwa/call/add_4/nested",
    "lanes": 4,
-   "ns_min": 8.054,
-   "ns_median": 8.065,
-   "ns_max": 8.231
+   "ns_min": 8.042,
+   "ns_median": 8.07,
+   "ns_max": 8.21
   },
   {
    "name": "upwa/call/add_4/none",
    "lanes": 4,
-   "ns_min": 2.62,
-   "ns_median": 2.673,
-   "ns_max": 2.737
+   "ns_min": 3.462,
+   "ns_median": 3.488,
+   "ns_max": 3.524
   },
   {
    "name": "upwa/call/add_4096/nearest",
    "lanes": 4,
-   "ns_min": 1852,
-   "ns_median": 1857,
-   "ns_max": 1903
+   "ns_min": 1848,
+   "ns_median": 1860,
+   "ns_max": 1907
   },
   {
    "name": "upwa/call/add_4096/nested",
    "lanes": 4,
-   "ns_min": 1851,
-   "ns_median": 1855,
-   "ns_max": 1896
+   "ns_min": 1847,
+   "ns_median": 1859,
+   "ns_max": 1909
   },
   {
    "name": "upwa/call/add_4096/none",
    "lanes": 4,
-   "ns_min": 1848,
-   "ns_median": 1855,
+   "ns_min": 1847,
+   "ns_median": 1856,
    "ns_max": 1896
   },
   {
    "name": "upwa/call/add_64/nearest",
    "lanes": 4,
-   "ns_min": 27.6,
+   "ns_min": 27.56,
    "ns_median": 27.75,
-   "ns_max": 30.29
+   "ns_max": 28.47
   },
   {
    "name": "upwa/call/add_64/nested",
    "lanes": 4,
-   "ns_min": 16.38,
-   "ns_median": 16.48,
-   "ns_max": 17.9
+   "ns_min": 16.46,
+   "ns_median": 16.58,
+   "ns_max": 16.89
   },
   {
    "name": "upwa/call/add_64/none",
    "lanes": 4,
-   "ns_min": 16.21,
-   "ns_median": 16.27,
-   "ns_max": 16.61
+   "ns_min": 15.35,
+   "ns_median": 15.42,
+   "ns_max": 17.1
   },
   {
    "name": "upwa/call/mul_1024/nearest",
    "lanes": 4,
-   "ns_min": 958.7,
-   "ns_median": 961.6,
-   "ns_max": 977.8
+   "ns_min": 953.1,
+   "ns_median": 963.6,
+   "ns_max": 979.7
   },
   {
    "name": "upwa/call/mul_1024/nested",
    "lanes": 4,
-   "ns_min": 949.9,
-   "ns_median": 956,
-   "ns_max": 971.1
+   "ns_min": 951.8,
+   "ns_median": 959.5,
+   "ns_max": 983.5
   },
   {
    "name": "upwa/call/mul_1024/none",
    "lanes": 4,
-   "ns_min": 951.4,
-   "ns_median": 957.6,
-   "ns_max": 977.1
+   "ns_min": 951.2,
+   "ns_median": 958.8,
+   "ns_max": 978.1
   },
   {
    "name": "upwa/call/mul_16/nearest",
    "lanes": 4,
-   "ns_min": 26.18,
-   "ns_median": 26.36,
-   "ns_max": 27.02
+   "ns_min": 26.15,
+   "ns_median": 26.29,
+   "ns_max": 26.97
   },
   {
    "name": "upwa/call/mul_16/nested",
    "lanes": 4,
-   "ns_min": 16.02,
-   "ns_median": 16.15,
-   "ns_max": 16.45
+   "ns_min": 15.91,
+   "ns_median": 16.17,
+   "ns_max": 16.56
   },
   {
    "name": "upwa/call/mul_16/none",
    "lanes": 4,
-   "ns_min": 15.47,
-   "ns_median": 15.72,
-   "ns_max": 16.41
+   "ns_min": 15.39,
+   "ns_median": 15.53,
+   "ns_max": 15.67
   },
   {
    "name": "upwa/call/mul_256/nearest",
    "lanes": 4,
-   "ns_min": 248.4,
-   "ns_median": 251.1,
-   "ns_max": 257.8
+   "ns_min": 249,
+   "ns_median": 251.5,
+   "ns_max": 260
   },
   {
    "name": "upwa/call/mul_256/nested",
    "lanes": 4,
-   "ns_min": 237.9,
-   "ns_median": 240,
-   "ns_max": 246.2
+   "ns_min": 239.5,
+   "ns_median": 240.5,
+   "ns_max": 244.6
   },
   {
    "name": "upwa/call/mul_256/none",
    "lanes": 4,
-   "ns_min": 237.4,
-   "ns_median": 238,
-   "ns_max": 242
+   "ns_min": 235.8,
+   "ns_median": 237.9,
+   "ns_max": 243.3
   },
   {
    "name": "upwa/call/mul_4/nearest",
    "lanes": 4,
-   "ns_min": 22.54,
-   "ns_median": 22.6,
-   "ns_max": 23.14
+   "ns_min": 22.5,
+   "ns_median": 22.55,
+   "ns_max": 22.88
   },
   {
    "name": "upwa/call/mul_4/nested",
    "lanes": 4,
-   "ns_min": 8.953,
-   "ns_median": 8.974,
-   "ns_max": 9.182
+   "ns_min": 8.937,
+   "ns_median": 8.968,
+   "ns_max": 9.14
   },
   {
    "name": "upwa/call/mul_4/none",
    "lanes": 4,
-   "ns_min": 4.423,
-   "ns_median": 4.456,
-   "ns_max": 4.523
+   "ns_min": 4.36,
+   "ns_median": 4.422,
+   "ns_max": 4.551
   },
   {
    "name": "upwa/call/mul_4096/nearest",
    "lanes": 4,
-   "ns_min": 3802,
-   "ns_median": 3818,
-   "ns_max": 3980
+   "ns_min": 3795,
+   "ns_median": 3813,
+   "ns_max": 3890
   },
   {
    "name": "upwa/call/mul_4096/nested",
    "lanes": 4,
-   "ns_min": 3791,
-   "ns_median": 3817,
-   "ns_max": 3889
+   "ns_min": 3787,
+   "ns_median": 3807,
+   "ns_max": 3879
   },
   {
    "name": "upwa/call/mul_4096/none",
    "lanes": 4,
-   "ns_min": 3792,
-   "ns_median": 3815,
-   "ns_max": 3976
+   "ns_min": 3785,
+   "ns_median": 3806,
+   "ns_max": 3867
   },
   {
    "name": "upwa/call/mul_64/nearest",
    "lanes": 4,
-   "ns_min": 72.44,
-   "ns_median": 73.52,
-   "ns_max": 77.94
+   "ns_min": 72.36,
+   "ns_median": 73.46,
+   "ns_max": 75.5
   },
   {
    "name": "upwa/call/mul_64/nested",
    "lanes": 4,
-   "ns_min": 60.45,
-   "ns_median": 61.08,
-   "ns_max": 62.11
+   "ns_min": 60.44,
+   "ns_median": 61.59,
+   "ns_max": 62.63
   },
   {
    "name": "upwa/call/mul_64/none",
    "lanes": 4,
-   "ns_min": 61.18,
-   "ns_median": 61.58,
-   "ns_max": 66.07
+   "ns_min": 59.8,
+   "ns_median": 60.15,
+   "ns_max": 61.23
   },
   {
    "name": "upwa/tp/interval_add_1/fenv_loop",
    "lanes": 4,
-   "ns_min": 1.142,
-   "ns_median": 1.152,
-   "ns_max": 1.177
+   "ns_min": 0.9296,
+   "ns_median": 0.9337,
+   "ns_max": 0.9624
   },
   {
    "name": "upwa/tp/interval_add_1/op",
    "lanes": 4,
-   "ns_min": 0.2575,
-   "ns_median": 0.2627,
-   "ns_max": 0.2704
+   "ns_min": 0.2574,
+   "ns_median": 0.2618,
+   "ns_max": 0.2696
   },
   {
    "name": "upwa/tp/interval_add_1/packed",
    "lanes": 4,
-   "ns_min": 1.594,
-   "ns_median": 1.605,
-   "ns_max": 1.644
+   "ns_min": 1.602,
+   "ns_median": 1.608,
+   "ns_max": 1.64
   },
   {
    "name": "upwa/tp/interval_mul_1/fenv_loop",
    "lanes": 4,
-   "ns_min": 1.321,
-   "ns_median": 1.329,
-   "ns_max": 1.348
+   "ns_min": 1.248,
+   "ns_median": 1.255,
+   "ns_max": 1.301
   },
   {
    "name": "upwa/tp/interval_mul_1/op",
    "lanes": 4,
-   "ns_min": 0.9694,
-   "ns_median": 0.9875,
-   "ns_max": 1.006
+   "ns_min": 0.9761,
+   "ns_median": 0.9884,
+   "ns_max": 1.004
   },
   {
    "name": "upwa/tp/interval_mul_1/packed",
    "lanes": 4,
-   "ns_min": 4.631,
-   "ns_median": 4.654,
-   "ns_max": 4.748
+   "ns_min": 4.604,
+   "ns_median": 4.631,
+   "ns_max": 4.752
   },
   {
    "name": "upwa/tp/interval_sub_1/fenv_loop",
    "lanes": 4,
-   "ns_min": 1.262,
-   "ns_median": 1.271,
-   "ns_max": 1.291
+   "ns_min": 0.9216,
+   "ns_median": 0.9252,
+   "ns_max": 0.9409
   },
   {
    "name": "upwa/tp/interval_sub_1/op",
    "lanes": 4,
-   "ns_min": 0.2596,
-   "ns_median": 0.2639,
-   "ns_max": 0.2719
+   "ns_min": 0.2583,
+   "ns_median": 0.2607,
+   "ns_max": 0.2748
   },
   {
    "name": "upwa/tp/interval_sub_1/packed",
    "lanes": 4,
-   "ns_min": 1.652,
-   "ns_median": 1.66,
-   "ns_max": 1.793
+   "ns_min": 1.691,
+   "ns_median": 1.701,
+   "ns_max": 1.735
   },
   {
    "name": "upwaf/tp/interval_add_1/fenv_loop",
    "lanes": 8,
-   "ns_min": 0.9072,
-   "ns_median": 0.9258,
-   "ns_max": 0.9518
+   "ns_min": 0.8162,
+   "ns_median": 0.8236,
+   "ns_max": 0.8428
   },
   {
    "name": "upwaf/tp/interval_add_1/op",
    "lanes": 8,
-   "ns_min": 0.1464,
-   "ns_median": 0.1489,
-   "ns_max": 0.1562
+   "ns_min": 0.1454,
+   "ns_median": 0.148,
+   "ns_max": 0.1532
   },
   {
    "name": "upwaf/tp/interval_add_1/packed",
    "lanes": 8,
-   "ns_min": 0.8062,
-   "ns_median": 0.81,
-   "ns_max": 0.845
+   "ns_min": 0.8032,
+   "ns_median": 0.8066,
+   "ns_max": 0.8216
   },
   {
    "name": "upwaf/tp/interval_mul_1/fenv_loop",
    "lanes": 8,
-   "ns_min": 1.02,
-   "ns_median": 1.028,
-   "ns_max": 1.054
+   "ns_min": 0.955,
+   "ns_median": 0.971,
+   "ns_max": 0.9885
   },
   {
    "name": "upwaf/tp/interval_mul_1/op",
    "lanes": 8,
-   "ns_min": 0.4759,
-   "ns_median": 0.4825,
-   "ns_max": 0.4925
+   "ns_min": 0.4768,
+   "ns_median": 0.4819,
+   "ns_max": 0.4923
   },
   {
    "name": "upwaf/tp/interval_mul_1/packed",
    "lanes": 8,
-   "ns_min": 2.357,
-   "ns_median": 2.368,
-   "ns_max": 2.413
+   "ns_min": 2.311,
+   "ns_median": 2.319,
+   "ns_max": 2.363
   },
   {
    "name": "upwaf/tp/interval_sub_1/fenv_loop",
    "lanes": 8,
-   "ns_min": 0.9693,
-   "ns_median": 0.9774,
-   "ns_max": 0.9981
+   "ns_min": 0.8138,
+   "ns_median": 0.8192,
+   "ns_max": 0.8414
   },
   {
    "name": "upwaf/tp/interval_sub_1/op",
    "lanes": 8,
-   "ns_min": 0.1467,
-   "ns_median": 0.1504,
-   "ns_max": 0.1573
+   "ns_min": 0.1455,
+   "ns_median": 0.1479,
+   "ns_max": 0.1543
   },
   {
    "name": "upwaf/tp/interval_sub_1/packed",
    "lanes": 8,
-   "ns_min": 0.8391,
-   "ns_median": 0.8457,
-   "ns_max": 0.8746
+   "ns_min": 0.8611,
+   "ns_median": 0.864,
+   "ns_max": 0.8823
   },
   {
    "name": "upwf/tp/interval_add_1/conv",
    "lanes": 1,
-   "ns_min": 3.305,
-   "ns_median": 3.329,
-   "ns_max": 3.671
+   "ns_min": 3.01,
+   "ns_median": 3.037,
+   "ns_max": 3.099
   },
   {
    "name": "upwf/tp/interval_add_1/native",
    "lanes": 1,
-   "ns_min": 0.5989,
-   "ns_median": 0.6037,
-   "ns_max": 0.6151
+   "ns_min": 1.191,
+   "ns_median": 1.194,
+   "ns_max": 1.211
   },
   {
    "name": "upwf/tp/interval_mul_1/conv",
    "lanes": 1,
-   "ns_min": 5.714,
-   "ns_median": 5.737,
-   "ns_max": 5.868
+   "ns_min": 5.71,
+   "ns_median": 5.745,
+   "ns_max": 5.845
   },
   {
    "name": "upwf/tp/interval_mul_1/native",
    "lanes": 1,
-   "ns_min": 1.984,
-   "ns_median": 1.996,
-   "ns_max": 2.052
+   "ns_min": 2.096,
+   "ns_median": 2.112,
+   "ns_max": 2.14
   },
   {
    "name": "upws/call/nearest_add_1/change",
    "lanes": 1,
-   "ns_min": 56.91,
-   "ns_median": 57.05,
-   "ns_max": 58.4
+   "ns_min": 56.37,
+   "ns_median": 56.55,
+   "ns_max": 57.95
   },
   {
    "name": "upws/call/nearest_add_1/nested",
    "lanes": 1,
-   "ns_min": 16.63,
-   "ns_median": 16.67,
-   "ns_max": 17.2
+   "ns_min": 16.54,
+   "ns_median": 16.6,
+   "ns_max": 16.91
   },
   {
    "name": "upws/call/nearest_add_1/none",
    "lanes": 1,
-   "ns_min": 5.713,
-   "ns_median": 5.873,
-   "ns_max": 6.061
+   "ns_min": 5.603,
+   "ns_median": 5.78,
+   "ns_max": 6.019
   },
   {
    "name": "upws/call/regscope_add_1/change",
    "lanes": 1,
-   "ns_min": 21.32,
-   "ns_median": 21.38,
-   "ns_max": 21.81
+   "ns_min": 21.3,
+   "ns_median": 21.35,
+   "ns_max": 21.79
   },
   {
    "name": "upws/call/regscope_add_1/nested",
    "lanes": 1,
-   "ns_min": 7.962,
-   "ns_median": 8.014,
-   "ns_max": 8.246
+   "ns_min": 7.408,
+   "ns_median": 7.427,
+   "ns_max": 7.556
   },
   {
    "name": "upws/call/scope_add_1/change",
    "lanes": 1,
-   "ns_min": 52.29,
-   "ns_median": 52.59,
-   "ns_max": 53.98
+   "ns_min": 124.1,
+   "ns_median": 124.8,
+   "ns_max": 127.9
   },
   {
    "name": "upws/call/scope_add_1/nested",
    "lanes": 1,
    "ns_min": 14.29,
-   "ns_median": 14.41,
-   "ns_max": 14.63
+   "ns_median": 14.33,
+   "ns_max": 14.74
   },
   {
    "name": "upws/call/scope_add_1/none",
    "lanes": 1,
-   "ns_min": 2.17,
-   "ns_median": 2.181,
-   "ns_max": 2.219
+   "ns_min": 2.103,
+   "ns_median": 2.124,
+   "ns_max": 2.17
   }
  ],
  "run_conditions": {
   "cpu": 15,
   "sibling": 79,
   "samples": 3,
-  "spread": 1.0061,
-  "sibling_busy_max": 0.004,
-  "sibling_busy_mean": 0.003,
-  "cpu_busy_mean": 0.999,
+  "spread": 1.0056,
+  "sibling_busy_max": 0.008,
+  "sibling_busy_mean": 0.004,
+  "cpu_busy_mean": 0.985,
   "reason": "kept"
  },
  "up_checks": {

@@ -49,10 +49,10 @@ of the compiler but MSVC's, and whose output it compares with the text on this p
 
 How much faster, measured on the shipped header on the two test machines
 ([Benchmarks](../developer/results/bench-upward.md#1-the-type-against-the-default-interval)): in a
-loop inside one scope a sum of `double` was 3.6 to 6.0 times faster than the default
-`Interval<double, 1>`'s, a product 4.7 to 8.4 times, and a 3 by 3 determinant of differences, the
-filter of an orientation test, 7.8 to 22 times. Converting from and to the default interval inside
-the loop gives most of that back (a sum 1.2 to 1.7 times faster, a product 1.6 to 3.7 times): keep
+loop inside one scope a sum of `double` was 2.5 to 7.5 times faster than the default
+`Interval<double, 1>`'s, a product 4.3 to 8.5 times, and a 3 by 3 determinant of differences, the
+filter of an orientation test, 8.4 to 22 times. Converting from and to the default interval inside
+the loop gives most of that back (a sum 1.2 to 1.7 times faster, a product 1.8 to 3.9 times): keep
 the values in the round-up type across a computation.
 
 A typical use is a *filter* that decides a sign: an expression evaluated on intervals whose result
@@ -190,10 +190,11 @@ loop, so that theirs only read.
 
 What a scope costs, measured on the shipped header
 ([Benchmarks](../developer/results/bench-upward.md#5-the-scopes)), entry and exit together: a
-`Scope` that writes the mode took 23 to 25 ns on an Apple M3, and about 50 ns on an x86-64 machine
-(a Zen 2 with glibc), where it also sets the C library's mode; the scope of a function on arrays,
-which writes the register only, took about 19 ns there. A nested scope of the same mode took under
-1 ns on the M3; on the Zen 2 about 12 ns, and about 6 ns for the one that writes the register only.
+`Scope` that writes the mode took 21 to 23 ns on an Apple M3, and about 50 ns on an x86-64 machine
+(a Zen 2 with glibc), where it also sets the C library's mode (122 ns in one program, where the code
+of the call lay elsewhere); the scope of a function on arrays, which writes the register only, took
+about 19 ns there. A nested scope of the same mode took under 1 ns on the M3; on the Zen 2 12 to 14
+ns, and about 5 ns for the one that writes the register only.
 So a scope goes around a region of many operations, not around each one.
 
 ### A NearestScope inside a Scope
@@ -230,8 +231,8 @@ set the operator of `Interval<T>` gives on it (the bits of the NaNs of an empty 
 - **Each holds its own scope** for the call (upward, the register only), so a program may call it
   where the mode is to nearest; it loads after the scope is set and stores before it ends. Inside a
   `kairn::upward::Scope` that scope costs one read. Called where the mode is to nearest, the
-  scope was under 10% of a call from about 256 elements of `double` on the Zen 2, and on the M3
-  from about 256 elements for a product and about 1024 for a sum
+  scope was about 10% of a call or less from 256 elements of `double` on the Zen 2, and under 10% on
+  the M3 from about 256 elements for a product and about 1024 for a sum
   ([Benchmarks](../developer/results/bench-upward.md#4-the-scope-of-a-function-on-arrays-by-length));
   below that, hold one `Scope` around the loop of calls.
 - **The views have the same length**; for each view read, the view written has the same two

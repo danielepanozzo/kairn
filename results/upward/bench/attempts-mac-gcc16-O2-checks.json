@@ -3,60 +3,60 @@
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0253,
+  "spread": 1.0034,
   "reason": "kept",
   "file": "checks-mac-gcc16-O2-c0-r1.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:23"
+  "time": "2026-11-27 17:08:15"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0243,
+  "spread": 1.0024,
   "reason": "kept",
   "file": "checks-mac-gcc16-O2-c1-r1.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:29"
+  "time": "2026-11-27 17:08:22"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0016,
+  "spread": 1.0027,
   "reason": "kept",
   "file": "checks-mac-gcc16-O2-c0-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:36"
+  "time": "2026-11-27 17:08:28"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0019,
+  "spread": 1.0025,
   "reason": "kept",
   "file": "checks-mac-gcc16-O2-c1-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:42"
+  "time": "2026-11-27 17:08:35"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0365,
+  "spread": 1.0029,
   "reason": "kept",
   "file": "checks-mac-gcc16-O2-c0-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:49"
+  "time": "2026-11-27 17:08:42"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0037,
+  "spread": 1.0032,
   "reason": "kept",
   "file": "checks-mac-gcc16-O2-c1-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:56"
+  "time": "2026-11-27 17:08:48"
  }
 ]

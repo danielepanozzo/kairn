@@ -3,110 +3,30 @@
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0248,
+  "spread": 1.0029,
   "reason": "kept",
   "file": "main-mac-gcc16-O3-r1.json",
   "attempt": 1,
-  "time": "2026-11-26 22:19:15"
+  "time": "2026-11-27 17:09:08"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.061,
-  "reason": "spread 1.061 at the median function",
-  "file": "main-mac-gcc16-O3-r2.json",
-  "attempt": 1,
-  "time": "2026-11-26 22:19:34"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.09,
-  "reason": "spread 1.090 at the median function",
-  "file": "main-mac-gcc16-O3-r2.json",
-  "attempt": 2,
-  "time": "2026-11-26 22:19:53"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.062,
-  "reason": "spread 1.062 at the median function",
-  "file": "main-mac-gcc16-O3-r2.json",
-  "attempt": 3,
-  "time": "2026-11-26 22:20:12"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0503,
-  "reason": "spread 1.050 at the median function",
-  "file": "main-mac-gcc16-O3-r2.json",
-  "attempt": 4,
-  "time": "2026-11-26 22:20:31"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.044,
+  "spread": 1.0027,
   "reason": "kept",
   "file": "main-mac-gcc16-O3-r2.json",
-  "attempt": 5,
-  "time": "2026-11-26 22:20:50"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0849,
-  "reason": "spread 1.085 at the median function",
-  "file": "main-mac-gcc16-O3-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:21:35"
+  "time": "2026-11-27 17:09:27"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0698,
-  "reason": "spread 1.070 at the median function",
-  "file": "main-mac-gcc16-O3-r3.json",
-  "attempt": 2,
-  "time": "2026-11-26 22:21:54"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0691,
-  "reason": "spread 1.069 at the median function",
-  "file": "main-mac-gcc16-O3-r3.json",
-  "attempt": 3,
-  "time": "2026-11-26 22:22:13"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.1281,
-  "reason": "spread 1.128 at the median function",
-  "file": "main-mac-gcc16-O3-r3.json",
-  "attempt": 4,
-  "time": "2026-11-26 22:22:32"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0454,
+  "spread": 1.0029,
   "reason": "kept",
   "file": "main-mac-gcc16-O3-r3.json",
-  "attempt": 5,
-  "time": "2026-11-26 22:22:50"
+  "attempt": 1,
+  "time": "2026-11-27 17:09:46"
  }
 ]

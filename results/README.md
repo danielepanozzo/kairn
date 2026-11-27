@@ -41,7 +41,11 @@ is an input of the library, of the generator, or of the proofs.
   file per run of `kairn-bench-up` made by `bench/up_run.py` (`main-`, `checks-...-cK-`, `msvc-`, named
   by the machine, the compiler and the optimization level), and the record of every attempt, kept or
   set aside (`attempts-*.json`); `bench/up_report.py` prints the tables of
-  `docs/developer/results/bench-upward.md` from them.
+  `docs/developer/results/bench-upward.md` from them. `4710839b/`, the runs of the first version of
+  that page, whose program loaded the pointers of its arrays again in its loops; `unord/` and
+  `placement/`, the summaries of two programs run alternately on one machine (the old and the new test
+  of an empty operand on arm64; the program of `4710839b/` and that of these runs on Zen 2), which
+  the page's section "What changed" reports.
 - `brute-code.json`: for every commit that a summary under `*/brute/` names as the code of its
   runs, the SHA-256 of the code and of the claims of every kernel and loop at that commit, written
   from the repository's history by `docs/tools/brute_code.py`. A kernel's reference page shows the

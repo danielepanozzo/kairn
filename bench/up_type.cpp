@@ -91,7 +91,7 @@ TypeData<float>* g32 = nullptr;
 // the chain's results by reference. Reached through TypeData, a structure in memory, the pointers
 // were loaded again in every iteration of the loops by Clang (a store, or an operation under strict
 // floating point, might have changed them as far as it knew), and after every call of the loops of
-// the scopes by GCC 16 and Clang (bench/README.md, "The round-up interval").
+// the scopes by GCC and Clang (bench/README.md, "The round-up interval").
 template <class T>
 struct Local {
     U<T>* x;
