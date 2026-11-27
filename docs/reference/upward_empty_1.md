@@ -42,7 +42,7 @@ Stated for every binary format with a precision of at least 1 bit, no operation 
 
 ## Listing
 
-From [`gen/kernels/upward_empty_1.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/upward_empty_1.kernel), the description the formal model (`proofs/gen/UpwardModel.v`) is generated from. The generator prints no C++ of it yet. Each statement is one operation of `T`, and none rounds to nearest ([the round-up interval in the kernel IR](../developer/architecture.md#the-round-up-interval)); `unord(a, b)` is whether $a$ or $b$ is a NaN.
+From [`gen/kernels/upward_empty_1.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/upward_empty_1.kernel), the description the C++ (`include/kairn/gen/upward.hpp`) and the formal model (`proofs/gen/UpwardModel.v`) are generated from. Each statement is one operation of `T`, and none rounds to nearest ([the round-up interval in the kernel IR](../developer/architecture.md#the-round-up-interval)); `unord(a, b)` is whether $a$ or $b$ is a NaN.
 
 ```
 # Whether an interval of the round-up interval is the empty set: its upper bound is a NaN (the empty

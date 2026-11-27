@@ -45,7 +45,7 @@ Stated for every binary format with a precision of at least 1 bit, no operation 
 
 ## Listing
 
-From [`gen/kernels/upward_hull_1.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/upward_hull_1.kernel), the description the formal model (`proofs/gen/UpwardModel.v`) is generated from. The generator prints no C++ of it yet. Each statement is one operation of `T`, and none rounds to nearest ([the round-up interval in the kernel IR](../developer/architecture.md#the-round-up-interval)); `max_nl(a, b)` is the greater of $a$ and $b$, and $b$ when $a$ is a NaN; `unord(a, b)` is whether $a$ or $b$ is a NaN. A line of two statements separated by ` | ` is a *pair line*: the two lanes of one instruction, lane 0 on the left ([the pair form](../developer/design/upward.md#the-pair-form)).
+From [`gen/kernels/upward_hull_1.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/upward_hull_1.kernel), the description the C++ (`include/kairn/gen/upward.hpp`) and the formal model (`proofs/gen/UpwardModel.v`) are generated from. Each statement is one operation of `T`, and none rounds to nearest ([the round-up interval in the kernel IR](../developer/architecture.md#the-round-up-interval)); `max_nl(a, b)` is the greater of $a$ and $b$, and $b$ when $a$ is a NaN; `unord(a, b)` is whether $a$ or $b$ is a NaN. A line of two statements separated by ` | ` is a *pair line*: the two lanes of one instruction, lane 0 on the left ([the pair form](../developer/design/upward.md#the-pair-form)).
 
 ```
 # The hull of two intervals of the round-up interval (docs/developer/design/upward.md, "Hull and
