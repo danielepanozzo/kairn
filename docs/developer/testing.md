@@ -2230,7 +2230,14 @@ per piece, starts only the pieces without one, so that a run stopped resumes, re
 after each piece, and `collect` requires every case of every kernel, format and form once, judged
 and passed, no invalid or suspicious line and every claim applied, and merges the summaries with the
 oracle (`tests/brute/README.md`, "The round-up interval"). Two pieces at once judged 117 000 lines a
-second on the Mac; 23 at once 430 000 on the second socket of the Linux machine.
+second on the Mac; 23 at once 430 000 on the second socket of the Linux machine. **The run of
+precision 1 to 4** (2026-11-27, the commit `8aed527830fc62a8c674c5951285f9d2ea9a35a3`, whose kernels,
+claims, interpreter and oracle are those of the kernels proved since but for their statuses; on
+the Linux machine with `--jobs 46`, 4 hours 6 minutes, 94 hours of processes): every one of the
+5 345 305 871 cases of the 243 kernels, formats and forms judged and passed, none invalid or
+suspicious, every claim applied, the pieces covering every case once; 1 618 578 339 lines in
+`fp:4:-6:1` and 3 564 720 739 in `fp:4:-7:2` (`results/upward/exhaustive.json`, with the counts of
+each class of each claim).
 
 **The guards** (`full.tools.crosscheck.guards.UpwardGuards`): a random run of a kernel of the family
 must list the strata of the family `upward` (chosen before the interval families) and have a case
@@ -2383,6 +2390,27 @@ Clang) or `/arch:AVX2` (MSVC and clang-cl) when the build's flags do not already
 [Getting started](../getting-started/index.md#hardware-fma).
 
 ## Time
+
+**The tests of the round-up interval** ([The round-up interval](#the-round-up-interval)), measured
+on 2026-11-26 and 27 on the branch of the tests of its kernels, merged with its public type and the
+type's first tests. On the Mac with GCC 16 (`--parallel 4`): the quick tier, 1 365 tests, in 214
+seconds, the 111 labelled `upward` 57.1 seconds of its 854 of test time; the full tier's 97 labelled
+`upward`, 40 seconds (160 of test time: the cross-checks of the runners and their flag matrix 75, the
+interpreter's enumerations 43, the emulated kernels 27, the object code 15). With Apple clang 21:
+the quick tier, 1 364 tests, in 204 seconds, the 111 labelled `upward` 50.3 seconds of test time;
+the full tier's 97, 66 seconds (264). On the Windows machine with MSVC, 8 logical processors, the commands of
+the job "Windows x64, upward": configuring 49 seconds, building `kairn-upward-tests` 19, the quick
+tier's 112 tests labelled `upward` 18 seconds (22 with `--parallel 4`; 134 of test time), the full
+tier's 73 that depend on the compiler 51 (66 with `--parallel 4`; 400 of test time); and the quick
+tier without them (`-DKAIRN_UPWARD_TESTS=OFF`, before the type's tests) 337 seconds against 331 for
+`main` before the family, the 6 seconds being the 48 tests of `tests/api/` then registered for the
+family, which the type's tests have since moved to `api/upward/` (with the option off the quick tier
+now registers no test of the family). By the rule of four, the job "Windows x64, upward" takes some
+12 minutes on a hosted runner, of its 30. In the generator's suite, `test_upward.py` and
+`test_upward_cxx.py` take 61 seconds with both compilers of the Mac (`--jobs 4`), 28 and 26 with one;
+`tests/brute/upward.py` judged 430 000 lines a second with 46 processes on the second socket of the
+Linux machine, and the 190 mutants of `kernel_mutants.py --upward` took 55 minutes with four jobs on
+the Mac.
 
 **The quick tier on 2026-11-22** (`main` at `5f597fb`, 1 198 to 1 202 tests by platform: with the
 functions on arrays, the ball vectors, the entry forms of rule R3 and the examples of the Concepts

@@ -28,6 +28,11 @@ is an input of the library, of the generator, or of the proofs.
   kernel and format the best line of every quantity with its value, one file per run: from the
   strata alone, and with every seed through the interpreter and through a compiled runner;
   `docs/developer/results/brute-milestone2.md` reports it ("The adversarial search").
+- `upward/exhaustive.json`: the kernels of the round-up interval on every case of the formats of
+  their statements of precision 1 to 4, through the generator's interpreter in each form of
+  `max_nl`, judged by the oracle (`tests/brute/upward.py collect`): the commands, the commits, and per
+  kernel, format and form the cases and the oracle's counts of each class of its claim
+  (docs/developer/testing.md, "The round-up interval").
 - `upward/mutants.json`: the faults that `tests/kernel_mutants.py --upward` plants in the two-number
   form of the round-up interval's kernels, a line per mutant with what caught it (each tier's
   cross-checks, the comparison with the interpreter), from the run of
