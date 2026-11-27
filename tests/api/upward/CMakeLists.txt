@@ -264,5 +264,69 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   _kairn_upward_reject(msvc_fp_contract /fp:contract "does not work with /fp:contract")
 endif()
 
+# The type (reject.cpp, cases 120 to 146), compiled with the option of kairn::upward in both
+# compilations, as a program builds it: the conversions between the two interval types are explicit,
+# no operation mixes them, nothing is constexpr, what the type does not have; and, against a copy of
+# the headers in which the kernels of gen/upward.hpp are unverified (reject_fixture.cmake), an
+# operation written without the marker: with every kernel unverified, and with one only, the others
+# proved, so that the operation cannot compile through the interval of its number either. Each
+# control writes what compiles instead.
+get_target_property(_upward_option kairn::upward INTERFACE_COMPILE_OPTIONS)
+list(JOIN _upward_option "|" _upward_option)
+function(_kairn_upward_type_reject name case expect)
+  set(_script "${CMAKE_CURRENT_SOURCE_DIR}/../compile_fail.cmake")
+  set(_extra ${ARGN})
+  if(_extra)
+    set(_script "${CMAKE_CURRENT_SOURCE_DIR}/reject_fixture.cmake")
+  endif()
+  add_test(NAME api.upward.reject.${name}
+    COMMAND "${CMAKE_COMMAND}" "-DCXX=${CMAKE_CXX_COMPILER}" "-DSTYLE=${_api_style}" "-DINCLUDE=${_api_include}"
+      "-DSOURCE=${CMAKE_CURRENT_SOURCE_DIR}/../reject.cpp" "-DCASE=${case}"
+      "-DCOMMON=${_api_fma_bars}|${_upward_option}" "-DEXPECT=${expect}" ${_upward_reject_sysroot} ${_extra}
+      -P "${_script}")
+  set_tests_properties(api.upward.reject.${name} PROPERTIES TIMEOUT 300 LABELS reject)
+endfunction()
+set(_upward_reject_sysroot "")
+if(CMAKE_OSX_SYSROOT AND NOT _msvc_style)
+  set(_upward_reject_sysroot "-DSYSROOT=${CMAKE_OSX_SYSROOT}")
+endif()
+_kairn_upward_type_reject(implicit_from_default 120 "${_api_no_conversion}")
+_kairn_upward_type_reject(implicit_to_default 121 "${_api_no_conversion}")
+_kairn_upward_type_reject(mixed_operator 122 "${_api_no_operator}")
+_kairn_upward_type_reject(mixed_operator_default_first 123 "${_api_no_operator}")
+_kairn_upward_type_reject(mixed_comparison 124 "${_api_no_call}")
+_kairn_upward_type_reject(mixed_hull 125 "${_api_no_call}")
+_kairn_upward_type_reject(not_constexpr.make 126 "constant|constexpr|literal")
+_kairn_upward_type_reject(not_constexpr.add 127 "constant|constexpr|literal")
+_kairn_upward_type_reject(no_midpoint 128 "midpoint")
+_kairn_upward_type_reject(no_radius 129 "radius")
+_kairn_upward_type_reject(no_mid_rad 130 "mid_rad")
+_kairn_upward_type_reject(no_split 131 "split")
+_kairn_upward_type_reject(no_ball 132 "${_api_no_constructor}")
+_kairn_upward_type_reject(no_from_ball 133 "${_api_no_constructor}")
+_kairn_upward_type_reject(no_comparison_operator 134 "${_api_no_operator}")
+_kairn_upward_type_reject(no_division 135 "${_api_no_operator}")
+_kairn_upward_type_reject(no_two_limbs 136 "${_api_no_constructor}")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(_upward_unmarked "constraint|no overloaded function|no operator found|does not define this operator|cannot convert")
+else()
+  set(_upward_unmarked "proved|invalid operands|no match")
+endif()
+foreach(_case_name IN ITEMS 137:operator 138:make 139:member 140:comparison 141:arrays 142:from_interval
+                            143:number_operand)
+  string(REPLACE ":" ";" _pair "${_case_name}")
+  list(GET _pair 0 _case)
+  list(GET _pair 1 _name)
+  _kairn_upward_type_reject(unverified.${_name} ${_case} "${_upward_unmarked}"
+    "-DUPWARD_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/${_name}")
+endforeach()
+foreach(_case_kernel IN ITEMS 144:upward_add_num_1 145:upward_mul_num_1 146:upward_contains_1)
+  string(REPLACE ":" ";" _pair "${_case_kernel}")
+  list(GET _pair 0 _case)
+  list(GET _pair 1 _kernel)
+  _kairn_upward_type_reject(unverified_only.${_kernel} ${_case} "${_upward_unmarked}"
+    "-DUPWARD_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/only-${_kernel}" "-DUPWARD_ONLY=${_kernel}")
+endforeach()
+
 get_property(_upward_tests DIRECTORY PROPERTY TESTS)
 set_property(TEST ${_upward_tests} APPEND PROPERTY LABELS "api;upward;quick")
