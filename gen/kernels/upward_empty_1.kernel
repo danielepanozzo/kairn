@@ -12,10 +12,11 @@ ensures:       certain m empty x x=xu,xn exact
 min_precision: 1
 source:        the upper bound tested for a NaN (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardPredicates.v upward_empty_1_correct
 entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
 unused:        xn the upper bound alone tells the empty set (NaN, NaN) from a nonempty state, whose lanes are no NaN

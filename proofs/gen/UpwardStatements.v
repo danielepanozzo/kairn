@@ -13,7 +13,7 @@ From Kairn Require Import IeeeVocabulary IeeeIntervalVocabulary IeeeUpwardOperat
 From Kairn.Gen Require UpwardModel.
 Open Scope R_scope.
 
-(* upward_add_1: the sums of the lanes rounded upward (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_add_1: the sums of the lanes rounded upward (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_add_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -37,7 +37,7 @@ Definition upward_add_1_spec : Prop :=
     range_2 (fun x y : R => x + y) (in_upward_1 xu xn) (in_upward_1 yu yn) z ->
     Rabs z <= omega prec emax)).
 
-(* upward_add_num_1: the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_add_num_1: the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_add_num_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -60,7 +60,7 @@ Definition upward_add_num_1_spec : Prop :=
     range_2 (fun x t' : R => x + t') (in_upward_1 xu xn) (in_number_1 t) z ->
     Rabs z <= omega prec emax)).
 
-(* upward_contains_1: the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_contains_1: the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_contains_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -71,7 +71,7 @@ Definition upward_contains_1_spec : Prop :=
   (m = true <->
     finite t /\ in_upward_1 xu xn (val t)).
 
-(* upward_empty_1: the upper bound tested for a NaN (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_empty_1: the upper bound tested for a NaN (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_empty_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -81,7 +81,7 @@ Definition upward_empty_1_spec : Prop :=
   (m = true <->
     upward_empty_1 xu xn).
 
-(* upward_entire_1: both lanes compared with +inf (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_entire_1: both lanes compared with +inf (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_entire_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -91,7 +91,7 @@ Definition upward_entire_1_spec : Prop :=
   (m = true <->
     (forall z : R, in_upward_1 xu xn z)).
 
-(* upward_equal_1: the lanes compared with the negated lanes (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_equal_1: the lanes compared with the negated lanes (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -108,7 +108,7 @@ Definition upward_equal_1_spec : Prop :=
     (forall x y : R, in_upward_1 xu xn x -> in_upward_1 yu yn y -> ~ (x = y))) /\
   ~ (yes = true /\ no = true).
 
-(* upward_from_interval_1: the upper bound and the negated lower bound, the empty set after a test (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_from_interval_1: the upper bound and the negated lower bound, the empty set after a test (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_from_interval_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -121,7 +121,7 @@ Definition upward_from_interval_1_spec : Prop :=
   (forall z : R, in_upward_1 zu zn z <-> in_interval_1 xl xu z) /\
   (interval_nonempty_1 xl xu -> xopp (xval zn) = xval xl /\ xval zu = xval xu).
 
-(* upward_hull_1: the larger lanes, the empty set its identity (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_hull_1: the larger lanes, the empty set its identity (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_hull_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -139,7 +139,7 @@ Definition upward_hull_1_spec : Prop :=
    range_upper (fun z : R => in_upward_1 xu xn z \/ in_upward_1 yu yn z) hi ->
    xopp (xval zn) = lo /\ xval zu = hi).
 
-(* upward_intersection_1: the smaller lanes, the empty set if they cross (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_intersection_1: the smaller lanes, the empty set if they cross (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_intersection_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -157,7 +157,7 @@ Definition upward_intersection_1_spec : Prop :=
    range_upper (fun z : R => in_upward_1 xu xn z /\ in_upward_1 yu yn z) hi ->
    xopp (xval zn) = lo /\ xval zu = hi).
 
-(* upward_less_1: the lanes compared with the other lanes negated (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_less_1: the lanes compared with the other lanes negated (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_less_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -174,7 +174,7 @@ Definition upward_less_1_spec : Prop :=
     (forall x y : R, in_upward_1 xu xn x -> in_upward_1 yu yn y -> ~ (x < y))) /\
   ~ (yes = true /\ no = true).
 
-(* upward_less_equal_1: the lanes compared with the other lanes negated (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_less_equal_1: the lanes compared with the other lanes negated (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_less_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -191,7 +191,7 @@ Definition upward_less_equal_1_spec : Prop :=
     (forall x y : R, in_upward_1 xu xn x -> in_upward_1 yu yn y -> ~ (x <= y))) /\
   ~ (yes = true /\ no = true).
 
-(* upward_make_1: constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_make_1: constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_make_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -204,7 +204,7 @@ Definition upward_make_1_spec : Prop :=
    zu = infinity prec emax false /\ zn = infinity prec emax false) /\
   (xlt (xval hi) (xval lo) = true -> upward_empty_1 zu zn).
 
-(* upward_mul_1: the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_mul_1: the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_mul_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -229,7 +229,7 @@ Definition upward_mul_1_spec : Prop :=
     range_2 (fun x y : R => x * y) (in_upward_1 xu xn) (in_upward_1 yu yn) z ->
     Rabs z <= omega prec emax)).
 
-(* upward_mul_num_1: the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_mul_num_1: the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_mul_num_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -253,7 +253,7 @@ Definition upward_mul_num_1_spec : Prop :=
     range_2 (fun x t' : R => x * t') (in_upward_1 xu xn) (in_number_1 t) z ->
     Rabs z <= omega prec emax)).
 
-(* upward_neg_1: the two lanes exchanged (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_neg_1: the two lanes exchanged (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_neg_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -275,7 +275,7 @@ Definition upward_neg_1_spec : Prop :=
     range_1 (fun x : R => - x) (in_upward_1 xu xn) z ->
     Rabs z <= omega prec emax)).
 
-(* upward_negative_1: the upper bound compared with 0 (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_negative_1: the upper bound compared with 0 (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_negative_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -286,7 +286,7 @@ Definition upward_negative_1_spec : Prop :=
     upward_nonempty_1 xu xn /\
     (forall x : R, in_upward_1 xu xn x -> x < 0)).
 
-(* upward_positive_1: the negated lower bound compared with 0 (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_positive_1: the negated lower bound compared with 0 (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_positive_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -297,7 +297,7 @@ Definition upward_positive_1_spec : Prop :=
     upward_nonempty_1 xu xn /\
     (forall x : R, in_upward_1 xu xn x -> 0 < x)).
 
-(* upward_rel_disjoint_1: the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_rel_disjoint_1: the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_rel_disjoint_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -309,7 +309,7 @@ Definition upward_rel_disjoint_1_spec : Prop :=
   (m = true <->
     ~ (exists z : R, in_upward_1 xu xn z /\ in_upward_1 yu yn z)).
 
-(* upward_rel_equal_1: the lanes compared, and tests of emptiness (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_rel_equal_1: the lanes compared, and tests of emptiness (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_rel_equal_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -320,7 +320,7 @@ Definition upward_rel_equal_1_spec : Prop :=
   (m = true <->
     (forall z : R, in_upward_1 xu xn z <-> in_upward_1 yu yn z)).
 
-(* upward_rel_interior_1: the lanes compared, and a test of emptiness (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_rel_interior_1: the lanes compared, and a test of emptiness (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_rel_interior_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -332,7 +332,7 @@ Definition upward_rel_interior_1_spec : Prop :=
     (forall z : R, in_upward_1 xu xn z ->
     exists d : R, 0 < d /\ (forall w : R, Rabs (w - z) < d -> in_upward_1 yu yn w))).
 
-(* upward_sub_1: the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_sub_1: the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_sub_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -356,7 +356,7 @@ Definition upward_sub_1_spec : Prop :=
     range_2 (fun x y : R => x - y) (in_upward_1 xu xn) (in_upward_1 yu yn) z ->
     Rabs z <= omega prec emax)).
 
-(* upward_subset_1: the lanes compared, and a test of emptiness (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_subset_1: the lanes compared, and a test of emptiness (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_subset_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -367,7 +367,7 @@ Definition upward_subset_1_spec : Prop :=
   (m = true <->
     (forall z : R, in_upward_1 xu xn z -> in_upward_1 yu yn z)).
 
-(* upward_to_interval_1: the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_to_interval_1: the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_to_interval_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -380,7 +380,7 @@ Definition upward_to_interval_1_spec : Prop :=
   (forall z : R, in_interval_1 zl zu z <-> in_upward_1 xu xn z) /\
   (upward_nonempty_1 xu xn -> xval zl = xopp (xval xn) /\ xval zu = xval xu).
 
-(* upward_zero_1: both lanes compared with 0 (the listing of the round-up interval). IEEE-model status: unverified. *)
+(* upward_zero_1: both lanes compared with 0 (the listing of the round-up interval). IEEE-model status: proved. *)
 Definition upward_zero_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),

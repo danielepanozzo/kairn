@@ -14,10 +14,11 @@ ensures:       encloses_interval zu zn x+t x=xu,xn numbers=t tight=rounded bound
 min_precision: 1
 source:        the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardArith.v upward_add_num_1_correct
 entry:         yes
 cone_exempt:   the lanes are selected after an explicit test that t is finite, and a lane that is not finite is part of a state; encloses_interval states what comes out
 

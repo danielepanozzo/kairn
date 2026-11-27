@@ -15,10 +15,11 @@ ensures:       trit yes no lt x y x=xu,xn y=yu,yn exact
 min_precision: 1
 source:        the lanes compared with the other lanes negated (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardPredicates.v upward_less_1_correct
 entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical operand
 

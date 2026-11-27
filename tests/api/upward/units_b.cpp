@@ -6,12 +6,13 @@
 
 #include "units.hpp"
 
+// The upper bound of the product of the points [x, x] and [y, y], through kairn::upward::Interval:
+// from_limbs, the operator (kernel upward_mul_1, its first input pinned) and upper(), with the
+// marker, which compiles whatever gen/upward.hpp says of the kernels.
 double units::mul(double x, double y) noexcept {
-    KAIRN_DETAIL_UPWARD_PIN(x);
-    KAIRN_DETAIL_UPWARD_BARRIER(y);
-    double z = x * y;
-    KAIRN_DETAIL_UPWARD_BARRIER(z);
-    return z;
+    using I = kairn::upward::Interval<double>;
+    const double a[2] = {x, -x}, b[2] = {y, -y};
+    return kairn::unverified(kairn::unverified(I::from_limbs(a)) * I::from_limbs(b)).upper();
 }
 
 const void* units::zero_address() noexcept {

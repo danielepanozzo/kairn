@@ -234,7 +234,7 @@ KAIRN_GEN_FORCEINLINE float32x2_t flip1(float32x2_t a) noexcept {
 // --- The exact kernels: the same result in every rounding mode and under every option.
 
 // upward_contains_1(pair x = (xu, xn), t) -> mask m: exact.
-// the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_contains_1(__m128d x, double t, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -327,7 +327,7 @@ KAIRN_GEN_FORCEINLINE void upward_contains_1(numbers<float> x, float t, bool& m_
 #endif
 
 // upward_empty_1(pair x = (xu, xn)) -> mask m: exact.
-// the upper bound tested for a NaN (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the upper bound tested for a NaN (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_empty_1(__m128d x, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -370,7 +370,7 @@ KAIRN_GEN_FORCEINLINE void upward_empty_1(numbers<float> x, bool& m_out) noexcep
 #endif
 
 // upward_entire_1(pair x = (xu, xn)) -> mask m: exact.
-// both lanes compared with +inf (the listing of the round-up interval). Status: unverified (IEEE model only).
+// both lanes compared with +inf (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_entire_1(__m128d x, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -433,7 +433,7 @@ KAIRN_GEN_FORCEINLINE void upward_entire_1(numbers<float> x, bool& m_out) noexce
 #endif
 
 // upward_equal_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask yes, mask no: exact.
-// the lanes compared with the negated lanes (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared with the negated lanes (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_equal_1(__m128d x, __m128d y, bool& yes_out, bool& no_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -564,7 +564,7 @@ KAIRN_GEN_FORCEINLINE void upward_equal_1(numbers<float> x, numbers<float> y, bo
 #endif
 
 // upward_from_interval_1(xl, xu) -> pair z = (zu, zn): exact.
-// the upper bound and the negated lower bound, the empty set after a test (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the upper bound and the negated lower bound, the empty set after a test (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_from_interval_1(double xl, double xu, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(xl);
@@ -637,7 +637,7 @@ KAIRN_GEN_FORCEINLINE void upward_from_interval_1(float xl, float xu, numbers<fl
 #endif
 
 // upward_hull_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): exact.
-// the larger lanes, the empty set its identity (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the larger lanes, the empty set its identity (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_hull_1(__m128d x, __m128d y, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -718,7 +718,7 @@ KAIRN_GEN_FORCEINLINE void upward_hull_1(numbers<float> x, numbers<float> y, num
 #endif
 
 // upward_intersection_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): exact.
-// the smaller lanes, the empty set if they cross (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the smaller lanes, the empty set if they cross (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_intersection_1(__m128d x, __m128d y, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -835,7 +835,7 @@ KAIRN_GEN_FORCEINLINE void upward_intersection_1(numbers<float> x, numbers<float
 #endif
 
 // upward_less_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask yes, mask no: exact.
-// the lanes compared with the other lanes negated (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared with the other lanes negated (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_less_1(__m128d x, __m128d y, bool& yes_out, bool& no_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -930,7 +930,7 @@ KAIRN_GEN_FORCEINLINE void upward_less_1(numbers<float> x, numbers<float> y, boo
 #endif
 
 // upward_less_equal_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask yes, mask no: exact.
-// the lanes compared with the other lanes negated (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared with the other lanes negated (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_less_equal_1(__m128d x, __m128d y, bool& yes_out, bool& no_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1025,7 +1025,7 @@ KAIRN_GEN_FORCEINLINE void upward_less_equal_1(numbers<float> x, numbers<float> 
 #endif
 
 // upward_make_1(lo, hi) -> pair z = (zu, zn): exact.
-// constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval). Status: unverified (IEEE model only).
+// constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_make_1(double lo, double hi, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(lo);
@@ -1150,7 +1150,7 @@ KAIRN_GEN_FORCEINLINE void upward_make_1(float lo, float hi, numbers<float>& z_o
 #endif
 
 // upward_neg_1(pair x = (xu, xn)) -> pair z = (zu, zn): exact.
-// the two lanes exchanged (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the two lanes exchanged (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_neg_1(__m128d x, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1207,7 +1207,7 @@ KAIRN_GEN_FORCEINLINE void upward_neg_1(numbers<float> x, numbers<float>& z_out)
 #endif
 
 // upward_negative_1(pair x = (xu, xn)) -> mask m: exact.
-// the upper bound compared with 0 (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the upper bound compared with 0 (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_negative_1(__m128d x, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1250,7 +1250,7 @@ KAIRN_GEN_FORCEINLINE void upward_negative_1(numbers<float> x, bool& m_out) noex
 #endif
 
 // upward_positive_1(pair x = (xu, xn)) -> mask m: exact.
-// the negated lower bound compared with 0 (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the negated lower bound compared with 0 (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_positive_1(__m128d x, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1293,7 +1293,7 @@ KAIRN_GEN_FORCEINLINE void upward_positive_1(numbers<float> x, bool& m_out) noex
 #endif
 
 // upward_rel_disjoint_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
-// the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_rel_disjoint_1(__m128d x, __m128d y, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1400,7 +1400,7 @@ KAIRN_GEN_FORCEINLINE void upward_rel_disjoint_1(numbers<float> x, numbers<float
 #endif
 
 // upward_rel_equal_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
-// the lanes compared, and tests of emptiness (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared, and tests of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_rel_equal_1(__m128d x, __m128d y, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1507,7 +1507,7 @@ KAIRN_GEN_FORCEINLINE void upward_rel_equal_1(numbers<float> x, numbers<float> y
 #endif
 
 // upward_rel_interior_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
-// the lanes compared, and a test of emptiness (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared, and a test of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_rel_interior_1(__m128d x, __m128d y, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1650,7 +1650,7 @@ KAIRN_GEN_FORCEINLINE void upward_rel_interior_1(numbers<float> x, numbers<float
 #endif
 
 // upward_subset_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
-// the lanes compared, and a test of emptiness (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes compared, and a test of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_subset_1(__m128d x, __m128d y, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1745,7 +1745,7 @@ KAIRN_GEN_FORCEINLINE void upward_subset_1(numbers<float> x, numbers<float> y, b
 #endif
 
 // upward_to_interval_1(pair x = (xu, xn)) -> zl, zu: exact.
-// the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_to_interval_1(__m128d x, double& zl_out, double& zu_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1838,7 +1838,7 @@ KAIRN_GEN_FORCEINLINE void upward_to_interval_1(numbers<float> x, float& zl_out,
 #endif
 
 // upward_zero_1(pair x = (xu, xn)) -> mask m: exact.
-// both lanes compared with 0 (the listing of the round-up interval). Status: unverified (IEEE model only).
+// both lanes compared with 0 (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_zero_1(__m128d x, bool& m_out) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(x);
@@ -1905,7 +1905,7 @@ KAIRN_GEN_FORCEINLINE void upward_zero_1(numbers<float> x, bool& m_out) noexcept
 namespace {
 
 // upward_add_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): rounds upward.
-// the sums of the lanes rounded upward (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the sums of the lanes rounded upward (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_add_1(__m128d x, __m128d y, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_PIN(x);
@@ -1970,7 +1970,7 @@ KAIRN_GEN_FORCEINLINE void upward_add_1(numbers<float> x, numbers<float> y, numb
 #endif
 
 // upward_add_num_1(pair x = (xu, xn), t) -> pair z = (zu, zn): rounds upward.
-// the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_add_num_1(__m128d x, double t, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_PIN(x);
@@ -2081,7 +2081,7 @@ KAIRN_GEN_FORCEINLINE void upward_add_num_1(numbers<float> x, float t, numbers<f
 #endif
 
 // upward_mul_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): rounds upward.
-// the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_mul_1(__m128d x, __m128d y, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_PIN(x);
@@ -2254,7 +2254,7 @@ KAIRN_GEN_FORCEINLINE void upward_mul_1(numbers<float> x, numbers<float> y, numb
 #endif
 
 // upward_mul_num_1(pair x = (xu, xn), t) -> pair z = (zu, zn): rounds upward.
-// the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_mul_num_1(__m128d x, double t, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_PIN(x);
@@ -2461,7 +2461,7 @@ KAIRN_GEN_FORCEINLINE void upward_mul_num_1(numbers<float> x, float t, numbers<f
 #endif
 
 // upward_sub_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): rounds upward.
-// the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval). Status: unverified (IEEE model only).
+// the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval). Status: proved (IEEE model only).
 #if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_SSE2
 KAIRN_GEN_FORCEINLINE void upward_sub_1(__m128d x, __m128d y, __m128d& z_out) noexcept {
     KAIRN_DETAIL_UPWARD_PIN(x);
@@ -3506,77 +3506,77 @@ inline void upward_sub_1_arrays(const float* xu_in, const float* xn_in, const fl
 // real-model statement) and T has at least its minimum precision.
 namespace bounds {
 template <class T> struct upward_add_1;
-template <> struct upward_add_1<double> { static constexpr bool proved = false; };
-template <> struct upward_add_1<float> { static constexpr bool proved = false; };
+template <> struct upward_add_1<double> { static constexpr bool proved = true; };
+template <> struct upward_add_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_add_num_1;
-template <> struct upward_add_num_1<double> { static constexpr bool proved = false; };
-template <> struct upward_add_num_1<float> { static constexpr bool proved = false; };
+template <> struct upward_add_num_1<double> { static constexpr bool proved = true; };
+template <> struct upward_add_num_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_contains_1;
-template <> struct upward_contains_1<double> { static constexpr bool proved = false; };
-template <> struct upward_contains_1<float> { static constexpr bool proved = false; };
+template <> struct upward_contains_1<double> { static constexpr bool proved = true; };
+template <> struct upward_contains_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_empty_1;
-template <> struct upward_empty_1<double> { static constexpr bool proved = false; };
-template <> struct upward_empty_1<float> { static constexpr bool proved = false; };
+template <> struct upward_empty_1<double> { static constexpr bool proved = true; };
+template <> struct upward_empty_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_entire_1;
-template <> struct upward_entire_1<double> { static constexpr bool proved = false; };
-template <> struct upward_entire_1<float> { static constexpr bool proved = false; };
+template <> struct upward_entire_1<double> { static constexpr bool proved = true; };
+template <> struct upward_entire_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_equal_1;
-template <> struct upward_equal_1<double> { static constexpr bool proved = false; };
-template <> struct upward_equal_1<float> { static constexpr bool proved = false; };
+template <> struct upward_equal_1<double> { static constexpr bool proved = true; };
+template <> struct upward_equal_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_from_interval_1;
-template <> struct upward_from_interval_1<double> { static constexpr bool proved = false; };
-template <> struct upward_from_interval_1<float> { static constexpr bool proved = false; };
+template <> struct upward_from_interval_1<double> { static constexpr bool proved = true; };
+template <> struct upward_from_interval_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_hull_1;
-template <> struct upward_hull_1<double> { static constexpr bool proved = false; };
-template <> struct upward_hull_1<float> { static constexpr bool proved = false; };
+template <> struct upward_hull_1<double> { static constexpr bool proved = true; };
+template <> struct upward_hull_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_intersection_1;
-template <> struct upward_intersection_1<double> { static constexpr bool proved = false; };
-template <> struct upward_intersection_1<float> { static constexpr bool proved = false; };
+template <> struct upward_intersection_1<double> { static constexpr bool proved = true; };
+template <> struct upward_intersection_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_less_1;
-template <> struct upward_less_1<double> { static constexpr bool proved = false; };
-template <> struct upward_less_1<float> { static constexpr bool proved = false; };
+template <> struct upward_less_1<double> { static constexpr bool proved = true; };
+template <> struct upward_less_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_less_equal_1;
-template <> struct upward_less_equal_1<double> { static constexpr bool proved = false; };
-template <> struct upward_less_equal_1<float> { static constexpr bool proved = false; };
+template <> struct upward_less_equal_1<double> { static constexpr bool proved = true; };
+template <> struct upward_less_equal_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_make_1;
-template <> struct upward_make_1<double> { static constexpr bool proved = false; };
-template <> struct upward_make_1<float> { static constexpr bool proved = false; };
+template <> struct upward_make_1<double> { static constexpr bool proved = true; };
+template <> struct upward_make_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_mul_1;
-template <> struct upward_mul_1<double> { static constexpr bool proved = false; };
-template <> struct upward_mul_1<float> { static constexpr bool proved = false; };
+template <> struct upward_mul_1<double> { static constexpr bool proved = true; };
+template <> struct upward_mul_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_mul_num_1;
-template <> struct upward_mul_num_1<double> { static constexpr bool proved = false; };
-template <> struct upward_mul_num_1<float> { static constexpr bool proved = false; };
+template <> struct upward_mul_num_1<double> { static constexpr bool proved = true; };
+template <> struct upward_mul_num_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_neg_1;
-template <> struct upward_neg_1<double> { static constexpr bool proved = false; };
-template <> struct upward_neg_1<float> { static constexpr bool proved = false; };
+template <> struct upward_neg_1<double> { static constexpr bool proved = true; };
+template <> struct upward_neg_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_negative_1;
-template <> struct upward_negative_1<double> { static constexpr bool proved = false; };
-template <> struct upward_negative_1<float> { static constexpr bool proved = false; };
+template <> struct upward_negative_1<double> { static constexpr bool proved = true; };
+template <> struct upward_negative_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_positive_1;
-template <> struct upward_positive_1<double> { static constexpr bool proved = false; };
-template <> struct upward_positive_1<float> { static constexpr bool proved = false; };
+template <> struct upward_positive_1<double> { static constexpr bool proved = true; };
+template <> struct upward_positive_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_rel_disjoint_1;
-template <> struct upward_rel_disjoint_1<double> { static constexpr bool proved = false; };
-template <> struct upward_rel_disjoint_1<float> { static constexpr bool proved = false; };
+template <> struct upward_rel_disjoint_1<double> { static constexpr bool proved = true; };
+template <> struct upward_rel_disjoint_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_rel_equal_1;
-template <> struct upward_rel_equal_1<double> { static constexpr bool proved = false; };
-template <> struct upward_rel_equal_1<float> { static constexpr bool proved = false; };
+template <> struct upward_rel_equal_1<double> { static constexpr bool proved = true; };
+template <> struct upward_rel_equal_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_rel_interior_1;
-template <> struct upward_rel_interior_1<double> { static constexpr bool proved = false; };
-template <> struct upward_rel_interior_1<float> { static constexpr bool proved = false; };
+template <> struct upward_rel_interior_1<double> { static constexpr bool proved = true; };
+template <> struct upward_rel_interior_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_sub_1;
-template <> struct upward_sub_1<double> { static constexpr bool proved = false; };
-template <> struct upward_sub_1<float> { static constexpr bool proved = false; };
+template <> struct upward_sub_1<double> { static constexpr bool proved = true; };
+template <> struct upward_sub_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_subset_1;
-template <> struct upward_subset_1<double> { static constexpr bool proved = false; };
-template <> struct upward_subset_1<float> { static constexpr bool proved = false; };
+template <> struct upward_subset_1<double> { static constexpr bool proved = true; };
+template <> struct upward_subset_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_to_interval_1;
-template <> struct upward_to_interval_1<double> { static constexpr bool proved = false; };
-template <> struct upward_to_interval_1<float> { static constexpr bool proved = false; };
+template <> struct upward_to_interval_1<double> { static constexpr bool proved = true; };
+template <> struct upward_to_interval_1<float> { static constexpr bool proved = true; };
 template <class T> struct upward_zero_1;
-template <> struct upward_zero_1<double> { static constexpr bool proved = false; };
-template <> struct upward_zero_1<float> { static constexpr bool proved = false; };
+template <> struct upward_zero_1<double> { static constexpr bool proved = true; };
+template <> struct upward_zero_1<float> { static constexpr bool proved = true; };
 }  // namespace bounds
 
 // --- The stored results of kairn::upward::self_test() (the design page, "The self-check",

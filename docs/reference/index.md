@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 263 kernels, 239 are proved and 24 are **UNVERIFIED**: [`upward_add_1`](upward_add_1.md), [`upward_add_num_1`](upward_add_num_1.md), [`upward_contains_1`](upward_contains_1.md), [`upward_empty_1`](upward_empty_1.md), [`upward_entire_1`](upward_entire_1.md), [`upward_equal_1`](upward_equal_1.md), [`upward_from_interval_1`](upward_from_interval_1.md), [`upward_hull_1`](upward_hull_1.md), [`upward_intersection_1`](upward_intersection_1.md), [`upward_less_1`](upward_less_1.md), [`upward_less_equal_1`](upward_less_equal_1.md), [`upward_make_1`](upward_make_1.md), [`upward_mul_1`](upward_mul_1.md), [`upward_mul_num_1`](upward_mul_num_1.md), [`upward_neg_1`](upward_neg_1.md), [`upward_negative_1`](upward_negative_1.md), [`upward_positive_1`](upward_positive_1.md), [`upward_rel_disjoint_1`](upward_rel_disjoint_1.md), [`upward_rel_equal_1`](upward_rel_equal_1.md), [`upward_rel_interior_1`](upward_rel_interior_1.md), [`upward_sub_1`](upward_sub_1.md), [`upward_subset_1`](upward_subset_1.md), [`upward_to_interval_1`](upward_to_interval_1.md), [`upward_zero_1`](upward_zero_1.md).
+All 263 kernels are proved.
 
 36 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -253,30 +253,30 @@ Arithmetic on balls: the result contains every result on points of the operands;
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| not yet called by the public headers | - | the state of the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`upward_make_1`](upward_make_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | the same set as a state of the round-up interval, exactly | [`upward_from_interval_1`](upward_from_interval_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | the same set as an interval of the default type, exactly | [`upward_to_interval_1`](upward_to_interval_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical state that contains every $-x$; exactly the range | [`upward_neg_1`](upward_neg_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical state that contains every $x + y$; the range rounded outward | [`upward_add_1`](upward_add_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical state that contains every $x - y$; the range rounded outward | [`upward_sub_1`](upward_sub_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical state that contains every $x y$; the range rounded outward | [`upward_mul_1`](upward_mul_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical state that contains every $x + t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_add_num_1`](upward_add_num_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical state that contains every $x t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_mul_num_1`](upward_mul_num_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | the hull of the intervals, exactly | [`upward_hull_1`](upward_hull_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | the intersection of the intervals, exactly | [`upward_intersection_1`](upward_intersection_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`upward_empty_1`](upward_empty_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`upward_entire_1`](upward_entire_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $t \in X$; exact | [`upward_contains_1`](upward_contains_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`upward_subset_1`](upward_subset_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`upward_positive_1`](upward_positive_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`upward_negative_1`](upward_negative_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`upward_zero_1`](upward_zero_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_1`](upward_less_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_equal_1`](upward_less_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`upward_equal_1`](upward_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X = Y$; exact | [`upward_rel_equal_1`](upward_rel_equal_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`upward_rel_interior_1`](upward_rel_interior_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`upward_rel_disjoint_1`](upward_rel_disjoint_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the state of the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`upward_make_1`](upward_make_1.md) |
+| not yet called by the public headers | - | the same set as a state of the round-up interval, exactly | [`upward_from_interval_1`](upward_from_interval_1.md) |
+| not yet called by the public headers | - | the same set as an interval of the default type, exactly | [`upward_to_interval_1`](upward_to_interval_1.md) |
+| not yet called by the public headers | - | a canonical state that contains every $-x$; exactly the range | [`upward_neg_1`](upward_neg_1.md) |
+| not yet called by the public headers | - | a canonical state that contains every $x + y$; the range rounded outward | [`upward_add_1`](upward_add_1.md) |
+| not yet called by the public headers | - | a canonical state that contains every $x - y$; the range rounded outward | [`upward_sub_1`](upward_sub_1.md) |
+| not yet called by the public headers | - | a canonical state that contains every $x y$; the range rounded outward | [`upward_mul_1`](upward_mul_1.md) |
+| not yet called by the public headers | - | a canonical state that contains every $x + t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_add_num_1`](upward_add_num_1.md) |
+| not yet called by the public headers | - | a canonical state that contains every $x t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_mul_num_1`](upward_mul_num_1.md) |
+| not yet called by the public headers | - | the hull of the intervals, exactly | [`upward_hull_1`](upward_hull_1.md) |
+| not yet called by the public headers | - | the intersection of the intervals, exactly | [`upward_intersection_1`](upward_intersection_1.md) |
+| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`upward_empty_1`](upward_empty_1.md) |
+| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`upward_entire_1`](upward_entire_1.md) |
+| not yet called by the public headers | - | whether $t \in X$; exact | [`upward_contains_1`](upward_contains_1.md) |
+| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`upward_subset_1`](upward_subset_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`upward_positive_1`](upward_positive_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`upward_negative_1`](upward_negative_1.md) |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`upward_zero_1`](upward_zero_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_1`](upward_less_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_equal_1`](upward_less_equal_1.md) |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`upward_equal_1`](upward_equal_1.md) |
+| not yet called by the public headers | - | whether $X = Y$; exact | [`upward_rel_equal_1`](upward_rel_equal_1.md) |
+| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`upward_rel_interior_1`](upward_rel_interior_1.md) |
+| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`upward_rel_disjoint_1`](upward_rel_disjoint_1.md) |
 
 ## Building blocks on T
 

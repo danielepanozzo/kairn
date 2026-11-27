@@ -18,10 +18,11 @@ ensures:       encloses_interval zu zn x*y x=xu,xn y=yu,yn tight=rounded bounded
 min_precision: 1
 source:        the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardArith.v upward_mul_1_correct
 entry:         yes
 cone_exempt:   the bounds are the greatest of rounded products, a NaN candidate dropped, and the empty set is selected after an explicit test; encloses_interval states what comes out
 

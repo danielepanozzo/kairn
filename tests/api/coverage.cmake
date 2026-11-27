@@ -34,9 +34,15 @@
 # centers or coefficients), and every kernel that a listed loop names that way is public: reached by
 # a form, a building block, or a loop part.
 #
-#   cmake -DRUNNER=... -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels "-DINTERNAL=a;b"
-#         "-DNOT_PUBLIC=c;d" "-DPACKED_ONLY=o;p" "-DNOT_CHECKED=e;f" "-DFOLDS_NOT_PUBLIC=g;h"
-#         "-DFOLDS_NOT_CHECKED=i;j" "-DLOOPS=k;l" "-DLOOP_PARTS=m;n"
+# The kernels of the round-up interval (those of CLAIMS marked "rounding": "upward") are reached by
+# the public forms of <kairn/upward.hpp>, which the runner of that header has (tests/api/upward/
+# runner.cpp, given as UPWARD_RUNNER): its --list must be exactly those kernels, RUNNER must list
+# none of them, and they count as reached by public forms. Without UPWARD_RUNNER (the tests of that
+# header off, KAIRN_UPWARD_TESTS), they count as not checked.
+#
+#   cmake -DRUNNER=... [-DUPWARD_RUNNER=...] -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels
+#         "-DINTERNAL=a;b" "-DNOT_PUBLIC=c;d" "-DPACKED_ONLY=o;p" "-DNOT_CHECKED=e;f"
+#         "-DFOLDS_NOT_PUBLIC=g;h" "-DFOLDS_NOT_CHECKED=i;j" "-DLOOPS=k;l" "-DLOOP_PARTS=m;n"
 #         [-DPACKED_HEADER=...] -P coverage.cmake
 cmake_minimum_required(VERSION 3.21)
 
@@ -74,10 +80,41 @@ file(READ "${CLAIMS}" _json)
 string(JSON _count LENGTH "${_json}" kernels)
 math(EXPR _last "${_count} - 1")
 set(_claims "")
+set(_claims_upward "")
 foreach(_i RANGE ${_last})
   string(JSON _k GET "${_json}" kernels ${_i} name)
   list(APPEND _claims ${_k})
+  string(JSON _rounding ERROR_VARIABLE _no_rounding GET "${_json}" kernels ${_i} rounding)
+  if(NOT _no_rounding AND _rounding STREQUAL "upward")
+    list(APPEND _claims_upward ${_k})
+  endif()
 endforeach()
+
+# The kernels of the round-up interval: through the runner of <kairn/upward.hpp>, or not checked.
+set(_problems "")
+set(_upward_unchecked "")
+foreach(_k IN LISTS _claims_upward)
+  if(_k IN_LIST _runner_list)
+    list(APPEND _problems "${_k}, a kernel of the round-up interval, is in ${RUNNER} --list")
+  endif()
+endforeach()
+if(UPWARD_RUNNER)
+  execute_process(COMMAND "${UPWARD_RUNNER}" --list OUTPUT_VARIABLE _out RESULT_VARIABLE _status)
+  if(NOT _status STREQUAL "0")
+    message(FATAL_ERROR "${UPWARD_RUNNER} --list failed: ${_status}")
+  endif()
+  string(STRIP "${_out}" _out)
+  string(REPLACE "\n" ";" _upward_list "${_out}")
+  list(SORT _upward_list)
+  set(_want_upward ${_claims_upward})
+  list(SORT _want_upward)
+  if(NOT _upward_list STREQUAL _want_upward)
+    list(APPEND _problems "the kernels of the round-up interval in ${CLAIMS}: ${_want_upward}; in ${UPWARD_RUNNER} --list: ${_upward_list}")
+  endif()
+  list(APPEND _runner_list ${_upward_list})
+else()
+  set(_upward_unchecked ${_claims_upward})
+endif()
 
 file(GLOB _descriptions "${KERNELS}/*.kernel")
 set(_entry "")
@@ -100,7 +137,6 @@ if(NOT _entry)
   message(FATAL_ERROR "no entry kernel found in ${KERNELS}: the scan is broken")
 endif()
 
-set(_problems "")
 set(_internal ${INTERNAL})
 set(_not_public ${NOT_PUBLIC})
 set(_packed_only ${PACKED_ONLY})
@@ -177,7 +213,7 @@ foreach(_k IN LISTS _runner_loop_parts)
     list(APPEND _problems "${_k} is listed as a part of ${_loop}, whose description does not name it")
   endif()
 endforeach()
-set(_not_checked ${NOT_CHECKED})
+set(_not_checked ${NOT_CHECKED} ${_upward_unchecked})
 foreach(_k IN LISTS _not_checked)
   if(NOT _k IN_LIST _claims)
     list(APPEND _problems "${_k}, in none of the runner's lists (not cross-checked or not public yet), is not a kernel of ${CLAIMS}")
@@ -353,8 +389,14 @@ list(LENGTH _entry _e)
 list(LENGTH _not_checked _q)
 list(LENGTH _runner_loops _l)
 list(LENGTH _runner_loop_parts _lp)
+list(LENGTH _claims_upward _u)
+if(UPWARD_RUNNER)
+  set(_upward_message "; the ${_u} kernels of the round-up interval reached by the forms of <kairn/upward.hpp>")
+else()
+  set(_upward_message "; the ${_u} kernels of the round-up interval not checked (its tests are off)")
+endif()
 message(STATUS "${_n} kernels reached by public forms, ${_m} building blocks, ${_p} entry kernels not public yet "
   "(${_e} entry kernels in all), ${_q} kernels in none of the runner's lists (not cross-checked "
   "or not public yet)${_packed_message}; ${_fold_forms_n} folds reached by the functions on arrays, "
   "${_folds_np_n} with no public caller; ${_l} loops reached by the forms of BallVector and ${_lp} kernels "
-  "that are parts of them")
+  "that are parts of them${_upward_message}")
