@@ -3265,7 +3265,10 @@ machine; the comparison alone (`--no-tiers`) takes about a minute per change and
 
 The stopgap of the one tier, a timeout of 1 800 seconds for the generator's and the oracle's tests
 and of 60 minutes for the jobs of `build.yml`, is gone: their timeouts are 600 seconds and 30
-minutes again.
+minutes again. Since 2026-11-27 the job "Windows x64, MSVC" of `build.yml`, alone, has 45 minutes
+(the owner's decision of that date): on the hosted runners it took 21 to 29 minutes in its last
+four runs on `main`, and on 2026-11-27 a slow runner was cancelled at 30 with nothing wrong (18
+minutes to build what the run before had built in 9); the rerun passed in 21.5.
 
 ### The tools' tests leave the quick tier
 
@@ -4087,4 +4090,5 @@ are not. The tests are unchanged: a failure of this kind
 fails the job, and the job is run again by hand. Whether a run under Rosetta that fails should be
 repeated once by the test itself, and fail only when it fails again, was open issue 20 of the
 [Milestone 2 report](results/milestone2.md#open-issues); the owner decided on 2026-11-23 that it
-is not: the tests stay strict, and each such failure is added to this paragraph.
+is not: the tests stay strict, and each such failure is added to this paragraph. Told of the four
+on 2026-11-27, the owner kept that decision.

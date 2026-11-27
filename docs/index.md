@@ -107,8 +107,8 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   time, `Packed` and the containers, the functions on arrays, the accumulator and `BallVector`.
   Every kernel and every loop over arrays is proved; the report lists what is open, what was
   measured, and the rulings that await confirmation.
-- **The round-up interval**, between Milestones 2 and 3 and not a milestone, complete and awaiting
-  the owner's review ([design](developer/design/upward.md), [concept](concepts/upward.md),
+- **The round-up interval**, between Milestones 2 and 3 and not a milestone, complete and reviewed
+  by the owner on 2026-11-27 ([design](developer/design/upward.md), [concept](concepts/upward.md),
   [measurements](developer/results/bench-upward.md)): the opt-in header
   `kairn/upward.hpp`, an interval of one limb computed under the rounding mode upward, for speed,
   with its scopes, its functions on arrays and its self-check. Its 24 kernels are proved, in the

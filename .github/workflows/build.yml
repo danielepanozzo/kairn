@@ -32,7 +32,8 @@ jobs:
   test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # 30 minutes, and 45 for the job "Windows x64, MSVC" (its matrix entry says why).
+    timeout-minutes: ${{ matrix.minutes || 30 }}
     strategy:
       fail-fast: false
       matrix:
@@ -53,10 +54,14 @@ jobs:
             os: macos-15
             cxx: clang++
           # The tests of the round-up interval with these two compilers: the jobs of upward-windows.
+          # 45 minutes for this job alone (the owner's decision of 2026-11-27): on the hosted runners
+          # it took 21 to 29 minutes in its last four runs on main, and on 2026-11-27 a slow runner
+          # was cancelled at 30 with nothing wrong (the rerun passed in 21.5).
           - name: Windows x64, MSVC
             os: windows-2025
             cxx: cl
             options: -DKAIRN_UPWARD_TESTS=OFF
+            minutes: 45
           - name: Windows x64, clang-cl
             os: windows-2025
             cxx: clang-cl

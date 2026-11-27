@@ -14,7 +14,8 @@ of the [Milestone 2 statements](milestone2.md#notation-and-vocabulary).
 **What is decided, and by whom.** The owner decided what the section
 [Decisions](#decisions) lists, with the dates. Everything else on this page is a choice of the
 authors, marked *(a choice of the authors)* where it is made and listed again in
-[Choices of the authors](#choices-of-the-authors) for the owner's review. When the page was
+[Choices of the authors](#choices-of-the-authors) for the owner's review; the owner reviewed them
+on 2026-11-27 and accepted them as built ([log](phase0/decisions.md#decisions-log)). When the page was
 written nothing of it was implemented, proved or measured: the listings had been run in exact
 arithmetic on every pair of canonical states of small formats ([Checked](#checked-before-this-page)),
 evidence that the statements are not wrong, not a proof of them. **State on 2026-11-26.** The
@@ -79,7 +80,8 @@ The owner's decisions on this feature, each recorded in the
 
 ## Choices of the authors
 
-Each is made where the page says so; listed here for the owner's review.
+Each is made where the page says so; listed here for the owner's review. **Reviewed on
+2026-11-27: the owner accepted them as built.**
 
 1. The names: header `<kairn/upward.hpp>`, namespace `kairn::upward`, `Interval<T>`, `Scope`,
    `NearestScope`, `self_test()`, `View<T>`, the macro `KAIRN_UPWARD_OPTIONS_UNCHECKED`, the CMake
@@ -1307,7 +1309,8 @@ Waves: U1, U3, U4's lemmas and U5 first; then U2 and U4's theorems; then U6; the
 ## Open questions
 
 The questions this page left open when it was written, each settled before the implementation
-started. Every answer is a choice of the authors, listed with the others for the owner's review.
+started. Every answer is a choice of the authors, listed with the others for the owner's review,
+and accepted with them on 2026-11-27.
 
 1. **Code around a scope.** `pass()`, the barriers on `to_interval()` and the concept page's rule
    are what the first delivery has, and `NearestScope` is part of it. The header promises nothing
