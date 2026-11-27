@@ -269,3 +269,59 @@ foreach(_level IN LISTS _levels)
   string(REGEX REPLACE " +" " " _flags "${_flags}")
   target_compile_definitions(kairn-bench-m2-modes-${_level} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags}\"")
 endforeach()
+
+# The benchmark of the round-up interval, kairn/upward.hpp (bench/README.md, "The round-up
+# interval"; bench/up_data.hpp), when KAIRN_BENCH_UPWARD is on (the default): kairn-bench-up-LEVEL,
+# and kairn-bench-up-checks-LEVEL with KAIRN_CHECKS 1 in every translation unit. Each is the driver
+# of Milestone 2 with the units of the first part of its benchmark (m2.cpp, m2_fenv.cpp,
+# m2_packed.cpp, m2_fenv_packed.cpp: the default Interval<T, 1> and the props that change the
+# rounding mode, the comparisons) and the units up_*.cpp. Requires the rounding mode upward set by
+# kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math,
+# MSVC /fp:strict): the units that include kairn/upward.hpp are compiled with the option of the
+# target kairn::upward (up_type.cpp, and up_arrays.cpp with the flags of packed code), and no other
+# unit is, so that the default types are compiled as a client compiles them; the new props of the
+# rounding mode (up_fenv.cpp, up_fenv_packed.cpp) as m2_fenv.cpp and m2_fenv_packed.cpp. With MSVC
+# the programs leave out /fp:precise (MSVC's default), which /fp:strict would override.
+option(KAIRN_BENCH_UPWARD "Build kairn-bench-up-LEVEL, the benchmark of kairn/upward.hpp (bench/up_data.hpp)" ON)
+if(KAIRN_BENCH_UPWARD)
+  get_target_property(_upward_option kairn::upward INTERFACE_COMPILE_OPTIONS)
+  set_source_files_properties(up_type.cpp PROPERTIES COMPILE_OPTIONS "${_upward_option}")
+  set_source_files_properties(up_arrays.cpp PROPERTIES COMPILE_OPTIONS "${_upward_option};${_packed_isa}")
+  set_source_files_properties(up_packed.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
+  set_source_files_properties(up_fenv.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math}")
+  set_source_files_properties(up_fenv_packed.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math};${_packed_isa}")
+  set(_up_sources m2_main.cpp m2.cpp m2_fenv.cpp m2_packed.cpp m2_fenv_packed.cpp up_parts.cpp up_check.cpp
+      up_type.cpp up_arrays.cpp up_default.cpp up_packed.cpp up_fenv.cpp up_fenv_packed.cpp)
+  if(_opt_O2 STREQUAL "/O2")
+    set(_up_no_contract "")
+  else()
+    set(_up_no_contract ${_no_contract})
+  endif()
+  string(REPLACE ";" " " _upward_option_text "${_upward_option}")
+  foreach(_checks IN ITEMS 0 1)
+    foreach(_level IN LISTS _levels)
+      if(_checks)
+        set(_target kairn-bench-up-checks-${_level})
+      else()
+        set(_target kairn-bench-up-${_level})
+      endif()
+      add_executable(${_target} ${_up_sources})
+      target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
+      target_compile_options(${_target} PRIVATE ${_opt_${_level}} ${_up_no_contract})
+      string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_${_level}} ${_up_no_contract} ${_fma}" _flags)
+      if(_checks)
+        string(APPEND _flags " -DKAIRN_CHECKS=1")
+        target_compile_definitions(${_target} PRIVATE KAIRN_CHECKS=1)
+      endif()
+      string(REGEX REPLACE " +" " " _flags "${_flags}")
+      set(_flags_packed "${_flags}")
+      if(_packed_isa_text)
+        string(APPEND _flags_packed " (packed code also ${_packed_isa_text})")
+      endif()
+      target_compile_definitions(${_target} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags_packed}\""
+        "KAIRN_BENCH_FENV_FLAGS=\"${_flags_packed} ${_rounding_math_text}\""
+        "KAIRN_BENCH_UPWARD_FLAGS=\"${_flags_packed} ${_upward_option_text}\""
+        "KAIRN_BENCH_WHAT=\"kairn-bench-up\"" "KAIRN_BENCH_SETTING=\"inline\"")
+    endforeach()
+  endforeach()
+endif()
