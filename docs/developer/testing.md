@@ -2210,14 +2210,16 @@ on 2 000 random cases of `fp:8:-14:1` (`KAIRN_EMULATED_CASES`), judged by the or
 interpreter's bytes (`--interp`); `full.crosscheck.emulated.same_lines` (`same_lines.py
 --upward-runner`) on 100 requests of every kernel of the family in both forms of `max_nl`, the
 interpreter's bytes. The generator's suite compares it with the interpreter on every canonical state
-of the quick formats in both forms (`gen/tests/test_upward_cxx.py`, `Emulated`). **A finding of
-MSVC:** built by MSVC 19.5x at `/O2`, the emulated `upward_intersection_1` returns, on some lines,
-the lane of the other operand (`(0x1.46p+6, 0x1p-14)` and `(0x1.4p-11, 0x1.14p+7)` give `zn` =
-`0x1.14p+7` for `0x1p-14`), which the comparison with the interpreter and the oracle fail; at `/O1`
-and `/Od`, and at `/O2` with the 24 emulated kernels `__declspec(noinline)`, every line is right,
-and every compiled runner of the family, on `double` and `float`, is right at every level. It is the
-miscompilation of [The emulated formats](#the-emulated-formats) (a selection of a struct of a
-`uint64_t` and an `int`, inlined at `/O2`), met in another kernel.
+of the quick formats in both forms (`gen/tests/test_upward_cxx.py`, `Emulated`). The printer writes
+each of these kernels `KAIRN_GEN_NOINLINE` (never inlined), for **a finding of MSVC:** built by MSVC
+19.5x at `/O2` as an ordinary inline function, the emulated `upward_intersection_1` returns, on some
+lines, the lane of the other operand (`(0x1.46p+6, 0x1p-14)` and `(0x1.4p-11, 0x1.14p+7)` give `zn`
+= `0x1.14p+7` for `0x1p-14`), which the comparison with the interpreter and the oracle fail; at
+`/O1` and `/Od`, and at `/O2` with the 24 emulated kernels `__declspec(noinline)`, every line is
+right, and every compiled runner of the family, on `double` and `float`, is right at every level. It
+is the miscompilation of [The emulated formats](#the-emulated-formats) (a selection of a struct of a
+`uint64_t` and an `int`, inlined at `/O2`), met in another kernel. The shipped kernels of the family
+are not concerned: they compute on `double` and `float`, and are tested as built.
 
 **The oracle's judgment of every case** (the gate of the generator's suite of the design page:
 every kernel through the interpreter on every pair of canonical states of the formats of the

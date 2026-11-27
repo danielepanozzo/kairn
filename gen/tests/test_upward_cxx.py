@@ -634,10 +634,11 @@ class Printers(unittest.TestCase):
 
     def test_the_emulated_listing_is_the_two_number_listing(self):
         # The emulated kernels are the two-number form for double, the type's name for double, its
-        # operations for the sums, products and maxima, and no barrier.
+        # operations for the sums, products and maxima, and no barrier; none is inlined (MSVC at /O2
+        # miscompiles upward_intersection_1 for the emulated type when it inlines it).
         double = {name: self.functions(name)[4] for name in family()}     # numbers, double
         for name in family():
-            emulated = re.findall(rf'\ninline void {name}\([^\n]*\n(.*?)\n\}}', self.emulated, re.S)
+            emulated = re.findall(rf'\nKAIRN_GEN_NOINLINE void {name}\([^\n]*\n(.*?)\n\}}', self.emulated, re.S)
             self.assertEqual(len(emulated), 1, name)
             e = emulated[0].replace(upward_cpp.EMULATED, 'double')
             a = r'((?:std::numeric_limits<double>::\w+\(\))|[\w.]+)'

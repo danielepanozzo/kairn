@@ -8,8 +8,9 @@
 // by the same printer (gen/kairn_gen/upward_cpp.py, numbers_function) with that type: add_ru,
 // mul_ru, unord and max_nl are the type's (computed with integers; max_nl in the form that
 // kairn::emulated::set_max_form sets), and there is no barrier, since nothing here depends on the
-// rounding mode of the machine. A test file (docs/developer/testing.md, "The emulated formats"),
-// not shipped.
+// rounding mode of the machine. No kernel is inlined (KAIRN_GEN_NOINLINE): MSVC 19.5x at /O2
+// miscompiles upward_intersection_1 for this type when it inlines it. A test file
+// (docs/developer/testing.md, "The emulated formats"), not shipped.
 #pragma once
 
 #include "../prelude.hpp"
@@ -30,7 +31,7 @@ inline kairn::emulated::Number pair_nlower(numbers<kairn::emulated::Number> v) n
 
 // upward_add_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): rounds upward.
 // the sums of the lanes rounded upward (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_add_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_add_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -42,7 +43,7 @@ inline void upward_add_1(numbers<kairn::emulated::Number> x, numbers<kairn::emul
 
 // upward_add_num_1(pair x = (xu, xn), t) -> pair z = (zu, zn): rounds upward.
 // the lanes added to (t, -t) rounded upward, the whole line for a t that is not finite (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_add_num_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number t, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_add_num_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number t, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number nt = -t;
@@ -59,7 +60,7 @@ inline void upward_add_num_1(numbers<kairn::emulated::Number> x, kairn::emulated
 
 // upward_contains_1(pair x = (xu, xn), t) -> mask m: exact.
 // the lanes compared with the point and its negation, and a test that the point is finite (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_contains_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number t, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_contains_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number t, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const bool a = xu >= t;
@@ -74,7 +75,7 @@ inline void upward_contains_1(numbers<kairn::emulated::Number> x, kairn::emulate
 
 // upward_empty_1(pair x = (xu, xn)) -> mask m: exact.
 // the upper bound tested for a NaN (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_empty_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_empty_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const bool m = unord(xu, xu);
     m_out = m;
@@ -82,7 +83,7 @@ inline void upward_empty_1(numbers<kairn::emulated::Number> x, bool& m_out) noex
 
 // upward_entire_1(pair x = (xu, xn)) -> mask m: exact.
 // both lanes compared with +inf (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_entire_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_entire_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const bool a = xu == std::numeric_limits<kairn::emulated::Number>::infinity();
@@ -93,7 +94,7 @@ inline void upward_entire_1(numbers<kairn::emulated::Number> x, bool& m_out) noe
 
 // upward_equal_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask yes, mask no: exact.
 // the lanes compared with the negated lanes (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& yes_out, bool& no_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& yes_out, bool& no_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -114,7 +115,7 @@ inline void upward_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn::em
 
 // upward_from_interval_1(xl, xu) -> pair z = (zu, zn): exact.
 // the upper bound and the negated lower bound, the empty set after a test (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_from_interval_1(kairn::emulated::Number xl, kairn::emulated::Number xu, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_from_interval_1(kairn::emulated::Number xl, kairn::emulated::Number xu, numbers<kairn::emulated::Number>& z_out) noexcept {
     const bool e = xl == std::numeric_limits<kairn::emulated::Number>::infinity();
     const kairn::emulated::Number nl = -xl;
     const kairn::emulated::Number zu = e ? std::numeric_limits<kairn::emulated::Number>::quiet_NaN() : xu;
@@ -124,7 +125,7 @@ inline void upward_from_interval_1(kairn::emulated::Number xl, kairn::emulated::
 
 // upward_hull_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): exact.
 // the larger lanes, the empty set its identity (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_hull_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_hull_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -140,7 +141,7 @@ inline void upward_hull_1(numbers<kairn::emulated::Number> x, numbers<kairn::emu
 
 // upward_intersection_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): exact.
 // the smaller lanes, the empty set if they cross (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_intersection_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_intersection_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -164,7 +165,7 @@ inline void upward_intersection_1(numbers<kairn::emulated::Number> x, numbers<ka
 
 // upward_less_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask yes, mask no: exact.
 // the lanes compared with the other lanes negated (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_less_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& yes_out, bool& no_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_less_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& yes_out, bool& no_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -179,7 +180,7 @@ inline void upward_less_1(numbers<kairn::emulated::Number> x, numbers<kairn::emu
 
 // upward_less_equal_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask yes, mask no: exact.
 // the lanes compared with the other lanes negated (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_less_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& yes_out, bool& no_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_less_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& yes_out, bool& no_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -194,7 +195,7 @@ inline void upward_less_equal_1(numbers<kairn::emulated::Number> x, numbers<kair
 
 // upward_make_1(lo, hi) -> pair z = (zu, zn): exact.
 // constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_make_1(kairn::emulated::Number lo, kairn::emulated::Number hi, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_make_1(kairn::emulated::Number lo, kairn::emulated::Number hi, numbers<kairn::emulated::Number>& z_out) noexcept {
     const bool ok = hi >= lo;
     const bool nl = std::numeric_limits<kairn::emulated::Number>::infinity() > lo;
     const kairn::emulated::Number mi = -std::numeric_limits<kairn::emulated::Number>::infinity();
@@ -212,7 +213,7 @@ inline void upward_make_1(kairn::emulated::Number lo, kairn::emulated::Number hi
 
 // upward_mul_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): rounds upward.
 // the greatest of the products of the lanes rounded upward, the NaN candidates dropped (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_mul_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_mul_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -246,7 +247,7 @@ inline void upward_mul_1(numbers<kairn::emulated::Number> x, numbers<kairn::emul
 
 // upward_mul_num_1(pair x = (xu, xn), t) -> pair z = (zu, zn): rounds upward.
 // the greater of two products of the lanes rounded upward, the NaN candidate dropped, x times the whole line for a t that is not finite (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_mul_num_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number t, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_mul_num_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number t, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number nt = -t;
@@ -281,7 +282,7 @@ inline void upward_mul_num_1(numbers<kairn::emulated::Number> x, kairn::emulated
 
 // upward_neg_1(pair x = (xu, xn)) -> pair z = (zu, zn): exact.
 // the two lanes exchanged (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_neg_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_neg_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number zu = xn;
@@ -291,7 +292,7 @@ inline void upward_neg_1(numbers<kairn::emulated::Number> x, numbers<kairn::emul
 
 // upward_negative_1(pair x = (xu, xn)) -> mask m: exact.
 // the upper bound compared with 0 (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_negative_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_negative_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const bool m = kairn::emulated::Number() > xu;
     m_out = m;
@@ -299,7 +300,7 @@ inline void upward_negative_1(numbers<kairn::emulated::Number> x, bool& m_out) n
 
 // upward_positive_1(pair x = (xu, xn)) -> mask m: exact.
 // the negated lower bound compared with 0 (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_positive_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_positive_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
     const kairn::emulated::Number xn = x.n;
     const bool m = kairn::emulated::Number() > xn;
     m_out = m;
@@ -307,7 +308,7 @@ inline void upward_positive_1(numbers<kairn::emulated::Number> x, bool& m_out) n
 
 // upward_rel_disjoint_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
 // the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_rel_disjoint_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_rel_disjoint_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -324,7 +325,7 @@ inline void upward_rel_disjoint_1(numbers<kairn::emulated::Number> x, numbers<ka
 
 // upward_rel_equal_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
 // the lanes compared, and tests of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_rel_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_rel_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -341,7 +342,7 @@ inline void upward_rel_equal_1(numbers<kairn::emulated::Number> x, numbers<kairn
 
 // upward_rel_interior_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
 // the lanes compared, and a test of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_rel_interior_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_rel_interior_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -364,7 +365,7 @@ inline void upward_rel_interior_1(numbers<kairn::emulated::Number> x, numbers<ka
 
 // upward_sub_1(pair x = (xu, xn), pair y = (yu, yn)) -> pair z = (zu, zn): rounds upward.
 // the sums of the lanes of x and of y swapped, rounded upward (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_sub_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_sub_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, numbers<kairn::emulated::Number>& z_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -376,7 +377,7 @@ inline void upward_sub_1(numbers<kairn::emulated::Number> x, numbers<kairn::emul
 
 // upward_subset_1(pair x = (xu, xn), pair y = (yu, yn)) -> mask m: exact.
 // the lanes compared, and a test of emptiness (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_subset_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_subset_1(numbers<kairn::emulated::Number> x, numbers<kairn::emulated::Number> y, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const kairn::emulated::Number yu = y.u;
@@ -391,7 +392,7 @@ inline void upward_subset_1(numbers<kairn::emulated::Number> x, numbers<kairn::e
 
 // upward_to_interval_1(pair x = (xu, xn)) -> zl, zu: exact.
 // the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_to_interval_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number& zl_out, kairn::emulated::Number& zu_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_to_interval_1(numbers<kairn::emulated::Number> x, kairn::emulated::Number& zl_out, kairn::emulated::Number& zu_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const bool e = unord(xu, xu);
@@ -405,7 +406,7 @@ inline void upward_to_interval_1(numbers<kairn::emulated::Number> x, kairn::emul
 
 // upward_zero_1(pair x = (xu, xn)) -> mask m: exact.
 // both lanes compared with 0 (the listing of the round-up interval). Status: proved (IEEE model only).
-inline void upward_zero_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
+KAIRN_GEN_NOINLINE void upward_zero_1(numbers<kairn::emulated::Number> x, bool& m_out) noexcept {
     const kairn::emulated::Number xu = x.u;
     const kairn::emulated::Number xn = x.n;
     const bool a = xn == kairn::emulated::Number();

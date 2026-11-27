@@ -1245,7 +1245,9 @@ def emulated_header(kernels):
     (tests/emulated/number.hpp, a format chosen at run time), by numbers_function with that type:
     the same statements as the two-number form for double, add_ru, mul_ru, unord and max_nl being the
     type's own (max_nl in the form its runner sets), and no barrier: the type computes with integers
-    and needs no mode. A test file, not shipped."""
+    and needs no mode. Each kernel is KAIRN_GEN_NOINLINE: MSVC 19.5x at /O2 miscompiles
+    upward_intersection_1 for this type when it inlines it (docs/developer/testing.md, "The emulated
+    formats"). A test file, not shipped."""
     family = _kernels(kernels)
     limb = emulated_limb()
     lines = [HEADER,
@@ -1257,8 +1259,9 @@ def emulated_header(kernels):
              '// by the same printer (gen/kairn_gen/upward_cpp.py, numbers_function) with that type: add_ru,',
              "// mul_ru, unord and max_nl are the type's (computed with integers; max_nl in the form that",
              '// kairn::emulated::set_max_form sets), and there is no barrier, since nothing here depends on the',
-             '// rounding mode of the machine. A test file (docs/developer/testing.md, "The emulated formats"),',
-             '// not shipped.',
+             '// rounding mode of the machine. No kernel is inlined (KAIRN_GEN_NOINLINE): MSVC 19.5x at /O2',
+             '// miscompiles upward_intersection_1 for this type when it inlines it. A test file',
+             '// (docs/developer/testing.md, "The emulated formats"), not shipped.',
              '#pragma once', '',
              '#include "../prelude.hpp"', '',
              'namespace kairn::emulated::upward {', '',
@@ -1275,7 +1278,8 @@ def emulated_header(kernels):
              f'inline {EMULATED} pair_nlower(numbers<{EMULATED}> v) noexcept {{ return v.n; }}']
     for k in family.values():
         lines += [''] + _description(k)
-        lines += numbers_function(k, limb, f'numbers<{EMULATED}>', kernels, inline='inline', barriers=False)
+        lines += numbers_function(k, limb, f'numbers<{EMULATED}>', kernels, inline='KAIRN_GEN_NOINLINE',
+                                  barriers=False)
     lines += ['', '}  // namespace kairn::emulated::upward']
     return '\n'.join(lines) + '\n'
 
