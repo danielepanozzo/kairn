@@ -107,6 +107,44 @@ the quick tier fails on one, a broken stream, a runner or oracle error, a timeou
 its series (one kernel, format and runner, or one enumeration) stops, and the finding goes to
 `WORK/findings.jsonl` with the oracle's example lines and the command that reruns one of them.
 
+## The round-up interval
+
+The kernels of `kairn/upward.hpp` (`upward_*_1`, "rounding": "upward"; they require the rounding
+mode upward set by `kairn::upward::Scope` and the options of `docs/concepts/upward.md`, GCC and Clang
+`-frounding-math`, MSVC `/fp:strict`) are in the compiled part above, through the runners of their
+family that each build produces (`kairn-gen-upward-runner*`) and through no other. Their
+enumerations are not in the interpreter's part: `upward.py` here runs every case of the formats of
+their statements of precision 1 to 4 through the interpreter, in each form of `max_nl` a kernel
+computes, judged by the oracle (the gate of the generator's suite of
+[the design page](../../docs/developer/design/upward.md), "Tests and CI";
+[testing.md](../../docs/developer/testing.md#the-round-up-interval)). Nor are their emulated kernels
+in the emulated part, whose runner has the other kernels.
+
+```sh
+python3 tests/brute/upward.py plan [--precision 1-4] [--kernels K,...]
+python3 tests/brute/upward.py run --work WORK --jobs N [--precision 1-4] [--cpus LIST] [--nice N] \
+    [--commit SHA --driver-commit SHA]
+python3 tests/brute/upward.py status --work WORK
+python3 tests/brute/upward.py collect --work WORK --out results/upward/exhaustive.json
+```
+
+The cases are those of `gen/tests/test_upward.py` (every canonical state with both zeros, every
+canonical default interval, every value of a number), in pieces of about two million lines, each
+the cases of a range of the first operand's: the interpreter completes a piece in a worker process,
+and a process of the oracle's `check --fail-on-suspicious --expect-valid` of its own judges it and
+writes its summary (`--jobs` counts both: two a piece). 243 kernels, formats and forms, 5 345 305 871
+lines in 2 879 pieces. `run` writes `WORK/run.json` (the plan and the commits: a later `run` in WORK
+must have the same), a summary and a record per piece in `WORK/pieces/` (the oracle's report too
+for a piece that fails, and the piece in `WORK/findings.jsonl`), `WORK/run.log`, and
+`WORK/status.txt`, rewritten after each piece: pieces and lines done, the rate over the last ten
+minutes, the time left. It starts only the pieces without a record, so the same command resumes a
+run that was stopped (a signal stops it, and its pieces run again next time; on Linux they also die
+with it if it is killed). `status` writes and prints the status file from the records. `collect`
+requires every piece of the plan to have passed, the pieces of each kernel, format and form to cover
+every case once, the merged counts (`kairn-oracle check --merge`) to be the cases of the plan, all
+judged, none failed, invalid or suspicious, and every claim applied, and writes the counts of every
+kernel, format and form, and of each class of its claim, into one file.
+
 ## Commands
 
 ```sh

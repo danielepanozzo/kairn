@@ -6,7 +6,8 @@
 #
 # Each job runs tests/brute/brute.py: every kernel of gen/claims.json, binary64 and binary32, on
 # new random cases every night (the seed is the number of the run), through every runner that the
-# platform's compilers build, judged by the oracle and held to the guards of the cross-checks.
+# platform's compilers build (the kernels of the round-up interval through the runners of their
+# family alone), judged by the oracle and held to the guards of the cross-checks.
 # One more job enumerates, with the generator's interpreter, every operand of one fortieth of the
 # toy-format domains of the plan, a different fortieth each night, and runs the same fortieth of
 # the plan's emulated part (the kernels printed for the emulated limb type, every operand or random
@@ -39,10 +40,11 @@ permissions:
   contents: read
 
 env:
-  # 100 minutes at night. On a pull request, four minutes on four kernels in small units, and the
-  # 26 enumerations of precision 1, which take seconds.
+  # 100 minutes at night. On a pull request, four minutes on five kernels in small units (one of the
+  # round-up interval, which goes through the runners of its family alone), and the 26 enumerations
+  # of precision 1, which take seconds.
   BUDGET: ${{ github.event_name == 'pull_request' && '240' || inputs.budget || '6000' }}
-  SELECTION: ${{ github.event_name == 'pull_request' && '--kernels add_2_2,mul_2_2_full,ball_mul_2_full,two_prod --chunk 5000' || '--chunk 50000' }}
+  SELECTION: ${{ github.event_name == 'pull_request' && '--kernels add_2_2,mul_2_2_full,ball_mul_2_full,two_prod,upward_mul_1 --chunk 5000' || '--chunk 50000' }}
 
 jobs:
   compiled:

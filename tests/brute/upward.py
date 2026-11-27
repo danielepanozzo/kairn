@@ -29,8 +29,9 @@ precision 1 to 4, 5.2 billion of them at precision 4.
 plan), a summary and a record per piece under WORK/pieces/, the oracle's report of each piece that
 fails and WORK/findings.jsonl, WORK/run.log, and WORK/status.txt, rewritten after every piece
 (pieces and lines done, the rate, the time left). It starts only the pieces without a record, so
-the same command resumes a run that was stopped; it stops its pieces on SIGINT, SIGTERM and SIGHUP,
-and on Linux they also die with it if it is killed. `status` prints WORK/status.txt again, from the
+the same command resumes a run that was stopped; it stops its pieces on SIGINT, SIGTERM and SIGHUP
+(but a signal ignored when it starts, SIGHUP under nohup), and on Linux they also die with it if it
+is killed. `status` prints WORK/status.txt again, from the
 records. `collect` checks that every piece of the plan passed and that the pieces of each kernel,
 format and form cover every case once, merges their summaries with the oracle (`check --merge`),
 requires the merged counts to be the cases of the plan, every case judged, none failed, invalid or
@@ -252,7 +253,9 @@ def cmd_run(a):
     log(work, "%d pieces, %d done, %d to run, %d workers (two busy processes each)"
         % (len(plan), len(recs), len(todo), max(1, a.jobs // 2)))
     for s in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
-        signal.signal(s, _on_signal)
+        # A signal ignored when the run starts (SIGHUP under nohup) stays ignored.
+        if signal.getsignal(s) != signal.SIG_IGN:
+            signal.signal(s, _on_signal)
     import multiprocessing as mp
     pool = mp.get_context("fork" if sys.platform.startswith("linux") else "spawn").Pool(
         max(1, a.jobs // 2), initializer=_worker_init, initargs=(a.nice,))

@@ -6,6 +6,13 @@
 # tests of the library with each compiler; the full tier, everything that left it (the tools' own
 # tests among them), runs beside these jobs in full.yml, and the generator's whole suite, its C++
 # tests included, in generator.yml.
+#
+# The tests of kairn/upward.hpp, the round-up interval (label upward; it requires the rounding mode
+# upward set by kairn::upward::Scope and the options of docs/concepts/upward.md, GCC and Clang
+# -frounding-math, MSVC /fp:strict, which the CMake target kairn::upward adds), run in the Linux and
+# macOS jobs of the quick tier with the rest. The two Windows jobs of the quick tier are near their
+# limit: they configure -DKAIRN_UPWARD_TESTS=OFF, and the jobs "Windows x64, upward" below build
+# and run those tests alone with each compiler, so that the long jobs do not get longer.
 name: Build and test
 
 on:
@@ -45,12 +52,15 @@ jobs:
           - name: macOS arm64, Apple clang
             os: macos-15
             cxx: clang++
+          # The tests of the round-up interval with these two compilers: the jobs of upward-windows.
           - name: Windows x64, MSVC
             os: windows-2025
             cxx: cl
+            options: -DKAIRN_UPWARD_TESTS=OFF
           - name: Windows x64, clang-cl
             os: windows-2025
             cxx: clang-cl
+            options: -DKAIRN_UPWARD_TESTS=OFF
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -98,9 +108,108 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+          ${{ matrix.options }}
 
       - name: Build
         run: cmake --build build --parallel
 
       - name: Test
         run: ctest --test-dir build --output-on-failure --parallel 4
+
+  # The tests labelled upward (the round-up interval) with MSVC and with clang-cl, which the Windows
+  # jobs above leave out: the quick tier's (the cross-checks of the family's runners, the object
+  # code, the scopes, the checks, the units, what must not compile) and the full tier's that depend
+  # on the compiler (its flag matrix of the runners: /Od, /O1, /O2, /O2 /GL, KAIRN_CHECKS 0 and 1,
+  # and with clang-cl each contraction setting and a build without the option; the object code on
+  # the whole matrix; the emulated kernels). It builds the target kairn-upward-tests, the programs
+  # those tests run, and nothing else. The full tier's tests of the family in exact arithmetic
+  # (label python) run in full.yml, on Linux.
+  #
+  # clang-cl had never compiled kairn/upward.hpp before the first run of this job: a step prints
+  # the compiler and the forms the header chose before any test, the tests print their output on
+  # failure, and a failing job keeps ctest's logs as an artifact.
+  upward-windows:
+    name: Windows x64, upward, ${{ matrix.compiler }}
+    runs-on: windows-2025
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: MSVC
+            cxx: cl
+          - compiler: clang-cl
+            cxx: clang-cl
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      # As in the job above: the variables of a Visual Studio developer prompt.
+      - name: Visual Studio developer environment
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "no Visual Studio with the x64 C++ tools" }
+          $bat = Join-Path $env:RUNNER_TEMP "vcvars-and-set.bat"
+          Set-Content -Path $bat -Value "@call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul || exit /b 1", "@set"
+          $before = @{}
+          Get-ChildItem env: | ForEach-Object { $before[$_.Name] = $_.Value }
+          $lines = & cmd.exe /d /c $bat
+          if ($LASTEXITCODE -ne 0) { throw "vcvars64.bat failed" }
+          foreach ($line in $lines) {
+            if ($line -match '^([^=]+)=(.*)$' -and $before[$Matches[1]] -cne $Matches[2]) {
+              Add-Content -Path $env:GITHUB_ENV -Value "$($Matches[1])=$($Matches[2])"
+            }
+          }
+
+      # As in the job above: the image's clang-cl with the image's newer standard library.
+      - name: Let the image's clang-cl use the image's newer standard library
+        if: matrix.cxx == 'clang-cl'
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_ENV -Value "CL=/D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+
+      - name: Build the programs of the tests labelled upward
+        run: cmake --build build --parallel --target kairn-upward-tests
+
+      # What a failure below is about: the compiler, and the form of the kernels, of their arrays and
+      # of max_nl that the generated header chose for each runner.
+      - name: The compiler and the forms of the round-up interval
+        shell: pwsh
+        run: |
+          Get-ChildItem build/CMakeFiles -Recurse -Filter CMakeCXXCompiler.cmake |
+            Select-String 'set\(CMAKE_CXX_COMPILER(_ID|_VERSION|_FRONTEND_VARIANT)? ' |
+            ForEach-Object { $_.Line }
+          foreach ($form in "register", "arrays", "numbers") {
+            $exe = "build/tests/kairn-gen-upward-runner-$form.exe"
+            $text = & $exe --describe
+            if ($LASTEXITCODE -ne 0) { throw "$exe --describe failed" }
+            Write-Output "kairn-gen-upward-runner-${form}: $text"
+          }
+
+      - name: Test, the quick tier's tests labelled upward
+        run: ctest --test-dir build --output-on-failure --parallel 4 -L upward
+
+      - name: Test, the full tier's tests labelled upward that depend on the compiler
+        if: success() || failure()
+        run: ctest --test-dir build/tests/full --output-on-failure --parallel 4 -L upward -LE python
+
+      - name: Keep the tests' logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: upward-windows-${{ matrix.cxx }}-logs
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build/tests/full/Testing/Temporary/LastTest.log
+          if-no-files-found: warn

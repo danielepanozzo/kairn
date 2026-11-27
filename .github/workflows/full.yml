@@ -14,6 +14,12 @@
 # - the generator's tests without C++ (label generator) compare the interpreter with the machine's
 #   arithmetic: they run inside the generator's whole suite in generator.yml, on every operating
 #   system, and not here.
+#
+# The full tier's tests of kairn/upward.hpp, the round-up interval (label upward: the flag matrix of
+# its runners, the object code on its whole matrix, its emulated kernels, the interpreter on its
+# toy formats), run in these jobs on Linux and macOS. The Windows jobs configure
+# -DKAIRN_UPWARD_TESTS=OFF: the jobs "Windows x64, upward" of build.yml run the family's tests that
+# depend on the compiler with MSVC and clang-cl, and the python jobs below its enumerations.
 name: Full tier
 
 on:
@@ -83,26 +89,32 @@ jobs:
             os: windows-2025
             cxx: cl
             shard: '-I "1,,3"'
+            options: -DKAIRN_UPWARD_TESTS=OFF
           - name: Windows x64, MSVC, 2 of 3
             os: windows-2025
             cxx: cl
             shard: '-I "2,,3"'
+            options: -DKAIRN_UPWARD_TESTS=OFF
           - name: Windows x64, MSVC, 3 of 3
             os: windows-2025
             cxx: cl
             shard: '-I "3,,3"'
+            options: -DKAIRN_UPWARD_TESTS=OFF
           - name: Windows x64, clang-cl, 1 of 3
             os: windows-2025
             cxx: clang-cl
             shard: '-I "1,,3"'
+            options: -DKAIRN_UPWARD_TESTS=OFF
           - name: Windows x64, clang-cl, 2 of 3
             os: windows-2025
             cxx: clang-cl
             shard: '-I "2,,3"'
+            options: -DKAIRN_UPWARD_TESTS=OFF
           - name: Windows x64, clang-cl, 3 of 3
             os: windows-2025
             cxx: clang-cl
             shard: '-I "3,,3"'
+            options: -DKAIRN_UPWARD_TESTS=OFF
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -145,6 +157,7 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+          ${{ matrix.options }}
 
       - name: Build
         run: cmake --build build --parallel
