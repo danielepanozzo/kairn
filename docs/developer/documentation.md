@@ -85,7 +85,9 @@ program, write its new output into the `.txt` file and check the page that inclu
 ## Reference pages
 
 The pages under `docs/reference/`, except `reading.md` and the pages that `PAGES` of
-`docs/tools/reference_operations.py` lists (`rational.md`, for operations that call no kernel; `packed.md`, `soa.md` and `enclosure.md`, of a header or an interface as a whole), are
+`docs/tools/reference_operations.py` lists (`rational.md`, for operations that call no kernel;
+`enclosure.md`, `upward.md`, `packed.md`, `soa.md`, `batch.md`, `accumulator.md` and
+`ball_vector.md`, of a header, an interface or a family of kernels as a whole), are
 generated and committed, like the generated C++, and the Reference part of `nav` in `mkdocs.yml` is
 generated between the lines `# BEGIN reference` and `# END reference`, the pages of `PAGES` in it:
 
@@ -96,9 +98,11 @@ python3 docs/tools/test_reference.py     # the tests of the script and of its ta
 ```
 
 The script reads `gen/claims.json`, the kernel descriptions under `gen/kernels/`,
-`include/kairn/gen/bounds.hpp` and the generated headers of the kernels, `proofs/gen/Statements.v`,
-the axiom audit's allow-list and files (below), and the stored brute-force summaries under
-`results/` with `results/brute-code.json` (below), and prints
+`include/kairn/gen/bounds.hpp` and the generated headers of the kernels, `proofs/gen/Statements.v`
+and `Model.v` (for the kernels of the round-up interval, `"rounding": "upward"` in the claims,
+`proofs/gen/UpwardModel.v` and `UpwardStatements.v`, and `include/kairn/gen/upward.hpp`, which
+says whether the generator printed their C++), the axiom audit's allow-list and files (below), and
+the stored brute-force summaries under `results/` with `results/brute-code.json` (below), and prints
 every number, status and formula of a page from them. Rerun it after any of these changes;
 `--check` and the tests run in CI (the workflow `checks.yml`) and in ctest: `docs.reference.check`
 in the quick tier, and `full.tools.docs.reference.test` in the full tier.
@@ -106,10 +110,14 @@ in the quick tier, and `full.tools.docs.reference.test` in the full tier.
 The one input written by hand is `docs/tools/reference_operations.py`: for each kernel its page's
 title and group, and the C++ forms that reach it, with their operand types. A new kernel needs an
 entry there (the script refuses to run without one), and the test fails when a public operation
-whose header comment names a kernel is not among that kernel's forms.
+whose header comment names a kernel is not among that kernel's forms. The test reads the comments
+of `expansion.hpp`, `ball.hpp`, `interval.hpp`, `traits.hpp`, `blocks.hpp` and `upward.hpp`; in the
+last, and in the table, `upward::Interval<T>` is `kairn::upward::Interval<T>` and
+`upward::View<T>` its view of two arrays, and `Interval<T, 1>` the default interval.
 
 The script knows the claim kinds, fields and requirements of `docs/developer/architecture.md`
-("Claims", "Claims of the second wave", "Claims of the non-finite layer"), each in the domain where
+("Claims", "Claims of the second wave", "Claims of the non-finite layer", and, for the kernels
+that say `"rounding": "upward"` only, "Claims of the round-up interval"), each in the domain where
 that page gives it a meaning, and nothing else: on a kind, a requirement, a field, a condition, a
 lead or a status it has no template for, it stops and names it, so that someone writes the
 template before the pages change. Whether a kernel has a statement on finite operands is what the

@@ -16,7 +16,11 @@ A state of the round-up interval is stored as its upper bound and its lower boun
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `upward::Interval<T>(X)` | `Interval<T, 1>` | `upward::Interval<T>` | explicit: no conversion between the two types is implicit; `X` canonical, checked when `KAIRN_CHECKS` is 1; exact: does not round, the same result in every rounding mode; not `constexpr` |
+
+`T` is `float` or `double`; `upward::Interval<T>` is the round-up interval `kairn::upward::Interval<T>`, and `Interval<T, 1>` the default `kairn::Interval<T, 1>`. The operations are in namespace `kairn::upward`, header `kairn/upward.hpp`, which `kairn/kairn.hpp` does not include and which requires the options of [The round-up interval](../concepts/upward.md) (GCC and Clang `-frounding-math`, MSVC `/fp:strict`); an operation that rounds runs only inside an upward scope. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

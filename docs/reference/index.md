@@ -253,30 +253,38 @@ Arithmetic on balls: the result contains every result on points of the operands;
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| not yet called by the public headers | - | the state of the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`upward_make_1`](upward_make_1.md) |
-| not yet called by the public headers | - | the same set as a state of the round-up interval, exactly | [`upward_from_interval_1`](upward_from_interval_1.md) |
-| not yet called by the public headers | - | the same set as an interval of the default type, exactly | [`upward_to_interval_1`](upward_to_interval_1.md) |
-| not yet called by the public headers | - | a canonical state that contains every $-x$; exactly the range | [`upward_neg_1`](upward_neg_1.md) |
-| not yet called by the public headers | - | a canonical state that contains every $x + y$; the range rounded outward | [`upward_add_1`](upward_add_1.md) |
-| not yet called by the public headers | - | a canonical state that contains every $x - y$; the range rounded outward | [`upward_sub_1`](upward_sub_1.md) |
-| not yet called by the public headers | - | a canonical state that contains every $x y$; the range rounded outward | [`upward_mul_1`](upward_mul_1.md) |
-| not yet called by the public headers | - | a canonical state that contains every $x + t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_add_num_1`](upward_add_num_1.md) |
-| not yet called by the public headers | - | a canonical state that contains every $x t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_mul_num_1`](upward_mul_num_1.md) |
-| not yet called by the public headers | - | the hull of the intervals, exactly | [`upward_hull_1`](upward_hull_1.md) |
-| not yet called by the public headers | - | the intersection of the intervals, exactly | [`upward_intersection_1`](upward_intersection_1.md) |
-| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`upward_empty_1`](upward_empty_1.md) |
-| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`upward_entire_1`](upward_entire_1.md) |
-| not yet called by the public headers | - | whether $t \in X$; exact | [`upward_contains_1`](upward_contains_1.md) |
-| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`upward_subset_1`](upward_subset_1.md) |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`upward_positive_1`](upward_positive_1.md) |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`upward_negative_1`](upward_negative_1.md) |
-| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`upward_zero_1`](upward_zero_1.md) |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_1`](upward_less_1.md) |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_equal_1`](upward_less_equal_1.md) |
-| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`upward_equal_1`](upward_equal_1.md) |
-| not yet called by the public headers | - | whether $X = Y$; exact | [`upward_rel_equal_1`](upward_rel_equal_1.md) |
-| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`upward_rel_interior_1`](upward_rel_interior_1.md) |
-| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`upward_rel_disjoint_1`](upward_rel_disjoint_1.md) |
+| `upward::Interval<T>(lo, hi)`, `upward::Interval<T>(a)`, `from_bounds(lo, hi)` | `T`, `T` | the state of the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound and for the same infinity twice | [`upward_make_1`](upward_make_1.md) |
+| `upward::Interval<T>(X)` | `Interval<T, 1>` | the same set as a state of the round-up interval, exactly | [`upward_from_interval_1`](upward_from_interval_1.md) |
+| `X.to_interval()`, `X.lower()`, `X.upper()` | `upward::Interval<T>` | the same set as an interval of the default type, exactly | [`upward_to_interval_1`](upward_to_interval_1.md) |
+| `-X`, `neg(z, x)`, `t - X` | `upward::Interval<T>` | a canonical state that contains every $-x$; exactly the range | [`upward_neg_1`](upward_neg_1.md) |
+| `X + Y`, `X += Y`, `add(z, x, y)` | `upward::Interval<T>`, `upward::Interval<T>` | a canonical state that contains every $x + y$; the range rounded outward | [`upward_add_1`](upward_add_1.md) |
+| `X - Y`, `X -= Y`, `sub(z, x, y)` | `upward::Interval<T>`, `upward::Interval<T>` | a canonical state that contains every $x - y$; the range rounded outward | [`upward_sub_1`](upward_sub_1.md) |
+| `X * Y`, `X *= Y`, `mul(z, x, y)` | `upward::Interval<T>`, `upward::Interval<T>` | a canonical state that contains every $x y$; the range rounded outward | [`upward_mul_1`](upward_mul_1.md) |
+| `X + t`, `t + X`, `X += t`, `X - t`, `X -= t`, `t - X`, `add(z, x, t)` | `upward::Interval<T>`, `T` | a canonical state that contains every $x + t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_add_num_1`](upward_add_num_1.md) |
+| `X * t`, `t * X`, `X *= t`, `mul(z, x, t)` | `upward::Interval<T>`, `T` | a canonical state that contains every $x t'$, $t'$ a member of `Interval(t)`; the range rounded outward | [`upward_mul_num_1`](upward_mul_num_1.md) |
+| `X.hull(Y)` | `upward::Interval<T>`, `upward::Interval<T>` | the hull of the intervals, exactly | [`upward_hull_1`](upward_hull_1.md) |
+| `X.intersection(Y)` | `upward::Interval<T>`, `upward::Interval<T>` | the intersection of the intervals, exactly | [`upward_intersection_1`](upward_intersection_1.md) |
+| `X.is_empty()` | `upward::Interval<T>` | whether $X = \emptyset$; exact | [`upward_empty_1`](upward_empty_1.md) |
+| `X.is_whole()` | `upward::Interval<T>` | whether $X = \mathbb{R}$; exact | [`upward_entire_1`](upward_entire_1.md) |
+| `X.contains(t)`, `member(t, X)` | `upward::Interval<T>`, `T` | whether $t \in X$; exact | [`upward_contains_1`](upward_contains_1.md) |
+| `Y.contains(X)`, `ieee1788::subset(X, Y)` | `upward::Interval<T>`, `upward::Interval<T>` | whether $X \subseteq Y$; exact | [`upward_subset_1`](upward_subset_1.md) |
+| `X.certainly_positive()` | `upward::Interval<T>` | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`upward_positive_1`](upward_positive_1.md) |
+| `X.certainly_negative()` | `upward::Interval<T>` | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`upward_negative_1`](upward_negative_1.md) |
+| `X.certainly_zero()` | `upward::Interval<T>` | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`upward_zero_1`](upward_zero_1.md) |
+| `less(X, Y)`, `greater(Y, X)` | `upward::Interval<T>`, `upward::Interval<T>` | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_1`](upward_less_1.md) |
+| `less_equal(X, Y)`, `greater_equal(Y, X)` | `upward::Interval<T>`, `upward::Interval<T>` | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`upward_less_equal_1`](upward_less_equal_1.md) |
+| `equal(X, Y)`, `not_equal(X, Y)` | `upward::Interval<T>`, `upward::Interval<T>` | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`upward_equal_1`](upward_equal_1.md) |
+| `ieee1788::equal(X, Y)` | `upward::Interval<T>`, `upward::Interval<T>` | whether $X = Y$; exact | [`upward_rel_equal_1`](upward_rel_equal_1.md) |
+| `ieee1788::interior(X, Y)` | `upward::Interval<T>`, `upward::Interval<T>` | whether $X \subseteq \operatorname{int} Y$; exact | [`upward_rel_interior_1`](upward_rel_interior_1.md) |
+| `ieee1788::disjoint(X, Y)` | `upward::Interval<T>`, `upward::Interval<T>` | whether $X \cap Y = \emptyset$; exact | [`upward_rel_disjoint_1`](upward_rel_disjoint_1.md) |
+| `upward::Interval<T>()` | none | the point 0: $[0, 0]$, the pair $(+0, +0)$ | none |
+| `upward::Interval<T>::empty(), upward::Interval<T>::whole()` | none | the empty set, $(\mathrm{NaN}, \mathrm{NaN})$, and the whole line, $(+\infty, +\infty)$ | none |
+| `upward::Interval<T>::from_limbs(p), X.to_limbs(p)` | `const T*` | the stored pair $(u, n)$ read from `p[0]`, `p[1]` (one load; a canonical state, checked when `KAIRN_CHECKS` is 1) and written there (one store), every bit kept | none |
+| `X.is_finite()` | `upward::Interval<T>` | whether both lanes are finite, from their bit patterns: a nonempty bounded interval; not machine-checked | none |
+| `upward::View<T>(upper, nlower, n)` | `T*`, `T*`, `std::size_t` | the two arrays of a view, the upper bounds and the negated lower bounds, and its length; owns nothing ([The functions on arrays](../concepts/upward.md#the-functions-on-arrays)) | none |
+| `kairn::upward::Scope, kairn::upward::NearestScope` | none | the rounding mode upward (`Scope`) or to nearest (`NearestScope`) for the scope's lifetime, with flush to zero and denormals-are-zero off, and what it found restored at its end ([The scopes](../concepts/upward.md#the-scopes)) | none |
+| `pass(v)` | `T, upward::Interval<T> or Interval<T, 1>` | `v`, the same bits, after a barrier: a computation on the result happens after the most recent boundary of a scope ([Code next to a scope's boundary](../concepts/upward.md#code-next-to-a-scopes-boundary)) | none |
+| `self_test()` | none | the self-check of the file that calls it ([The self-check](../concepts/upward.md#the-self-check)) | every kernel of the family, on fixed operands |
 
 ## Building blocks on T
 
