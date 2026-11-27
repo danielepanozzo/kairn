@@ -15,7 +15,8 @@
 //   converted in the loop (kairn::upward::Interval<T>(x), upward_from_interval_1) and each result
 //   back (to_interval(), upward_to_interval_1): what the conversions cost a program that keeps the
 //   default layout;
-// and native_x16, the loop of native 16 times inside one Scope (the scope's share of a call 1/16th).
+// and native_x16, the loop of native 16 times inside one Scope (the scope's share of a call 1/16th;
+// for a chain, the chain 16 times as long: 16 kN steps over the elements again).
 // The conversions alone, tp/from_interval_1/op and tp/to_interval_1/op, are loops without a scope
 // (they are exact, in every mode).
 //
@@ -257,7 +258,13 @@ extern "C" KB_UP_NOIPA void kb_upws_one_nearest(const I1<double>* x, const I1<do
       KB_PASSES(KB_EACH(d.z[i] = d.x[i] * d.y[i])))                                                \
     X(B, SUF, T, tp, interval_sub_1, native, kN, ku::Scope scope; KB_EACH(d.z[i] = d.x[i] - d.y[i]))  \
     X(B, SUF, T, tp, interval_sub_1, conv, kN, ku::Scope scope; KB_EACH(d.z1[i] = (CV(x1) - CV(y1)).to_interval())) \
+    X(B, SUF, T, tp, interval_sub_1, native_x16, up::kPasses * kN, ku::Scope scope;                   \
+      KB_PASSES(KB_EACH(d.z[i] = d.x[i] - d.y[i])))                                                \
     X(B, SUF, T, sum, interval_add_1, native, kN, ku::Scope scope; U<T> s; KB_EACH(s = s + d.x[i]) d.s = s;) \
+    X(B, SUF, T, sum, interval_add_1, native_x16, up::kPasses * kN, ku::Scope scope; U<T> s;          \
+      for (int pass = 0; pass < up::kPasses; ++pass) KB_EACH(s = s + d.x[i]) d.s = s;)             \
+    X(B, SUF, T, prod, interval_mul_1, native_x16, up::kPasses * kN, ku::Scope scope; U<T> p(T(1));   \
+      for (int pass = 0; pass < up::kPasses; ++pass) KB_EACH(p = p * d.f[i]) d.s = p;)             \
     X(B, SUF, T, sum, interval_add_1, conv, kN, ku::Scope scope; U<T> s; KB_EACH(s = s + CV(x1)) d.s1 = s.to_interval();) \
     X(B, SUF, T, prod, interval_mul_1, native, kN, ku::Scope scope; U<T> p(T(1)); KB_EACH(p = p * d.f[i]) d.s = p;) \
     X(B, SUF, T, prod, interval_mul_1, conv, kN, ku::Scope scope; U<T> p(T(1)); KB_EACH(p = p * CV(f1))  \

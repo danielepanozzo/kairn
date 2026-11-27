@@ -57,6 +57,7 @@ N<T> operator*(const N<T>& x, const N<T>& y) {
 struct What {
     std::string op;    // add, sub, mul, sum, prod, horner, lat, det3, copy
     int n = 0;         // results: elements, or 1 for a chain
+    int passes = 1;    // a chain 16 times as long (variants _x16)
     bool products = false;
     bool rounds = true;
 };
@@ -104,15 +105,18 @@ bool what_of(const std::string& name, What& w) {
         if ((op != "add" && op != "mul") || length < 1 || length > kLong) return false;
         return binary(op, covered(length));
     }
+    const bool x16 = part[3].size() > 4 && part[3].compare(part[3].size() - 4, 4, "_x16") == 0;
     if (kind == "sum" && kernel == "interval_add_1") {
         w.op = "sum";
         w.n = 1;
+        w.passes = x16 ? kPasses : 1;
         return true;
     }
     if (kind == "prod" && kernel == "interval_mul_1") {
         w.op = "prod";
         w.n = 1;
         w.products = true;
+        w.passes = x16 ? kPasses : 1;
         return true;
     }
     if (kind == "lat" && kernel == "horner_i1") {
@@ -143,11 +147,11 @@ std::vector<I> compute(const Raw<T>& r, const What& w) {
         }
     } else if (w.op == "sum") {
         I s{T(0), T(0)};
-        for (int i = 0; i < kN; ++i) s = s + X(i);
+        for (int i = 0; i < kN * w.passes; ++i) s = s + X(i % kN);
         out.push_back(s);
     } else if (w.op == "prod") {
         I p{T(1), T(1)};
-        for (int i = 0; i < kN; ++i) p = p * F(i);
+        for (int i = 0; i < kN * w.passes; ++i) p = p * F(i % kN);
         out.push_back(p);
     } else if (w.op == "horner") {
         for (int i = 0; i < kN; ++i) out.push_back(horner(c, H(i)));

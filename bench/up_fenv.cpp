@@ -5,9 +5,11 @@
 // m2_fenv.cpp does not have, double, backend m2:
 //
 //   tp/det3_i1/fenv_loop         the determinant of coordinate differences (up_data.hpp)
-//   tp/interval_add_1/fenv_loop_x16, tp/interval_mul_1/fenv_loop_x16
+//   tp/interval_{add,sub,mul}_1/fenv_loop_x16
 //                                the loops of m2_fenv.cpp 16 times between one change of mode and
 //                                its reset, next to the round-up interval's native_x16
+//   sum/interval_add_1/fenv_loop_x16, prod/interval_mul_1/fenv_loop_x16
+//                                the chains of m2_fenv.cpp 16 times as long (16 kN steps)
 //
 // Not part of the library, not verified, not to be used outside bench/. Compiled as m2_fenv.cpp
 // (-frounding-math, /fp:strict with MSVC; with Clang the pragma STDC FENV_ACCESS ON), and it does
@@ -78,32 +80,44 @@ struct Coordinates {
         __VA_ARGS__;                                                                               \
     }
 
-// X(KERNEL, VARIANT, OPS, BODY...): BODY between fesetround(FE_UPWARD) and fesetround(FE_TONEAREST).
+// X(KIND, KERNEL, VARIANT, OPS, BODY...): BODY between fesetround(FE_UPWARD) and fesetround(FE_TONEAREST).
 #define KB_UPF_LIST(X)                                                                             \
-    X(det3_i1, fenv_loop, kN, const Coordinates g{r};                                              \
+    X(tp, det3_i1, fenv_loop, kN, const Coordinates g{r};                                              \
       KB_EACH(const P<double> z = up::det3_at<P<double>>(g, i); r.out[2 * i] = z.l; r.out[2 * i + 1] = z.u)) \
-    X(interval_add_1, fenv_loop_x16, up::kPasses * kN,                                             \
+    X(tp, interval_add_1, fenv_loop_x16, up::kPasses * kN,                                             \
       for (int pass = 0; pass < up::kPasses; ++pass) {                                             \
           KB_EACH(const P<double> z = P<double>{XL, XU} + P<double>{YL, YU}; r.out[2 * i] = z.l;   \
                   r.out[2 * i + 1] = z.u)                                                          \
           KB_UP_FENCE();                                                                           \
       })                                                                                           \
-    X(interval_mul_1, fenv_loop_x16, up::kPasses * kN,                                             \
+    X(tp, interval_sub_1, fenv_loop_x16, up::kPasses * kN,                                         \
+      for (int pass = 0; pass < up::kPasses; ++pass) {                                             \
+          KB_EACH(const P<double> z = P<double>{XL, XU} - P<double>{YL, YU}; r.out[2 * i] = z.l;   \
+                  r.out[2 * i + 1] = z.u)                                                          \
+          KB_UP_FENCE();                                                                           \
+      })                                                                                           \
+    X(tp, interval_mul_1, fenv_loop_x16, up::kPasses * kN,                                         \
       for (int pass = 0; pass < up::kPasses; ++pass) {                                             \
           KB_EACH(const P<double> z = P<double>{XL, XU} * P<double>{YL, YU}; r.out[2 * i] = z.l;   \
                   r.out[2 * i + 1] = z.u)                                                          \
           KB_UP_FENCE();                                                                           \
-      })
+      })                                                                                           \
+    X(sum, interval_add_1, fenv_loop_x16, up::kPasses * kN, P<double> s{0, 0};                     \
+      for (int pass = 0; pass < up::kPasses; ++pass) KB_EACH(s = s + P<double>{XL, XU})            \
+      r.cout[0] = s.l; r.cout[1] = s.u;)                                                           \
+    X(prod, interval_mul_1, fenv_loop_x16, up::kPasses * kN, P<double> p{1, 1};                    \
+      for (int pass = 0; pass < up::kPasses; ++pass) KB_EACH(p = p * P<double>{r.fi[2 * i], r.fi[2 * i + 1]}) \
+      r.cout[0] = p.l; r.cout[1] = p.u;)
 
-#define KB_UPF_DEF(KERNEL, VAR, OPS, ...)                                                          \
-    extern "C" KB_NOINLINE void kb_m2_64_tp_##KERNEL##__##VAR(void* kb_data) {                     \
+#define KB_UPF_DEF(KIND, KERNEL, VAR, OPS, ...)                                                    \
+    extern "C" KB_NOINLINE void kb_m2_64_##KIND##_##KERNEL##__##VAR(void* kb_data) {               \
         Raw<double>& r = *static_cast<Raw<double>*>(kb_data);                                      \
         std::fesetround(FE_UPWARD);                                                                \
         __VA_ARGS__                                                                                \
         std::fesetround(FE_TONEAREST);                                                             \
     }
-#define KB_UPF_ROW(KERNEL, VAR, OPS, ...)                                                          \
-    {"m2/tp/" #KERNEL "/" #VAR, kb_m2_64_tp_##KERNEL##__##VAR, 64, 1, OPS, 0, 0, kairn_bench::up::check_raw_out},
+#define KB_UPF_ROW(KIND, KERNEL, VAR, OPS, ...)                                                    \
+    {"m2/" #KIND "/" #KERNEL "/" #VAR, kb_m2_64_##KIND##_##KERNEL##__##VAR, 64, 1, OPS, 0, 0, kairn_bench::up::check_raw_out},
 
 KB_UPF_LIST(KB_UPF_DEF)
 
