@@ -144,6 +144,16 @@ the self-check probes both directions in its own shapes ([The self-check](#the-s
 its advice says when a computation of the default types right after an upward scope came out as if
 computed inside it.
 
+The movement is real. The tests `api.upward.moves` probe it in more shapes, at every optimization
+level ([Testing](../developer/testing.md#code-next-to-a-scopes-boundary)). With the options, when
+the values crossed the boundary in registers: GCC 13 and GCC 16, from `-O1` on, computed once a sum
+of the program, or of an `Expansion<T, 1>`, that the program wrote on both sides of a boundary, and
+computed a sum that does not change in a loop once, before the loop, although each iteration held
+its own scope; MSVC 19.52, from `/O1` on, did the second, for a `Scope` and for a `NearestScope` in
+each iteration; Clang 18 and Apple clang 21 moved nothing. No compiler moved a computation whose
+values crossed the boundary through memory, `to_interval()` or `pass()`, at any level, and none
+moved an operation of the header.
+
 ## The scopes
 
 `kairn::upward::Scope` sets the rounding mode upward for its lifetime, and
@@ -358,12 +368,13 @@ as they are and, where CMake supports it, with whole-program optimization. Each 
 program or a DLL, has its own copy of it, which the scopes of another module never write. Of two
 modules one arrangement is tested, by `api.upward.dll`: a scope of the program around calls of a
 function that a DLL exports and that runs the header's operations (a product of
-`kairn::upward::Interval<double>`). The probes of `api.upward.units` passed there at `/Od`, `/O2`
-and `/O2 /GL`, the call into the DLL being opaque to the compiler. That arrangement is supported as
-tested: the scope in the calling module, around a call into the module that runs the operations.
-Any other split of a scope and the operations it holds between two modules, such as a scope in a
-DLL around operations of the program, is not tested and not supported: keep a scope and the
-operations it holds in one module, or in the arrangement of the test.
+`kairn::upward::Interval<double>`, a sum, a product by a number and a function on arrays). The
+probes of `api.upward.units` passed there at `/Od`, `/O2` and `/O2 /GL`. They pass because the call
+into the DLL is opaque to the compiler, not through the barrier per scope: the DLL's operations
+read the DLL's own copy of the zero, which no scope of the program refreshes. So **keep a scope and
+the operations it holds in one module**: that is the arrangement the barrier per scope protects
+(a function of a DLL that holds its own scope is such a case, and is tested too). The arrangement
+across two modules is tested as described, and not promised beyond that test.
 
 ## Contraction
 
@@ -395,7 +406,9 @@ a pragma it cannot see; it turns off the rows of GCC and MSVC and nothing else. 
 cannot see a missing option (Clang always, the others with the macro), an upward scope that writes
 the mode reports, in a checked build, a file whose build ignores the mode, and the self-check
 reports it as advice. Without the options the header's own operations are still right on GCC and
-Clang, through their barriers, but not on MSVC.
+Clang, through their barriers, and they were right in the tests with MSVC under `/fp:precise` too,
+through the barrier per scope; `/fp:strict` stays required with MSVC, and the program's own
+arithmetic inside a scope is right on no compiler without the options.
 
 ## The CMake target
 
