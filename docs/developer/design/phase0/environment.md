@@ -10,7 +10,11 @@ documentation quotes are in [References](references.md#backends).
 ## The contract
 
 1. All arithmetic is round-to-nearest-even. Kairn never reads or writes the rounding mode to do
-   its work, and never changes the floating-point environment.
+   its work, and never changes the floating-point environment. (Since 2026-11-26 this holds of the
+   default types. The owner's decision of 2026-11-24 makes one opt-in header the exception,
+   `kairn/upward.hpp`, the round-up interval, whose scopes set the mode upward, or to nearest, for
+   their lifetime and restore what they found, in files compiled with the options it names:
+   [The round-up interval](../../../concepts/upward.md), [the design page](../upward.md).)
 2. Subnormals behave as IEEE says (no FTZ, no DAZ), except on Metal, which has its own model.
 3. Each operation of a kernel is executed as written: no reassociation, no value-changing
    rewriting. FMA contraction is the one transformation Kairn tolerates, by construction.

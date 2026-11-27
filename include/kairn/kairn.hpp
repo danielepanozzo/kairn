@@ -11,7 +11,10 @@
 /// to include: Packed and the containers (packed.hpp, soa.hpp), the functions on arrays (batch.hpp)
 /// and the ball vectors (ball_vector.hpp), which include the packed kernels of the target and double
 /// the time to compile an empty program (docs/getting-started/index.md, "Use it from CMake", lists
-/// what this header includes). Larger k and I/O are not written yet, and will be separate headers.
+/// what this header includes); and the opt-in round-up interval (upward.hpp), which requires the
+/// rounding mode upward set by kairn::upward::Scope and the options of docs/concepts/upward.md
+/// (GCC and Clang -frounding-math, MSVC /fp:strict) in the files that include it. Larger k and I/O
+/// are not written yet, and will be separate headers.
 #pragma once
 
 #include "version.hpp"

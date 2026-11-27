@@ -1,11 +1,11 @@
 # The round-up interval: design
 
-`<kairn/upward.hpp>` is to be an opt-in alternative to `Interval<T, 1>`, used only for speed: one
+`<kairn/upward.hpp>` is an opt-in alternative to `Interval<T, 1>`, used only for speed: one
 interval of `float` or `double` kept as two numbers in one SIMD register and computed under the
 rounding mode upward, which the program sets through the header's scope objects and for which it
 compiles with the options this page names. The default types do not change in any way. This page
 is the contract that the generator, the proofs, the oracle, the library and the tests of this
-feature are built against, before any of it is written: the values, the kernels and their
+feature were built against, written before any of it: the values, the kernels and their
 listings, the new operations of the IR and their meaning in each model, the statements, how a
 listing becomes code in one register, the claims, the public interface, the self-check, the tests,
 the documentation, and the order of the work. Notation is that of [Numbers](phase0/numbers.md) and
@@ -14,13 +14,21 @@ of the [Milestone 2 statements](milestone2.md#notation-and-vocabulary).
 **What is decided, and by whom.** The owner decided what the section
 [Decisions](#decisions) lists, with the dates. Everything else on this page is a choice of the
 authors, marked *(a choice of the authors)* where it is made and listed again in
-[Choices of the authors](#choices-of-the-authors) for the owner's review. Nothing on this page is
-implemented, proved or measured in the repository yet: the listings were run in exact arithmetic on
-every pair of canonical states of small formats ([Checked](#checked-before-this-page)), which is
-evidence that the statements are not wrong, not a proof of them. A measurement step that preceded
-this page (hand-written candidates, their checks, a matrix of compilers and options) is in the
-authors' private notes; its timings are not quoted here, and the measurements that matter enter the
-repository in the last step of the work, rerun on the shipped code.
+[Choices of the authors](#choices-of-the-authors) for the owner's review. When the page was
+written nothing of it was implemented, proved or measured: the listings had been run in exact
+arithmetic on every pair of canonical states of small formats ([Checked](#checked-before-this-page)),
+evidence that the statements are not wrong, not a proof of them. **State on 2026-11-26.** The
+feature is in the repository as this page describes it: the four operations of the IR, the rules,
+the 24 kernels and their generated files, the oracle's vocabulary, the header with its scopes, its
+type, its functions on arrays and its self-check, the CMake target, the documentation
+([The round-up interval](../../concepts/upward.md)), and the theorems: every kernel of the family is
+proved, its `ieee_status` `proved` in `gen/claims.json`
+([the reference](../../reference/index.md#the-round-up-interval)). The tests that exist are those
+that [Testing](../testing.md) lists, which say what they found; this page keeps the plan of
+[Tests and CI](#tests-and-ci). A measurement step that preceded this page (hand-written candidates,
+their checks, a matrix of compilers and options) is in the authors' private notes; its timings are
+not quoted here, and the measurements that matter enter the repository in the last step of the
+work, rerun on the shipped code.
 
 ## In short
 
@@ -811,16 +819,21 @@ upward and its runner holds the mode. The vocabulary, by additions to the existi
               "intervals": {"x": {"upper": "xu", "nlower": "xn"}, "y": {"upper": "yu", "nlower": "yn"}},
               "tight": {"kind": "rounded"}, "bounded_when": [{"abs_le": "x*y", "omega": true}],
               "bounded_exactly": true}],
- "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 1, "status": "proved", "ieee_status": "proved",
+ "ieee_theorem": {"file": "proofs/theories/IeeeUpwardArith.v", "name": "upward_mul_1_correct"},
  "instances": {"binary64": [], "binary32": []}},
 {"name": "upward_to_interval_1", "domain": "extended", "ieee_only": true, "rounding": "upward",
  "inputs": [{"name": "xu", "limbs": 1}, {"name": "xn", "limbs": 1}],
  "outputs": [{"name": "zl", "limbs": 1}, {"name": "zu", "limbs": 1}],
  "requires": ["upward(xu, xn)"],
  "ensures": [{"kind": "same_set", "of": {"lower": "zl", "upper": "zu"}, "from": {"upper": "xu", "nlower": "xn"}}],
- "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 1, "status": "proved", "ieee_status": "proved",
+ "ieee_theorem": {"file": "proofs/theories/IeeeUpwardExact.v", "name": "upward_to_interval_1_correct"},
  "instances": {"binary64": [], "binary32": []}}
 ```
+
+(Two entries as `gen/claims.json` has them since their theorems landed, without the fields
+`theorem`, `source` and `flops`; before, both statuses were `unverified`.)
 
 `upward_add_num_1` claims `encloses_interval` of `x+t` with `"numbers": ["t"]`; `upward_make_1`
 claims `makes_interval` with `"upper": "zu", "nlower": "zn"` and `"from": {"lower": "lo", "upper":
@@ -947,11 +960,15 @@ assurance on MSVC is weaker, the concept page says so, and the tests and the sel
 exactly that movement. Also on MSVC: `/fp:strict` stays required and is checked with `_M_FP_STRICT`,
 and `/fp:contract` is refused through `_M_FP_CONTRACT` ([The compile-time guard](#the-compile-time-guard)).
 
-Not yet tested, and tests of step 5: a scope in one file and the operations in another
-([Tests](#tests-and-ci), `api.upward.units`), and a program and a DLL: each module of Windows has its
-own copy of an inline `thread_local`, so operations compiled into a DLL and run inside a scope of the
-program read a copy that the program's scopes never write; until a test says otherwise the concept
-page asks that the scopes and the operations be in the same module. A rejected alternative: a
+Tests of step 5, untested when this page was written: a scope in one file and the operations in
+another ([Tests](#tests-and-ci), `api.upward.units`), and a program and a DLL: each module of Windows
+has its own copy of an inline `thread_local`, so operations compiled into a DLL and run inside a
+scope of the program read a copy that the program's scopes never write. Since then `api.upward.dll`
+runs that arrangement, the scope in the program around calls of a function of the DLL that runs the
+operations, and its probes passed at `/Od`, `/O2` and `/O2 /GL`, the call into the DLL being opaque
+to the compiler ([Testing](../testing.md#the-round-up-intervals-environment)); the concept page
+supports that arrangement as tested, and no other split of a scope and its operations between two
+modules ([MSVC](../../concepts/upward.md#msvc)). A rejected alternative: a
 volatile read in every operation instead of once per scope, independent of the scopes, cost several
 times more on a sum in the investigation (to be measured and recorded in step 6).
 
@@ -1306,7 +1323,9 @@ started. Every answer is a choice of the authors, listed with the others for the
    README's list, named "The round-up interval", with no milestone number; the version 0.4.0.
 8. **MSVC and DLLs**: the tests get a case with the scope in the program and the operations in a DLL.
    Until it passes in CI, the concept page asks that the scopes and the operations be in the same
-   module, and says that the other arrangement is not supported.
+   module, and says that the other arrangement is not supported. (Since 2026-11-26: the case,
+   `api.upward.dll`, passed on the Windows test machine, not yet in CI; the concept page says what
+   it tests, supports that one arrangement as tested, and no other split between two modules.)
 9. **The names** are those of [Choices of the authors](#choices-of-the-authors), item 1.
 
 ## References

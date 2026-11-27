@@ -5,6 +5,15 @@
 /// What each version has. Until 1.0 a minor version may change the interface, and a version names
 /// what a tree has, not a release.
 ///
+/// - 0.4.0: the opt-in round-up interval, kairn/upward.hpp, which kairn/kairn.hpp does not include
+///   and which requires the rounding mode upward set by kairn::upward::Scope and the options of
+///   docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict), with the CMake target
+///   kairn::upward that adds them: kairn::upward::Interval<T>, an interval of one limb kept in one
+///   register and computed under the mode upward, its operations, comparisons and relations, its
+///   functions on arrays on views kairn::upward::View<T>, the scopes kairn::upward::Scope and
+///   kairn::upward::NearestScope, kairn::upward::pass() and kairn::upward::self_test(), whose
+///   kairn::Status sets kernel for every failure and gives advice in limitation. The default types
+///   are unchanged.
 /// - 0.3.2: kairn::Status has a third member, limitation, with limited(): kairn::self_test()
 ///   reports there, without failing, that a square the program passes straight into an operation
 ///   is not rounded first in the translation unit that calls it (Clang under -ffp-contract=fast).
@@ -40,12 +49,12 @@
 /// The major version.
 #define KAIRN_VERSION_MAJOR 0
 /// The minor version.
-#define KAIRN_VERSION_MINOR 3
+#define KAIRN_VERSION_MINOR 4
 /// The patch version.
-#define KAIRN_VERSION_PATCH 2
+#define KAIRN_VERSION_PATCH 0
 
 /// "MAJOR.MINOR.PATCH", as a string literal.
-#define KAIRN_VERSION_STRING "0.3.2"
+#define KAIRN_VERSION_STRING "0.4.0"
 
 /// MAJOR * 10000 + MINOR * 100 + PATCH, for comparisons in `#if`.
 #define KAIRN_VERSION (KAIRN_VERSION_MAJOR * 10000 + KAIRN_VERSION_MINOR * 100 + KAIRN_VERSION_PATCH)

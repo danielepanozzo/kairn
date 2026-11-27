@@ -87,6 +87,26 @@ def param_type(param, context):
     return t
 
 
+# kairn/upward.hpp, the round-up interval: there Interval is kairn::upward::Interval<T>, which the
+# table writes upward::Interval<T>, View<T> and View<const T> are the views of its functions on
+# arrays, and ::kairn::Interval<T, 1> is the default interval.
+UPWARD_TYPES = {"Interval": "upward::Interval<T>", "Interval<T>": "upward::Interval<T>",
+                "Interval<U>": "upward::Interval<T>", "View<T>": "upward::View<T>",
+                "View<const T>": "upward::View<const T>", "::kairn::Interval<T, 1>": "Interval<T, 1>"}
+
+
+def upward_param_type(param):
+    """The type of a parameter of kairn/upward.hpp, as the table writes it (UPWARD_TYPES); a view
+    read keeps its const, which param_type would drop."""
+    t = re.sub(r"&", " ", param).strip()
+    t = re.sub(r"\s+[A-Za-z_]\w*\s*$", "", t)            # the parameter's name
+    t = re.sub(r"\s+", " ", re.sub(r"^const\s+", "", t.strip())).strip()
+    m = re.fullmatch(r"std::type_identity_t<(.*)>", t)
+    if m:
+        t = m.group(1)
+    return UPWARD_TYPES.get(t, t)
+
+
 KERNEL_WORDS = re.compile(r"\b[Kk]ernels?\s+([a-z][a-z0-9_]*(?:(?:\s*,\s*|\s+or\s+|\s+and\s+)[a-z][a-z0-9_]*)*)")
 
 
@@ -103,7 +123,8 @@ def header_operations(root, known):
     """[(where, key, kernels)] for every public declaration whose /// comment names a kernel; key
     is ('op', name, operand types) for an operation and ('traits', 'traits<...>::member')."""
     found = []
-    for fname in ("expansion.hpp", "ball.hpp", "interval.hpp", "traits.hpp", "blocks.hpp"):
+    for fname in ("expansion.hpp", "ball.hpp", "interval.hpp", "traits.hpp", "blocks.hpp", "upward.hpp"):
+        upward = fname == "upward.hpp"
         path = os.path.join(root, "include", "kairn", fname)
         lines = reference.read(path).split("\n")
         context, detail, comment, prefix = None, False, [], ""
@@ -122,7 +143,7 @@ def header_operations(root, known):
             m = re.match(r"(?:struct|class) (Expansion<T, [12]>|Ball|Interval|traits_one_limb|traits<Expansion<T, 2>>) \{",
                          s)
             if m:
-                context = {"Ball": "Ball<T, K>", "Interval": "Interval<T, K>",
+                context = {"Ball": "Ball<T, K>", "Interval": "upward::Interval<T>" if upward else "Interval<T, K>",
                            "traits_one_limb": "traits<T>"}.get(m.group(1), m.group(1))
                 comment = []
                 continue
@@ -157,11 +178,12 @@ def header_operations(root, known):
             if not f:
                 raise AssertionError("%s: cannot read the declaration %r" % (where, s))
             name = f.group(1)
-            if context and name == context.split("<")[0]:
+            if context and name == context.split("<")[0].split("::")[-1]:
                 name = context                                   # a constructor
             elif not context:
                 name = prefix + name
-            operands = tuple(param_type(p, context) for p in split_params(f.group(2)))
+            operands = tuple(upward_param_type(p) if upward else param_type(p, context)
+                             for p in split_params(f.group(2)))
             found.append((where, ("op", name, operands), names))
     return found
 
@@ -348,6 +370,22 @@ class Table(unittest.TestCase):
         self.assertIn((("op", "ieee1788::subset", ("Interval<T, K>", "Interval<T, K>")),
                        ("interval_subset_1", "interval_subset_2")), keys)
         self.assertIn((("op", "lower", ()), ("ball_lower_as_1", "ball_to_interval_2")), keys)
+        # The round-up interval (kairn/upward.hpp): Interval there is kairn::upward::Interval<T>, a
+        # number may be either operand, a composition names both kernels, a view read keeps its
+        # const, and the conversion from the default interval is a constructor.
+        U, UW, UR = "upward::Interval<T>", "upward::View<T>", "upward::View<const T>"
+        self.assertIn((("op", "operator*", (U, U)), ("upward_mul_1",)), keys)
+        self.assertIn((("op", "operator+", ("T", U)), ("upward_add_num_1",)), keys)
+        self.assertIn((("op", "operator-", ("T", U)), ("upward_add_num_1", "upward_neg_1")), keys)
+        self.assertIn((("op", "operator-=", (U, "T")), ("upward_add_num_1",)), keys)
+        self.assertIn((("op", U, ("T", "T")), ("upward_make_1",)), keys)
+        self.assertIn((("op", U, ("Interval<T, 1>",)), ("upward_from_interval_1",)), keys)
+        self.assertIn((("op", "to_interval", ()), ("upward_to_interval_1",)), keys)
+        self.assertIn((("op", "contains", (U,)), ("upward_subset_1",)), keys)
+        self.assertIn((("op", "member", ("T", U)), ("upward_contains_1",)), keys)
+        self.assertIn((("op", "ieee1788::interior", (U, U)), ("upward_rel_interior_1",)), keys)
+        self.assertIn((("op", "add", (UW, UR, UR)), ("upward_add_1",)), keys)
+        self.assertIn((("op", "mul", (UW, UR, "T")), ("upward_mul_num_1",)), keys)
 
 
 # --- The tool on modified copies ---------------------------------------------------------------
@@ -735,6 +773,18 @@ class Tool(unittest.TestCase):
         self.assertIn("$X$ as $(x_u, x_n)$, $Y$ as $(y_u, y_n)$, $Z$ as $(z_u, z_n)$", page)
         self.assertIn("its products rounded upward, and no flush to zero of results or operands", page)
         self.assertIn("(`proofs/gen/UpwardModel.v`)", page)
+        # The C++ of the family: its forms, its namespace and header, and its views of arrays.
+        self.assertIn("| `X * Y` | `upward::Interval<T>`, `upward::Interval<T>` | `upward::Interval<T>` |", page)
+        self.assertIn("| `mul(z, x, y)` | `upward::View<T>`, `upward::View<const T>`, `upward::View<const T>` | "
+                      "`void` |", page)
+        self.assertIn("The operations are in namespace `kairn::upward`, header `kairn/upward.hpp`", page)
+        self.assertIn("an operation that rounds runs only inside an upward scope (a function on arrays holds its "
+                      "own)", page)
+        self.assertNotIn("header `kairn/kairn.hpp`. The operators", page)
+        page = self.page("upward_hull_1")
+        self.assertIn("`upward::Interval<T>` is the round-up interval `kairn::upward::Interval<T>`, and "
+                      "`Interval<T, 1>` the default", page)
+        self.assertNotIn("views of two arrays", page)
         # A number: the members of Interval(t), and I5 for a finite one.
         page = self.page("upward_add_num_1")
         self.assertIn("$Z$ contains $x + t'$ for every $x \\in X$, $t' \\in \\langle t\\rangle$", page)

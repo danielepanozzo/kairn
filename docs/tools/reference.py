@@ -2309,6 +2309,22 @@ class Site:
                     "`kairn/accumulator.hpp`, which `kairn/kairn.hpp` includes. They take no marker: an "
                     "operation of an accumulator compiles only while its kernels are proved "
                     "([The accumulator](accumulator.md)).")
+            elif any(t.startswith("upward::") for f in p["forms"] for t in f["operands"] + [f["result"]]):
+                # The round-up interval (kairn/upward.hpp): a namespace and a header of their own, the
+                # options, and the scope of the operations that round.
+                arrays = any(t.startswith("upward::View") for f in p["forms"] for t in f["operands"])
+                text = "\n".join(rows) + "\n\n" + (
+                    "`T` is `float` or `double`; `upward::Interval<T>` is the round-up interval "
+                    "`kairn::upward::Interval<T>`%s, and `Interval<T, 1>` the default `kairn::Interval<T, 1>`. The "
+                    "operations are in namespace `kairn::upward`, header `kairn/upward.hpp`, which `kairn/kairn.hpp` "
+                    "does not include and which requires the options of [The round-up interval](%s) (GCC and Clang "
+                    "`-frounding-math`, MSVC `/fp:strict`); an operation that rounds runs only inside an upward "
+                    "scope%s. The operators and functions also accept the marker `kairn::unverified` on an operand%s, "
+                    "which they need while the kernel is UNVERIFIED." % (
+                        ", `upward::View<T>` and `upward::View<const T>` the views of two arrays that the functions on "
+                        "arrays write and read" if arrays else "", UPWARD_CONCEPT,
+                        " (a function on arrays holds its own)" if arrays else "",
+                        " (a function on arrays on its first input)" if arrays else ""))
             elif any("SoAView" in t for f in p["forms"] for t in f["operands"]):
                 # The functions on arrays (kairn/batch.hpp): a header of their own, and no marker.
                 # A row of another header (an operator of Packed<T, 1> over the same step) names it.

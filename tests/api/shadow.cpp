@@ -6,6 +6,11 @@
 // a global variable for each name of a parameter or a local variable of Kairn's headers, as a
 // program may have. This file's own names all start with use_, which shadow.py checks no name of
 // Kairn's starts with, so that none of them hides a global of shadow_globals.hpp.
+//
+// kairn/upward.hpp, the round-up interval, is included too, with KAIRN_UPWARD_OPTIONS_UNCHECKED:
+// it requires the rounding mode upward set by kairn::upward::Scope and the options of
+// docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict), and this file only
+// goes through the front end, so its guard has nothing to protect here.
 #if defined(KAIRN_TEST_GLOBALS)
 #include "shadow_globals.hpp"
 #endif
@@ -15,6 +20,8 @@
 #include <kairn/packed.hpp>
 #include <kairn/soa.hpp>
 #include <kairn/ball_vector.hpp>
+#define KAIRN_UPWARD_OPTIONS_UNCHECKED
+#include <kairn/upward.hpp>
 
 namespace use_test {
 
@@ -436,13 +443,108 @@ double use_every_operation(UseT use_a, UseT use_b) {
     return use_sum;
 }
 
+// Every public operation of kairn/upward.hpp once: the constructors and conversions, the scopes,
+// the operators with an interval and with a number, the compound assignments, the members, the
+// comparisons, the relations, pass() of each type, the functions on arrays, the self-check.
+template <class UseT>
+double use_upward(UseT use_a, UseT use_b) {
+    using UseI = kairn::upward::Interval<UseT>;
+    using kairn::unverified;
+    double use_sum = 0;
+    const UseT use_p[2] = {use_b, -use_a};
+    UseI use_x = UseI::from_limbs(use_p), use_y(unverified(use_a), use_b), use_w(use_a, use_b), use_v(use_a);
+    UseI use_z = UseI::from_bounds(unverified(use_a), use_b);
+    use_z = UseI::from_bounds(use_a, use_b);
+    use_z = UseI(unverified(kairn::Interval<UseT, 1>::from_bounds(use_a, use_b)));
+    use_z = UseI(kairn::Interval<UseT, 1>::from_bounds(use_a, use_b));
+    use_z = UseI(unverified(use_a));
+    use_z = UseI::empty();
+    use_z = UseI::whole();
+    {
+        kairn::upward::Scope use_s;
+        use_z = unverified(use_x) + use_y;
+        use_z = unverified(use_x) - use_y;
+        use_z = unverified(use_x) * use_y;
+        use_z = use_x + use_y - use_w * use_v;
+        use_z = unverified(use_x) + use_a;
+        use_z = use_a - unverified(use_x);
+        use_z = unverified(use_x) - use_a;
+        use_z = use_a * unverified(use_x);
+        use_z = use_x + use_a + (use_a + use_x) - (use_x - use_a) - (use_a - use_x) + use_x * use_a + use_a * use_x;
+        use_z += unverified(use_y);
+        use_z -= unverified(use_a);
+        use_z *= unverified(use_y);
+        use_z += use_y;
+        use_z -= use_y;
+        use_z *= use_y;
+        use_z += use_a;
+        use_z -= use_a;
+        use_z *= use_a;
+        kairn::upward::NearestScope use_n;
+        use_sum += kairn::upward::pass(use_a) + kairn::upward::pass(kairn::Interval<UseT, 1>(use_b)).lower().limb[0];
+    }
+    use_z = -unverified(use_x);
+    use_z = -use_x;
+    use_z = use_x.hull(unverified(use_y));
+    use_z = use_x.hull(use_y);
+    use_z = use_x.intersection(unverified(use_y));
+    use_z = use_x.intersection(use_y);
+    use_z = kairn::upward::pass(use_z);
+    use_sum += unverified(use_z).lower() + unverified(use_z).upper() + use_z.lower() + use_z.upper();
+    use_sum += unverified(use_z).to_interval().lower().limb[0] + use_z.to_interval().upper().limb[0];
+    use_sum += unverified(use_z).is_empty() + use_z.is_empty() + unverified(use_z).is_whole() + use_z.is_whole();
+    use_sum += use_z.is_finite();
+    use_sum += unverified(use_z).certainly_positive() + use_z.certainly_positive();
+    use_sum += unverified(use_z).certainly_negative() + use_z.certainly_negative();
+    use_sum += unverified(use_z).certainly_zero() + use_z.certainly_zero();
+    use_sum += use_z.contains(unverified(use_a)) + use_z.contains(use_a);
+    use_sum += use_z.contains(unverified(use_x)) + use_z.contains(use_x);
+    use_sum += kairn::certainly(kairn::upward::less(unverified(use_x), use_y)) + kairn::certainly(kairn::upward::less(use_x, use_y));
+    use_sum += kairn::certainly(kairn::upward::less_equal(unverified(use_x), use_y)) +
+               kairn::certainly(kairn::upward::less_equal(use_x, use_y));
+    use_sum += kairn::certainly(kairn::upward::greater(unverified(use_x), use_y)) +
+               kairn::certainly(kairn::upward::greater(use_x, use_y));
+    use_sum += kairn::certainly(kairn::upward::greater_equal(unverified(use_x), use_y)) +
+               kairn::certainly(kairn::upward::greater_equal(use_x, use_y));
+    use_sum += kairn::certainly(kairn::upward::equal(unverified(use_x), use_y)) + kairn::certainly(kairn::upward::equal(use_x, use_y));
+    use_sum += kairn::certainly(kairn::upward::not_equal(unverified(use_x), use_y)) +
+               kairn::certainly(kairn::upward::not_equal(use_x, use_y));
+    use_sum += kairn::certainly(kairn::upward::member(unverified(use_a), use_x)) + kairn::certainly(kairn::upward::member(use_a, use_x));
+    use_sum += kairn::upward::ieee1788::equal(unverified(use_x), use_y) + kairn::upward::ieee1788::equal(use_x, use_y);
+    use_sum += kairn::upward::ieee1788::subset(unverified(use_x), use_y) + kairn::upward::ieee1788::subset(use_x, use_y);
+    use_sum += kairn::upward::ieee1788::interior(unverified(use_x), use_y) + kairn::upward::ieee1788::interior(use_x, use_y);
+    use_sum += kairn::upward::ieee1788::disjoint(unverified(use_x), use_y) + kairn::upward::ieee1788::disjoint(use_x, use_y);
+    UseT use_u[3] = {use_b, use_b, use_b}, use_m[3] = {-use_a, -use_a, -use_a};
+    const kairn::upward::View<UseT> use_vw(use_u, use_m, 3);
+    const kairn::upward::View<const UseT> use_r(use_vw);
+    kairn::upward::add(use_vw, unverified(use_r), use_r);
+    kairn::upward::sub(use_vw, unverified(use_r), use_r);
+    kairn::upward::mul(use_vw, unverified(use_r), use_r);
+    kairn::upward::neg(use_vw, unverified(use_r));
+    kairn::upward::add(use_vw, unverified(use_r), use_a);
+    kairn::upward::mul(use_vw, unverified(use_r), use_a);
+    kairn::upward::add(use_vw, use_r, use_r);
+    kairn::upward::sub(use_vw, use_r, use_r);
+    kairn::upward::mul(use_vw, use_r, use_r);
+    kairn::upward::neg(use_vw, use_r);
+    kairn::upward::add(use_vw, use_r, use_a);
+    kairn::upward::mul(use_vw, use_r, use_a);
+    use_z.to_limbs(use_u);
+    return use_sum + use_u[0];
+}
+
 }  // namespace use_test
 
 int main() {
     const kairn::Status use_status = kairn::self_test();
+    const kairn::Status use_upward_status = kairn::upward::self_test();
+    const double use_upward_total = use_test::use_upward<double>(1.0, 2.0) + use_test::use_upward<float>(1.0f, 2.0f);
     const double use_total = use_test::use_every_operation<double>(1.5, 0x1p-60) +
                              use_test::use_every_operation<float>(1.5f, 0x1p-30f);
-    return use_status.ok() && kairn::environment_ok() && use_total == use_total ? 0 : 1;
+    return use_status.ok() && use_upward_status.ok() && kairn::environment_ok() && use_total == use_total &&
+                   use_upward_total == use_upward_total
+               ? 0
+               : 1;
 }
 
 // With KAIRN_TEST_DEFINITIONS (and KAIRN_ENCLOSURE_CODE_EXTERNAL), the definitions of the

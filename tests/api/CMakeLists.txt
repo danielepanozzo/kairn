@@ -1477,6 +1477,43 @@ foreach(_i RANGE 0 ${_last} 2)
     set_tests_properties(api.example.concepts_${_concept}${_suffix} PROPERTIES LABELS "api;example;concepts")
   endforeach()
 endforeach()
+# The example of "The round-up interval" (docs/concepts/upward.md), the same way, when
+# KAIRN_UPWARD_TESTS is on: it links kairn::upward, which adds the options of the header, and is
+# built with the build's flags and under each contraction setting but MSVC's (its /fp:strict, which
+# kairn::upward adds, excludes contraction, and the header's guard refuses /fp:contract).
+if(KAIRN_UPWARD_TESTS)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(_upward_example_variants "" "")
+  elseif(_msvc_style)
+    set(_upward_example_variants "" "" contract-fast /clang:-ffp-contract=fast)
+  else()
+    set(_upward_example_variants "" "" contract-off -ffp-contract=off contract-on -ffp-contract=on
+      contract-fast -ffp-contract=fast)
+  endif()
+  list(LENGTH _upward_example_variants _n)
+  math(EXPR _last "${_n} - 1")
+  foreach(_i RANGE 0 ${_last} 2)
+    math(EXPR _j "${_i} + 1")
+    list(GET _upward_example_variants ${_i} _variant)
+    list(GET _upward_example_variants ${_j} _option)
+    if(_variant STREQUAL "")
+      set(_suffix "")
+    else()
+      set(_suffix ".${_variant}")
+    endif()
+    string(REPLACE "." "-" _target_suffix "${_suffix}")
+    add_executable(kairn-example-concepts-upward${_target_suffix}
+      "${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_upward.cpp")
+    target_link_libraries(kairn-example-concepts-upward${_target_suffix} PRIVATE kairn::upward kairn::fma)
+    target_compile_options(kairn-example-concepts-upward${_target_suffix} PRIVATE ${_api_warnings} ${_option})
+    add_test(NAME api.example.concepts_upward${_suffix}
+      COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-concepts-upward${_target_suffix}>"
+        "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_upward.txt"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+    set_tests_properties(api.example.concepts_upward${_suffix} PROPERTIES LABELS "api;example;concepts;upward"
+      TIMEOUT 120)
+  endforeach()
+endif()
 # The tutorial on a vector loop (docs/tutorials/vector-loop.md), in every form of Packed (above):
 # the same text in each, which the program checks against an exact reference and the bound it
 # states, and which the tutorial shows.

@@ -225,7 +225,10 @@ With a NaN operand comparisons return false (and `compare` returns "unordered"),
 ### Directed rounding without a rounding mode
 
 Kairn never calls `fesetround`. A result rounded down or up is obtained from the round-to-nearest
-result and the *sign of its exact error*, then one step to the neighbor:
+result and the *sign of its exact error*, then one step to the neighbor (since 2026-11-26 this holds
+of the default types: the opt-in round-up interval, `kairn/upward.hpp`, computes under the rounding
+mode upward, which its scopes set, by the owner's decision of 2026-11-24;
+[The round-up interval](../../../concepts/upward.md)):
 
 $$\mathrm{RD}(a + b) = \begin{cases} \mathrm{pred}(s) & \text{if } e < 0 \\ s & \text{otherwise} \end{cases}
 \qquad (s, e) = \mathrm{Fast2Sum}(\text{larger}, \text{smaller}),$$

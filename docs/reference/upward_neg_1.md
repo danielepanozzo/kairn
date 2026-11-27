@@ -16,7 +16,13 @@ A state of the round-up interval is stored as its upper bound and its lower boun
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `-X` | `upward::Interval<T>` | `upward::Interval<T>` | the two lanes exchanged; exact: does not round, the same result in every rounding mode; not `constexpr` |
+| `neg(z, x)` | `upward::View<T>`, `upward::View<const T>` | `void` | a function on arrays, called by its qualified name (`kairn::upward::add` and the others): element by element on views of two plain arrays, the upper bounds and the negated lower bounds, with the kernel's form on arrays; it holds its own scope, so it may be called where the mode is to nearest; the views have the same length; `z` has, for each view read, the same two arrays (in place) or none that overlaps them, and its own two do not overlap ([The functions on arrays](../concepts/upward.md#the-functions-on-arrays)); not `constexpr` |
+| `t - X` | `T`, `upward::Interval<T>` | `upward::Interval<T>` | $-(X + (-t))$, with [`upward_add_num_1`](upward_add_num_1.md): a composition through an exact negation, argued and not machine-checked as one statement ([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked)); rounds upward: only inside an upward scope ([The scopes](../concepts/upward.md#the-scopes)); not `constexpr` |
+
+`T` is `float` or `double`; `upward::Interval<T>` is the round-up interval `kairn::upward::Interval<T>`, `upward::View<T>` and `upward::View<const T>` the views of two arrays that the functions on arrays write and read, and `Interval<T, 1>` the default `kairn::Interval<T, 1>`. The operations are in namespace `kairn::upward`, header `kairn/upward.hpp`, which `kairn/kairn.hpp` does not include and which requires the options of [The round-up interval](../concepts/upward.md) (GCC and Clang `-frounding-math`, MSVC `/fp:strict`); an operation that rounds runs only inside an upward scope (a function on arrays holds its own). The operators and functions also accept the marker `kairn::unverified` on an operand (a function on arrays on its first input), which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

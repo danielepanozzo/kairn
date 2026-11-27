@@ -231,7 +231,7 @@ mode, and it needs of the environment what the default types exclude:
   `KAIRN_CHECKS` reports them, so does the check of a batch entry in every build (but for the two
   that compute no sum), `kairn::environment_ok()` is false there, and `kairn::self_test()` fails, as
   it should. A program calls them inside a `NearestScope`, and brings the values they use
-  across the scope's boundary through memory or `kairn::upward::pass()`
+  across the scope's boundary through memory, `to_interval()` or `kairn::upward::pass()`
   ([Code next to a scope's boundary](upward.md#code-next-to-a-scopes-boundary)).
 
 What is assumed there outside the proofs, that each operation of the header that rounds runs as the

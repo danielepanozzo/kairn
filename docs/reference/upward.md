@@ -35,6 +35,13 @@ input `x` of the description, whose lanes are the inputs `xu` and `xn`; the outp
 $(z_u, z_n)$. So a lower bound always appears negated, $-x_n$, and a result's lower bound is
 $-z_n$.
 
+The section "C++" of a kernel's page lists the operations of `kairn/upward.hpp` that reach it, in
+namespace `kairn::upward`: `upward::Interval<T>` there is `kairn::upward::Interval<T>`,
+`upward::View<T>` and `upward::View<const T>` the views of two arrays that the functions on arrays
+write and read, and `Interval<T, 1>` the default interval. An operation that rounds says so: it runs
+only inside an upward scope, and a function on arrays holds its own
+([The round-up interval](../concepts/upward.md)).
+
 ## What the statements say
 
 The statements are those of the default interval kernels of the same name, read on the state the

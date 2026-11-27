@@ -2,23 +2,27 @@
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
 ([report](../developer/results/milestone1.md)), and Milestone 2 is complete and was reviewed by the
-owner on 2026-11-23 ([report](../developer/results/milestone2.md#the-owners-review)), in version 0.3.2 of the development line. In the public headers of this version: numbers of one and two limbs of
+owner on 2026-11-23 ([report](../developer/results/milestone2.md#the-owners-review)); version 0.4.0 of the development line adds the opt-in round-up interval. In the public headers of this version: numbers of one and two limbs of
 type `float` or `double`, balls and intervals around them with the
 [interface the two share](#intervals-and-balls), the [building blocks](#building-blocks) on `T`,
 [constants](#constants-from-fractions) built at compile time from an integer or a fraction, and the
 accumulator of a sum or a dot product (`kairn/accumulator.hpp`), all of which `kairn/kairn.hpp`
 includes; and, in headers of their own that it does not include, the packed SIMD type and
 containers in structure-of-arrays form (`kairn/packed.hpp`, `kairn/soa.hpp`:
-[Vector loops](#vector-loops)), the functions on arrays (`kairn/batch.hpp`) and `BallVector`
-(`kairn/ball_vector.hpp`: [Ball vectors](#ball-vectors)). Not yet: the later milestones. The
+[Vector loops](#vector-loops)), the functions on arrays (`kairn/batch.hpp`), `BallVector`
+(`kairn/ball_vector.hpp`: [Ball vectors](#ball-vectors)), and the opt-in round-up interval
+(`kairn/upward.hpp`: [The round-up interval](#the-round-up-interval)), which requires compiler
+options and its own scopes. Not yet: the later milestones. The
 kernels these operations call have checked proofs of their claims, in a model of arithmetic where
 nothing overflows and, for what they return at overflow and for infinities and NaN (results like
 those of `float` and `double`; sets: the whole line, the empty set, or an interval with an
 infinite bound) and for the intervals and the interface of the sets, in a model of IEEE 754; the
-loops of the functions on arrays and of `BallVector` are proved in both. Not machine-checked:
-`ldexp` beyond the powers of two of `T`, `rational`, a few compositions of proved kernels in the
-headers, the integer bookkeeping of the bounds of arrays and of the accumulator, and the tests of
-bit patterns written by hand. [What holds
+loops of the functions on arrays and of `BallVector` are proved in both; the kernels of the
+round-up interval in the model of IEEE 754 with their sums and products rounded upward. Not
+machine-checked: `ldexp` beyond the powers of two of `T`, `rational`, a few compositions of proved
+kernels in the headers, the integer bookkeeping of the bounds of arrays and of the accumulator, the
+tests of bit patterns written by hand, and that each operation of the round-up interval that
+rounds runs as the IEEE operation rounded upward. [What holds
 today](guarantees.md) has the details. This page shows how to write a first program, choose the
 limb type and the number of limbs, compute with intervals and balls, write constants such as 1/10,
 use the building blocks, build and test the repository, use the CMake package, read what Kairn's
@@ -270,6 +274,27 @@ compile as `kairn/packed.hpp` and `kairn/soa.hpp`, which it includes
 [tutorial](../tutorials/ball-vectors.md) subdivides a polynomial in the Bernstein basis and
 multiplies two polynomials, and checks both against exact arithmetic.
 
+## The round-up interval
+
+`kairn/upward.hpp` is an opt-in alternative to `Interval<T, 1>`, used only for speed:
+`kairn::upward::Interval<T>` keeps an interval of `float` or `double` as its upper bound and its
+lower bound negated, the two lanes of one SIMD register, and computes under the rounding mode
+upward, so that a sum is one vector addition. **It requires compiler options and scopes**: every
+file that includes it is compiled with `-frounding-math` (GCC and Clang) or `/fp:strict` (MSVC),
+which the CMake target `kairn::upward` adds ([below](#use-it-from-cmake)), and every operation that
+rounds runs inside a `kairn::upward::Scope`, which sets the mode for its lifetime and restores it:
+
+```cpp
+--8<-- "docs/examples/cpp/concepts_upward.cpp:scope"
+```
+
+The default types inside such a scope see a mode that is not theirs, and are called inside a
+`kairn::upward::NearestScope`; a program calls `kairn::upward::self_test()` from each file built
+with other options. Its kernels are proved in the model of IEEE 754 with their sums and products
+rounded upward; that the compiled code runs them so is what the options and the scopes are for,
+and is the program's to arrange. [The round-up interval](../concepts/upward.md) says what the
+program guarantees, how the type differs from the default interval, and what its checks see.
+
 ## Constants from fractions
 
 A constant such as 1/10 or 1/3 is not a `double`, nor the sum of two. `kairn::rational<X>(num,
@@ -391,9 +416,9 @@ undefined function-like macro in an `#if` does not compile; `KAIRN_VERSION`, whi
 defines, can also be compared directly (`#if KAIRN_VERSION >= 200`). The building blocks are in
 0.2.0; the functions on arrays, the ball vectors, `from_bounds` and `from_limbs` of a set and the
 whole enclosure interface are in 0.3.0 (`KAIRN_VERSION_AT_LEAST(0, 3, 0)`); the operators of
-`Packed<T, 1>` and the guards of the constructors of two limbs are in 0.3.1, and
-`Status::limitation` in 0.3.2; `version.hpp`
-lists what each version has.
+`Packed<T, 1>` and the guards of the constructors of two limbs are in 0.3.1,
+`Status::limitation` in 0.3.2, and the round-up interval, `kairn/upward.hpp`, in 0.4.0
+(`KAIRN_VERSION_AT_LEAST(0, 4, 0)`); `version.hpp` lists what each version has.
 
 ## What you need
 
@@ -455,10 +480,11 @@ The tests of the quick tier:
 | `crosscheck.compiled.*` | Each kernel, compiled with the build's compiler and flags, scalar and packed (NEON on AArch64, AVX2 on x86-64, one operand per lane), and again under each contraction setting that matters to the compiler: every one of these builds on the same random `binary64` and `binary32` operands, judged by the oracle against the kernel's claims. |
 | `objcode.*` | The fused multiply-adds and plain multiplications in the object code of every kernel, compiled with the build's compiler in a few configurations of its flags, are those its description asks for; a textbook `a * b + c` fails that check where the compiler fuses it. With the operations of `Ball` outlined and external ([below](#compile-time-and-the-operations-of-ball)), each is a call, and the function it calls has the fused operations of its kernel. |
 | `regression.cases` | The stored cases that once found a problem or came closest to a claim (`tests/regression/cases.txt`), through every compiled runner, the generator's interpreter and every public form of their kernels, judged by the oracle. |
-| `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel; Kairn prints no line when it is configured there, and its `cmake --install` installs nothing of Kairn's unless `KAIRN_INSTALL` is on. |
+| `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel, and a program that links `kairn::upward` builds; Kairn prints no line when it is configured there, and its `cmake --install` installs nothing of Kairn's unless `KAIRN_INSTALL` is on. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory, with the license in it as `share/licenses/kairn/LICENSE`. |
-| `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel. |
+| `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel, and a program that links `kairn::upward` builds. |
 | `api.oracle.*` | Each public operation, computed through the constructors, operators and functions of `kairn/kairn.hpp`, on random `binary64` and `binary32` operands (infinities, NaN, the empty set and the whole line included, for the kernels that have them), judged by the oracle against the claims of the kernel it calls; built with the build's flags and with contraction forced on. |
+| `api.oracle.upward_*`, `api.upward.*` | When `KAIRN_UPWARD_TESTS` is on (the default): each operation of `kairn/upward.hpp`, through a runner over the header in several builds, judged by the oracle against the claims of the kernel it calls; and the tests of its scopes, its checks, its self-check, its functions on arrays and its compile-time guard, against the default interval too ([Testing](../developer/testing.md#the-round-up-intervals-environment)). |
 | `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by some public operation, or is a building block of others, or is on a short list of entry kernels not public yet, each with its reason. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, and the same results at run time. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
@@ -493,7 +519,7 @@ C++20, and there is nothing to compile. Its headers today:
 
 | Header | Content |
 |---|---|
-| `kairn/kairn.hpp` | All of the following but `kairn/packed.hpp`, `kairn/soa.hpp`, `kairn/batch.hpp` and `kairn/ball_vector.hpp`, which include the packed kernels of the target and would add their cost to every program ([Compile time](#compile-time-and-the-operations-of-ball)); the accumulator (`kairn/accumulator.hpp`) is included. This is the one list of what it includes. |
+| `kairn/kairn.hpp` | All of the following but `kairn/packed.hpp`, `kairn/soa.hpp`, `kairn/batch.hpp` and `kairn/ball_vector.hpp`, which include the packed kernels of the target and would add their cost to every program ([Compile time](#compile-time-and-the-operations-of-ball)), and `kairn/upward.hpp`, which requires options of its own; the accumulator (`kairn/accumulator.hpp`) is included. This is the one list of what it includes. |
 | `kairn/expansion.hpp` | `kairn::Expansion<T, 1>` and `kairn::Expansion<T, 2>`, `T` = `float` or `double`, and their operations. |
 | `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`; it includes `interval.hpp`. |
 | `kairn/interval.hpp` | `kairn::Interval<T, 1>` and `kairn::Interval<T, 2>`, the conversions between intervals and balls, and the relations of IEEE 1788 (`kairn::ieee1788`). |
@@ -504,6 +530,7 @@ C++20, and there is nothing to compile. Its headers today:
 | `kairn/soa.hpp` | `kairn::SoA<T, k>` and its views, numbers stored as one array per limb ([Vector loops](#vector-loops)); not included by `kairn/kairn.hpp`. |
 | `kairn/batch.hpp` | The functions on arrays: `sum`, `sum_fast`, `dot`, `add`, `sub`, `scale`, `mul_pow2`, `axpy`, `conv`, `norm_upper` ([Functions on arrays](../reference/batch.md)); not included by `kairn/kairn.hpp`. |
 | `kairn/ball_vector.hpp` | `kairn::BallVector<T, k, N>` and `kairn::BallVectorView<T, k>`, N centers and one radius ([Ball vectors](#ball-vectors)); not included by `kairn/kairn.hpp`. |
+| `kairn/upward.hpp` | The opt-in round-up interval, in namespace `kairn::upward`: `Interval<T>`, an interval of one limb computed under the rounding mode upward, its functions on arrays on views `View<T>`, the scopes `Scope` and `NearestScope`, `pass()` and `self_test()`; requires `-frounding-math` (GCC and Clang) or `/fp:strict` (MSVC), which the target `kairn::upward` adds ([below](#the-round-up-interval)); not included by `kairn/kairn.hpp`. |
 | `kairn/accumulator.hpp` | `kairn::Accumulator<T, k>`, a sum or a dot product built term by term, with its error bound ([The accumulator](../reference/accumulator.md)); included by `kairn/kairn.hpp`. |
 | `kairn/reduction.hpp`, `kairn/order.hpp` | `kairn::Reduction<X>`, a number and whether it is finite, and the tag `kairn::sequential`, which the headers above include. |
 | `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
@@ -520,6 +547,11 @@ A project can add the source tree (directly, or through `FetchContent`), as the
 --8<-- "tests/consume/add_subdirectory/CMakeLists.txt"
 ```
 
+The last two lines build a program that includes `kairn/upward.hpp`, the opt-in round-up interval:
+it links `kairn::upward`, which links `kairn::kairn` and adds the compiler option that header needs
+([The round-up interval](#the-round-up-interval)). A program that does not use that header leaves
+them out.
+
 Or it can install Kairn first, with `cmake --install build --prefix PREFIX`, which installs the
 headers, the package under `share/cmake/kairn` and the license as `share/licenses/kairn/LICENSE`
 (`share` is `CMAKE_INSTALL_DATADIR`), and find it with `PREFIX` in `CMAKE_PREFIX_PATH`, as the
@@ -530,8 +562,9 @@ headers, the package under `share/cmake/kairn` and the license as `share/license
 ```
 
 The installed package accepts a request for a version with the same major and minor number that is
-not newer than itself. The development line of Milestone 2 is 0.3.0 to 0.3.2: a request for 0.2 is not
-accepted by it (`include/kairn/version.hpp` says what each version has).
+not newer than itself. The development line of Milestone 2 was 0.3.0 to 0.3.2, and 0.4.0 adds the
+round-up interval: a request for 0.3 is not accepted by it (`include/kairn/version.hpp` says what
+each version has).
 
 Added with `add_subdirectory` or `FetchContent`, Kairn keeps to itself: it adds no install rule,
 so that `cmake --install` of the project installs the project's files and not Kairn's, unless the
@@ -658,6 +691,10 @@ flag from the files that include it.
   ([Hardware FMA](#hardware-fma)).
 - `Kairn: no FMA primitive has been chosen and measured for MSVC on this architecture`. MSVC
   compiling for a target other than x86, such as ARM64, which this version does not support.
+- Including `kairn/upward.hpp`, the opt-in round-up interval: `kairn/upward.hpp needs
+  -frounding-math with GCC`, `kairn/upward.hpp needs /fp:strict with MSVC` and `kairn/upward.hpp
+  does not work with /fp:contract`. Link `kairn::upward`, which adds the option, to the targets
+  whose files include it ([The round-up interval](#the-round-up-interval)).
 
 ### When the program runs
 
@@ -716,8 +753,9 @@ Under `-fno-signed-zeros -ffp-contract=fast`, a combination Kairn does not suppo
 message comes for a wider loss: every product's guard.
 
 `kairn::environment_ok()` reads the control register (MXCSR on x86-64, FPCR on AArch64) and says
-whether the rounding mode and flush to zero are as Kairn assumes. Kairn never changes them; a
-program that may find them changed, after a call into a library, can check and put them back:
+whether the rounding mode and flush to zero are as Kairn assumes. The default types never change
+them (the scopes of the opt-in `kairn/upward.hpp` do, and restore what they found); a program that
+may find them changed, after a call into a library, can check and put them back:
 
 ```cpp
 --8<-- "docs/examples/cpp/troubleshooting.cpp:check"

@@ -240,6 +240,23 @@ FACTORS = "; the operands are guarded, as factors of a fused operation ([rule R3
 # says so in these words.
 COMPOSITION = ("argued and tested but not machine-checked "
                "([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values))")
+# The round-up interval (kairn/upward.hpp, namespace kairn::upward): its interval and the views of
+# its functions on arrays, written and read. The C++ text of a page says what each name is.
+U = "upward::Interval<T>"
+UW = "upward::View<T>"
+UR = "upward::View<const T>"
+UPWARD_CONCEPT_PAGE = "../concepts/upward.md"
+UPWARD_EXACT = "exact: does not round, the same result in every rounding mode; not `constexpr`"
+UPWARD_ROUNDS = ("rounds upward: only inside an upward scope ([The scopes](" + UPWARD_CONCEPT_PAGE + "#the-scopes)); "
+                 "not `constexpr`")
+UPWARD_EXCHANGED = "the operands exchanged"
+UPWARD_COMPOSED = ("a composition through an exact negation, argued and not machine-checked as one statement "
+                   "([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked))")
+UPWARD_ARRAYS = ("a function on arrays, called by its qualified name (`kairn::upward::add` and the others): element by "
+                 "element on views of two plain arrays, the upper bounds and the negated lower bounds, with the "
+                 "kernel's form on arrays; it holds its own scope, so it may be called where the mode is to nearest; "
+                 "the views have the same length; `z` has, for each view read, the same two arrays (in place) or "
+                 "none that overlaps them, and its own two do not overlap ([The functions on arrays](" + UPWARD_CONCEPT_PAGE + "#the-functions-on-arrays)); not `constexpr`")
 
 KERNELS = {
     # --- Constructors ---------------------------------------------------------------------------
@@ -1217,32 +1234,120 @@ KERNELS = {
     "conv_radius": page("ball-vectors", "The radius of the product of two polynomials whose coefficients are BallVectors"),
     "bv_conv_finish": page("ball-vectors", "The result of the product of two BallVectors: the radius, or NaN"),
     # --- The round-up interval (kairn/upward.hpp, docs/developer/design/upward.md) --------------------
-    # Entry kernels that no header calls yet: their forms join the table when the interval type of
-    # the header does (the design page, "The interface", says which operation calls which kernel).
-    "upward_make_1": page("upward", "A round-up interval from two values of T"),
-    "upward_from_interval_1": page("upward", "A round-up interval from an interval of the default type"),
-    "upward_to_interval_1": page("upward", "A round-up interval as an interval of the default type"),
-    "upward_neg_1": page("upward", "The negation of a round-up interval"),
-    "upward_add_1": page("upward", "Sum of two round-up intervals"),
-    "upward_sub_1": page("upward", "Difference of two round-up intervals"),
-    "upward_mul_1": page("upward", "Product of two round-up intervals"),
-    "upward_add_num_1": page("upward", "A round-up interval plus a number of T"),
-    "upward_mul_num_1": page("upward", "A round-up interval times a number of T"),
-    "upward_hull_1": page("upward", "The hull of two round-up intervals"),
-    "upward_intersection_1": page("upward", "The intersection of two round-up intervals"),
-    "upward_empty_1": page("upward", "Whether a round-up interval is empty"),
-    "upward_entire_1": page("upward", "Whether a round-up interval is the whole line"),
-    "upward_contains_1": page("upward", "Whether a point is a member of a round-up interval"),
-    "upward_subset_1": page("upward", "Whether a round-up interval is a subset of another"),
-    "upward_positive_1": page("upward", "Whether every member of a round-up interval is positive"),
-    "upward_negative_1": page("upward", "Whether every member of a round-up interval is negative"),
-    "upward_zero_1": page("upward", "Whether a round-up interval is [0, 0]"),
-    "upward_less_1": page("upward", "The three-valued X < Y of round-up intervals"),
-    "upward_less_equal_1": page("upward", "The three-valued X <= Y of round-up intervals"),
-    "upward_equal_1": page("upward", "The three-valued X = Y of round-up intervals"),
-    "upward_rel_equal_1": page("upward", "The relation equal of IEEE 1788, round-up intervals"),
-    "upward_rel_interior_1": page("upward", "The relation interior of IEEE 1788, round-up intervals"),
-    "upward_rel_disjoint_1": page("upward", "The relation disjoint of IEEE 1788, round-up intervals"),
+    # Every kernel is reached through kairn::upward::Interval<T> (the design page, "The interface",
+    # says which operation calls which kernel); the sum, the difference, the product, the negation
+    # and the operations with a number also through the functions on arrays, which run the array
+    # form of the same kernel (the design page, "The printers").
+    "upward_make_1": page(
+        "upward", "A round-up interval from two values of T",
+        form("upward::Interval<T>(lo, hi)", T, T, result=U, note=UPWARD_EXACT),
+        form("upward::Interval<T>(a)", T, result=U,
+             note="implicit; $l_o = h_i = a$, so the whole line for an infinite $a$ or a NaN, as `Interval<T, 1>(a)`; "
+                  + UPWARD_EXACT),
+        form("from_bounds(lo, hi)", T, T, result=U,
+             note="`upward::Interval<T>::from_bounds(lo, hi)`, the same set as `upward::Interval<T>(lo, hi)`, under "
+                  "the name of the default type; " + UPWARD_EXACT)),
+    "upward_from_interval_1": page(
+        "upward", "A round-up interval from an interval of the default type",
+        form("upward::Interval<T>(X)", I1, result=U,
+             note="explicit: no conversion between the two types is implicit; `X` canonical, checked when "
+                  "`KAIRN_CHECKS` is 1; " + UPWARD_EXACT)),
+    "upward_to_interval_1": page(
+        "upward", "A round-up interval as an interval of the default type",
+        form("X.to_interval()", U, result=I1,
+             note="its bounds after a barrier, so that a computation of the default types on the result happens after "
+                  "the most recent boundary of a scope ([Code next to a scope's boundary](" + UPWARD_CONCEPT_PAGE +
+                  "#code-next-to-a-scopes-boundary)); " + UPWARD_EXACT),
+        form("X.lower()", U, result=T, note="$-x_n$, the lower bound; $+\\infty$ for the empty set; " + UPWARD_EXACT),
+        form("X.upper()", U, result=T, note="$x_u$, the upper bound; $-\\infty$ for the empty set; " + UPWARD_EXACT)),
+    "upward_neg_1": page(
+        "upward", "The negation of a round-up interval",
+        form("-X", U, result=U, note="the two lanes exchanged; " + UPWARD_EXACT),
+        form("neg(z, x)", UW, UR, result="void", note=UPWARD_ARRAYS),
+        form("t - X", T, U, result=U, note="$-(X + (-t))$, with [`upward_add_num_1`](upward_add_num_1.md): " +
+             UPWARD_COMPOSED + "; " + UPWARD_ROUNDS)),
+    "upward_add_1": page(
+        "upward", "Sum of two round-up intervals",
+        form("X + Y", U, U, result=U, note="one addition of the two lanes; " + UPWARD_ROUNDS),
+        form("X += Y", U, U, result=U, note=UPWARD_ROUNDS),
+        form("add(z, x, y)", UW, UR, UR, result="void", note=UPWARD_ARRAYS)),
+    "upward_sub_1": page(
+        "upward", "Difference of two round-up intervals",
+        form("X - Y", U, U, result=U, note="one addition of `X` and the lanes of `Y` exchanged; " + UPWARD_ROUNDS),
+        form("X -= Y", U, U, result=U, note=UPWARD_ROUNDS),
+        form("sub(z, x, y)", UW, UR, UR, result="void", note=UPWARD_ARRAYS)),
+    "upward_mul_1": page(
+        "upward", "Product of two round-up intervals",
+        form("X * Y", U, U, result=U, note="four products of two lanes and three maxima; " + UPWARD_ROUNDS),
+        form("X *= Y", U, U, result=U, note=UPWARD_ROUNDS),
+        form("mul(z, x, y)", UW, UR, UR, result="void", note=UPWARD_ARRAYS)),
+    "upward_add_num_1": page(
+        "upward", "A round-up interval plus a number of T",
+        form("X + t", U, T, result=U, note=UPWARD_ROUNDS),
+        form("t + X", T, U, result=U, note=UPWARD_EXCHANGED + "; " + UPWARD_ROUNDS),
+        form("X += t", U, T, result=U, note=UPWARD_ROUNDS),
+        form("X - t", U, T, result=U, note="$X + (-t)$: " + UPWARD_COMPOSED + "; " + UPWARD_ROUNDS),
+        form("X -= t", U, T, result=U, note="$X + (-t)$, as `X - t`; " + UPWARD_ROUNDS),
+        form("t - X", T, U, result=U, note="$-(X + (-t))$, with [`upward_neg_1`](upward_neg_1.md): " +
+             UPWARD_COMPOSED + "; " + UPWARD_ROUNDS),
+        form("add(z, x, t)", UW, UR, T, result="void", note="one `t` for every element; " + UPWARD_ARRAYS)),
+    "upward_mul_num_1": page(
+        "upward", "A round-up interval times a number of T",
+        form("X * t", U, T, result=U, note=UPWARD_ROUNDS),
+        form("t * X", T, U, result=U, note=UPWARD_EXCHANGED + "; " + UPWARD_ROUNDS),
+        form("X *= t", U, T, result=U, note=UPWARD_ROUNDS),
+        form("mul(z, x, t)", UW, UR, T, result="void", note="one `t` for every element; " + UPWARD_ARRAYS)),
+    "upward_hull_1": page(
+        "upward", "The hull of two round-up intervals",
+        form("X.hull(Y)", U, U, result=U, note=UPWARD_EXACT)),
+    "upward_intersection_1": page(
+        "upward", "The intersection of two round-up intervals",
+        form("X.intersection(Y)", U, U, result=U, note=UPWARD_EXACT)),
+    "upward_empty_1": page(
+        "upward", "Whether a round-up interval is empty",
+        form("X.is_empty()", U, result="bool", note=UPWARD_EXACT)),
+    "upward_entire_1": page(
+        "upward", "Whether a round-up interval is the whole line",
+        form("X.is_whole()", U, result="bool", note=WHOLE + "; " + UPWARD_EXACT)),
+    "upward_contains_1": page(
+        "upward", "Whether a point is a member of a round-up interval",
+        form("X.contains(t)", U, T, result="bool", note=UPWARD_EXACT),
+        form("member(t, X)", T, U, result="Trit", note=MEMBER_EXACT + "; " + UPWARD_EXACT)),
+    "upward_subset_1": page(
+        "upward", "Whether a round-up interval is a subset of another",
+        form("Y.contains(X)", U, U, result="bool", note="whether $Y \\supseteq X$: the kernel with `X` first; " +
+             UPWARD_EXACT),
+        form("ieee1788::subset(X, Y)", U, U, result="bool", note="the relation subset of IEEE 1788; " + UPWARD_EXACT)),
+    "upward_positive_1": page(
+        "upward", "Whether every member of a round-up interval is positive",
+        form("X.certainly_positive()", U, result="bool", note=UPWARD_EXACT)),
+    "upward_negative_1": page(
+        "upward", "Whether every member of a round-up interval is negative",
+        form("X.certainly_negative()", U, result="bool", note=UPWARD_EXACT)),
+    "upward_zero_1": page(
+        "upward", "Whether a round-up interval is [0, 0]",
+        form("X.certainly_zero()", U, result="bool", note=UPWARD_EXACT)),
+    "upward_less_1": page(
+        "upward", "The three-valued X < Y of round-up intervals",
+        form("less(X, Y)", U, U, result="Trit", note=UPWARD_EXACT),
+        form("greater(Y, X)", U, U, result="Trit", note=UPWARD_EXCHANGED + "; " + UPWARD_EXACT)),
+    "upward_less_equal_1": page(
+        "upward", "The three-valued X <= Y of round-up intervals",
+        form("less_equal(X, Y)", U, U, result="Trit", note=UPWARD_EXACT),
+        form("greater_equal(Y, X)", U, U, result="Trit", note=UPWARD_EXCHANGED + "; " + UPWARD_EXACT)),
+    "upward_equal_1": page(
+        "upward", "The three-valued X = Y of round-up intervals",
+        form("equal(X, Y)", U, U, result="Trit", note=UPWARD_EXACT),
+        form("not_equal(X, Y)", U, U, result="Trit", note=OPPOSITE + "; " + UPWARD_EXACT)),
+    "upward_rel_equal_1": page(
+        "upward", "The relation equal of IEEE 1788, round-up intervals",
+        form("ieee1788::equal(X, Y)", U, U, result="bool", note=UPWARD_EXACT)),
+    "upward_rel_interior_1": page(
+        "upward", "The relation interior of IEEE 1788, round-up intervals",
+        form("ieee1788::interior(X, Y)", U, U, result="bool", note=UPWARD_EXACT)),
+    "upward_rel_disjoint_1": page(
+        "upward", "The relation disjoint of IEEE 1788, round-up intervals",
+        form("ieee1788::disjoint(X, Y)", U, U, result="bool", note=UPWARD_EXACT)),
 }
 
 
@@ -1293,6 +1398,30 @@ EXACT = [
     exact("intervals", "the stored bounds; $+\\infty$ and $-\\infty$ for the empty set",
           form("X.lower(), X.upper()", "Interval<T, K>", result="Expansion<T, K>"),
           form("X.lower_as<T>(), X.upper_as<T>()", I1, result=T)),
+    # The round-up interval (kairn/upward.hpp): constants, a load and a store, a test of bit
+    # patterns, the scopes, pass() and the self-check.
+    exact("upward", "the point 0: $[0, 0]$, the pair $(+0, +0)$",
+          form("upward::Interval<T>()", result=U)),
+    exact("upward", "the empty set, $(\\mathrm{NaN}, \\mathrm{NaN})$, and the whole line, $(+\\infty, +\\infty)$",
+          form("upward::Interval<T>::empty(), upward::Interval<T>::whole()", result=U)),
+    exact("upward", "the stored pair $(u, n)$ read from `p[0]`, `p[1]` (one load; a canonical state, checked when "
+          "`KAIRN_CHECKS` is 1) and written there (one store), every bit kept",
+          form("upward::Interval<T>::from_limbs(p), X.to_limbs(p)", "const T*", result=U)),
+    exact("upward", "whether both lanes are finite, from their bit patterns: a nonempty bounded interval; not "
+          "machine-checked",
+          form("X.is_finite()", U, result="bool")),
+    exact("upward", "the two arrays of a view, the upper bounds and the negated lower bounds, and its length; owns "
+          "nothing ([The functions on arrays](../concepts/upward.md#the-functions-on-arrays))",
+          form("upward::View<T>(upper, nlower, n)", "T*", "T*", "std::size_t", result=UW)),
+    exact("upward", "the rounding mode upward (`Scope`) or to nearest (`NearestScope`) for the scope's lifetime, with "
+          "flush to zero and denormals-are-zero off, and what it found restored at its end "
+          "([The scopes](../concepts/upward.md#the-scopes))",
+          form("kairn::upward::Scope, kairn::upward::NearestScope", result="a scope")),
+    exact("upward", "`v`, the same bits, after a barrier: a computation on the result happens after the most recent "
+          "boundary of a scope ([Code next to a scope's boundary](../concepts/upward.md#code-next-to-a-scopes-boundary))",
+          form("pass(v)", "T, upward::Interval<T> or Interval<T, 1>", result="the same type")),
+    exact("upward", "the self-check of the file that calls it ([The self-check](../concepts/upward.md#the-self-check))",
+          form("self_test()", result="Status"), kernel="every kernel of the family, on fixed operands"),
     exact("construction", "$-1$, $0$ or $+1$, from the leading limb; $0$ for NaN",
           form("sign(x)", "Expansion<T, K>", result="int")),
     exact("construction", "whether the leading limb is finite",

@@ -420,6 +420,7 @@ nav:
           - Brute force, Milestone 2: developer/results/brute-milestone2.md
           - Benchmarks, Milestone 2: developer/results/bench-milestone2.md
           - Compile times and other costs, Milestone 2: developer/results/costs-milestone2.md
+          - Benchmarks, the round-up interval: developer/results/bench-upward.md
       - Design notes:
           - Phase 0 report:
               - developer/design/phase0/index.md

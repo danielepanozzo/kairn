@@ -12,6 +12,12 @@
 // restoring write: the gap of the design page's section "MSVC", which this probes and does not
 // close). On MSVC also where the operation's file finds kairn::upward::detail::zero: the same object
 // as this file's within one program, another one in a DLL (each module has its own).
+//
+// Two arrangements: the scope in this file around calls into the other file (the probes above, and
+// the type's sum, its product by a number and a function on arrays called inside a Scope); and the
+// scope held by the function of the other file (a product in a kairn::upward::Scope of its own, the
+// function on arrays with the scope it holds), called from rounding to nearest, inside a
+// NearestScope inside a Scope, and in a loop, this file's code to nearest again after each call.
 #include <kairn/upward.hpp>
 
 #include "environment.hpp"
@@ -34,6 +40,13 @@ char line[256];
 
 void probe(const char* what, double got, double want) {
     std::snprintf(line, sizeof line, "%s: %a (%s)", what, got, got == want ? "as expected" : want == up ? "expected upward" : "expected to nearest");
+    expect(got == want, line);
+}
+
+// The sum 1 + 2^-60 (environment.hpp's v_one and v_tiny): 1 + 2^-52 upward, 1 to nearest.
+constexpr double sum_up = 1 + 0x1p-52;
+void probe_sum(const char* what, double got, double want) {
+    std::snprintf(line, sizeof line, "%s: %a (%s)", what, got, got == want ? "as expected" : want == sum_up ? "expected upward" : "expected to nearest");
     expect(got == want, line);
 }
 
@@ -127,6 +140,62 @@ int main() {
     }
     out = late;
     probe("a product of a Scope used only after the Scope ended", out, up);
+
+    // The first arrangement, the scope in this file around calls into the other file (or the DLL):
+    // the type's sum and its product by a number, as the product above, and the function on arrays
+    // called inside the Scope (its own scope then only reads).
+    {
+        const double one = v_one, t = v_tiny;
+        double s_in = 0, s_out = 0, n_in = 0, n_out = 0;
+        {
+            Scope s;
+            s_in = units::add(one, t);
+            n_in = units::mul_number(x, x);
+        }
+        s_out = units::add(one, t);
+        n_out = units::mul_number(x, x);
+        probe_sum("the type's sum in a Scope", s_in, sum_up);
+        probe_sum("the same after the Scope", s_out, 1.0);
+        probe("the type's product by a number in a Scope", n_in, up);
+        probe("the same after the Scope", n_out, nearest);
+        double z[9] = {};
+        {
+            Scope s;
+            units::square_array(x, z, 9);
+        }
+        bool all = true;
+        for (double e : z) all = all && e == up;
+        probe("a function on arrays called in a Scope, every element", all ? up : 0.0, up);
+    }
+
+    // The second arrangement, the scope held by the function of the other file (or the DLL), called
+    // from rounding to nearest, inside a NearestScope inside a Scope, and in a loop; after each call
+    // this file's code is to nearest again.
+    {
+        double z[9] = {};
+        probe("a product in a Scope held by the other file, called to nearest", units::held_mul(x, x), up);
+        probe("this file's product after that call", units::mul(x, x), nearest);
+        units::square_array(x, z, 9);
+        bool all = true;
+        for (double e : z) all = all && e == up;
+        probe("a function on arrays (its own scope) called to nearest, every element", all ? up : 0.0, up);
+        probe("this file's product after that call", units::mul(x, x), nearest);
+        double held = 0, after = 0;
+        {
+            Scope s;
+            {
+                NearestScope n;
+                held = units::held_mul(x, x);
+                after = units::mul(x, x);
+            }
+        }
+        probe("a product in a Scope held by the other file, called in a NearestScope inside a Scope", held, up);
+        probe("the NearestScope's product after that call", after, nearest);
+        const int n = v_count;
+        bool loop = true;
+        for (int i = 0; i < n; ++i) loop = loop && units::held_mul(x, x) == up && units::mul(x, x) == nearest;
+        probe("held Scopes in a loop of unknown length, and to nearest between them", loop ? up : 0.0, up);
+    }
 
 #if defined(KAIRN_DETAIL_UPWARD_MSVC)
     const void* here = &kairn::upward::detail::zero;

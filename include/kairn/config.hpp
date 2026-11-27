@@ -329,8 +329,9 @@ KAIRN_GEN_PUSH_WARNINGS
 /// Kairn's public interface: the number types Expansion<T, 1> and Expansion<T, 2>, the balls
 /// Ball<T, 1> and Ball<T, 2>, the intervals Interval<T, 1> and Interval<T, 2>, their operations,
 /// kairn::traits, kairn::self_test() and
-/// kairn::environment_ok(), with T float or double. The namespaces kairn::detail and kairn::gen
-/// are not part of it.
+/// kairn::environment_ok(), with T float or double; and, in the opt-in kairn/upward.hpp, the
+/// round-up interval of namespace kairn::upward. The namespaces kairn::detail, kairn::gen and
+/// kairn::upward::detail are not part of it.
 namespace kairn {
 
 /// The marker of an operation whose proof is not checked yet ("UNVERIFIED").

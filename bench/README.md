@@ -7,7 +7,8 @@ answers five questions: what the opaque product costs, what the fix-up for non-f
 costs, what a `Ball` operation costs, how Kairn compares with textbook double-word arithmetic, and
 how `float` limbs compare with `double` limbs. No external benchmark library; MPFR is timed for
 scale when it is already installed. The harness of Milestone 2, a program of its own, is described
-[below](#milestone-2).
+[below](#milestone-2), and so is that of [the round-up interval](#the-round-up-interval), the same
+driver with units of its own.
 
 Nothing here is part of the library. The props (`props.hpp`, `props_packed.hpp`) are not
 verified and must not be used elsewhere. Each is the baseline of one comparison: a core with the
@@ -353,6 +354,101 @@ cmake ... -DKAIRN_BENCH_NOCHECK_INCLUDE=/tmp/nocheck -DKAIRN_BENCH_BEFORE_INCLUD
       "-DKAIRN_BENCH_EXTRA_INCLUDES=forced=/tmp/forced;unforced=/tmp/unforced"
 taskset -c 12 build-bench/bench/kairn-bench-m2-forced-O2 --cpu 12 --reps 31 --filter $F ... inline-linux-gcc-O2-cf-r1.json
 ```
+
+## The round-up interval
+
+The harness behind [Benchmarks, the round-up interval](../docs/developer/results/bench-upward.md):
+`kairn::upward::Interval<T>` of `<kairn/upward.hpp>`, its functions on arrays and its scopes, on the
+shipped header, next to the default `Interval<T, 1>` and to the classical interval with the rounding
+mode set once around a loop. Requires the rounding mode upward set by kairn::upward::Scope and the
+options of docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict): the units that
+include the header are compiled with the option of the target `kairn::upward`, and every timed
+function of the type holds a `Scope` or runs inside one.
+
+`KAIRN_BENCH_UPWARD` (default `ON`, with `KAIRN_BUILD_BENCHMARKS`) builds `kairn-bench-up-LEVEL` and
+`kairn-bench-up-checks-LEVEL` (`KAIRN_CHECKS` 1 in every translation unit), with the levels and flags
+of `kairn-bench-m2`. Each is the driver of Milestone 2 (`m2_main.cpp`, its options above) with the
+first part of that benchmark (`m2.cpp`, `m2_fenv.cpp`, `m2_packed.cpp`, `m2_fenv_packed.cpp`), whose
+functions on the default types are the comparisons, and these units, each of which adds its table of
+functions to the driver's before `main`; the JSON says `"what": "kairn-bench-up"` and records the
+flags of the upward units (`upward_flags`). Only the units that include `kairn/upward.hpp` get the
+option of `kairn::upward`, so that the default types are compiled as a client compiles them; with
+MSVC the programs leave out `/fp:precise`, MSVC's default, which `/fp:strict` would override.
+
+| File | What it holds |
+|---|---|
+| `up_data.hpp` | what the units share: the lengths and the operands of the functions on arrays, the determinant `det3` and Horner (one template each, every type evaluating the same expression), the placement of the arrays (`Placed`, `Bounds`), the checks' interface |
+| `up_type.cpp` | the type, double (backend `upw`) and float (`upwf`): loops (`tp`) of `+`, `-`, `*`, the chains `sum` and `prod`, Horner (`tp`, and `lat`: dependent evaluations), the determinant (`tp/det3_i1`), the conversions alone (`tp/from_interval_1/op`, `tp/to_interval_1/op`); and the scopes (`upws`) |
+| `up_arrays.cpp` | the functions on arrays, `kairn::upward::add`, `sub`, `mul` on `View<double>` (`upwa`) and `View<float>` (`upwaf`): on 256 elements (`tp`, time per element) and by length (`call/add_L`, `call/mul_L`, time per call); compiled with the flags of packed code |
+| `up_default.cpp` | the determinant of the default types, double (`m2/tp/det3_i1`, `det3_i2`, `det3_b1`, `det3_b2`, and `det3_t`, plain `double`) |
+| `up_packed.cpp` | Kairn's packed kernels of `Interval<T, 1>` on the arrays of `up_arrays.cpp`'s layout, double and float (variant `packed`) |
+| `up_fenv.cpp`, `up_fenv_packed.cpp` | props of the rounding mode, as `m2_fenv.cpp` and `m2_fenv_packed.cpp` and compiled as they are: `m2/tp/det3_i1/fenv_loop`, the loops and chains 16 times between one change of mode and its reset (`fenv_loop_x16`), and the packed classical interval on the arrays (`upwa`, `upwaf`, variant `fenv_loop`) |
+| `up_check.cpp`, `up_kernels.hpp` | the checks, and Kairn's default kernels as types with operators (the references) |
+| `up_parts.cpp` | the empty tables of the second and third parts of `kairn-bench-m2`, which this program does not build |
+| `up_run.py`, `up_report.py` | the timed runs (below), and the tables of the results page |
+
+The variants of the type: `native`, arrays of `kairn::upward::Interval<T>` filled outside the
+timed function, one `Scope` around the loop or chain; `native_x16`, the same loop 16 times inside one
+`Scope` (a chain 16 times as long), so that the scope's share is a 16th; `conv`, arrays of the default
+`Interval<T, 1>`, each operand converted in the loop (`kairn::upward::Interval<T>(x)`) and each result
+back (`to_interval()`). The functions on arrays by length L (4, 16, 64, 256, 1024, 4096), each timed
+function making at least 64 calls on windows of arrays of 4096 elements: `nearest`, the public
+function called from code that rounds to nearest (its scope writes the control register); `nested`,
+the same inside an outer `Scope` (its scope reads the register); `none`, the generated array kernel
+that the function runs, inside an outer `Scope` (the call without its scope). The scopes, `upws/call/`
+(256 calls of a function of its own, not inlined, that holds a scope around one sum): `scope_add_1`
+(`kairn::upward::Scope`), `regscope_add_1` (the register-only scope of the functions on arrays,
+`kairn::upward::detail::RegisterScope`), `nearest_add_1` (`kairn::upward::NearestScope` around one sum
+of the default `Interval<double, 1>`), each `change` (the scope changes the mode), `nested` (it
+changes nothing) and `none` (the same call without the scope). Next to them, the functions of
+`m2.cpp` and `m2_fenv.cpp` of the same kernels: `op`, `kairn`, `fenv_loop`, the floors `plain`.
+
+**The checks.** Before anything is timed, each function of these units runs on cleared outputs from
+rounding to nearest, is refused if it leaves the C library's mode or the control register (rounding
+control, flush to zero) other than it found it, and its results, read as (lower, upper) pairs, are
+compared with the same computation by Kairn's default kernels on the same operands: every bound
+equal, a zero of the other sign counted; for one product, a bound one number tighter counted where
+the default's may be one number wider (below $2^{2p-1}\eta$; none occurs on these operands); any
+other difference refuses the function, and so does a computation that rounds and has no value that
+differs from the same computation rounded to nearest. The determinants of the default types are
+compared with their `kairn` variant byte for byte. The driver prints the counts (`up check: ...`),
+and `up_run.py` stores them in each run's JSON (`up_checks`).
+
+**Placement.** A load whose address is a multiple of 4 KB away from a store still in flight is taken
+for a load of that store's data until the full addresses are compared, which can slow a loop several
+times by chance of where its arrays fall. The arrays of these units are placed in pages of their own
+at offsets modulo 4 KB that keep every store of a loop at least 1 KB from its loads; `m2.cpp`'s
+packed arrays are not (`sxi[0]` and `sout[0]` 32 bytes apart modulo 4 KB, so that each iteration's
+loads alias the previous iteration's stores), which is why the packed kernels are timed again here on
+the placed arrays, and the `m2p` functions kept beside them.
+
+```sh
+cmake -S . -B build-bench -G Ninja -DCMAKE_BUILD_TYPE=Release -DKAIRN_BUILD_TESTS=OFF -DKAIRN_BUILD_BENCHMARKS=ON \
+      -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror" [-DCMAKE_CXX_COMPILER=g++]
+cmake --build build-bench --target kairn-bench-up-O2 kairn-bench-up-O3 kairn-bench-up-checks-O2 kairn-bench-up-checks-O3
+python3 -c "import sys; sys.path.insert(0, 'bench'); import up_run; print(up_run.FILTERS['main'])" > filter.txt
+build-bench/bench/kairn-bench-up-O2 --check-only --filter "$(cat filter.txt)"     # the checks alone
+python3 bench/up_run.py runs --program build-bench/bench/kairn-bench-up-O2 --name linux-gcc-O2 --runs 4 \
+    --cpus 4-7 --machine "..." --commit "$(git rev-parse --short HEAD)" --out results/upward/bench
+python3 bench/up_run.py pairs --program build-bench/bench/kairn-bench-up-O2 --other build-bench/bench/kairn-bench-up-checks-O2 \
+    --item checks --name linux-gcc-O2 --runs 4 --cpus 4-7 --machine "..." --commit "..." --out results/upward/bench
+python3 bench/up_run.py runs --program build\bench\kairn-bench-up-O2.exe --item msvc --name windows-msvc-O2 --runs 3 ...
+python3 bench/up_report.py results/upward/bench     # the tables of the results page
+```
+
+`up_run.py runs` makes the kept runs of one program with the filter of an item (`main`: everything
+of the round-up interval and its comparisons; `checks`: the loops, chains, arrays and scopes that the
+checked build changes, with the default type's; `msvc`: the short table of MSVC), stored as
+`ITEM-MACHINE-COMPILER-LEVEL-rN.json`; `pairs` runs the program and the other one alternately on the
+same logical CPU, stored as `ITEM-MACHINE-COMPILER-LEVEL-c0-rN.json` and `-c1-rN.json`. On Linux each
+run is pinned (`taskset`, `--cpu`) to the CPU of `--cpus` whose usage and its SMT sibling's (CPU +
+64) were the lowest over the 2 s before it, and the two are sampled every 5 s from `/proc/stat`; a
+run whose sibling was busy (above 10% in a sample) or whose spread at the median function (the median
+over the functions of the median over the minimum of their samples) is above 5% is set aside and made
+again, up to `--attempts` times (four on Zen 2 and six on the M3 for the stored runs); elsewhere only
+the spread decides. On the M3 the stored runs were started when the 1-minute load average was under 6. Every attempt, kept or set aside, is
+listed in `attempts-MACHINE-COMPILER-LEVEL-ITEM.json`, and each kept run's JSON gets the same record
+as `run_conditions`.
 
 ## Other costs
 

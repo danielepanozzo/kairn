@@ -18,13 +18,23 @@ GENERATE_LATEX         = NO
 HAVE_DOT               = NO
 
 # The public headers, and the main page. Not recursive: include/kairn/gen/ holds the generated
-# kernels, which are not an interface to call. The namespaces kairn::detail and kairn::gen, and the
-# macros named KAIRN_DETAIL_*, are internal too.
+# kernels, which are not an interface to call. The namespaces kairn::detail and kairn::gen (with
+# kairn::gen::upward, the kernels of the round-up interval), kairn::upward::detail, and the macros
+# named KAIRN_DETAIL_*, are internal too.
 INPUT                  = include/kairn docs/api/mainpage.md
 FILE_PATTERNS          = *.hpp
 RECURSIVE              = NO
 USE_MDFILE_AS_MAINPAGE = docs/api/mainpage.md
-EXCLUDE_SYMBOLS        = kairn::detail kairn::packed_detail kairn::gen KAIRN_DETAIL_*
+EXCLUDE_SYMBOLS        = kairn::detail kairn::packed_detail kairn::gen kairn::upward::detail KAIRN_DETAIL_*
+# kairn/upward.hpp gives internal linkage to everything whose result can depend on the options of
+# the file that compiles it: its operators that round are static function templates, and its
+# scopes, pass(), the functions on arrays and self_test() are in an unnamed namespace. They are
+# public all the same, so Doxygen lists both (the unnamed namespace as
+# kairn::upward::anonymous_namespace{upward.hpp}); no other public header has either. The unnamed
+# namespaces inside kairn::upward::detail, which EXCLUDE_SYMBOLS does not reach, are between
+# @cond and @endcond in the header.
+EXTRACT_STATIC         = YES
+EXTRACT_ANON_NSPACES   = YES
 FULL_PATH_NAMES        = YES
 STRIP_FROM_PATH        = include .
 STRIP_FROM_INC_PATH    = include

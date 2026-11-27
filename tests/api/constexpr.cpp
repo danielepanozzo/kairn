@@ -47,10 +47,10 @@
 // The test of a version, as a program writes it (version.hpp).
 #if !defined(KAIRN_VERSION_AT_LEAST)
 #error "version.hpp defines no KAIRN_VERSION_AT_LEAST"
-#elif !KAIRN_VERSION_AT_LEAST(0, 3, 2) || KAIRN_VERSION_AT_LEAST(0, 3, 3) || !KAIRN_VERSION_AT_LEAST(0, 3, 0)
-#error "KAIRN_VERSION_AT_LEAST disagrees with version 0.3.2"
+#elif !KAIRN_VERSION_AT_LEAST(0, 4, 0) || KAIRN_VERSION_AT_LEAST(0, 4, 1) || !KAIRN_VERSION_AT_LEAST(0, 3, 2)
+#error "KAIRN_VERSION_AT_LEAST disagrees with version 0.4.0"
 #endif
-static_assert(KAIRN_VERSION == 302 && KAIRN_VERSION_AT_LEAST(0, 2, 0) && !KAIRN_VERSION_AT_LEAST(1, 0, 0));
+static_assert(KAIRN_VERSION == 400 && KAIRN_VERSION_AT_LEAST(0, 2, 0) && !KAIRN_VERSION_AT_LEAST(1, 0, 0));
 
 // Under MSVC a limb that a constructor's guard must turn from -0 into +0 at run time is compared as
 // a zero, of either sign. MSVC removes the addition of zero where it moves two guarded values as one
