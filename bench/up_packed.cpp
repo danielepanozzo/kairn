@@ -1,9 +1,11 @@
 // Kairn's packed interval kernels of one limb (kairn/gen/avx2.hpp, neon.hpp), the comparisons of the
-// functions on arrays of the round-up interval (bench/up_data.hpp, up_arrays.cpp) that m2_packed.cpp
-// does not have: interval_sub_1 for double (backend upwa) and interval_add_1, interval_sub_1,
-// interval_mul_1 for float (upwaf), variant packed, one interval per lane, on one array per bound
-// (Raw<T>::sxi, syi), the results to sout[0] and sout[1]. Ordinary code under rounding to nearest,
-// compiled as m2_packed.cpp (AVX2 and FMA on x86-64); without a packed backend its table is empty.
+// functions on arrays of the round-up interval (bench/up_data.hpp, up_arrays.cpp): interval_add_1,
+// interval_sub_1 and interval_mul_1 for double (backend upwa) and float (upwaf), variant packed,
+// one interval per lane, on one array per bound placed as the arrays of the round-up interval are
+// (up_data.hpp, Bounds): m2_packed.cpp times the same kernels for double on the arrays of m2.cpp,
+// whose placement makes each iteration's loads alias the previous iteration's stores modulo 4 KB.
+// Ordinary code under rounding to nearest, compiled as m2_packed.cpp (AVX2 and FMA on x86-64);
+// without a packed backend its table is empty.
 #include "m2_data.hpp"
 #include "props_packed.hpp"
 #include "up_data.hpp"
@@ -34,6 +36,18 @@ KAIRN_GEN_FORCEINLINE VF load(const float* p) noexcept { return vld1q_f32(p); }
 KAIRN_GEN_FORCEINLINE void store(float* p, VF v) noexcept { vst1q_f32(p, v); }
 #endif
 
+namespace up = kairn_bench::up;
+// The bounds of this unit, and the check of its functions.
+struct Mine : up::BoundsOf<1> {
+    template <class T>
+    static up::Bounds<T>* bounds() {
+        if constexpr (sizeof(T) == 8)
+            return b64;
+        else
+            return b32;
+    }
+};
+
 template <class T>
 struct Lanes;
 template <>
@@ -51,25 +65,27 @@ struct Lanes<float> {
 
 // X(B, SUF, T, KERNEL)
 #define KB_UPP_LIST(X)                                                                             \
+    X("upwa", upwa, double, interval_add_1)                                                        \
     X("upwa", upwa, double, interval_sub_1)                                                        \
+    X("upwa", upwa, double, interval_mul_1)                                                        \
     X("upwaf", upwaf, float, interval_add_1)                                                       \
     X("upwaf", upwaf, float, interval_sub_1)                                                       \
     X("upwaf", upwaf, float, interval_mul_1)
 
 #define KB_UPP_DEF(B, SUF, T, KERNEL)                                                              \
-    extern "C" KB_NOINLINE void kb_##SUF##_tp_##KERNEL##__packed(void* kb_data) {                  \
-        Raw<T>& r = *static_cast<Raw<T>*>(kb_data);                                                \
+    extern "C" KB_NOINLINE void kb_##SUF##_tp_##KERNEL##__packed(void*) {                          \
+        const up::Bounds<T>& b = *Mine::bounds<T>();                                              \
         using V = Lanes<T>::V;                                                                     \
         for (int i = 0; i < kN; i += Lanes<T>::W) {                                                \
             V zl, zu;                                                                              \
-            kg::KERNEL(load(&r.sxi[0][i]), load(&r.sxi[1][i]), load(&r.syi[0][i]), load(&r.syi[1][i]), zl, zu); \
-            store(&r.sout[0][i], zl);                                                              \
-            store(&r.sout[1][i], zu);                                                              \
+            kg::KERNEL(load(b.xl + i), load(b.xh + i), load(b.yl + i), load(b.yh + i), zl, zu);    \
+            store(b.zl + i, zl);                                                                   \
+            store(b.zh + i, zu);                                                                   \
         }                                                                                          \
     }
 #define KB_UPP_ROW(B, SUF, T, KERNEL)                                                              \
     {B "/tp/" #KERNEL "/packed", kb_##SUF##_tp_##KERNEL##__packed, int(8 * sizeof(T)), Lanes<T>::W, kN, 0, 0, \
-     kairn_bench::up::check_raw_sout},
+     Mine::check},
 
 KB_UPP_LIST(KB_UPP_DEF)
 

@@ -1,12 +1,13 @@
 // Measurement props for the functions on arrays of the round-up interval (bench/up_data.hpp,
 // up_arrays.cpp): the classical packed interval, the rounding mode set upward once around a whole
-// loop of packed operations, as m2_fenv_packed.cpp, for what that file does not have:
-// interval_sub_1 for double (backend upwa) and interval_add_1, interval_sub_1, interval_mul_1 for
-// float (upwaf), variant fenv_loop, on one array per bound (Raw<T>::sxi, syi), the results to
-// sout[0] and sout[1]. Two plain numbers per interval, the lower bound as RD(t) = -RU(-t), no
-// special case. Not part of the library; compiled as m2_fenv_packed.cpp (m2_fenv.cpp says how the
-// compilers are made to honor the mode; AVX2 and FMA on x86-64); it does not include Kairn: the
-// register operations are spelled here. Checked against Kairn's default kernels before it is timed.
+// loop of packed operations, as m2_fenv_packed.cpp: interval_add_1, interval_sub_1 and
+// interval_mul_1 for double (backend upwa) and float (upwaf), variant fenv_loop, on one array per
+// bound placed as the arrays of the round-up interval are (up_data.hpp, Bounds; m2_fenv_packed.cpp
+// times the sum and the product of double on the arrays of m2.cpp). Two plain numbers per interval,
+// the lower bound as RD(t) = -RU(-t), no special case. Not part of the library; compiled as
+// m2_fenv_packed.cpp (m2_fenv.cpp says how the compilers are made to honor the mode; AVX2 and FMA
+// on x86-64); it does not include Kairn: the register operations are spelled here. Checked against
+// Kairn's default kernels before it is timed.
 #include <cfenv>
 
 #include "up_data.hpp"
@@ -78,6 +79,17 @@ struct F {
 };
 #endif
 
+// The bounds of this unit, and the check of its functions.
+struct Mine : kairn_bench::up::BoundsOf<2> {
+    template <class T>
+    static kairn_bench::up::Bounds<T>* bounds() {
+        if constexpr (sizeof(T) == 8)
+            return b64;
+        else
+            return b32;
+    }
+};
+
 // The interval operations under the mode upward, as m2_fenv_packed.cpp writes them.
 template <class R>
 KB_UP_INLINE void iadd(typename R::V xl, typename R::V xu, typename R::V yl, typename R::V yu, typename R::V& zl,
@@ -103,26 +115,28 @@ KB_UP_INLINE void imul(typename R::V xl, typename R::V xu, typename R::V yl, typ
 
 // X(B, SUF, T, R, KERNEL, OP)
 #define KB_UPFP_LIST(X)                                                                            \
+    X("upwa", upwa, double, D, interval_add_1, iadd)                                               \
     X("upwa", upwa, double, D, interval_sub_1, isub)                                               \
+    X("upwa", upwa, double, D, interval_mul_1, imul)                                               \
     X("upwaf", upwaf, float, F, interval_add_1, iadd)                                              \
     X("upwaf", upwaf, float, F, interval_sub_1, isub)                                              \
     X("upwaf", upwaf, float, F, interval_mul_1, imul)
 
 #define KB_UPFP_DEF(B, SUF, T, R, KERNEL, OP)                                                      \
-    extern "C" KB_NOINLINE void kb_##SUF##_tp_##KERNEL##__fenv_loop(void* kb_data) {               \
-        Raw<T>& r = *static_cast<Raw<T>*>(kb_data);                                                \
+    extern "C" KB_NOINLINE void kb_##SUF##_tp_##KERNEL##__fenv_loop(void*) {                       \
+        const kairn_bench::up::Bounds<T>& b = *Mine::bounds<T>();                                  \
         std::fesetround(FE_UPWARD);                                                                \
         for (int i = 0; i < kN; i += R::W) {                                                       \
             R::V zl, zu;                                                                           \
-            OP<R>(R::load(&r.sxi[0][i]), R::load(&r.sxi[1][i]), R::load(&r.syi[0][i]), R::load(&r.syi[1][i]), zl, zu); \
-            R::store(&r.sout[0][i], zl);                                                           \
-            R::store(&r.sout[1][i], zu);                                                           \
+            OP<R>(R::load(b.xl + i), R::load(b.xh + i), R::load(b.yl + i), R::load(b.yh + i), zl, zu); \
+            R::store(b.zl + i, zl);                                                                \
+            R::store(b.zh + i, zu);                                                                \
         }                                                                                          \
         std::fesetround(FE_TONEAREST);                                                             \
     }
 #define KB_UPFP_ROW(B, SUF, T, R, KERNEL, OP)                                                      \
     {B "/tp/" #KERNEL "/fenv_loop", kb_##SUF##_tp_##KERNEL##__fenv_loop, int(8 * sizeof(T)), R::W, kN, 0, 0, \
-     kairn_bench::up::check_raw_sout},
+     Mine::check},
 
 KB_UPFP_LIST(KB_UPFP_DEF)
 

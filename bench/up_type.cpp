@@ -33,6 +33,7 @@
 #include <kairn/upward.hpp>
 
 #include <cstring>
+#include <new>
 #include <string>
 
 #include "up_data.hpp"
@@ -54,14 +55,31 @@ template <class T>
 using E1 = kairn::Expansion<T, 1>;
 
 // The operands and results of one limb type: X, Y, F, the Horner arguments H and coefficients C
-// (points of T8, m2.cpp), as the type and as the default type.
+// (points of T8, m2.cpp), as the type and as the default type. The arrays of kN elements are placed
+// as up_data.hpp says (Placed): the type's read in the slots 0 to 3 and written in slot 8, the
+// default's read in the slots 4 to 7 and written in slot 10.
+template <class T, class V>
+V* placed_array(const up::Placed& p, int k) {
+    V* a = p.at<V>(k);
+    for (int i = 0; i < kN; ++i) new (a + i) V();
+    return a;
+}
 template <class T>
 struct TypeData {
-    U<T> x[kN], y[kN], f[kN], h[kN], c[kDeg + 1];
-    U<T> z[kN];
+    up::Placed place{kN * sizeof(I1<T>) > kN * sizeof(U<T>) ? kN * sizeof(I1<T>) : kN * sizeof(U<T>)};
+    U<T>* x = placed_array<T, U<T>>(place, 0);
+    U<T>* y = placed_array<T, U<T>>(place, 1);
+    U<T>* f = placed_array<T, U<T>>(place, 2);
+    U<T>* h = placed_array<T, U<T>>(place, 3);
+    U<T>* z = placed_array<T, U<T>>(place, 8);
+    I1<T>* x1 = placed_array<T, I1<T>>(place, 4);
+    I1<T>* y1 = placed_array<T, I1<T>>(place, 5);
+    I1<T>* f1 = placed_array<T, I1<T>>(place, 6);
+    I1<T>* h1 = placed_array<T, I1<T>>(place, 7);
+    I1<T>* z1 = placed_array<T, I1<T>>(place, 10);
+    U<T> c[kDeg + 1];
     U<T> s;
-    I1<T> x1[kN], y1[kN], f1[kN], h1[kN], c1[kDeg + 1];
-    I1<T> z1[kN];
+    I1<T> c1[kDeg + 1];
     I1<T> s1;
 };
 TypeData<double>* g64 = nullptr;
@@ -106,9 +124,9 @@ void fill(TypeData<T>*& p, const Raw<T>& r) {
 
 template <class T>
 void clear_t(TypeData<T>& d) {
-    std::memset(static_cast<void*>(d.z), 0xff, sizeof d.z);
+    std::memset(static_cast<void*>(d.z), 0xff, kN * sizeof(U<T>));
     std::memset(static_cast<void*>(&d.s), 0xff, sizeof d.s);
-    std::memset(static_cast<void*>(d.z1), 0xff, sizeof d.z1);
+    std::memset(static_cast<void*>(d.z1), 0xff, kN * sizeof(I1<T>));
     std::memset(static_cast<void*>(&d.s1), 0xff, sizeof d.s1);
 }
 void clear(int bits) {
