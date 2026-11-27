@@ -445,7 +445,8 @@ run is pinned (`taskset`, `--cpu`) to the CPU of `--cpus` whose usage and its SM
 64) were the lowest over the 2 s before it, and the two are sampled every 5 s from `/proc/stat`; a
 run whose sibling was busy (above 10% in a sample) or whose spread at the median function (the median
 over the functions of the median over the minimum of their samples) is above 5% is set aside and made
-again, up to four times; elsewhere only the spread decides. Every attempt, kept or set aside, is
+again, up to `--attempts` times (four on Zen 2 and six on the M3 for the stored runs); elsewhere only
+the spread decides. On the M3 the stored runs were started when the 1-minute load average was under 6. Every attempt, kept or set aside, is
 listed in `attempts-MACHINE-COMPILER-LEVEL-ITEM.json`, and each kept run's JSON gets the same record
 as `run_conditions`.
 
