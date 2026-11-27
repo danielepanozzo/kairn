@@ -732,11 +732,11 @@ unspecified. `x - t` and `t - x` are compositions of proved kernels through an e
 argued and not proved as one statement, and `is_finite()` is a test of bit patterns.
 
 **A new assumption.** The statements are about IEEE 754's operations rounded upward; that each
-operation of the header that rounds runs as such is assumed, not proved, and is the program's
-responsibility, by the owner's decision of 2026-11-24: the files that include the header are
-compiled with `-frounding-math` (GCC and Clang) or `/fp:strict` (MSVC), every operation that rounds
-runs inside the header's scopes, and the mode is never set by hand around them
-([What the program guarantees](../concepts/upward.md#what-the-program-guarantees)). The header's
+operation of the header that rounds runs as such is assumed, not proved, and is the program's to
+arrange: the files that include the header are compiled with `-frounding-math` (GCC and Clang) or
+`/fp:strict` (MSVC), which are the program's responsibility by the owner's decision of 2026-11-24,
+every operation that rounds runs inside the header's scopes, and the mode is never set by hand
+around them ([What the program guarantees](../concepts/upward.md#what-the-program-guarantees)). The header's
 compile-time guard, the assertions of a build with `KAIRN_CHECKS` and `kairn::upward::self_test()`
 are evidence of it, not a proof ([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked)).
 On MSVC the assurance is weaker ([MSVC](../concepts/upward.md#msvc)).
