@@ -198,9 +198,9 @@ int cmp_corner(const XV& v, const Corner& c, Exact& t, double* diff = nullptr, d
 
 // --- The check of one result ---------------------------------------------------------------------------
 
-enum Op { ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG, CONV, N_OPS };
+enum Op { ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG, CONV, ADD_LEAN, ADD_SLOPPY, N_OPS };
 const char* const kOpName[N_OPS] = {"add", "sub", "mul.sel2", "mul.eight", "mul.table", "mul.branch", "mul.sel4",
-                                    "sqr", "add_num", "mul_num", "neg", "conv"};
+                                    "sqr", "add_num", "mul_num", "neg", "conv", "add.lean", "add.sloppy"};
 
 struct Verdict {
     bool ok = true;
@@ -316,6 +316,8 @@ Verdict judge(Op op, const Res& x, const Res& y, double t, const Res& z, bool ty
     };
     switch (op) {
     case ADD:
+    case ADD_LEAN:
+    case ADD_SLOPPY:
         check_sum(x.lo, y.lo, x.hi, y.hi);
         break;
     case SUB: {
@@ -415,6 +417,8 @@ u2::Interval apply(Op op, const u2::Interval& x, const u2::Interval& y, double t
     d2::R z;
     switch (op) {
     case ADD: z = d2::add_r(a, b); break;
+    case ADD_LEAN: z = d2::add_r<d2::SumForm::lean>(a, b); break;
+    case ADD_SLOPPY: z = d2::add_r<d2::SumForm::sloppy>(a, b); break;
     case SUB: z = d2::add_r(a, d2::neg_r(b)); break;
     case MUL_SEL2: z = d2::mul_sel2(a, b); break;
     case MUL_EIGHT: z = d2::mul_eight(a, b); break;
@@ -434,7 +438,9 @@ u2::Interval apply(Op op, const u2::Interval& x, const u2::Interval& y, double t
 }
 I2 apply_default(Op op, const I2& x, const I2& y, double t) {
     switch (op) {
-    case ADD: return x + y;
+    case ADD:
+    case ADD_LEAN:
+    case ADD_SLOPPY: return x + y;
     case SUB: return x - y;
     case SQR: return x * x;
     case ADD_NUM: return x + I2(t);
@@ -669,7 +675,7 @@ void run_special() {
         (lo >= 0 && hi <= 0 ? f_tighter : lo <= 0 && hi >= 0 ? f_wider : f_mixed)++;
         if (finite_examples.size() < 6) finite_examples.push_back(std::string(how) + ": " + b);
     };
-    const std::vector<Op> binary = {ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4};
+    const std::vector<Op> binary = {ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, ADD_LEAN, ADD_SLOPPY};
     for (const DI& dx : v) {
         const u2::Interval x = to_type(dx);
         const Res rx = res_of(x);
@@ -752,7 +758,8 @@ int main(int argc, char** argv) {
                 "?"
 #endif
     );
-    const std::vector<Op> all = {ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG, CONV};
+    const std::vector<Op> all = {ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, SQR,
+                                 ADD_NUM, MUL_NUM, NEG, CONV, ADD_LEAN, ADD_SLOPPY};
     auto mix = [](Rng& g, int kmin, int kmax) { return interval(g, g.range(0, 4), kmin, kmax, g.range(20, 100)); };
     auto num = [](Rng& g, int kmin, int kmax) {
         const int k = g.range(0, 9);

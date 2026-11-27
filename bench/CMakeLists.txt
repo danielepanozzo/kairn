@@ -292,6 +292,17 @@ if(KAIRN_BENCH_UPWARD)
   set_source_files_properties(up_fenv_packed.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math};${_packed_isa}")
   set(_up_sources m2_main.cpp m2.cpp m2_fenv.cpp m2_packed.cpp m2_fenv_packed.cpp up_parts.cpp up_check.cpp
       up_type.cpp up_arrays.cpp up_default.cpp up_packed.cpp up_fenv.cpp up_fenv_packed.cpp)
+  # The experimental two-limb interval rounded upward (experiments/upward2/, NOT VERIFIED; bench/x2_data.hpp),
+  # added to kairn-bench-up-LEVEL when KAIRN_BENCH_UPWARD2 is on (default off): x2_type.cpp (the type, and the
+  # one-limb round-up interval on its points) with the option of kairn::upward and the flags of packed code,
+  # x2_proto.cpp (the earlier prototype) as m2_fenv.cpp, x2_default.cpp (the default two-limb types) and
+  # x2_check.cpp as m2.cpp.
+  option(KAIRN_BENCH_UPWARD2 "Add the experimental two-limb interval rounded upward (experiments/upward2) to kairn-bench-up-LEVEL" OFF)
+  if(KAIRN_BENCH_UPWARD2)
+    set_source_files_properties(x2_type.cpp PROPERTIES COMPILE_OPTIONS "${_upward_option};${_packed_isa}")
+    set_source_files_properties(x2_proto.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math}")
+    list(APPEND _up_sources x2_type.cpp x2_proto.cpp x2_default.cpp x2_check.cpp)
+  endif()
   if(_opt_O2 STREQUAL "/O2")
     set(_up_no_contract "")
   else()
@@ -307,6 +318,9 @@ if(KAIRN_BENCH_UPWARD)
       endif()
       add_executable(${_target} ${_up_sources})
       target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
+      if(KAIRN_BENCH_UPWARD2)
+        target_include_directories(${_target} PRIVATE "${PROJECT_SOURCE_DIR}/experiments/upward2/include")
+      endif()
       target_compile_options(${_target} PRIVATE ${_opt_${_level}} ${_up_no_contract})
       string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_${_level}} ${_up_no_contract} ${_fma}" _flags)
       if(_checks)
