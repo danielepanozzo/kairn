@@ -190,8 +190,9 @@ Labels select groups in either tier: `-L crosscheck`, `-L compiled`, `-L interp`
 `mul_2_2`. The tests of `kairn/upward.hpp` and of its kernels (label `upward`, in both tiers) are
 registered when the option `KAIRN_UPWARD_TESTS` is on, the default; with it off neither tier
 registers a test of the round-up interval, nor builds a program for one. The target
-`kairn-upward-tests` builds the programs the tests labelled `upward` run and nothing else (the job
-"Windows x64, upward" of the CI builds it alone).
+`kairn-upward-tests` builds the programs the tests labelled `upward` run and nothing else: every
+target of the test directories whose name holds `upward` (the job "Windows x64, upward" of the CI
+builds it alone), so a program of a test with that label has `upward` in its name.
 
 ## Cross-checks
 

@@ -1640,31 +1640,31 @@ endif()
 
 # --- The round-up interval's programs -----------------------------------------------------------
 #
-# kairn-upward-tests builds the programs that the tests labelled upward run, and nothing else: the
-# runners of the round-up interval (_upward_compiled, the emulated one, the full tier's flag matrix
-# of full/upward/) and every target of api/upward/. A job that runs those tests alone (the job
-# "Windows x64, upward" of .github/workflows/build.yml) builds this target, not everything. With
-# KAIRN_UPWARD_TESTS.
+# kairn-upward-tests builds the programs that the tests labelled upward run, and nothing else: every
+# target of this directory and of the directories under it whose name holds "upward", the family's
+# naming of its programs (the runners of the round-up interval, kairn-gen-upward-runner-*, the
+# emulated one and the full tier's flag matrix of full/upward/; the programs of api/upward/ and of
+# its subdirectories, kairn-api-upward-*; the example of api/, kairn-example-concepts-upward*). A job
+# that runs those tests alone (the job "Windows x64, upward" of .github/workflows/build.yml) builds
+# this target, not everything; a program of a test labelled upward must have "upward" in its name.
+# With KAIRN_UPWARD_TESTS.
+function(_kairn_upward_targets dir out)
+  get_property(_targets DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
+  set(_found "")
+  foreach(_t IN LISTS _targets)
+    if(_t MATCHES "upward")
+      list(APPEND _found ${_t})
+    endif()
+  endforeach()
+  get_property(_subdirs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)
+  foreach(_d IN LISTS _subdirs)
+    _kairn_upward_targets("${_d}" _more)
+    list(APPEND _found ${_more})
+  endforeach()
+  set(${out} ${_found} PARENT_SCOPE)
+endfunction()
 if(KAIRN_UPWARD_TESTS)
-  set(_upward_targets "")
-  foreach(_target kairn-gen-upward-runner-register kairn-gen-upward-runner-arrays
-                  kairn-gen-upward-runner-numbers kairn-emulated-upward-runner)
-    if(TARGET ${_target})
-      list(APPEND _upward_targets ${_target})
-    endif()
-  endforeach()
-  # The directories added: api/upward/ by api/ with KAIRN_UPWARD_TESTS, full/upward/ by full/ with
-  # the full tier and the runners.
-  set(_upward_dirs api/upward)
-  if(_full_tier AND _upward_compiled)
-    list(APPEND _upward_dirs full/upward)
-  endif()
-  foreach(_dir IN LISTS _upward_dirs)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_dir}/CMakeLists.txt")
-      get_property(_dir_targets DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${_dir}" PROPERTY BUILDSYSTEM_TARGETS)
-      list(APPEND _upward_targets ${_dir_targets})
-    endif()
-  endforeach()
+  _kairn_upward_targets("${CMAKE_CURRENT_SOURCE_DIR}" _upward_targets)
   add_custom_target(kairn-upward-tests)
   if(_upward_targets)
     add_dependencies(kairn-upward-tests ${_upward_targets})
