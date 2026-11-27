@@ -207,12 +207,13 @@ set the operator of `Interval<T>` gives on it (the bits of the NaNs of an empty 
 - **The views have the same length**; for each view read, the view written has the same two
   arrays (in place, as `add(zs, zs, 1.0)` above) or arrays that overlap neither of them, and the two
   arrays it writes do not overlap each other. Every element read is a canonical state. A checked
-  build checks all three; a view of another length is reported and the shortest length used.
+  build checks all three; a view of another length is reported, and where the report returns the
+  shortest length is used.
 - **They are called by their qualified names**, `kairn::upward::add(z, x, y)`: they have internal
   linkage, in an unnamed namespace, which argument-dependent lookup does not search.
 - Each runs the array form of its kernel: AVX2 where the file is compiled for it, NEON on AArch64,
-  and elsewhere the kernel of one interval element by element
-  ([The printers](../developer/design/upward.md#the-printers)).
+  and elsewhere, or where the two-number form is forced, the kernel of one interval element by
+  element ([The printers](../developer/design/upward.md#the-printers)).
 
 An array of pairs, $(u, n)$ interleaved, has no function of its own: a loop of the interval type over
 it, with `from_limbs` and `to_limbs` inside one `Scope`, is the same code
