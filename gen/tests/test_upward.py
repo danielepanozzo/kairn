@@ -86,7 +86,8 @@ class Descriptions(unittest.TestCase):
         self.assertFalse(set(ks) & set(NAMES), 'the family is kept apart from the other kernels')
         for name, k in ks.upward.items():
             self.assertTrue(k.upward and k.ieee_only and k.extended and k.entry, name)
-            self.assertEqual((k.status, k.ieee_status, k.min_precision), ('unverified', 'unverified', 1), name)
+            self.assertEqual((k.status, k.ieee_status, k.min_precision), ('proved', 'proved', 1), name)
+            self.assertEqual(k.ieee_theorem[1], f'{name}_correct', name)
             self.assertTrue(k.source and k.license and k.cone_exempt, name)
             self.assertIsNone(k.value, name)
         # The pairs: every state is the two lanes of one register.
@@ -453,7 +454,7 @@ class Claims(unittest.TestCase):
         self.assertEqual(names[-len(NAMES):], list(family()))
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'rounding' in k}, set(NAMES))
         keys = ['name', 'domain', 'ieee_only', 'rounding', 'inputs', 'outputs', 'requires', 'ensures',
-                'min_precision', 'status', 'ieee_status', 'theorem', 'source', 'flops', 'instances']
+                'min_precision', 'status', 'ieee_status', 'theorem', 'ieee_theorem', 'source', 'flops', 'instances']
         for name in NAMES:
             k = self.by[name]
             self.assertEqual(list(k), keys, name)
@@ -469,6 +470,9 @@ class Claims(unittest.TestCase):
         block = re.search(r'```json\n(.*?)```', text, re.S).group(1)
         for sample in json.loads('[' + block + ']'):
             k = self.by[sample['name']]
+            # The page shows the entries as first generated, unverified; they are proved since.
+            self.assertEqual((k['status'], k['ieee_status']), ('proved', 'proved'), sample['name'])
+            sample = {key: v for key, v in sample.items() if key not in ('status', 'ieee_status')}
             self.assertEqual({key: k[key] for key in sample}, sample, sample['name'])
 
     def test_the_vocabulary(self):
@@ -606,17 +610,17 @@ class Rocq(unittest.TestCase):
                 self.assertNotIn(name, text)
 
     def test_the_audit(self):
-        self.assertIn('(* No statement of the round-up interval has a theorem yet. *)', self.audit)
-        ks = common.kernels()
-        k = ir.parse_kernel(open(os.path.join(common.GEN, 'kernels', 'upward_neg_1.kernel'), encoding='utf-8').read()
-                            .replace('status:        unverified', 'status:        proved')
-                            .replace('ieee_status:   unverified', 'ieee_status:   proved\n'
-                                     'ieee_theorem:  proofs/theories/IeeeUpward.v upward_neg_1_correct'), '-')
-        text = upward.audit(ir.KernelSet(upward=dict(ks.upward, upward_neg_1=k)))
-        self.assertIn('From Kairn Require Import IeeeUpward.\n', text)
+        # Every kernel of the family is proved: the audit imports each file that holds a theorem,
+        # checks each theorem against its statement and prints its assumptions.
+        self.assertNotIn('has a theorem yet', self.audit)
+        for f in ('IeeeUpwardArith', 'IeeeUpwardExact', 'IeeeUpwardPredicates'):
+            self.assertIn(f'From Kairn Require Import {f}.\n', self.audit)
+        self.assertEqual(self.audit.count('\nPrint Assumptions upward_'), len(NAMES))
         self.assertIn('Definition upward_neg_1_audit : upward_neg_1_spec := upward_neg_1_correct.\n'
-                      'Print Assumptions upward_neg_1_correct.', text)
-        self.assertEqual(rules.theorem(k, ks.upward), [])
+                      'Print Assumptions upward_neg_1_correct.', self.audit)
+        ks = common.kernels()
+        for name, k in ks.upward.items():
+            self.assertEqual(rules.theorem(k, ks.upward), [], name)
 
 
 # ---------------------------------------------------------------------------------------------
