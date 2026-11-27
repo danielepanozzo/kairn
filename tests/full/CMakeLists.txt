@@ -459,7 +459,8 @@ endforeach()
 # The runner of the packed forms alone, built for AVX2 where the build's flags give the scalar form
 # of Packed (api/CMakeLists.txt), on the kernels that packed.hpp calls. The kernels of the round-up
 # interval (_upward_kernels) are not called by kairn/kairn.hpp: the tests of their public type are
-# those of api/upward/ (label upward), and none is registered here.
+# those of api/upward/ (label upward), and their full tier's, full.api.oracle.upward_K.F and
+# full.api.flags.oracle.upward_K.F among them, are registered by upward/, none here.
 set(_api_full_kernels ${_api_oracle_kernels})
 if(_upward_kernels)
   list(REMOVE_ITEM _api_full_kernels ${_upward_kernels})
