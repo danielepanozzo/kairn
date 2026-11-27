@@ -124,7 +124,7 @@ KB_UP_INLINE void imul(typename R::V xl, typename R::V xu, typename R::V yl, typ
 
 #define KB_UPFP_DEF(B, SUF, T, R, KERNEL, OP)                                                      \
     extern "C" KB_NOINLINE void kb_##SUF##_tp_##KERNEL##__fenv_loop(void*) {                       \
-        const kairn_bench::up::Bounds<T>& b = *Mine::bounds<T>();                                  \
+        const typename kairn_bench::up::Bounds<T>::Pointers b = Mine::bounds<T>()->pointers();     \
         std::fesetround(FE_UPWARD);                                                                \
         for (int i = 0; i < kN; i += R::W) {                                                       \
             R::V zl, zu;                                                                           \

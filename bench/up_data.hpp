@@ -109,6 +109,9 @@ struct Placed {
 
 // The arrays of the packed loops on the default layout (up_packed.cpp, up_fenv_packed.cpp): the
 // lower and the upper bounds of X and Y, read, and of the results, written, kN of each, placed.
+// A timed function holds their pointers in its locals (pointers()), as a program holds the pointers
+// of the arrays of its loop: reached through the structure in memory, they were loaded again in
+// every iteration, after each store of the loop, by GCC and Clang.
 template <class T>
 struct Bounds {
     Placed place{kN * sizeof(T)};
@@ -118,6 +121,15 @@ struct Bounds {
     T* yh = place.at<T>(3);
     T* zl = place.at<T>(8);
     T* zh = place.at<T>(9);
+    struct Pointers {
+        T* xl;
+        T* xh;
+        T* yl;
+        T* yh;
+        T* zl;
+        T* zh;
+    };
+    Pointers pointers() const { return {xl, xh, yl, yh, zl, zh}; }
     void fill(const Raw<T>& r) {
         for (int i = 0; i < kN; ++i) {
             xl[i] = r.xi[2 * i];

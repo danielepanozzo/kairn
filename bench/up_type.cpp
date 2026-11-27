@@ -86,6 +86,34 @@ struct TypeData {
 TypeData<double>* g64 = nullptr;
 TypeData<float>* g32 = nullptr;
 
+// What a timed function reaches, held in its locals as a program holds the pointers of the arrays
+// of its loop: the arrays' pointers copied from TypeData on entry, the coefficients' address, and
+// the chain's results by reference. Reached through TypeData, a structure in memory, the pointers
+// were loaded again in every iteration of the loops by Clang (a store, or an operation under strict
+// floating point, might have changed them as far as it knew), and after every call of the loops of
+// the scopes by GCC 16 and Clang (bench/README.md, "The round-up interval").
+template <class T>
+struct Local {
+    U<T>* x;
+    U<T>* y;
+    U<T>* f;
+    U<T>* h;
+    U<T>* z;
+    I1<T>* x1;
+    I1<T>* y1;
+    I1<T>* f1;
+    I1<T>* h1;
+    I1<T>* z1;
+    U<T>* c;
+    U<T>& s;
+    I1<T>* c1;
+    I1<T>& s1;
+};
+template <class T>
+Local<T> local(TypeData<T>& d) {
+    return {d.x, d.y, d.f, d.h, d.z, d.x1, d.y1, d.f1, d.h1, d.z1, d.c, d.s, d.c1, d.s1};
+}
+
 template <class T>
 TypeData<T>& data();
 template <>
@@ -192,14 +220,14 @@ bool check(const Entry& e, char* why, std::size_t size) {
 // The coordinates of the determinant's points: the type's arrays, or the default's converted.
 template <class T>
 struct Native {
-    const TypeData<T>& d;
+    const Local<T>& d;
     const U<T>& x(int j) const { return d.x[j]; }
     const U<T>& y(int j) const { return d.y[j]; }
     const U<T>& f(int j) const { return d.f[j]; }
 };
 template <class T>
 struct Converted {
-    const TypeData<T>& d;
+    const Local<T>& d;
     U<T> x(int j) const { return U<T>(d.x1[j]); }
     U<T> y(int j) const { return U<T>(d.y1[j]); }
     U<T> f(int j) const { return U<T>(d.f1[j]); }
@@ -300,7 +328,7 @@ extern "C" KB_UP_NOIPA void kb_upws_one_nearest(const I1<double>* x, const I1<do
 #define KB_DEF(B, SUF, TYPE, KIND, KERNEL, VAR, OPS, ...)                                          \
     extern "C" KB_NOINLINE void kb_##SUF##_##KIND##_##KERNEL##__##VAR(void*) {                     \
         using T = TYPE;                                                                            \
-        [[maybe_unused]] TypeData<T>& d = data<T>();                                               \
+        [[maybe_unused]] const Local<T> d = local(data<T>());                                      \
         __VA_ARGS__                                                                                \
     }
 #define KB_ROW(B, SUF, T, KIND, KERNEL, VAR, OPS, ...)                                             \
