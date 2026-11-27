@@ -457,7 +457,7 @@ u2::Interval to_type(const DI& d) {
 // The default interval of the type's value, exactly (to_interval, under rounding to nearest).
 I2 to_default(const u2::Interval& z) { return u2::to_interval(z); }
 
-bool op_available(Op op) {
+bool op_available([[maybe_unused]] Op op) {
 #if KAIRN_UPWARD2_AVX2
     return true;
 #else

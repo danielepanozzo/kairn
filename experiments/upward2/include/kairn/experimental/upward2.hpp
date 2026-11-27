@@ -303,6 +303,13 @@ KAIRN_FORCEINLINE void fast_two_sum(V a, V b, V& s, V& t) noexcept {
     t = add(sub(a, s), b);
 }
 
+// two_sum_nonpos(a, b): two_sum for operands that are not positive (the second limbs of
+// upper-normalized pairs): the smaller of the two is then the larger in magnitude, so
+// fast_two_sum(min, max) is exact by the same lemma, in five operations instead of six. For any
+// operands it is still an upper pair of a + b (see fast_two_sum); only the exactness, the
+// normalization of the result, depends on the signs.
+KAIRN_FORCEINLINE void two_sum_nonpos(V a, V b, V& s, V& t) noexcept { fast_two_sum(vmin(a, b), vmax(a, b), s, t); }
+
 // --- The product of two pairs -------------------------------------------------------------------------
 
 // pair_mul(P, Q) -> p, (zh, zl): lane by lane, zh + zl >= (Ph + Pl)(Qh + Ql), with p = RU(Ph Qh) the
@@ -321,14 +328,12 @@ KAIRN_FORCEINLINE void fast_two_sum(V a, V b, V& s, V& t) noexcept {
 //   2^50); when p is subnormal every term is a multiple of the smallest subnormal and p + w, below
 //   2^-1021 in magnitude, is computed exactly (then zl = 0). So (zh, zl) is upper-normalized, which
 //   the lexicographic maximum of candidates (lexmax) needs.
-// The negation of p is exact; a barrier on p keeps the compiler from rewriting the fused operation
-// from its operands (rule U3 of the design page is about negating a rounded result in place of the
-// rounding of a negation; here the exact negation of p is what is meant).
+// The negation of p is exact (rule U3 of the design page is about negating a rounded result in
+// place of the rounding of a negation; here the exact negation of p is what is meant, and a fused
+// a b - p is the same operation whatever instruction computes it).
 KAIRN_FORCEINLINE void pair_mul(V ph, V pl, V qh, V ql, V& p, V& zh, V& zl) noexcept {
     p = mul(ph, qh);
-    V pb = p;
-    bar(pb);
-    const V e = fmadd(ph, qh, neg(pb));
+    const V e = fmadd(ph, qh, neg(p));
     const V c = fmadd(ph, ql, fmadd(pl, qh, mul(pl, ql)));
     const V w = add(e, c);
     fast_two_sum(p, w, zh, zl);
@@ -494,7 +499,17 @@ inline constexpr Case kCases[16] = {
     {0, 1, 0, 1, 0, 1},       // x = 0, y = 0
 };
 
+#if KAIRN_UPWARD2_FORM == KAIRN_UPWARD2_FORM_NEON
+// On AArch64 the four bits weighted in the lanes and added across them: one move to a general
+// register instead of two.
+KAIRN_FORCEINLINE int case_of(const R& x, const R& y) noexcept {
+    const uint64x2_t wx = vandq_u64(le0(x.h), vcombine_u64(vcreate_u64(1), vcreate_u64(2)));
+    const uint64x2_t wy = vandq_u64(le0(y.h), vcombine_u64(vcreate_u64(4), vcreate_u64(8)));
+    return int(vaddvq_u64(vorrq_u64(wx, wy)));
+}
+#else
 KAIRN_FORCEINLINE int case_of(const R& x, const R& y) noexcept { return bits(le0(x.h)) | (bits(le0(y.h)) << 2); }
+#endif
 
 // The two candidates of the case x ∋ 0, y ∋ 0.
 KAIRN_FORCEINLINE R mul_zero_zero(R x, R y) noexcept {
@@ -637,9 +652,7 @@ KAIRN_FORCEINLINE R mul_sel4(R x, R y) noexcept {
     KAIRN_DETAIL_UPWARD_BARRIER(ql);
     // pair_mul on four lanes (the same steps and reasons).
     const __m256d p = _mm256_mul_pd(ph, qh);
-    __m256d pb = p;
-    KAIRN_DETAIL_UPWARD_BARRIER(pb);
-    const __m256d e = _mm256_fmadd_pd(ph, qh, _mm256_xor_pd(pb, _mm256_set1_pd(-0.0)));
+    const __m256d e = _mm256_fmadd_pd(ph, qh, _mm256_xor_pd(p, _mm256_set1_pd(-0.0)));
     const __m256d c = _mm256_fmadd_pd(ph, ql, _mm256_fmadd_pd(pl, qh, _mm256_mul_pd(pl, ql)));
     const __m256d w = _mm256_add_pd(e, c);
     const __m256d zh = _mm256_add_pd(p, w);
@@ -672,18 +685,31 @@ KAIRN_FORCEINLINE R mul_sel4(R x, R y) noexcept {
 // unbounded operand, or an overflow) makes the bound +inf (the steps after it compute inf - inf);
 // a head that reaches +-MAX gets a zero second limb (see special_candidate); an empty operand's NaN
 // propagates to the heads.
+// The second limbs' two-sum is two_sum_nonpos (they are not positive); on AVX2 the first two
+// two-sums are one two_sum on the four lanes (xh | xl) + (yh | yl).
 enum class SumForm { accurate, lean, sloppy };
 template <SumForm F = SumForm::accurate>
 KAIRN_FORCEINLINE R add_r(R x, R y) noexcept {
     V s, e, zh, zl;
-    two_sum(x.h, y.h, s, e);
     if constexpr (F == SumForm::sloppy) {
+        two_sum(x.h, y.h, s, e);
         // The error of the second limbs' sum dropped: t = RU(xl + yl) >= xl + yl, c >= e + t.
         const V c = add(e, add(x.l, y.l));
         two_sum(s, c, zh, zl);
     } else {
         V t, f, v, g;
-        two_sum(x.l, y.l, t, f);
+#if KAIRN_UPWARD2_AVX2
+        const __m256d x4 = _mm256_set_m128d(x.l, x.h), y4 = _mm256_set_m128d(y.l, y.h);
+        const __m256d s4 = _mm256_add_pd(x4, y4);
+        const __m256d e4 = _mm256_min_pd(_mm256_add_pd(_mm256_sub_pd(x4, s4), y4), _mm256_add_pd(_mm256_sub_pd(y4, s4), x4));
+        s = _mm256_castpd256_pd128(s4);
+        t = _mm256_extractf128_pd(s4, 1);
+        e = _mm256_castpd256_pd128(e4);
+        f = _mm256_extractf128_pd(e4, 1);
+#else
+        two_sum(x.h, y.h, s, e);
+        two_sum_nonpos(x.l, y.l, t, f);
+#endif
         const V c = add(e, t);
         if constexpr (F == SumForm::lean) fast_two_sum(s, c, v, g);
         else two_sum(s, c, v, g);
@@ -729,9 +755,7 @@ KAIRN_FORCEINLINE R mul_num_r(R x, double t) noexcept {
     bar(at);
     // pair_mul with Ql = 0: c = RU(Pl |t|).
     const V p = mul(pr.h, at);
-    V pb = p;
-    bar(pb);
-    const V e = fmadd(pr.h, at, neg(pb));
+    const V e = fmadd(pr.h, at, neg(p));
     const V w = add(e, mul(pr.l, at));
     V zh, zl;
     fast_two_sum(p, w, zh, zl);
@@ -902,9 +926,11 @@ private:
 };
 
 // --- The operations (internal linkage; each needs a kairn::upward::Scope) -----------------------------
+//
+// Forced inline: GCC called the product otherwise (its kernels, forced inline into it, make it large).
 
 /// x + y.
-[[maybe_unused]] static inline Interval operator+(const Interval& x, const Interval& y) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator+(const Interval& x, const Interval& y) noexcept {
     detail::check_mode();
     detail::R a = x.r_, b = y.r_;
     detail::pin(a);
@@ -914,7 +940,7 @@ private:
     return Interval(z);
 }
 /// x - y: x + (-y), -y the two pairs of y exchanged.
-[[maybe_unused]] static inline Interval operator-(const Interval& x, const Interval& y) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator-(const Interval& x, const Interval& y) noexcept {
     detail::check_mode();
     detail::R a = x.r_, b = y.r_;
     detail::pin(a);
@@ -924,9 +950,9 @@ private:
     return Interval(z);
 }
 /// -x (exact).
-[[maybe_unused]] static inline Interval operator-(const Interval& x) noexcept { return Interval(detail::neg_r(x.r_)); }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator-(const Interval& x) noexcept { return Interval(detail::neg_r(x.r_)); }
 /// x * y.
-[[maybe_unused]] static inline Interval operator*(const Interval& x, const Interval& y) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator*(const Interval& x, const Interval& y) noexcept {
     detail::check_mode();
     detail::R a = x.r_, b = y.r_;
     detail::pin(a);
@@ -936,7 +962,7 @@ private:
     return Interval(z);
 }
 /// x + t, t + x, x - t, t - x, x * t, t * x for a number t; an infinite t or a NaN is the whole line.
-[[maybe_unused]] static inline Interval operator+(const Interval& x, double t) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator+(const Interval& x, double t) noexcept {
     detail::check_mode();
     detail::R a = x.r_;
     detail::pin(a);
@@ -945,10 +971,10 @@ private:
     detail::bar(z);
     return Interval(z);
 }
-[[maybe_unused]] static inline Interval operator+(double t, const Interval& x) noexcept { return x + t; }
-[[maybe_unused]] static inline Interval operator-(const Interval& x, double t) noexcept { return x + (-t); }
-[[maybe_unused]] static inline Interval operator-(double t, const Interval& x) noexcept { return (-x) + t; }
-[[maybe_unused]] static inline Interval operator*(const Interval& x, double t) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator+(double t, const Interval& x) noexcept { return x + t; }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator-(const Interval& x, double t) noexcept { return x + (-t); }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator-(double t, const Interval& x) noexcept { return (-x) + t; }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator*(const Interval& x, double t) noexcept {
     detail::check_mode();
     detail::R a = x.r_;
     detail::pin(a);
@@ -957,9 +983,9 @@ private:
     detail::bar(z);
     return Interval(z);
 }
-[[maybe_unused]] static inline Interval operator*(double t, const Interval& x) noexcept { return x * t; }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval operator*(double t, const Interval& x) noexcept { return x * t; }
 /// x^2 (the square, tighter than x * x where x contains zero).
-[[maybe_unused]] static inline Interval sqr(const Interval& x) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval sqr(const Interval& x) noexcept {
     detail::check_mode();
     detail::R a = x.r_;
     detail::pin(a);
@@ -967,21 +993,21 @@ private:
     detail::bar(z);
     return Interval(z);
 }
-[[maybe_unused]] static inline Interval& operator+=(Interval& x, const Interval& y) noexcept { return x = x + y; }
-[[maybe_unused]] static inline Interval& operator-=(Interval& x, const Interval& y) noexcept { return x = x - y; }
-[[maybe_unused]] static inline Interval& operator*=(Interval& x, const Interval& y) noexcept { return x = x * y; }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval& operator+=(Interval& x, const Interval& y) noexcept { return x = x + y; }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval& operator-=(Interval& x, const Interval& y) noexcept { return x = x - y; }
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval& operator*=(Interval& x, const Interval& y) noexcept { return x = x * y; }
 
 /// From the default Interval<double, 2>, under the mode upward (inside a Scope): the same set, its
 /// bounds upper-normalized (see detail::from_limbs_r: a bound MAX with a positive second limb
 /// becomes infinite, and a bound +-MAX loses its second limb).
-[[maybe_unused]] static inline Interval from_interval(const ::kairn::Interval<double, 2>& x) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval from_interval(const ::kairn::Interval<double, 2>& x) noexcept {
     detail::check_mode();
     return Interval(detail::from_limbs_r(x.lower().limb[0], x.lower().limb[1], x.upper().limb[0],
                                          x.upper().limb[1]));
 }
 /// To the default Interval<double, 2>, UNDER ROUNDING TO NEAREST (outside a Scope, or inside a
 /// kairn::upward::NearestScope): the same bounds exactly (see detail::to_limbs_rn).
-[[maybe_unused]] static inline ::kairn::Interval<double, 2> to_interval(const Interval& x) noexcept {
+[[maybe_unused]] static KAIRN_FORCEINLINE ::kairn::Interval<double, 2> to_interval(const Interval& x) noexcept {
     double o[4];
     detail::to_limbs_rn(x.r_, o);
     return ::kairn::Interval<double, 2>::from_limbs(o);

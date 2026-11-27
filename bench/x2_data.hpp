@@ -38,8 +38,9 @@ using m2::Raw;
 
 // XR, YR: kRand products whose signs are random and do not repeat within a call (X2 and Y2 with
 // signs from a hash of the index), for the forms of the product with branches, whose signs the
-// predictors could learn over the 256 elements of the other loops repeated call after call.
-inline constexpr int kRand = 4096;
+// predictors could learn over the 256 elements of the other loops repeated call after call (on the
+// M3 they learned 4096 such products repeated call after call: 16384 per call, 512 KB per array).
+inline constexpr int kRand = 16384;
 struct Ops {
     double x[4 * kN], y[4 * kN], f[4 * kN], h[4 * kN];
     double xp[4 * kN], yp[4 * kN], xz[4 * kN], yz[4 * kN];
