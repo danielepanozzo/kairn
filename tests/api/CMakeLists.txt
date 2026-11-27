@@ -1548,9 +1548,14 @@ set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)
 # The tests of <kairn/upward.hpp> (upward/, label upward), registered when KAIRN_UPWARD_TESTS is on
 # (../CMakeLists.txt); they label themselves quick, and use this file's variables for the warnings
 # and the compilations of api.reject.*.
+set(_upward_api_runners "")
 if(KAIRN_UPWARD_TESTS)
   add_subdirectory(upward)
 endif()
+# For ../full/upward/CMakeLists.txt: the kernels of the round-up interval that upward/ registers
+# api.oracle.upward_K.F for, and the runners it judges them through.
+set(_api_upward_kernels ${_api_upward_kernels} PARENT_SCOPE)
+set(_api_upward_runners ${_upward_api_runners} PARENT_SCOPE)
 
 # Every test here is in the quick tier (../CMakeLists.txt, "The two tiers").
 get_property(_api_tests DIRECTORY PROPERTY TESTS)

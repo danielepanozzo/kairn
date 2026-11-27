@@ -169,6 +169,9 @@ set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
 # (_upward_compiled) and those of the flag matrix of upward/ (_upward_flags_runners), each holding an
 # upward scope; its tests have the label upward.
 set(_upward_flags_runners "")
+set(_upward_api_sets "")
+set(_upward_api_flags_runners "")
+set(_upward_api_debug_runner "")
 if(KAIRN_UPWARD_TESTS AND _upward_compiled)
   add_subdirectory(upward)
 endif()
@@ -459,7 +462,8 @@ endforeach()
 # The runner of the packed forms alone, built for AVX2 where the build's flags give the scalar form
 # of Packed (api/CMakeLists.txt), on the kernels that packed.hpp calls. The kernels of the round-up
 # interval (_upward_kernels) are not called by kairn/kairn.hpp: the tests of their public type are
-# those of api/upward/ (label upward), and none is registered here.
+# those of api/upward/ (label upward), and their full tier's below, full.api.oracle.upward_K.F and
+# full.api.flags.oracle.upward_K.F among them; none in this loop.
 set(_api_full_kernels ${_api_oracle_kernels})
 if(_upward_kernels)
   list(REMOVE_ITEM _api_full_kernels ${_upward_kernels})
@@ -517,6 +521,57 @@ foreach(_loop IN LISTS _api_oracle_loops)
     set_tests_properties(${_name} PROPERTIES TIMEOUT 900 LABELS "full;api;oracle")
   endforeach()
 endforeach()
+
+# The public type of the round-up interval (api/upward/, label upward), which requires the rounding
+# mode upward set by kairn::upward::Scope and the options of docs/concepts/upward.md, with the programs
+# of upward/, built with each of its flag sets:
+#
+# - full.api.oracle.upward_K.F: api.oracle.upward_K.F on KAIRN_API_CASES cases (the quick tier's
+#   KAIRN_API_QUICK_CASES among them, the same seed), through the quick tier's runners of api/upward/
+#   and the debug build's, on its first form only, as full.api.oracle.K.F;
+# - full.api.flags.oracle.upward_K.F: every form through the runner of each set, on the quick tier's
+#   cases;
+# - full.api.upward.flags.SET.self_test, .moves, .differential: the quick tier's tests of those names
+#   with each set's programs (the differential judged by the oracle where Python is).
+if(_upward_api_sets)
+  set(_api_up "${PROJECT_SOURCE_DIR}/tests/api/upward")
+  set(_api_up_tests "")
+  foreach(_set IN LISTS _upward_api_sets)
+    set(_prefix full.api.upward.flags.${_set})
+    add_test(NAME ${_prefix}.self_test COMMAND kairn-api-upward-flags-${_set}-self-test)
+    add_test(NAME ${_prefix}.moves COMMAND kairn-api-upward-flags-${_set}-moves)
+    if(Python3_Interpreter_FOUND)
+      add_test(NAME ${_prefix}.differential
+        COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-upward-flags-${_set}-differential>"
+          "-DPYTHON=${Python3_EXECUTABLE}" "-DORACLE=${PROJECT_SOURCE_DIR}/oracle/kairn-oracle"
+          "-DCLAIMS=${_oracle_claims}" "-DLINES=${CMAKE_CURRENT_BINARY_DIR}/upward-differential-${_set}.txt"
+          -P "${_api_up}/differential.cmake")
+    else()
+      add_test(NAME ${_prefix}.differential COMMAND kairn-api-upward-flags-${_set}-differential
+        "${CMAKE_CURRENT_BINARY_DIR}/upward-differential-${_set}.txt")
+    endif()
+    list(APPEND _api_up_tests ${_prefix}.self_test ${_prefix}.moves ${_prefix}.differential)
+  endforeach()
+  set_tests_properties(${_api_up_tests} PROPERTIES TIMEOUT 300 LABELS "full;api;upward;flags")
+  if(_crosscheck AND _api_upward_kernels AND _api_upward_runners)
+    foreach(_kernel IN LISTS _api_upward_kernels)
+      foreach(_format binary64 binary32)
+        set(_name full.api.oracle.${_kernel}.${_format})
+        add_test(NAME ${_name}
+          COMMAND ${_crosscheck} api --kernel ${_kernel} --format ${_format} --count ${KAIRN_API_CASES}
+            --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-oracle" --seed "${KAIRN_API_SEED}"
+            ${_api_upward_runners} ${_upward_api_debug_runner} ${_oracle_claims_arg})
+        set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;upward")
+        set(_name full.api.flags.oracle.${_kernel}.${_format})
+        add_test(NAME ${_name}
+          COMMAND ${_crosscheck} api --kernel ${_kernel} --format ${_format} --count ${KAIRN_API_QUICK_CASES}
+            --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-flags" --seed "${KAIRN_API_SEED}"
+            ${_upward_api_flags_runners} ${_oracle_claims_arg})
+        set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;flags;upward")
+      endforeach()
+    endforeach()
+  endif()
+endif()
 
 # --- The flag sets (api/flags/) -----------------------------------------------------------------
 #

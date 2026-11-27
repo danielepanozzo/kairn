@@ -452,3 +452,7 @@ endforeach()
 
 get_property(_upward_tests DIRECTORY PROPERTY TESTS)
 set_property(TEST ${_upward_tests} APPEND PROPERTY LABELS "api;upward;quick")
+
+# For ../../full/upward/CMakeLists.txt, which registers full.api.oracle.upward_K.F with these runners on
+# KAIRN_API_CASES cases, and the flag matrix of the type's tests.
+set(_upward_api_runners ${_upward_runners} PARENT_SCOPE)
