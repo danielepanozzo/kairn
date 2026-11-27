@@ -106,7 +106,7 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   `Interval`, the interface intervals and balls share, the building blocks, constants at compile
   time, `Packed` and the containers, the functions on arrays, the accumulator and `BallVector`.
   Every kernel and every loop over arrays is proved; the report lists what is open, what was
-  measured, and the rulings that await confirmation.
+  measured, and the rulings of the authors, each with the owner's answer.
 - **The round-up interval**, between Milestones 2 and 3 and not a milestone, complete and reviewed
   by the owner on 2026-11-27 ([design](developer/design/upward.md), [concept](concepts/upward.md),
   [measurements](developer/results/bench-upward.md)): the opt-in header

@@ -813,6 +813,16 @@ Version 0.3.1 (0.3.2 with the probe of `kairn::self_test()`,
 generated in the real model, 404 generated in the IEEE model, 976 by hand; the same four axioms,
 nothing admitted.
 
+Six choices of the authors in these changes were put to the owner afterwards, and **the owner
+confirmed all six on 2026-11-27** ([log](../design/phase0/decisions.md#decisions-log)):
+`KAIRN_ENVIRONMENT_FAILURE` defined the same way in every translation unit of a program or in
+none, and the bound of 14 limbs of the forced inlining with Clang (the first item below); the
+guards of the constructors of an interval from numbers of two limbs and of
+`Accumulator::from_state`; the rule by which a reference page shows a stored brute-force run (the
+kernel's generated code unchanged since the run); with MSVC, a limb $-0$ that may stay $-0$ in
+scalar code ([the gates](#the-gates-of-the-merged-tree)); and the probe of `kairn::self_test()` as
+a report and not a failure ([below](#found-after-the-review-a-square-loses-its-guard)).
+
 - **The check of the environment at a batch entry** ([open issue 2](#open-issues)) is one read of
   the control register and one test of a mask at the place of the check, and the report is one
   function that is never inlined; the checks of a debug build share it. With Clang the
@@ -882,8 +892,8 @@ audit (the totals above). MSVC needed two changes first, both choices of the aut
   `from_limbs` of two limbs and `Accumulator<T, 2>::from_state`, depending on the code around
   them. The values are unchanged, and no statement of a kernel is about the sign of a zero. It is
   the behavior the owner confirmed for packed code at the review ("under MSVC a packed $-0$ may
-  stay $-0$"), now seen in scalar code; the authors extended that ruling, the owner has not ruled
-  on the scalar case. The test compares such a limb as a zero under MSVC and holds every other
+  stay $-0$"), now seen in scalar code; the authors extended that ruling, and the owner confirmed
+  it for scalar code on 2026-11-27. The test compares such a limb as a zero under MSVC and holds every other
   compiler to $+0$; the comments of the three constructors and the pages say so.
 
   What the guard is for was measured before the sentence was relaxed: whether MSVC, where it
