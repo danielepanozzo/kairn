@@ -546,6 +546,9 @@ struct Stat {
 
 std::mutex out_mutex;
 std::atomic<int> failures{0};
+// A debugging aid: with a fourth argument D, the operands and the results of + and * of the first D
+// cases of the first class, in hexadecimal (to compare builds).
+long dump_cases = 0;
 
 std::string hex(const DI& d) {
     char b[160];
@@ -595,6 +598,16 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
         const I2 kx = to_default(x), ky = to_default(y);
         cx.push_back(x);
         cy.push_back(y);
+        if (i < dump_cases && seed % 1000 == 227) {   // the first class (seed + 100, default seed)
+            double a[4], b[4], s[4], p[4];
+            x.to_limbs(a);
+            y.to_limbs(b);
+            apply(ADD, x, y, 0).to_limbs(s);
+            apply(MUL_BRANCH, x, y, 0).to_limbs(p);
+            std::lock_guard<std::mutex> lock(out_mutex);
+            std::printf("dump %ld x %a %a %a %a y %a %a %a %a sum %a %a %a %a mul %a %a %a %a\n", i, a[0], a[1], a[2], a[3], b[0], b[1],
+                        b[2], b[3], s[0], s[1], s[2], s[3], p[0], p[1], p[2], p[3]);
+        }
         for (Op op : ops) {
             if (!op_available(op) || op >= ARR_ADD) continue;
             const u2::Interval z = apply(op, x, y, t);
@@ -832,6 +845,7 @@ int main(int argc, char** argv) {
     const long n = argc > 1 ? std::atol(argv[1]) : 2000000;
     const std::uint64_t seed = argc > 2 ? std::strtoull(argv[2], nullptr, 0) : 20261127u;
     const int threads = argc > 3 ? std::atoi(argv[3]) : 8;
+    dump_cases = argc > 4 ? std::atol(argv[4]) : 0;
     std::printf("x2-check: n=%ld per class, seed=%llu, threads=%d, form %d (1 SSE, 2 NEON, 3 numbers), AVX2 %d, KAIRN_CHECKS %d, flags: %s\n",
                 n, static_cast<unsigned long long>(seed), threads, KAIRN_UPWARD2_FORM, KAIRN_UPWARD2_AVX2, KAIRN_CHECKS,
 #ifdef X2_FLAGS
