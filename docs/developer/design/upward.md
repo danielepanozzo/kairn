@@ -1312,7 +1312,8 @@ started. Every answer is a choice of the authors, listed with the others for the
 1. **Code around a scope.** `pass()`, the barriers on `to_interval()` and the concept page's rule
    are what the first delivery has, and `NearestScope` is part of it. The header promises nothing
    about code without barriers that shares a function with a scope beyond that rule; the tests
-   `api.upward.moves` measure the movement on every compiler, and the report records what they find.
+   `api.upward.moves` measure the movement on every compiler, and the concept page records what they
+   find ([The round-up interval](../../concepts/upward.md)).
 2. **The scope's check of the build** is made in a checked build only ([Checks](#checks)).
 3. **`-ffp-contract=off`** is not required ([Contraction](#contraction)).
 4. **Linkage**: as [Linkage](#linkage) says: the class and its exact members of external linkage,

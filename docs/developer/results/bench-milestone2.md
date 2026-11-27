@@ -4,10 +4,10 @@ What the parts of Milestone 2 that are on `main` cost
 ([Milestone 2 statements](../design/milestone2.md)): the building blocks that round down and up
 without a rounding mode, `Interval<T, 1>` and `Interval<T, 2>`, the additions to `Ball`, a Horner
 evaluation in each enclosure with the width of its result, `kairn::rational`, and the three settings
-of `KAIRN_ENCLOSURE_CODE`. Kairn never changes the rounding mode: a sum or a product rounded down
-or up is computed in round-to-nearest, as the rounded result, the sign of its exact error and one
-step to the neighbor, so that an interval operation is straight-line code that vectorizes and runs
-on a GPU. The price is more operations than one instruction under a directed mode; this page
+of `KAIRN_ENCLOSURE_CODE`. The default types never change the rounding mode: a sum or a product
+rounded down or up is computed in round-to-nearest, as the rounded result, the sign of its exact
+error and one step to the neighbor, so that an interval operation is straight-line code that
+vectorizes and runs on a GPU. The price is more operations than one instruction under a directed mode; this page
 measures it, against the classical way of changing the mode, against plain floors of `T`, and
 against `Ball`. Two machines, four compilers, `-O2` and `-O3`, three runs of each, `double` and
 `float` limbs, 2026-11-21, at commit `dee8ecd`. The harness and the exact commands are in
