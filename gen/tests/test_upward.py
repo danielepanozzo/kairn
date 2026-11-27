@@ -11,8 +11,11 @@ arithmetic, below, on every canonical state (and every value of a number) of for
 statements (architecture.md, "Number formats"): three of precision 1 and 2 in the quick suite, four
 of precision 2 and 3 with --full (some 20 minutes of four processes), two of precision 4 when
 $KAIRN_GEN_UPWARD_PRECISION is 4 (some 10^8 pairs a kernel: a run on the Linux machine, not CI).
-The same lines go to the oracle's command line (`kairn-oracle check`) when $KAIRN_GEN_UPWARD_ORACLE
-is 1: the gate of the design page, which needs the oracle's reading of the new claims.
+The same lines go to the oracle's command line (`kairn-oracle check`), the gate of the design page:
+in pieces (oracle_jobs, oracle_piece), each a range of the first operand's cases judged by a process
+of the oracle of its own, side by side, on the quick formats in the quick suite and those of
+precision 3 with --full; precision 4 is a run of tests/brute/upward.py, which keeps every piece's
+summary, resumes, and merges them (docs/developer/testing.md, "The round-up interval").
 """
 import hashlib
 import itertools
@@ -22,6 +25,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from bisect import bisect_left, bisect_right
 from concurrent.futures import ProcessPoolExecutor
@@ -882,6 +886,123 @@ FULL = formats((2, 2), (2, 3), (3, 1), (3, 2))
 FOUR = formats((4, 1), (4, 2))
 
 
+# ---------------------------------------------------------------------------------------------
+# The same cases judged by the oracle, in pieces
+
+ORACLE = os.path.join(common.ROOT, 'oracle', 'kairn-oracle')
+# The oracle's check of a piece: a non-finite result of small operands fails, as in the cross-checks,
+# and so does an invalid case (a line outside upward() or interval(): a fault of this enumeration).
+CHECK = ['check', '--fail-on-suspicious', '--expect-valid']
+# Lines per piece: some 40 to 100 seconds of one interpreter and one oracle on the test machines.
+PIECE = 2_000_000
+
+
+def max_forms(name, forms=('sel', 'nm')):
+    """The forms of max_nl a kernel is run in: both when it computes a max_nl, otherwise the first."""
+    ks = common.kernels()
+    return forms if any(p.op == 'max_nl' for p in ir.prims(ks.upward[name], ks.upward)) else forms[:1]
+
+
+def cases_of(name, fmt):
+    """(the first operand's cases, the cases of the others together) of a kernel on a format."""
+    groups = inputs(common.kernels().upward[name], interp.parse_format(fmt))
+    return len(groups[0][1]), math.prod(len(g[1]) for g in groups[1:])
+
+
+def oracle_jobs(names, fmts, piece=PIECE):
+    """The pieces of the oracle's judgment of the kernels on every case of the formats, in each form
+    of max_nl that each computes, format by format: (kernel, format, form, lo, hi, lines), the cases
+    whose first operand is one of the first group's lo to hi (inputs()), about `piece` lines each."""
+    jobs = []
+    for fmt in fmts:
+        for name in names:
+            first, rest = cases_of(name, fmt)
+            step = max(1, piece // rest)
+            for form in max_forms(name):
+                jobs += [(name, fmt, form, lo, min(first, lo + step), (min(first, lo + step) - lo) * rest)
+                         for lo in range(0, first, step)]
+    return jobs
+
+
+def oracle_lines(job):
+    """The interpreter's completed lines of a piece, in order, as `kairn-gen interp --max FORM`
+    writes them for the request lines of its cases (without a tag)."""
+    name, fmt, form, lo, hi = job[:5]
+    ks = common.kernels()
+    k = ks.upward[name]
+    f = interp.parse_format(fmt)
+    m = interp.Machine(ks, max_form=form)
+    groups = inputs(k, f)
+    text = {}
+
+    def limb(v):
+        if v not in text:
+            text[v] = interp.format_limb(v)
+        return text[v]
+    head = f'{name} {fmt} '
+    kinds = k.output_kinds
+    for first in groups[0][1][lo:hi]:
+        for rest in itertools.product(*(g[1] for g in groups[1:])):
+            given = {}
+            for (names, _), vals in zip(groups, (first,) + rest):
+                given.update(zip(names, vals))
+            args = [given[v] for v in k.input_limbs]
+            out = m.run(name, f, args)
+            yield head + ' '.join(limb(a) for a in args) + ' -> ' + ' '.join(
+                interp.format_mask(v) if kind == ir.MASK else limb(v) for v, kind in zip(out, kinds))
+
+
+def _die_with_parent():
+    import ctypes
+    import signal
+    ctypes.CDLL(None, use_errno=True).prctl(1, signal.SIGKILL)       # PR_SET_PDEATHSIG
+
+
+def oracle_piece(job, summary=None):
+    """One piece judged by the oracle's command line, in a process of its own (and its summary
+    written to `summary`, if given): (lines, the oracle's exit status, its report)."""
+    cmd = [sys.executable, ORACLE] + CHECK + (['--json', summary] if summary else [])
+    kw = {'preexec_fn': _die_with_parent} if sys.platform.startswith('linux') else {}
+    n, buf = 0, []
+    with tempfile.TemporaryFile() as out:
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=out, stderr=subprocess.STDOUT, **kw)
+        try:
+            for line in oracle_lines(job):
+                buf.append(line)
+                n += 1
+                if len(buf) == 4096:
+                    p.stdin.write(('\n'.join(buf) + '\n').encode('ascii'))
+                    buf.clear()
+            if buf:
+                p.stdin.write(('\n'.join(buf) + '\n').encode('ascii'))
+            p.stdin.close()
+        except BrokenPipeError:
+            pass
+        status = p.wait()
+        out.seek(0)
+        report = out.read().decode('ascii', 'replace')
+    return n, status, report
+
+
+_oracle_pool = None
+
+
+def oracle_run(names, fmts):
+    """Every piece of the kernels on the formats, side by side (two busy processes a piece):
+    {(kernel, format, form): lines}, and the reports of the pieces the oracle failed."""
+    global _oracle_pool
+    if _oracle_pool is None:
+        _oracle_pool = ProcessPoolExecutor(max_workers=max(1, common.JOBS // 2))
+    jobs = oracle_jobs(names, fmts)
+    lines, failed = {}, []
+    for job, (n, status, report) in zip(jobs, _oracle_pool.map(oracle_piece, jobs)):
+        lines[job[:3]] = lines.get(job[:3], 0) + n
+        if status != 0 or n != job[5]:
+            failed.append(f'{job[0]} {job[1]} --max {job[2]}, first operand {job[3]} to {job[4]}: {n} lines '
+                          f'of {job[5]}, the oracle exits with {status}:\n{report[-3000:]}')
+    return lines, failed
+
+
 class Exhaustive(unittest.TestCase):
     def check(self, fmts):
         found = exhaustive(NAMES, fmts)
@@ -930,29 +1051,24 @@ class Exhaustive(unittest.TestCase):
         self.assertIsNone(j(mul, [(NUM, False, 0, 0), (NUM, False, 0, 0)] + y,
                             [(NUM, True, 0, 0), (NUM, True, 0, 0)]))              # [0, 0], zero signs
 
-    @unittest.skipUnless(os.environ.get('KAIRN_GEN_UPWARD_ORACLE') == '1',
-                         'the oracle reads the claims of the round-up interval: $KAIRN_GEN_UPWARD_ORACLE=1')
     def test_the_oracle(self):
         # The gate of the design page: the interpreter's lines on every case of the quick formats (and
-        # of precision 3 with --full), in both forms of max_nl, judged by the oracle's command line.
-        ks = common.kernels()
-        for fmt in QUICK + (FULL if common.FULL else []):
-            f = interp.parse_format(fmt)
-            for form in ('sel', 'nm'):
-                m = interp.Machine(ks, max_form=form)
-                lines = []
-                for name in NAMES:
-                    k = ks.upward[name]
-                    groups = inputs(k, f)
-                    for case in itertools.product(*(g[1] for g in groups)):
-                        given = {}
-                        for (names, _), vals in zip(groups, case):
-                            given.update(zip(names, vals))
-                        line = ' '.join([name, fmt] + [interp.format_limb(given[v]) for v in k.input_limbs])
-                        lines.append(interp.complete(m, line, {}))
-                r = subprocess.run([sys.executable, os.path.join(common.ROOT, 'oracle', 'kairn-oracle'), 'check'],
-                                   input='\n'.join(lines) + '\n', capture_output=True, text=True)
-                self.assertEqual(r.returncode, 0, f'{fmt} --max {form}: {r.stdout[-3000:]}{r.stderr[-2000:]}')
+        # of precision 3 with --full), in each form of max_nl a kernel computes, judged by the oracle's
+        # command line, in pieces side by side; every case of every kernel, format and form, and the
+        # pieces as `kairn-gen interp` completes the same requests.
+        fmts = QUICK + (FULL if common.FULL else [])
+        lines, failed = oracle_run(NAMES, fmts)
+        self.assertEqual(failed[:3], [], f'{len(failed)} pieces failed')
+        self.assertEqual(len(lines), len(fmts) * (len(NAMES) + 3))
+        for (name, fmt, _), n in lines.items():
+            first, rest = cases_of(name, fmt)
+            self.assertEqual(n, first * rest, (name, fmt))
+        job = next(j for j in oracle_jobs(['upward_mul_1'], ['fp:2:-2:1']) if j[2] == 'nm')
+        done = list(oracle_lines(job))
+        requests = '\n'.join(line.split(' -> ')[0] for line in done[::97]) + '\n'
+        r = subprocess.run([sys.executable, os.path.join(common.GEN, 'kairn-gen'), 'interp', '--max', 'nm'],
+                           input=requests, capture_output=True, text=True)
+        self.assertEqual(r.stdout, '\n'.join(done[::97]) + '\n', r.stderr)
 
 
 if __name__ == '__main__':
