@@ -4,6 +4,7 @@ same requests of every kernel and fold (docs/developer/testing.md, "The emulated
 
     python3 tests/emulated/same_lines.py --runner LABEL EXECUTABLE ... --format F
         --seed S --count N [--max-length L] [--claims FILE]
+        (--upward-runner LABEL EXECUTABLE | --no-upward)
 
 The two are implementations of the semantics of the kernel IR that share nothing: the C++ that the
 generator prints for the emulated limb type (tests/emulated/gen/kernels.hpp), on the integer
@@ -16,6 +17,15 @@ runner complete in one process each; then the kernels that have a path of consta
 of each kernel where it does: a fault of the printer of the C++ (a select's arm, a value inlined
 from the wrong call, the fix-up branch), of the emulated arithmetic or of the interpreter. The
 oracle does not judge these lines: the tests crosscheck.emulated.K do, kernel by kernel.
+
+The kernels of the round-up interval ("rounding": "upward" in the claims; they require the rounding
+mode upward set by kairn::upward::Scope and the options of docs/concepts/upward.md, GCC and Clang
+-frounding-math, MSVC /fp:strict, in their compiled forms) are not in the emulated runners of the
+other kernels: their emulated kernels (tests/emulated/gen/upward.hpp) have a runner of their own,
+gen/tests/upward_runner.cpp built with KAIRN_UPWARD_RUNNER_EMULATED. With --upward-runner their
+requests, in one stream of their own, are completed by the interpreter and by that runner in each
+form of max_nl (--max sel, --max nm), the same bytes; with --no-upward they are left out, and the
+run says so. One of the two is required when the claims have such kernels.
 
 Python's standard library and the oracle (in this process, through tests/crosscheck.py); the
 generator's interpreter as a process.
@@ -99,11 +109,19 @@ def main(argv=None):
     ap.add_argument("--count", type=int, required=True)
     ap.add_argument("--max-length", default="16")
     ap.add_argument("--claims")
+    up = ap.add_mutually_exclusive_group()
+    up.add_argument("--upward-runner", nargs=2, metavar=("LABEL", "EXECUTABLE"),
+                    help="the emulated runner of the round-up interval's kernels")
+    up.add_argument("--no-upward", action="store_true", help="leave the round-up interval's kernels out")
     a = ap.parse_args(argv)
     claims_args = ["--claims", a.claims] if a.claims else []
     with open(a.claims or os.path.join(REPO, "gen", "claims.json"), encoding="utf-8") as f:
         claims = json.load(f)
-    kernels = [k["name"] for k in claims["kernels"]]
+    upward = [k["name"] for k in claims["kernels"] if k.get("rounding") == "upward"]
+    if upward and not (a.upward_runner or a.no_upward):
+        ap.error("the claims have %d kernels of the round-up interval: give --upward-runner or --no-upward"
+                 % len(upward))
+    kernels = [k["name"] for k in claims["kernels"] if k["name"] not in upward]
     folds = claims.get("folds", [])
     t0 = time.time()
     parts = {}
@@ -129,13 +147,29 @@ def main(argv=None):
     commands.update({label + ".ce": [exe, "--ce"] for label, exe in a.runner})
     more, ce_labels = compare("the path of constant evaluation", ce, commands)
     failed += more
+    up_text = ""
+    if upward and a.upward_runner:
+        label, exe = a.upward_runner
+        up_stream = "".join(generate(k, a.format, a.seed, a.count, claims_args) for k in upward).encode("ascii")
+        up_lines = sum(1 for line in up_stream.split(b"\n") if line and not line.startswith(b"#"))
+        up_labels = []
+        for form in ("sel", "nm"):
+            more, got = compare("the round-up interval, --max %s" % form, up_stream,
+                                {"interp --max %s" % form: crosscheck.INTERP + ["--max", form],
+                                 "%s --max %s" % (label, form): [exe, "--max", form]})
+            failed += more
+            up_labels += got
+        up_text = ("; the round-up interval's %d kernels, %d lines in each form of max_nl, the same bytes "
+                   "from %s" % (len(upward), up_lines, ", ".join(up_labels)))
+    elif upward:
+        up_text = "; the round-up interval's %d kernels left out (--no-upward)" % len(upward)
     if failed:
         print("same_lines: FAILED, the emulated kernels and the interpreter differ:\n" + "\n".join(failed))
         return 1
     print("same_lines: passed: %d lines of %d kernels and %d folds, the same bytes from %s; on the path "
-          "of constant evaluation %d lines of %d kernels, the same bytes from %s"
+          "of constant evaluation %d lines of %d kernels, the same bytes from %s%s"
           % (lines, len(kernels), len(folds), ", ".join(labels), ce_lines,
-             sum(1 for k in kernels if k in paths), ", ".join(ce_labels)))
+             sum(1 for k in kernels if k in paths), ", ".join(ce_labels), up_text))
     return 0
 
 

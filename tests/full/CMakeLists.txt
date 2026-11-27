@@ -164,6 +164,15 @@ endif()
 # (tests/crosscheck.py); every packed runner with both assignments of its lanes, the permuted
 # and the consecutive one (_compiled_both of tests/CMakeLists.txt).
 set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
+# A kernel of the round-up interval (tests/CMakeLists.txt, _upward_kernels; registered with
+# KAIRN_UPWARD_TESTS on only) has runners of its own: the quick tier's three with the build's flags
+# (_upward_compiled) and those of the flag matrix of upward/ (_upward_flags_runners), each holding an
+# upward scope; its tests have the label upward.
+set(_upward_flags_runners "")
+if(KAIRN_UPWARD_TESTS AND _upward_compiled)
+  add_subdirectory(upward)
+endif()
+set(_upward_compiled_full ${_upward_compiled} ${_upward_flags_runners})
 set(_compiled_full ${_compiled_both})
 foreach(_runner _label IN ZIP_LISTS _flags_gen_runners _flags_gen_labels)
   if(_label MATCHES "^cxx")
@@ -179,12 +188,19 @@ foreach(_kernel IN LISTS _full_kernels)
   set(_toy "${_full_${_kernel}_toy}")
   set(_restrict "${_full_${_kernel}_restrict}")
   set(_error "${_full_${_kernel}_error}")
+  set(_upward OFF)
+  if(_kernel IN_LIST _upward_kernels)
+    set(_upward ON)
+  endif()
   if(_restrict)
     set(_name full.crosscheck.interp-restricted.${_kernel})
     set(_labels full python crosscheck interp restricted)
   else()
     set(_name full.crosscheck.interp.${_kernel})
     set(_labels full python crosscheck interp)
+  endif()
+  if(_upward)
+    list(APPEND _labels upward)
   endif()
   if(_error)
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" "-DERROR=${_error}" -P "${_driver}")
@@ -211,7 +227,17 @@ foreach(_kernel IN LISTS _full_kernels)
       LABELS "full;python;crosscheck;interp;sampled")
   endif()
 
-  if(_compiled)
+  if(_upward)
+    # Its runners with the build's flags and of the flag matrix (upward/) on the full tier's cases.
+    if(_upward_compiled_full)
+      foreach(_format binary64 binary32)
+        set(_name full.crosscheck.compiled.${_kernel}.${_format})
+        add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_compiled} --format ${_format}
+          ${_random_args} --summary "${_summaries}/${_name}.json" ${_upward_compiled_full})
+        set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;compiled;upward")
+      endforeach()
+    endif()
+  elseif(_compiled)
     foreach(_format binary64 binary32)
       set(_name full.crosscheck.compiled.${_kernel}.${_format})
       add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_compiled} --format ${_format}
@@ -306,6 +332,10 @@ endif()
 # and fold, completed by the generator's interpreter and by both runners, each path, the same bytes
 # (emulated/same_lines.py). The brute-force plan has the enumerations of precision 8 to 11
 # (tests/brute/brute.py, the emulated part).
+# A kernel of the round-up interval: its own emulated runner (kairn-emulated-upward-runner, the kernels
+# of emulated/gen/upward.hpp, max_nl in MAXPD's form), whose lines must be the interpreter's bytes
+# (--interp, whose form is the same), on KAIRN_EMULATED_CASES random cases; both forms of max_nl on
+# every state of small formats are the generator's suite's (gen/tests/test_upward_cxx.py, Emulated).
 if(_emulated AND Python3_Interpreter_FOUND AND _crosscheck)
   foreach(_kernel IN LISTS _full_kernels)
     if(_full_${_kernel}_emulated_exhaustive)
@@ -318,6 +348,15 @@ if(_emulated AND Python3_Interpreter_FOUND AND _crosscheck)
       set(_format "${_emulated_format_kernel_${_kernel}}")
     endif()
     set(_name full.crosscheck.emulated.${_kernel})
+    if(_kernel IN_LIST _upward_kernels)
+      if(_emulated_upward_runners)
+        add_test(NAME ${_name} COMMAND ${_crosscheck} ${_full_${_kernel}_this_compiled}
+          --format "${_format}" ${_mode} --summary "${_summaries}/${_name}.json"
+          ${_emulated_upward_runners} --interp)
+        set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;emulated;upward")
+      endif()
+      continue()
+    endif()
     add_test(NAME ${_name} COMMAND ${_crosscheck} ${_full_${_kernel}_this_compiled}
       --format "${_format}" ${_mode} --summary "${_summaries}/${_name}.json"
       ${_emulated_runners})
@@ -331,10 +370,18 @@ if(_emulated AND Python3_Interpreter_FOUND AND _crosscheck)
       --summary "${_summaries}/${_name}.json" ${_emulated_runners})
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;emulated;fold")
   endforeach()
+  # The kernels of the round-up interval there through their emulated runner, in both forms of
+  # max_nl, or, with KAIRN_UPWARD_TESTS off, left out (same_lines.py --upward-runner, --no-upward).
+  if(_emulated_upward_runners)
+    set(_same_upward --upward-runner emulated-upward "$<TARGET_FILE:kairn-emulated-upward-runner>")
+  else()
+    set(_same_upward --no-upward)
+  endif()
   add_test(NAME full.crosscheck.emulated.same_lines
     COMMAND "${Python3_EXECUTABLE}" "${_emulated_dir}/same_lines.py"
       --runner emulated "$<TARGET_FILE:kairn-emulated-runner>"
       --runner emulated-fixup-call "$<TARGET_FILE:kairn-emulated-runner-fixup-call>"
+      ${_same_upward}
       --format "${KAIRN_EMULATED_FORMAT}" --seed "${KAIRN_CROSSCHECK_SEED}"
       --count "${KAIRN_EMULATED_SAME_CASES}" ${_oracle_claims_arg}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
@@ -365,6 +412,14 @@ if(_objcode_command)
       --workdir "${CMAKE_CURRENT_BINARY_DIR}/objcode/controls")
   set_tests_properties(full.objcode.check full.objcode.controls PROPERTIES TIMEOUT 1200 PROCESSORS 4
     LABELS "full;objcode")
+  # objcode.upward of tests/CMakeLists.txt on the whole matrix of the round-up interval.
+  if(KAIRN_UPWARD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/tests/objcode/upward_unit.cpp")
+    add_test(NAME full.objcode.upward
+      COMMAND ${_objcode_command} --upward --tier full --jobs 4
+        --workdir "${CMAKE_CURRENT_BINARY_DIR}/objcode/upward")
+    set_tests_properties(full.objcode.upward PROPERTIES TIMEOUT 1200 PROCESSORS 4
+      LABELS "full;objcode;upward")
+  endif()
 endif()
 
 # --- The adversarial search (begin) -------------------------------------------------------------
@@ -402,8 +457,14 @@ foreach(_set IN LISTS _flags_enclosure_sets)
   list(APPEND _api_full_common --runner ${_set} "$<TARGET_FILE:kairn-api-runner-${_set}>" --same-as ${_set} build)
 endforeach()
 # The runner of the packed forms alone, built for AVX2 where the build's flags give the scalar form
-# of Packed (api/CMakeLists.txt), on the kernels that packed.hpp calls.
-foreach(_kernel IN LISTS _api_oracle_kernels)
+# of Packed (api/CMakeLists.txt), on the kernels that packed.hpp calls. The kernels of the round-up
+# interval (_upward_kernels) are not called by kairn/kairn.hpp: the tests of their public type are
+# those of api/upward/ (label upward), and none is registered here.
+set(_api_full_kernels ${_api_oracle_kernels})
+if(_upward_kernels)
+  list(REMOVE_ITEM _api_full_kernels ${_upward_kernels})
+endif()
+foreach(_kernel IN LISTS _api_full_kernels)
   set(_extra "")
   if(_kernel IN_LIST _api_packed_kernels)
     set(_extra ${_api_packed_runner})
@@ -465,7 +526,7 @@ endforeach()
 # full.api.flags.SET.self_test, kairn::self_test() and kairn::environment_ok() compiled with the
 # set's flags (tests/api/runner.cpp --self-test), and full.api.flags.SET.constexpr,
 # tests/api/constexpr.cpp built with them.
-foreach(_kernel IN LISTS _api_oracle_kernels)
+foreach(_kernel IN LISTS _api_full_kernels)
   foreach(_format binary64 binary32)
     set(_name full.api.flags.oracle.${_kernel}.${_format})
     add_test(NAME ${_name}

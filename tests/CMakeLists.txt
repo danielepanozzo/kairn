@@ -365,6 +365,20 @@ if(EXISTS "${_emulated_dir}/number.cpp")
   endforeach()
   set(_emulated_runners --emulated emulated "$<TARGET_FILE:kairn-emulated-runner>"
     --emulated emulated-fixup-call "$<TARGET_FILE:kairn-emulated-runner-fixup-call>" --emulated-ce)
+  # The kernels of the round-up interval printed for the type (emulated/gen/upward.hpp, the two-number
+  # form with the type's operations rounded upward: no mode, no scope), on the runner of the family
+  # built for it (gen/tests/upward_runner.cpp with KAIRN_UPWARD_RUNNER_EMULATED; max_nl in MAXPD's
+  # form unless it is given --max nm), for full.crosscheck.emulated.upward_* and the comparison of
+  # full.crosscheck.emulated.same_lines. With KAIRN_UPWARD_TESTS.
+  set(_emulated_upward_runners "")
+  if(KAIRN_UPWARD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/gen/tests/upward_runner.cpp")
+    add_executable(kairn-emulated-upward-runner "${PROJECT_SOURCE_DIR}/gen/tests/upward_runner.cpp")
+    target_include_directories(kairn-emulated-upward-runner PRIVATE "${PROJECT_SOURCE_DIR}/gen/tests")
+    target_link_libraries(kairn-emulated-upward-runner PRIVATE kairn-emulated)
+    target_compile_definitions(kairn-emulated-upward-runner PRIVATE KAIRN_UPWARD_RUNNER_EMULATED)
+    target_compile_options(kairn-emulated-upward-runner PRIVATE ${_warnings})
+    set(_emulated_upward_runners --emulated emulated-upward "$<TARGET_FILE:kairn-emulated-upward-runner>")
+  endif()
   # A fault planted in the printed C++ (emulated/emitted_fault.py: the arms of a select of
   # mul_ext_2_2 swapped, in a copy of gen/kernels.hpp written at build time), for
   # full.crosscheck.emulated.fault.
@@ -438,6 +452,18 @@ if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/tests/objcode/obj
     COMMAND "${Python3_EXECUTABLE}" tests/objcode/test_objcode.py
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(objcode.test PROPERTIES LABELS "objcode;python")
+  # objcode.upward: the kernels of the round-up interval (objcode/upward_unit.cpp, objcode.py
+  # --upward; docs/developer/design/upward.md, "Object code"), with the options of kairn::upward, in
+  # the quick tier's configurations of their matrix (full.objcode.upward: all of it): in the form
+  # the target chooses with its array form, in the two-number form forced, and on x86-64 without the
+  # packed options; no fused multiply-add, no negated multiplication, no fmax, the multiplications and
+  # the maxima asked for, no call. With KAIRN_UPWARD_TESTS.
+  if(KAIRN_UPWARD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/tests/objcode/upward_unit.cpp")
+    add_test(NAME objcode.upward
+      COMMAND ${_objcode_command} --upward --tier quick --jobs 2
+        --workdir "${CMAKE_CURRENT_BINARY_DIR}/objcode/upward")
+    set_tests_properties(objcode.upward PROPERTIES TIMEOUT 600 PROCESSORS 2 LABELS "objcode;upward")
+  endif()
   message(STATUS "Kairn tests: the object code of every kernel with ${CMAKE_CXX_COMPILER_ID} "
     "(packed: ${_objcode_packed})")
 endif()
@@ -748,6 +774,28 @@ set(_toy_ext_i1_1_sum fp:3:-4:1)
 set(_toy_ext_i2_2_sum fp:2:-2:1)
 set(_toy_ext_b1_1_sum fp:3:-4:1)
 set(_toy_ext_b2_2_sum fp:3:-3:0)
+# The kernels of the round-up interval ("rounding": "upward", docs/developer/design/upward.md), by
+# the number of their one-limb inputs: a stored pair (u, n) is one operand of the oracle's
+# enumeration, the empty set and every canonical state of the format (one zero: 230 states in
+# fp:2:-2:1); a default interval as the interval kernels' (upward_from_interval_1); a number every
+# value. Formats of the statements. With KAIRN_UPWARD_TESTS only, and the label upward.
+#
+#   limbs    kernels                                      format        cases
+#   4        two states: the sums, the product, the hull,  fp:2:-2:1      52 900
+#            the intersection, the comparisons
+#   3        a state and a number: upward_add_num_1,      fp:3:-4:1      95 816
+#            upward_mul_num_1, upward_contains_1
+#   2        a state (upward_neg_1, upward_to_interval_1,  fp:5:-8:1      62 480
+#            the predicates of one state), a default
+#            interval (upward_from_interval_1), two numbers               125 316
+#            (upward_make_1)
+#
+# Every canonical state with both signs of a zero, at precision 1 to 4 and in both forms of max_nl,
+# is the generator's suite's and tests/brute/upward.py's (docs/developer/testing.md, "The round-up
+# interval").
+set(_toy_up_4 fp:2:-2:1)
+set(_toy_up_3 fp:3:-4:1)
+set(_toy_up_2 fp:5:-8:1)
 
 # --- Not yet cross-checked by the oracle ------------------------------------------------------
 #
@@ -980,8 +1028,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         "permuted,consecutive")
     endif()
   endforeach()
-  # What full/CMakeLists.txt registers, kernel by kernel, for the full tier.
+  # What full/CMakeLists.txt registers, kernel by kernel, for the full tier; and the kernels of the
+  # round-up interval ("rounding": "upward"), whose tests are registered with KAIRN_UPWARD_TESTS on
+  # only, through runners of their own.
   set(_full_kernels "")
+  set(_upward_kernels "")
   set(_n_complete 0)
   set(_n_restricted 0)
   set(_n_not_checked 0)
@@ -990,6 +1041,13 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     if(_kernel IN_LIST KAIRN_NOT_YET_CROSS_CHECKED)
       math(EXPR _n_not_checked "${_n_not_checked} + 1")
       continue()
+    endif()
+    string(JSON _rounding ERROR_VARIABLE _no_rounding GET "${_claims}" kernels ${_i} rounding)
+    if(_rounding STREQUAL "upward")
+      list(APPEND _upward_kernels ${_kernel})
+      if(NOT KAIRN_UPWARD_TESTS)
+        continue()
+      endif()
     endif()
     string(JSON _value ERROR_VARIABLE _no_value GET "${_claims}" kernels ${_i} value)
     string(JSON _min ERROR_VARIABLE _no_min GET "${_claims}" kernels ${_i} min_precision)
@@ -1096,6 +1154,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     if(DEFINED _toy_kernel_${_kernel})
       set(_toy "${_toy_kernel_${_kernel}}")
     endif()
+    if(_rounding STREQUAL "upward")
+      set(_toy "${_toy_up_${_inputs}}")
+    endif()
     list(LENGTH _toy _toy_length)
     set(_restrict "")
     if(_toy_length GREATER 1)
@@ -1152,7 +1213,6 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     # The compiled runners, on random cases of every stratum. A kernel of the round-up interval
     # ("rounding": "upward") has runners of its own (_upward_compiled) and the cases of an interval
     # kernel, with the label upward, when KAIRN_UPWARD_TESTS is on, and no such test otherwise.
-    string(JSON _rounding ERROR_VARIABLE _no_rounding GET "${_claims}" kernels ${_i} rounding)
     if(_rounding STREQUAL "upward")
       if(_upward_compiled)
         foreach(_format binary64 binary32)
@@ -1367,6 +1427,15 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   endif()
   list(JOIN _runner_labels ", " _labels)
   math(EXPR _count "${_count} - ${_n_not_checked}")
+  list(LENGTH _upward_kernels _n_upward)
+  if(_n_upward GREATER 0 AND NOT KAIRN_UPWARD_TESTS)
+    message(STATUS "Kairn tests: the ${_n_upward} kernels of the round-up interval have no test "
+      "(KAIRN_UPWARD_TESTS is OFF)")
+    math(EXPR _count "${_count} - ${_n_upward}")
+  elseif(_n_upward GREATER 0)
+    message(STATUS "Kairn tests: the ${_n_upward} kernels of the round-up interval through their own "
+      "runners upward-register, upward-arrays, upward-numbers (label upward)")
+  endif()
   if(_n_not_checked GREATER 0 OR _n_folds_not_checked GREATER 0)
     message(STATUS "Kairn tests: not yet cross-checked by the oracle (KAIRN_NOT_YET_CROSS_CHECKED): "
       "${_n_not_checked} kernels and ${_n_folds_not_checked} folds, tested by the generator's tier")
@@ -1567,4 +1636,37 @@ elseif(PROJECT_IS_TOP_LEVEL)
 else()
   message(STATUS "Kairn tests: the quick tier, ${_n_quick} tests; the full tier only when Kairn "
     "is the top-level project")
+endif()
+
+# --- The round-up interval's programs -----------------------------------------------------------
+#
+# kairn-upward-tests builds the programs that the tests labelled upward run, and nothing else: the
+# runners of the round-up interval (_upward_compiled, the emulated one, the full tier's flag matrix
+# of full/upward/) and every target of api/upward/. A job that runs those tests alone (the job
+# "Windows x64, upward" of .github/workflows/build.yml) builds this target, not everything. With
+# KAIRN_UPWARD_TESTS.
+if(KAIRN_UPWARD_TESTS)
+  set(_upward_targets "")
+  foreach(_target kairn-gen-upward-runner-register kairn-gen-upward-runner-arrays
+                  kairn-gen-upward-runner-numbers kairn-emulated-upward-runner)
+    if(TARGET ${_target})
+      list(APPEND _upward_targets ${_target})
+    endif()
+  endforeach()
+  # The directories added: api/upward/ by api/ with KAIRN_UPWARD_TESTS, full/upward/ by full/ with
+  # the full tier and the runners.
+  set(_upward_dirs api/upward)
+  if(_full_tier AND _upward_compiled)
+    list(APPEND _upward_dirs full/upward)
+  endif()
+  foreach(_dir IN LISTS _upward_dirs)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_dir}/CMakeLists.txt")
+      get_property(_dir_targets DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${_dir}" PROPERTY BUILDSYSTEM_TARGETS)
+      list(APPEND _upward_targets ${_dir_targets})
+    endif()
+  endforeach()
+  add_custom_target(kairn-upward-tests)
+  if(_upward_targets)
+    add_dependencies(kairn-upward-tests ${_upward_targets})
+  endif()
 endif()
