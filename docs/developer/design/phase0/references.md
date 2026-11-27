@@ -241,7 +241,9 @@ volume 2, `MAXPD` (the second operand returned when either operand is a NaN or b
 volume 1 for MXCSR.
 
 <a id="arm-arm"></a>**Arm ARM.** *Arm Architecture Reference Manual for A-profile*, `FMAXNM`
-(vector) and its pseudocode `FPMaxNum`, and FPCR.
+(vector) and its pseudocode `FPMaxNum`, and FPCR; and *Arm A-profile A64 Instruction Set
+Architecture* (DDI 0602, 2024-12), `FMAX` (vector) and its shared pseudocode `FPMax`,
+`FPProcessNaNs` and `FPProcessNaN`.
 
 ## Proof tools
 

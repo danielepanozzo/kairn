@@ -5,6 +5,10 @@
 /// What each version has. Until 1.0 a minor version may change the interface, and a version names
 /// what a tree has, not a release.
 ///
+/// - 0.4.1: in the NEON forms of kairn/upward.hpp, the test that an operand is empty (a NaN in a
+///   lane of either operand, detail::unord) is the NaN test of their maximum, FMAX, instead of two
+///   NaN tests and their or: the same result for every input, in fewer instructions. The listings,
+///   the statements, the claims and every other form are unchanged.
 /// - 0.4.0: the opt-in round-up interval, kairn/upward.hpp, which kairn/kairn.hpp does not include
 ///   and which requires the rounding mode upward set by kairn::upward::Scope and the options of
 ///   docs/concepts/upward.md (GCC and Clang -frounding-math, MSVC /fp:strict), with the CMake target
@@ -51,10 +55,10 @@
 /// The minor version.
 #define KAIRN_VERSION_MINOR 4
 /// The patch version.
-#define KAIRN_VERSION_PATCH 0
+#define KAIRN_VERSION_PATCH 1
 
 /// "MAJOR.MINOR.PATCH", as a string literal.
-#define KAIRN_VERSION_STRING "0.4.0"
+#define KAIRN_VERSION_STRING "0.4.1"
 
 /// MAJOR * 10000 + MINOR * 100 + PATCH, for comparisons in `#if`.
 #define KAIRN_VERSION (KAIRN_VERSION_MAJOR * 10000 + KAIRN_VERSION_MINOR * 100 + KAIRN_VERSION_PATCH)
