@@ -18,12 +18,13 @@
      returns the same number for operands that are not NaN, and NEON's vmaxq_f64 too, up to the
      sign of a zero, which the model does not have); eqb: eq (line 236); blend: blend (line 222);
      le0: le0 (line 234);
-   - upper_pair, upper_normalized: the vocabulary of the brief (lines 14-19 of the header);
+   - upper_pair, upper_normalized: the vocabulary of the probe (lines 14-19 of the header);
    - fast_two_sum: lines 331-334;
    - pair_mul: lines 366-372 (it returns p and the pair (zh, zl));
    - lexmax: lines 379-383;
-   - the registers V (two lanes) and Rg (struct R, two registers h and l: lines 92-95), with
-     lane0, lane1, swap, dup0, dup1, flip, mall, mlane1, mswap (lines 209-210, 219-221, 224,
+   - the registers V (two lanes, lane0 and lane1) and Rg (struct R, two registers hreg and lreg,
+     the h and l of lines 92-95), with swap, dup0, dup1, flip, mall, mlane1, mswap (lines
+     209-210, 219-221, 224,
      231, 241-242); pair_mul_v and lexmax_v: the same operations on the two lanes;
    - the case table kCases: lines 456-477; lanes: lines 500-506; mul_one: lines 491-497 (its
      fast path); mul_case: lines 507-518; mul_zero_zero: lines 480-489 (its fast path);
@@ -84,31 +85,34 @@ Definition lexmax (ah al bh bl : R) : R * R :=
 
 (** * Registers of two lanes *)
 
-Definition V : Type := (R * R)%type.
+(* A register of two lanes, and the struct R of the header (lines 92-95): the heads h and the
+   second limbs l. Records, not pairs: the lanes of a register and the two results of a
+   pair_mul are then told apart by name, which also keeps the kernel's conversion checks on the
+   right path (with pairs everywhere, it compared a lane of a register with a limb of a result
+   and spent minutes before backtracking). *)
+Record V : Type := mkV { lane0 : R; lane1 : R }.
+Record Rg : Type := mkR { hreg : V; lreg : V }.
 Definition M : Type := (bool * bool)%type.
-(* struct R { V h, l; }: the heads and the second limbs. *)
-Definition Rg : Type := (V * V)%type.
 
-Definition lane0 (a : V) : R := fst a.
-Definition lane1 (a : V) : R := snd a.
-Definition swap (a : V) : V := (lane1 a, lane0 a).
-Definition dup0 (a : V) : V := (lane0 a, lane0 a).
-Definition dup1 (a : V) : V := (lane1 a, lane1 a).
+Definition swap (a : V) : V := mkV (lane1 a) (lane0 a).
+Definition dup0 (a : V) : V := mkV (lane0 a) (lane0 a).
+Definition dup1 (a : V) : V := mkV (lane1 a) (lane1 a).
 Definition flip (m : M) (a : V) : V :=
-  (if fst m then - lane0 a else lane0 a, if snd m then - lane1 a else lane1 a).
+  mkV (if fst m then - lane0 a else lane0 a) (if snd m then - lane1 a else lane1 a).
 Definition mall : M := (true, true).
 Definition mlane1 : M := (false, true).
 Definition mswap (m : M) : M := (snd m, fst m).
 
-Definition pair_mul_v (emin prec : Z) (ph pl qh ql : V) : V * (V * V) :=
+(* pair_mul on the two lanes: the register p and the pair of registers (zh, zl). *)
+Definition pair_mul_v (emin prec : Z) (ph pl qh ql : V) : V * Rg :=
   let r0 := pair_mul emin prec (lane0 ph) (lane0 pl) (lane0 qh) (lane0 ql) in
   let r1 := pair_mul emin prec (lane1 ph) (lane1 pl) (lane1 qh) (lane1 ql) in
-  ((fst r0, fst r1), ((fst (snd r0), fst (snd r1)), (snd (snd r0), snd (snd r1)))).
+  (mkV (fst r0) (fst r1), mkR (mkV (fst (snd r0)) (fst (snd r1))) (mkV (snd (snd r0)) (snd (snd r1)))).
 
 Definition lexmax_v (ah al bh bl : V) : Rg :=
   let m0 := lexmax (lane0 ah) (lane0 al) (lane0 bh) (lane0 bl) in
   let m1 := lexmax (lane1 ah) (lane1 al) (lane1 bh) (lane1 bl) in
-  ((fst m0, fst m1), (snd m0, snd m1)).
+  mkR (mkV (fst m0) (fst m1)) (mkV (snd m0) (snd m1)).
 
 (** * The product, form "branch" (its fast path) *)
 
@@ -145,7 +149,7 @@ Definition lanes (P0 P1 : Z) (a : V) : V :=
 (* mul_one(p, q, x, y), its fast path: the pair (zh, zl) of pair_mul. In the model nothing
    overflows, so the test big(pr) that leads to mul_special is never taken. *)
 Definition mul_one (emin prec : Z) (p q : Rg) : Rg :=
-  snd (pair_mul_v emin prec (fst p) (snd p) (fst q) (snd q)).
+  snd (pair_mul_v emin prec (hreg p) (lreg p) (hreg q) (lreg q)).
 
 (* The integer flags of a Case read as C++ conditions: nonzero is true. *)
 Definition nz (k : Z) : bool := negb (Z.eqb k 0).
@@ -153,28 +157,28 @@ Definition nz (k : Z) : bool := negb (Z.eqb k 0).
 (* mul_case<K>(x, y). *)
 Definition mul_case (emin prec : Z) (k : nat) (x y : Rg) : Rg :=
   let c := kCases k in
-  let p : Rg := (lanes (p0 c) (p1 c) (fst x), lanes (p0 c) (p1 c) (snd x)) in
-  let q : Rg := (lanes (q0 c) (q1 c) (fst y), lanes (q0 c) (q1 c) (snd y)) in
+  let p : Rg := mkR (lanes (p0 c) (p1 c) (hreg x)) (lanes (p0 c) (p1 c) (lreg x)) in
+  let q : Rg := mkR (lanes (q0 c) (q1 c) (hreg y)) (lanes (q0 c) (q1 c) (lreg y)) in
   let q : Rg :=
     if (nz (s0 c) || nz (s1 c))%bool then
       let s := if (nz (s0 c) && nz (s1 c))%bool then mall
                else if nz (s1 c) then mlane1 else mswap mlane1 in
-      (flip s (fst q), flip s (snd q))
+      mkR (flip s (hreg q)) (flip s (lreg q))
     else q in
   mul_one emin prec p q.
 
 (* mul_zero_zero(x, y), its fast path. *)
 Definition mul_zero_zero (emin prec : Z) (x y : Rg) : Rg :=
-  let a := pair_mul_v emin prec (dup1 (fst x)) (dup1 (snd x)) (swap (fst y)) (swap (snd y)) in
-  let b := pair_mul_v emin prec (dup0 (fst x)) (dup0 (snd x)) (fst y) (snd y) in
-  lexmax_v (fst (snd a)) (snd (snd a)) (fst (snd b)) (snd (snd b)).
+  let a := pair_mul_v emin prec (dup1 (hreg x)) (dup1 (lreg x)) (swap (hreg y)) (swap (lreg y)) in
+  let b := pair_mul_v emin prec (dup0 (hreg x)) (dup0 (lreg x)) (hreg y) (lreg y) in
+  lexmax_v (hreg (snd a)) (lreg (snd a)) (hreg (snd b)) (lreg (snd b)).
 
 (* mul_branch(x, y). *)
 Definition mul_branch (emin prec : Z) (x y : Rg) : Rg :=
-  let xn := le0 (lane0 (fst x)) in   (* b <= 0 *)
-  let xp := le0 (lane1 (fst x)) in   (* a >= 0 *)
-  let yn := le0 (lane0 (fst y)) in   (* d <= 0 *)
-  let yp := le0 (lane1 (fst y)) in   (* c >= 0 *)
+  let xn := le0 (lane0 (hreg x)) in   (* b <= 0 *)
+  let xp := le0 (lane1 (hreg x)) in   (* a >= 0 *)
+  let yn := le0 (lane0 (hreg y)) in   (* d <= 0 *)
+  let yp := le0 (lane1 (hreg y)) in   (* c >= 0 *)
   if xp then
     (if yp then mul_case emin prec 10 x y
      else if yn then mul_case emin prec 6 x y
@@ -191,13 +195,13 @@ Definition mul_branch (emin prec : Z) (x y : Rg) : Rg :=
 
 (* The value of the upper pair of the upper bound, uh + ul, and of the negated lower bound,
    nh + nl. *)
-Definition hi (x : Rg) : R := lane0 (fst x) + lane0 (snd x).
-Definition nlo (x : Rg) : R := lane1 (fst x) + lane1 (snd x).
+Definition hi (x : Rg) : R := lane0 (hreg x) + lane0 (lreg x).
+Definition nlo (x : Rg) : R := lane1 (hreg x) + lane1 (lreg x).
 
 (* The invariant of the type in the model: both lanes upper-normalized. *)
 Definition canonical (emin prec : Z) (x : Rg) : Prop :=
-  upper_normalized emin prec (lane0 (fst x)) (lane0 (snd x)) /\
-  upper_normalized emin prec (lane1 (fst x)) (lane1 (snd x)).
+  upper_normalized emin prec (lane0 (hreg x)) (lane0 (lreg x)) /\
+  upper_normalized emin prec (lane1 (hreg x)) (lane1 (lreg x)).
 
 (* t is in the interval [-(nh + nl), uh + ul]. *)
 Definition mem (x : Rg) (t : R) : Prop := - nlo x <= t <= hi x.

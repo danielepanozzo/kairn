@@ -6,3 +6,5 @@
 X2Defs.v
 X2Order.v
 X2PairMul.v
+X2MulBranch.v
+X2Excess.v

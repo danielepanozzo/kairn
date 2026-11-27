@@ -1,8 +1,6 @@
 (* EXPERIMENTAL proof probe. Statement 2 of the product: pair_mul (upward2.hpp lines 366-372)
-   returns an upper pair of the exact product for all inputs, and an upper-normalized pair for
-   operands that are upper-normalized pairs or negations of such pairs (the product passes both:
-   mul_case negates the lanes of Q where its flags s are set), underflow included, from
-   precision 7. Model and definitions: X2Defs.v.
+   returns an upper pair of the exact product, and an upper-normalized pair, for ALL real
+   inputs (every precision, underflow included, no overflow). Model and definitions: X2Defs.v.
 
    Main theorems (Print Assumptions at the end of the file):
    - fast2sum_up_exact: for numbers a, b of the format with |b| <= |a|, a - RU(a + b) is a number
@@ -11,21 +9,32 @@
      Boldo, Graillat and Muller (2017); it is proved here (Sterbenz's lemma and one case below
      2^(emin + prec)), not assumed.
    - fast_two_sum_upper: s + t >= a + b, for all real a, b;
-   - fast_two_sum_normalized: when a - RU(a + b) is a number of the format (by
-     fast2sum_up_exact: when |b| <= |a|), t = RU(a + b - s) and (s, t) is upper-normalized;
+   - fast_two_sum_normalized: (s, t) is upper-normalized for every real a and every b of the
+     format, with NO order between them;
+   - fast_two_sum_error: when a - RU(a + b) is a number of the format (by fast2sum_up_exact:
+     when |b| <= |a|), t = RU(a + b - s), the least upper bound of the error in the format;
    - pair_mul_upper: zh + zl >= (Ph + Pl) (Qh + Ql), for all real inputs;
-   - pair_mul_normalized: (zh, zl) is upper-normalized, for numbers of the format with
-     |Pl| <= 2 u |Ph| and |Ql| <= 2 u |Qh| (small_tail), from precision 7;
-   - small_tail_upper_normalized: an upper-normalized pair and its negation have small tails;
-   - pair_mul_correct: the two together for operands that are upper-normalized pairs or
-     negations of upper-normalized pairs, from precision 7.
+   - pair_mul_normalized: (zh, zl) is upper-normalized, for all real inputs (w is a rounding,
+     so a number of the format, and fast_two_sum_normalized applies);
+   - pair_mul_correct: the two together, the probe's statement 2;
+   - pair_mul_tight: for operands that are upper-normalized pairs or their negations (the product
+     passes both: mul_case negates the lanes of Q where its flags s are set), from precision 7,
+     zh = RU(p + w) and zl = RU(p + w - zh): the header's argument that the final fast_two_sum
+     has its operands in order (or is exact), which normalization does not need but which says
+     that no step is lost in the last sum.
 
-   What makes p - zh exact is EITHER |w| <= |p| (then fast2sum_up_exact) OR
+   For pair_mul_tight, what makes p - zh exact is EITHER |w| <= |p| (then fast2sum_up_exact) OR
    |p + w| <= 2^(emin + prec) (then p + w is itself a number of the format, zh = p + w and
-   zl = 0). The proof bounds, with Y = u |Ph Qh| and eta = 2^emin: |w| <= 7 Y + 6 eta and
-   |p| >= |Ph Qh| - 2 Y - eta (lemma pair_mul_exact_step); so |w| > |p| forces |Ph Qh| < 8 eta
-   and then |p + w| < 14 eta, below 2^(emin + prec). Precision 7 is what keeps these constants
-   simple (u <= 1/128). *)
+   zl = 0). The proof (pair_mul_exact_step) bounds, with Y = u |Ph Qh| and eta = 2^emin,
+   |Pl| <= 2 u |Ph| and |Ql| <= 2 u |Qh| (small_tail, which upper-normalized pairs and their
+   negations have: small_tail_upper_normalized): |w| <= 7 Y + 6 eta and
+   |p| >= |Ph Qh| - 2 Y - eta; so |w| > |p| forces |Ph Qh| < 8 eta and then |p + w| < 14 eta,
+   below 2^(emin + prec). Precision 7 is what keeps these constants simple (u <= 1/128).
+
+   History: the first version of this file proved the normalization through that exactness,
+   from precision 7; the sum half of this probe (X2Sum.v, fast_two_sum_normalized) then found
+   that fast_two_sum's result is upper-normalized whenever b is a number of the format, which
+   makes the normalization of pair_mul unconditional. Both are kept. *)
 From Stdlib Require Import Reals ZArith Lia Lra Psatz Bool.
 From Flocq Require Import Core Plus_error Mult_error Sterbenz.
 From Kairn.Gen Require Import Statements.
@@ -142,23 +151,39 @@ intros a b. unfold fast_two_sum, add_up, sub_up. cbv zeta. cbn [fst snd].
 generalize (ru_ge emin prec (a - ru (a + b))) (ru_ge emin prec (ru (a - ru (a + b)) + b)). lra.
 Qed.
 
+(* Upper-normalized for every real a and every b of the format, with no order between them:
+   a - s <= -b (s >= a + b) and -b is a number of the format, so RU(a - s) <= -b and
+   t = RU(RU(a - s) + b) <= 0; and t >= a + b - s. So s + t is in [a + b, s], inside
+   (pred(s), s]. (The argument of the sum half of this probe, X2Sum.v; the first version of this
+   file proved the normalization of pair_mul the long way, through the exactness of p - zh;
+   that proof is kept below for what it still says, that zl is the least upper bound of the
+   error.) *)
 Theorem fast_two_sum_normalized :
-  forall a b, format (a - ru (a + b)) ->
-  let st := fast_two_sum emin prec a b in
-  snd st = ru (a + b - fst st) /\ upper_normalized emin prec (fst st) (snd st).
+  forall a b, format b ->
+  let st := fast_two_sum emin prec a b in upper_normalized emin prec (fst st) (snd st).
 Proof.
-intros a b Fd. unfold fast_two_sum, add_up, sub_up. cbv zeta. cbn [fst snd].
+intros a b Fb. unfold fast_two_sum, add_up, sub_up. cbv zeta. cbn [fst snd].
 assert (Fs : format (ru (a + b))) by apply (ru_format emin prec).
-assert (T : ru (ru (a - ru (a + b)) + b) = ru (a + b - ru (a + b))).
-{ rewrite (ru_id emin prec (a - ru (a + b))) by exact Fd. f_equal. ring. }
-rewrite T. split; [reflexivity|].
 unfold upper_normalized, fmt. split; [exact Fs | split; [apply (ru_format emin prec)|]].
 apply (proj2 (ru_eq_iff emin prec _ _ Fs)).
 assert (H1 : a + b <= ru (a + b)) by apply (ru_ge emin prec).
 assert (H2 : pred radix2 fexp (ru (a + b)) < a + b) by apply (pred_ru_lt emin prec).
-assert (H3 : a + b - ru (a + b) <= ru (a + b - ru (a + b))) by apply (ru_ge emin prec).
-assert (H4 : ru (a + b - ru (a + b)) <= 0) by (apply (ru_nonpos emin prec); lra).
+assert (H3 : ru (a - ru (a + b)) <= - b).
+{ apply (ru_le_format emin prec); [now apply generic_format_opp | lra]. }
+assert (H4 : a - ru (a + b) <= ru (a - ru (a + b))) by apply (ru_ge emin prec).
+assert (H5 : ru (a - ru (a + b)) + b <= ru (ru (a - ru (a + b)) + b)) by apply (ru_ge emin prec).
+assert (H6 : ru (ru (a - ru (a + b)) + b) <= 0) by (apply (ru_nonpos emin prec); lra).
 lra.
+Qed.
+
+(* When a - RU(a + b) is a number of the format (by fast2sum_up_exact: when |b| <= |a|),
+   t = RU(a + b - s): the least number of the format at or above the error. *)
+Theorem fast_two_sum_error :
+  forall a b, format (a - ru (a + b)) ->
+  let st := fast_two_sum emin prec a b in snd st = ru (a + b - fst st).
+Proof.
+intros a b Fd. unfold fast_two_sum, add_up, sub_up. cbv zeta. cbn [fst snd].
+rewrite (ru_id emin prec (a - ru (a + b))) by exact Fd. f_equal. ring.
 Qed.
 
 (** * Small tails *)
@@ -312,17 +337,27 @@ destruct (Rle_or_lt (Rabs w) (Rabs p)) as [O|O].
   replace (p - (p + w)) with (- w) by ring. now apply generic_format_opp.
 Qed.
 
+(* Normalization, for ALL real inputs: w is a number of the format (a rounding), so
+   fast_two_sum(p, w) is upper-normalized whatever the order of |p| and |w|. *)
 Theorem pair_mul_normalized :
-  (7 <= prec)%Z ->
-  forall ph pl qh ql, format ph -> format pl -> format qh -> format ql ->
-  small_tail prec ph pl -> small_tail prec qh ql ->
+  forall ph pl qh ql,
   let r := pair_mul emin prec ph pl qh ql in
   upper_normalized emin prec (fst (snd r)) (snd (snd r)).
 Proof.
-intros Hp ph pl qh ql Fph Fpl Fqh Fql Tp Tq r.
-assert (D := pair_mul_exact_step Hp ph pl qh ql Fph Fpl Fqh Fql Tp Tq _ _ _ _ _ _
-               eq_refl eq_refl eq_refl eq_refl eq_refl eq_refl).
-exact (proj2 (fast_two_sum_normalized _ _ D)).
+intros ph pl qh ql r. unfold r, pair_mul. cbv zeta. cbn [fst snd].
+apply fast_two_sum_normalized. unfold add_up. apply (ru_format emin prec).
+Qed.
+
+(* Statement 2: an upper pair of the exact product, upper-normalized, for all real inputs. *)
+Theorem pair_mul_correct :
+  forall ph pl qh ql,
+  let r := pair_mul emin prec ph pl qh ql in
+  upper_pair (fst (snd r)) (snd (snd r)) ((ph + pl) * (qh + ql)) /\
+  upper_normalized emin prec (fst (snd r)) (snd (snd r)).
+Proof.
+intros ph pl qh ql r. split.
+- exact (pair_mul_upper ph pl qh ql).
+- exact (pair_mul_normalized ph pl qh ql).
 Qed.
 
 (* The operands the product passes: each one an upper-normalized pair or the negation of one. *)
@@ -343,19 +378,23 @@ intros h l [N|N].
     now rewrite 2!Ropp_involutive.
 Qed.
 
-Theorem pair_mul_correct :
+(* What the order of the final fast_two_sum still gives (the header's argument, which the
+   normalization above does not need): for the operands the product passes, from precision 7,
+   p - zh is exact, so zh = RU(p + w) and zl = RU(p + w - zh), the least number of the format
+   at or above the error of the last sum: no step is lost there. *)
+Theorem pair_mul_tight :
   (7 <= prec)%Z ->
   forall ph pl qh ql, up_or_neg ph pl -> up_or_neg qh ql ->
   let r := pair_mul emin prec ph pl qh ql in
-  upper_pair (fst (snd r)) (snd (snd r)) ((ph + pl) * (qh + ql)) /\
-  upper_normalized emin prec (fst (snd r)) (snd (snd r)).
+  let w := ru (ru (ph * qh + - fst r) + ru (ph * ql + ru (pl * qh + ru (pl * ql)))) in
+  fst (snd r) = ru (fst r + w) /\ snd (snd r) = ru (fst r + w - fst (snd r)).
 Proof.
-intros Hp ph pl qh ql P Q r.
+intros Hp ph pl qh ql P Q r w.
 destruct (up_or_neg_facts ph pl P) as [Fph [Fpl Tp]].
 destruct (up_or_neg_facts qh ql Q) as [Fqh [Fql Tq]].
-split.
-- exact (pair_mul_upper ph pl qh ql).
-- exact (pair_mul_normalized Hp ph pl qh ql Fph Fpl Fqh Fql Tp Tq).
+assert (D := pair_mul_exact_step Hp ph pl qh ql Fph Fpl Fqh Fql Tp Tq _ _ _ _ _ _
+               eq_refl eq_refl eq_refl eq_refl eq_refl eq_refl).
+split; [reflexivity | exact (fast_two_sum_error _ _ D)].
 Qed.
 
 End PairMul.
@@ -363,6 +402,8 @@ End PairMul.
 Print Assumptions fast2sum_up_exact.
 Print Assumptions fast_two_sum_upper.
 Print Assumptions fast_two_sum_normalized.
+Print Assumptions fast_two_sum_error.
 Print Assumptions pair_mul_upper.
 Print Assumptions pair_mul_normalized.
 Print Assumptions pair_mul_correct.
+Print Assumptions pair_mul_tight.
