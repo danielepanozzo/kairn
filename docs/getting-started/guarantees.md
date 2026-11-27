@@ -2,7 +2,8 @@
 
 Kairn's public headers cover `Expansion<T, 1>`, `Expansion<T, 2>`, `Ball<T, 1>`, `Ball<T, 2>` and
 `Interval<T, 1>`, `Interval<T, 2>` for `T` = `float` and `double`, `Packed` and the arrays of
-numbers, the functions on arrays and the accumulator. This page says, for each
+numbers, the functions on arrays and the accumulator, and the opt-in round-up interval
+`kairn::upward::Interval<T>` ([below](#the-round-up-interval)). This page says, for each
 operation, what is proved, what the
 library returns at overflow and for infinite and NaN values, and what is not proved yet. It
 describes the repository as `gen/claims.json` stands in this version; the compiler enforces the
@@ -49,8 +50,8 @@ without the marker. `kairn::traits` exports error constants only for proved oper
 of an UNVERIFIED one has `verified == false` and no constants to read, so that no client bound can
 be built on a number that is only a target.
 
-In this version every kernel that an operation of these headers calls is proved, so no operation
-needs the marker; the kernels of Milestone 2 written so far are proved too, and the functions on
+In this version every kernel that an operation of these headers calls is proved, those of the
+round-up interval included, so no operation needs the marker; the kernels of Milestone 2 written so far are proved too, and the functions on
 arrays call loops all of whose kernels are proved ([below](#sums-dot-products-and-maps-of-arrays));
 a function on arrays has no marked form, and compiles only while the kernels of its loop are. It is how the
 operations still to come (three and four limbs, division, square root) will ship before their
@@ -716,10 +717,36 @@ zero compared as a zero under MSVC). Not provided: an empty state, a radius per 
 in the lane order, operations with a `Ball` or a number but the scaling, constant evaluation of any
 operation.
 
+## The round-up interval
+
+`kairn/upward.hpp`, which `kairn/kairn.hpp` does not include, holds `kairn::upward::Interval<T>`, an
+interval of one limb stored as its upper bound and its lower bound negated and computed under the
+rounding mode upward, its functions on arrays, and the scopes that set the mode
+([The round-up interval](../concepts/upward.md)). Each of its 24 kernels has a statement in the model
+of IEEE 754 only, with its sums and products rounded upward, toward $+\infty$, and the status that
+[the reference](../reference/index.md#the-round-up-interval) gives; in this version every one is
+proved. The arithmetic answers every special case as `Interval<T, 1>` does (the empty set,
+unbounded intervals, overflow, $0 \cdot \infty = 0$), and its products are exactly rounded, where
+the default one-limb product may be one number of `T` wider; the sign of a zero bound is
+unspecified. `x - t` and `t - x` are compositions of proved kernels through an exact negation,
+argued and not proved as one statement, and `is_finite()` is a test of bit patterns.
+
+**A new assumption.** The statements are about IEEE 754's operations rounded upward; that each
+operation of the header that rounds runs as such is assumed, not proved, and is the program's
+responsibility, by the owner's decision of 2026-11-24: the files that include the header are
+compiled with `-frounding-math` (GCC and Clang) or `/fp:strict` (MSVC), every operation that rounds
+runs inside the header's scopes, and the mode is never set by hand around them
+([What the program guarantees](../concepts/upward.md#what-the-program-guarantees)). The header's
+compile-time guard, the assertions of a build with `KAIRN_CHECKS` and `kairn::upward::self_test()`
+are evidence of it, not a proof ([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked)).
+On MSVC the assurance is weaker ([MSVC](../concepts/upward.md#msvc)).
+
 ## The environment
 
-Every guarantee assumes rounding to nearest, no flush to zero, and compiler flags that do not
-rewrite floating-point expressions ([Environment](../developer/design/phase0/environment.md)).
+Every guarantee of the default types assumes rounding to nearest, no flush to zero, and compiler
+flags that do not rewrite floating-point expressions
+([Environment](../developer/design/phase0/environment.md)); those of the round-up interval assume
+rounding upward ([above](#the-round-up-interval)).
 Including Kairn fails with `#error` under the flags a macro reveals (`-ffast-math`,
 `-ffinite-math-only`, and on GCC `-fassociative-math`, `-fno-signed-zeros`, `-freciprocal-math`;
 `/fp:fast` on MSVC). For the rest a program calls `kairn::self_test()` once at startup:
@@ -729,8 +756,9 @@ Including Kairn fails with `#error` under the flags a macro reveals (`-ffast-mat
 ```
 
 `kairn::environment_ok()` reads the control register and says whether the rounding mode and
-flush-to-zero are in their default state; Kairn never changes them. **The default environment is
-the precondition of every function, and the batch entries check it in every build**, with or
+flush-to-zero are in their default state; the default types never change them (the scopes of the
+opt-in `kairn/upward.hpp` do, and restore what they found). **The default environment is
+the precondition of every function of the default types, and the batch entries check it in every build**, with or
 without `NDEBUG`: each function on arrays of `kairn/batch.hpp` (`sum`, `sum_fast`, `dot`, the maps,
 `conv`, `norm_upper`) and each operation on whole ball vectors of `kairn/ball_vector.hpp` (the
 constructors from centers and a radius among them) reads the register once before its loop, as

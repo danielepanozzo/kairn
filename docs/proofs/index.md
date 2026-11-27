@@ -142,6 +142,15 @@ lists:
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
   `IeeeAccumulator.v`; [below](#the-accumulator));
+- `proofs/gen/UpwardModel.v` and `proofs/gen/UpwardStatements.v`, generated too: the kernels of the
+  round-up interval (`kairn/upward.hpp`) as functions of Flocq's binary floating-point numbers, with
+  their sums and products rounded upward, and one statement `K_spec` per kernel; and the files
+  written by hand that they and the theorems rest on, `proofs/theories/IeeeUpwardOperations.v` (what
+  the operations of the family mean: the sum and the product rounded upward, the test for a NaN, and
+  the property `max_nl_ok` of a maximum), `IeeeUpwardVocabulary.v` (a state of the round-up
+  interval and its members), and the proofs of the 24 theorems and their lemmas
+  (`IeeeUpwardMax.v`, the two machine forms of the maximum; `IeeeUpwardOps.v`, `IeeeUpwardRange.v`,
+  `IeeeUpwardProduct.v`, `IeeeUpwardArith.v`, `IeeeUpwardExact.v`, `IeeeUpwardPredicates.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -205,12 +214,15 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    BallVectors; and last, for each kernel whose C++ dispatches on constant evaluation (64), the theorem
    of its two executions (`IeeeTwoExecutions.v`) against the statement the generator prints
    for it in `proofs/gen/IeeeWith.v`, `K_two_executions_spec`, which no description names.
+6. **The theorem of every kernel of the round-up interval**, from the generated
+   `proofs/gen/UpwardAudit.v`, like step 2: `K_audit : K_spec := K_correct` and
+   `Print Assumptions K_correct`, for each of its kernels that the claims mark proved.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
 ```text
 == text scan of the proof files
-  115 files: no Admitted, admit, Axiom or Parameter
+  127 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -227,6 +239,8 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
       NOT ALLOWED  wrong
   rejected by the assumption check, as it must be
 == assumptions of the IEEE-model theorem of every kernel of the extended domain
+  ...
+== assumptions of the theorem of every kernel of the round-up interval
   ...
 == audit passed
 ```
@@ -345,6 +359,20 @@ The kernels of the last three
 kinds are in the generated headers and are `proved` in the claims; whether an operator of the
 library calls them yet is said in
 [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
+
+**The kernels of the round-up interval are proved in the same model, with their sums and products
+rounded upward.** Their models and statements are in files of their own
+(`proofs/gen/UpwardModel.v`, `UpwardStatements.v`), so that none of the files above changes: each
+operation that rounds is Flocq's `Bplus` or `Bmult` with `mode_UP`, and a maximum is any function
+with the property `max_nl_ok`, which both machine instructions that compute it have (two lemmas of
+`IeeeUpwardMax.v`). For the sum, the difference and the product of two states, and the sum and the
+product with a number, the statement says that the result is a canonical state, empty exactly when
+an operand is, containing every result on members, with each bound the bound of the exact range
+rounded outward, exactly, and bounded exactly when the range is within the largest number of `T`;
+for the others, that they give the same set or the exact answer of the default kernel of the same
+name ([The round-up interval: its kernels](../reference/upward.md)). What they do not cover is that
+the compiled code computes the operations rounded upward: that is assumed
+([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked)).
 
 ## Sums and dot products of arrays
 

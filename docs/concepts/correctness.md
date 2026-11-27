@@ -164,9 +164,16 @@ is written, and tested, often in exact arithmetic:
   ball of two limbs, each `make_2` (which gives the point exactly) followed by the operation of two
   limbs ([Compositions](../reference/enclosure.md#compositions)); `from_limbs` of an interval and of
   a ball, each limb through the guard of `make_2` or `make_2_limbs`
-  ([Limbs](../reference/enclosure.md#limbs)); and, for ball vectors, `axpy` (a scaling, then a sum)
+  ([Limbs](../reference/enclosure.md#limbs)); for ball vectors, `axpy` (a scaling, then a sum)
   and `norm_upper` (the bound of the centers, then the radius added)
-  ([Compositions made in the header](../reference/ball_vector.md#compositions-made-in-the-header)).
+  ([Compositions made in the header](../reference/ball_vector.md#compositions-made-in-the-header));
+  and, for the round-up interval, `x - t`, the sum with $-t$
+  ([`upward_add_num_1`](../reference/upward_add_num_1.md) after an exact negation), `t - x`, the
+  negation ([`upward_neg_1`](../reference/upward_neg_1.md)) of that sum, `x.contains(y)`, the
+  subset test with its operands exchanged
+  ([`upward_subset_1`](../reference/upward_subset_1.md)`(y, x)`), and `Interval(t)`, the constructor
+  given the same value twice ([`upward_make_1`](../reference/upward_make_1.md)`(t, t)`); `t + x` and
+  `t * x` are the kernels of `x + t` and `x * t` with the operands exchanged.
 - **The integer bookkeeping of the bounds of arrays and of the accumulator**: the count $n$ given to
   the kernels of `traits<X>::sum(n)` and `dot(n)` as the smallest number of `T` not below it; the
   accumulator's count, which saturates at $2^{64} - 1$, its conversion to `T`, and what it returns

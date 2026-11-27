@@ -13,13 +13,18 @@ blocks on `float` and `double`, constants built at compile time from an integer 
 the accumulator of a sum or a dot product, all included by `kairn/kairn.hpp`; and, in headers of
 their own that it does not include, the packed SIMD type `Packed` and containers in
 structure-of-arrays form (`kairn/packed.hpp`, `kairn/soa.hpp`), the functions on arrays
-(`kairn/batch.hpp`) and `BallVector` (`kairn/ball_vector.hpp`). The rest of the plan is to come.
+(`kairn/batch.hpp`), `BallVector` (`kairn/ball_vector.hpp`), and the opt-in round-up interval
+(`kairn/upward.hpp`), an interval of one limb computed under the rounding mode upward, for speed,
+which requires compiler options and the header's scopes ([The round-up interval](concepts/upward.md)).
+The rest of the plan is to come.
 The kernels these operations call have checked proofs of their
 claims: the error bounds, normalization and the containment of ball arithmetic in a model where
 nothing overflows, and in a model of IEEE 754 what they return at overflow and for infinities and
 NaN, results like those of `float` and `double`, and every claim of the intervals and of the
 interface of the sets; the loops of the functions on arrays and of `BallVector` are proved in both
-models ([What holds today](getting-started/guarantees.md); the
+models; the kernels of the round-up interval are proved in the model of IEEE 754 with their sums
+and products rounded upward, and that the compiled code runs them so is assumed, the program's to
+arrange ([What holds today](getting-started/guarantees.md); the
 [reference](reference/index.md) has each statement and its theorem). Not machine-checked: `ldexp`
 by a power of two outside the limb type's range, composed from proved steps by an argument that is
 tested ([`mul_pow2_2_full`](reference/mul_pow2_2_full.md), [`mul_1_1`](reference/mul_1_1.md));
@@ -27,9 +32,10 @@ tested ([`mul_pow2_2_full`](reference/mul_pow2_2_full.md), [`mul_1_1`](reference
 them that the ball of such a constant contains it
 ([Constants from fractions](reference/rational.md)); a few compositions of proved kernels in the
 headers, argued and not proved as one statement; the integer bookkeeping of the bounds of arrays
-and of the accumulator (the count of terms, its conversion to the limb type); and the tests of bit
+and of the accumulator (the count of terms, its conversion to the limb type); the tests of bit
 patterns written by hand (`sign`, `isfinite`, `is_normalized`, the states of a ball, `is_finite()`
-of an interval).
+of an interval); and, for the round-up interval, that each of its operations that rounds runs as
+the IEEE operation rounded upward.
 
 ## What it is
 
@@ -91,7 +97,7 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 - **Milestone 1**, complete, with the owner's decisions of 2026-11-20
   ([report](developer/results/milestone1.md)): `double` and `float` limbs with $k = 1$ and $2$;
   addition, subtraction and multiplication; scalar, AVX2 and NEON code; `Ball`; the generator, the
-  Rocq proofs with gradual underflow, the oracle and CI. Every kernel is proved. At overflow and
+  Rocq proofs with gradual underflow, the oracle and CI. Every kernel of the milestone is proved. At overflow and
   for infinities and NaN the operations return IEEE-like results and the special states of a
   ball, which is proved in a model of IEEE 754, with a condition under which a `Ball` operation
   stays finite. The report lists what is open.
@@ -108,7 +114,8 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 - [Getting started](getting-started/index.md): build and test the repository, and a first program.
 - [Concepts](concepts/index.md): what a number of several limbs is, how many digits it has at each
   magnitude, intervals, balls and ball vectors and when to use which, what a guarantee says and how
-  it is established, what the library needs of the floating-point environment, and arrays.
+  it is established, what the library needs of the floating-point environment, arrays, and the
+  opt-in round-up interval.
 - [Accurate sums and dot products](tutorials/accurate-sums.md): a tutorial with two-limb numbers
   and balls, on a sum that `double` gets entirely wrong.
 - [The range of a polynomial](tutorials/intervals.md): a tutorial with intervals and balls, on the
