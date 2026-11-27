@@ -197,6 +197,106 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 add_subdirectory(levels)
 
+# --- The configurations of the design page's table ("Tests and CI") -------------------------------
+#
+# With the options, every test passes with KAIRN_CHECKS 0 and 1 and with the two-number form forced:
+# the tests above that have no such build get one here (the scopes, from_limbs and to_limbs, the
+# differential, the two files of a program; the runners have theirs below, the self-check and
+# moves.cpp theirs above). Not api.upward.units in a checked build: it runs the operation outside
+# any scope on purpose.
+foreach(_variant checked numbers)
+  if(_variant STREQUAL "checked")
+    set(_definitions KAIRN_CHECKS=1)
+    set(_options "")
+  else()
+    set(_definitions KAIRN_CHECKS=0)
+    set(_options ${_upward_numbers})
+  endif()
+  _kairn_upward_program(kairn-api-upward-scope-${_variant} scope.cpp)
+  target_link_libraries(kairn-api-upward-scope-${_variant} PRIVATE Threads::Threads)
+  target_compile_definitions(kairn-api-upward-scope-${_variant} PRIVATE ${_definitions})
+  target_compile_options(kairn-api-upward-scope-${_variant} PRIVATE ${_options})
+  add_test(NAME api.upward.scope.${_variant} COMMAND kairn-api-upward-scope-${_variant})
+  _kairn_upward_program(kairn-api-upward-limbs-${_variant} limbs.cpp)
+  target_compile_definitions(kairn-api-upward-limbs-${_variant} PRIVATE ${_definitions})
+  target_compile_options(kairn-api-upward-limbs-${_variant} PRIVATE ${_options})
+  if(NOT _msvc_style)
+    target_compile_options(kairn-api-upward-limbs-${_variant} PRIVATE -O3)
+  endif()
+  add_test(NAME api.upward.limbs.${_variant} COMMAND kairn-api-upward-limbs-${_variant})
+endforeach()
+_kairn_upward_program(kairn-api-upward-differential-checked differential.cpp)
+target_compile_definitions(kairn-api-upward-differential-checked PRIVATE KAIRN_CHECKS=1)
+_kairn_upward_program(kairn-api-upward-units-numbers units_a.cpp units_b.cpp)
+target_compile_definitions(kairn-api-upward-units-numbers PRIVATE KAIRN_CHECKS=0)
+target_compile_options(kairn-api-upward-units-numbers PRIVATE ${_upward_numbers})
+add_test(NAME api.upward.units.numbers COMMAND kairn-api-upward-units-numbers)
+set(_upward_differentials checked)
+
+# Clang and Apple clang without -frounding-math: the header builds, its results are right (its
+# barriers), which the oracle judges through a runner built without the options (below) and the
+# differential here; the self-check's advice and the checked build's report are tested above
+# (api.upward.self_test.without_options, api.upward.checks.unhonored), and moves.cpp's group 1.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_executable(kairn-api-upward-differential-without-options differential.cpp)
+  target_link_libraries(kairn-api-upward-differential-without-options PRIVATE kairn::kairn kairn::fma)
+  target_compile_definitions(kairn-api-upward-differential-without-options PRIVATE KAIRN_CHECKS=0)
+  target_compile_options(kairn-api-upward-differential-without-options PRIVATE ${_api_warnings})
+  list(APPEND _upward_differentials without-options)
+endif()
+foreach(_variant IN LISTS _upward_differentials)
+  string(REPLACE "-" "_" _suffix "${_variant}")
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME api.upward.differential.${_suffix}
+      COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-upward-differential-${_variant}>"
+        "-DPYTHON=${Python3_EXECUTABLE}" "-DORACLE=${PROJECT_SOURCE_DIR}/oracle/kairn-oracle"
+        "-DCLAIMS=${_oracle_claims}" "-DLINES=${CMAKE_CURRENT_BINARY_DIR}/differential-${_variant}.txt"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/differential.cmake")
+  else()
+    add_test(NAME api.upward.differential.${_suffix} COMMAND kairn-api-upward-differential-${_variant}
+      "${CMAKE_CURRENT_BINARY_DIR}/differential-${_variant}.txt")
+  endif()
+endforeach()
+
+# GCC without -frounding-math and MSVC without /fp:strict: the build stops (api.upward.reject.*
+# below); with KAIRN_UPWARD_OPTIONS_UNCHECKED, the self-check and moves.cpp are reported, not gated
+# (report_only.cmake), built with the compiler's defaults.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  foreach(_source self_test moves)
+    string(REPLACE "_" "-" _name "${_source}")
+    add_executable(kairn-api-upward-${_name}-unchecked ${_source}.cpp)
+    target_link_libraries(kairn-api-upward-${_name}-unchecked PRIVATE kairn::kairn kairn::fma)
+    target_compile_definitions(kairn-api-upward-${_name}-unchecked PRIVATE KAIRN_CHECKS=0
+      KAIRN_UPWARD_OPTIONS_UNCHECKED UPWARD_TEST_WITHOUT_OPTIONS "UPWARD_TEST_LEVEL=\"the build's, unchecked\"")
+    target_compile_options(kairn-api-upward-${_name}-unchecked PRIVATE ${_api_warnings})
+    add_test(NAME api.upward.${_source}.unchecked
+      COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-upward-${_name}-unchecked>"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/report_only.cmake")
+  endforeach()
+endif()
+
+# x86-64 under Rosetta (Apple clang on arm64, where Rosetta runs x86-64 programs): whether it
+# honors MXCSR's rounding mode is not established, so the self-check and moves.cpp built for x86-64
+# with AVX2 and FMA are reported, not gated.
+if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64" AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  execute_process(COMMAND /usr/bin/arch -x86_64 /usr/bin/true RESULT_VARIABLE _upward_rosetta
+    OUTPUT_QUIET ERROR_QUIET)
+  if(_upward_rosetta STREQUAL "0")
+    foreach(_source self_test moves)
+      string(REPLACE "_" "-" _name "${_source}")
+      add_executable(kairn-api-upward-${_name}-rosetta ${_source}.cpp)
+      target_link_libraries(kairn-api-upward-${_name}-rosetta PRIVATE kairn::upward)
+      set_target_properties(kairn-api-upward-${_name}-rosetta PROPERTIES OSX_ARCHITECTURES x86_64)
+      target_compile_definitions(kairn-api-upward-${_name}-rosetta PRIVATE KAIRN_CHECKS=0
+        "UPWARD_TEST_LEVEL=\"the build's, x86-64 under Rosetta\"")
+      target_compile_options(kairn-api-upward-${_name}-rosetta PRIVATE ${_api_warnings} -mavx2 -mfma)
+      add_test(NAME api.upward.rosetta.${_source}
+        COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-upward-${_name}-rosetta>"
+          -P "${CMAKE_CURRENT_SOURCE_DIR}/report_only.cmake")
+    endforeach()
+  endif()
+endif()
+
 # The runners of the line protocol over the header, as --runner LABEL EXECUTABLE for
 # ../../crosscheck.py api. The runner with the build's flags also answers api.oracle.coverage
 # (--list), which ../CMakeLists.txt registers.
@@ -223,6 +323,15 @@ if(_api_packed_avx2)
   _kairn_upward_program(kairn-api-upward-runner-avx2 runner.cpp)
   target_compile_options(kairn-api-upward-runner-avx2 PRIVATE ${_isa_option})
   list(APPEND _upward_runners --runner avx2 "$<TARGET_FILE:kairn-api-upward-runner-avx2>")
+endif()
+# With Clang, a runner built without the options (kairn::kairn, KAIRN_CHECKS 0, whose scopes would
+# otherwise report the file): the header's results are right without them, through its barriers.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_executable(kairn-api-upward-runner-without-options runner.cpp)
+  target_link_libraries(kairn-api-upward-runner-without-options PRIVATE kairn::kairn kairn::fma)
+  target_compile_definitions(kairn-api-upward-runner-without-options PRIVATE KAIRN_CHECKS=0)
+  target_compile_options(kairn-api-upward-runner-without-options PRIVATE ${_api_warnings})
+  list(APPEND _upward_runners --runner without-options "$<TARGET_FILE:kairn-api-upward-runner-without-options>")
 endif()
 
 get_property(_upward_programs DIRECTORY PROPERTY TESTS)
