@@ -16,6 +16,8 @@
 //
 // Usage: x2-check [N per class (default 2000000)] [seed] [threads]
 #include <kairn/experimental/upward2.hpp>
+#include <kairn/experimental/upward2_arrays.hpp>
+#include <kairn/experimental/upward2_forms.hpp>
 #include <kairn/kairn.hpp>
 
 #include <algorithm>
@@ -198,9 +200,37 @@ int cmp_corner(const XV& v, const Corner& c, Exact& t, double* diff = nullptr, d
 
 // --- The check of one result ---------------------------------------------------------------------------
 
-enum Op { ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG, CONV, ADD_LEAN, ADD_SLOPPY, N_OPS };
+enum Op { ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG, CONV, ADD_LEAN, ADD_SLOPPY,
+          ARR_ADD, ARR_SUB, ARR_MUL, N_OPS };
 const char* const kOpName[N_OPS] = {"add", "sub", "mul.sel2", "mul.eight", "mul.table", "mul.branch", "mul.sel4",
-                                    "sqr", "add_num", "mul_num", "neg", "conv", "add.lean", "add.sloppy"};
+                                    "sqr", "add_num", "mul_num", "neg", "conv", "add.lean", "add.sloppy",
+                                    "arrays.add", "arrays.sub", "arrays.mul"};
+// The judge's operation for an operation of the functions on arrays.
+Op judged(Op op) { return op == ARR_ADD ? ADD : op == ARR_SUB ? SUB : op == ARR_MUL ? MUL_TABLE : op; }
+
+// The functions on arrays on n pairs of operands: z[k] = x[k] op y[k].
+void apply_arrays(Op op, const std::vector<u2::Interval>& x, const std::vector<u2::Interval>& y, std::vector<u2::Interval>& z) {
+    const std::size_t n = x.size();
+    std::vector<double> a(12 * n);
+    auto view = [&](int k) { return u2::View<double>{&a[(4 * k) * n], &a[(4 * k + 1) * n], &a[(4 * k + 2) * n], &a[(4 * k + 3) * n], n}; };
+    const u2::View<double> vx = view(0), vy = view(1), vz = view(2);
+    for (std::size_t i = 0; i < n; ++i) {
+        double p[4], q[4];
+        x[i].to_limbs(p);   // uh, nh, ul, nl
+        y[i].to_limbs(q);
+        vx.uh[i] = p[0], vx.nh[i] = p[1], vx.ul[i] = p[2], vx.nl[i] = p[3];
+        vy.uh[i] = q[0], vy.nh[i] = q[1], vy.ul[i] = q[2], vy.nl[i] = q[3];
+    }
+    const u2::View<const double> cx{vx.uh, vx.ul, vx.nh, vx.nl, n}, cy{vy.uh, vy.ul, vy.nh, vy.nl, n};
+    if (op == ARR_ADD) u2::add(vz, cx, cy);
+    else if (op == ARR_SUB) u2::sub(vz, cx, cy);
+    else u2::mul(vz, cx, cy);
+    z.resize(n);
+    for (std::size_t i = 0; i < n; ++i) {
+        const double r[4] = {vz.uh[i], vz.nh[i], vz.ul[i], vz.nl[i]};
+        z[i] = u2::Interval::from_limbs(r);
+    }
+}
 
 struct Verdict {
     bool ok = true;
@@ -417,8 +447,8 @@ u2::Interval apply(Op op, const u2::Interval& x, const u2::Interval& y, double t
     d2::R z;
     switch (op) {
     case ADD: z = d2::add_r(a, b); break;
-    case ADD_LEAN: z = d2::add_r<d2::SumForm::lean>(a, b); break;
-    case ADD_SLOPPY: z = d2::add_r<d2::SumForm::sloppy>(a, b); break;
+    case ADD_LEAN: z = d2::add_lean(a, b); break;
+    case ADD_SLOPPY: z = d2::add_sloppy(a, b); break;
     case SUB: z = d2::add_r(a, d2::neg_r(b)); break;
     case MUL_SEL2: z = d2::mul_sel2(a, b); break;
     case MUL_EIGHT: z = d2::mul_eight(a, b); break;
@@ -451,11 +481,28 @@ I2 apply_default(Op op, const I2& x, const I2& y, double t) {
     }
 }
 u2::Interval to_type(const DI& d) {
+    const I2 k = I2::from_limbs(&d.l0);   // the default type, before the scope (it assumes rounding to nearest)
     kairn::upward::Scope scope;
-    return u2::from_interval(I2::from_limbs(&d.l0));
+    return u2::from_interval(k);
 }
-// The default interval of the type's value, exactly (to_interval, under rounding to nearest).
-I2 to_default(const u2::Interval& z) { return u2::to_interval(z); }
+// The default interval of the type's value, exactly (to_interval, under rounding to nearest). The
+// limbs that to_interval gives are first tested canonical here (in every build), and a failure is
+// counted and printed with the interval.
+std::atomic<long> conversion_failures{0};
+I2 to_default(const u2::Interval& z) {
+    double o[4];
+    d2::to_limbs_rn(z.r_, o);
+    kairn::Expansion<double, 2> lo, hi;
+    lo.limb[0] = o[0], lo.limb[1] = o[1], hi.limb[0] = o[2], hi.limb[1] = o[3];
+    if (!kairn::detail::canonical_interval(lo, hi)) {
+        double p[4];
+        z.to_limbs(p);
+        if (conversion_failures++ < 5)
+            std::printf("  CONVERSION not canonical: (%a %a | %a %a) gives [%a %a, %a %a]\n", p[0], p[1], p[2], p[3], o[0], o[1], o[2], o[3]);
+        return I2::whole();
+    }
+    return u2::to_interval(z);
+}
 
 bool op_available([[maybe_unused]] Op op) {
 #if KAIRN_UPWARD2_AVX2
@@ -513,6 +560,7 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
     Exact e;
     std::vector<Stat> mine(N_OPS), dflt(N_OPS);
     std::vector<long> tighter(N_OPS), same(N_OPS), wider(N_OPS);
+    std::vector<u2::Interval> cx, cy;
     for (long i = 0; i < n; ++i) {
         DI dx, dy;
         double t = 0;
@@ -545,8 +593,10 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
             }
         }
         const I2 kx = to_default(x), ky = to_default(y);
+        cx.push_back(x);
+        cy.push_back(y);
         for (Op op : ops) {
-            if (!op_available(op)) continue;
+            if (!op_available(op) || op >= ARR_ADD) continue;
             const u2::Interval z = apply(op, x, y, t);
             const Res rz = res_of(z);
             const Verdict v = judge(op, rx, ry, t, rz, true, e);
@@ -576,6 +626,19 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
                 (v.ex[s] < vk.ex[s] ? tighter[op] : v.ex[s] == vk.ex[s] ? same[op] : wider[op])++;
             }
         }
+        // The functions on arrays, on chunks of 256 cases (so that their vector path runs).
+        if (cx.size() == 256 || i == n - 1) {
+            for (Op op : {ARR_ADD, ARR_SUB, ARR_MUL}) {
+                std::vector<u2::Interval> cz;
+                apply_arrays(op, cx, cy, cz);
+                for (std::size_t k = 0; k < cz.size(); ++k) {
+                    const Verdict v = judge(judged(op), res_of(cx[k]), res_of(cy[k]), 0, res_of(cz[k]), true, e);
+                    mine[op].add(v, kOpName[op]);
+                }
+            }
+            cx.clear();
+            cy.clear();
+        }
     }
     std::lock_guard<std::mutex> lock(out_mutex);
     for (Op op : ops) {
@@ -585,7 +648,7 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
                     kOpName[op], cls, s.n, s.bad, s.unnormalized, s.exact, s.q(0.5), s.q(0.99), s.mx(), s.zero_ref);
         if (!s.first_bad.empty()) std::printf("  first: %s\n", s.first_bad.c_str());
         if (s.bad || s.unnormalized) failures += 1;
-        if (op == CONV) continue;
+        if (op == CONV || op >= ARR_ADD) continue;
         Stat& k = dflt[op];
         std::printf("%-11s %-40s default n=%ld invalid=%ld median=%.3g p99=%.3g max=%.3g (u^2); per bound: type tighter %ld, equal %ld, wider %ld\n",
                     kOpName[op], cls, k.n, k.bad, k.q(0.5), k.q(0.99), k.mx(), tighter[op], same[op], wider[op]);
@@ -628,8 +691,8 @@ void run_special() {
         {0x1p-600, 0, 0x1p-599, 0x1p-653},
         {eta, 0, eta, 0},
         {-eta, 0, eta, 0},
-        {mn, 0, mn, eta},
-        {-mn, -eta, 4 * eta, 0},
+        {mn, 0, mn + eta, 0},          // (a second limb is always zero in a canonical pair there:
+        {-(mn + eta), 0, 4 * eta, 0},  //  every sum of subnormal numbers is exact)
         {0x1p-1000, 0x1p-1060, 0x1p-999, 0},
         {1 + 0x1p-52, 0x1p-106, 1 + 0x1p-51, 0},
         {-2, 0, -2, 0},
@@ -735,6 +798,25 @@ void run_special() {
             }
         }
     }
+    {   // Every pair through the functions on arrays, in one call each.
+        std::vector<u2::Interval> ax, ay, az;
+        for (const DI& dx : v)
+            for (const DI& dy : v) {
+                ax.push_back(to_type(dx));
+                ay.push_back(to_type(dy));
+            }
+        for (Op op : {ARR_ADD, ARR_SUB, ARR_MUL}) {
+            apply_arrays(op, ax, ay, az);
+            for (std::size_t k = 0; k < az.size(); ++k) {
+                ++pairs;
+                const Verdict vz = judge(judged(op), res_of(ax[k]), res_of(ay[k]), 0, res_of(az[k]), true, e);
+                if (!vz.ok) ++bad;
+                if (!vz.normalized) ++unnorm;
+                if (!vz.ok || !vz.normalized)
+                    std::printf("  SPECIAL INVALID %s pair %zu: %s\n", kOpName[op], k, vz.why.c_str());
+            }
+        }
+    }
     std::printf("special values: %ld cases, invalid=%ld, unnormalized=%ld; against Interval<double, 2>: same %ld, structural "
                 "differences %ld (listed), finite values differing: type tighter %ld, type wider %ld, mixed %ld\n",
                 pairs, bad, unnorm, same, structural, f_tighter, f_wider, f_mixed);
@@ -750,8 +832,8 @@ int main(int argc, char** argv) {
     const long n = argc > 1 ? std::atol(argv[1]) : 2000000;
     const std::uint64_t seed = argc > 2 ? std::strtoull(argv[2], nullptr, 0) : 20261127u;
     const int threads = argc > 3 ? std::atoi(argv[3]) : 8;
-    std::printf("x2-check: n=%ld per class, seed=%llu, threads=%d, form %d (1 SSE, 2 NEON, 3 numbers), AVX2 %d, product form %d, flags: %s\n",
-                n, static_cast<unsigned long long>(seed), threads, KAIRN_UPWARD2_FORM, KAIRN_UPWARD2_AVX2, KAIRN_UPWARD2_MUL,
+    std::printf("x2-check: n=%ld per class, seed=%llu, threads=%d, form %d (1 SSE, 2 NEON, 3 numbers), AVX2 %d, KAIRN_CHECKS %d, flags: %s\n",
+                n, static_cast<unsigned long long>(seed), threads, KAIRN_UPWARD2_FORM, KAIRN_UPWARD2_AVX2, KAIRN_CHECKS,
 #ifdef X2_FLAGS
                 X2_FLAGS
 #else
@@ -759,7 +841,7 @@ int main(int argc, char** argv) {
 #endif
     );
     const std::vector<Op> all = {ADD, SUB, MUL_SEL2, MUL_EIGHT, MUL_TABLE, MUL_BRANCH, MUL_SEL4, SQR,
-                                 ADD_NUM, MUL_NUM, NEG, CONV, ADD_LEAN, ADD_SLOPPY};
+                                 ADD_NUM, MUL_NUM, NEG, CONV, ADD_LEAN, ADD_SLOPPY, ARR_ADD, ARR_SUB, ARR_MUL};
     auto mix = [](Rng& g, int kmin, int kmax) { return interval(g, g.range(0, 4), kmin, kmax, g.range(20, 100)); };
     auto num = [](Rng& g, int kmin, int kmax) {
         const int k = g.range(0, 9);
@@ -849,6 +931,8 @@ int main(int argc, char** argv) {
         std::printf("the rounding mode was left changed\n");
         failures += 1;
     }
+    std::printf("conversions to Interval<double, 2> whose limbs are not canonical: %ld\n", conversion_failures.load());
+    if (conversion_failures) failures += 1;
     std::printf(failures ? "FAILED: %d\n" : "ok (%d failures)\n", failures.load());
     return failures ? 1 : 0;
 }

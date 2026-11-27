@@ -34,7 +34,7 @@
 
 // --- The forms --------------------------------------------------------------------------------------
 //
-// KAIRN_UPWARD2_FORM: SSE (x86-64 with FMA: two __m128d; the products of the type use 256-bit AVX2
+// KAIRN_UPWARD2_FORM: SSE (x86-64 with FMA: two __m128d; the functions on arrays use 256-bit AVX2
 // registers where the file has AVX2), NEON (AArch64: two float64x2_t), NUMBERS (four doubles, any
 // target, and any target where it is forced: the fallback, which may be slow and must be right).
 #define KAIRN_UPWARD2_FORM_SSE 1
@@ -257,6 +257,33 @@ KAIRN_FORCEINLINE void vstore(double* p, V v) noexcept {
 }
 #endif
 
+#if KAIRN_UPWARD2_AVX2
+// The same operations on four lanes (the functions on arrays: one element per lane).
+using V4 = __m256d;
+KAIRN_FORCEINLINE V4 vset4(double a) noexcept { return _mm256_set1_pd(a); }
+KAIRN_FORCEINLINE V4 add(V4 a, V4 b) noexcept { return _mm256_add_pd(a, b); }
+KAIRN_FORCEINLINE V4 sub(V4 a, V4 b) noexcept { return _mm256_sub_pd(a, b); }
+KAIRN_FORCEINLINE V4 mul(V4 a, V4 b) noexcept { return _mm256_mul_pd(a, b); }
+KAIRN_FORCEINLINE V4 fmadd(V4 a, V4 b, V4 c) noexcept { return _mm256_fmadd_pd(a, b, c); }
+KAIRN_FORCEINLINE V4 vmin(V4 a, V4 b) noexcept { return _mm256_min_pd(a, b); }
+KAIRN_FORCEINLINE V4 vmax(V4 a, V4 b) noexcept { return _mm256_max_pd(a, b); }
+KAIRN_FORCEINLINE V4 neg(V4 a) noexcept { return _mm256_xor_pd(a, _mm256_set1_pd(-0.0)); }
+KAIRN_FORCEINLINE V4 vabs(V4 a) noexcept { return _mm256_andnot_pd(_mm256_set1_pd(-0.0), a); }
+KAIRN_FORCEINLINE V4 blend(V4 m, V4 a, V4 b) noexcept { return _mm256_blendv_pd(b, a, m); }
+KAIRN_FORCEINLINE V4 clear(V4 m, V4 a) noexcept { return _mm256_andnot_pd(m, a); }
+KAIRN_FORCEINLINE V4 flip(V4 m, V4 a) noexcept { return _mm256_xor_pd(a, _mm256_and_pd(m, _mm256_set1_pd(-0.0))); }
+KAIRN_FORCEINLINE V4 mand(V4 a, V4 b) noexcept { return _mm256_and_pd(a, b); }
+KAIRN_FORCEINLINE V4 mor(V4 a, V4 b) noexcept { return _mm256_or_pd(a, b); }
+KAIRN_FORCEINLINE V4 le0(V4 a) noexcept { return _mm256_cmp_pd(a, _mm256_setzero_pd(), _CMP_LE_OQ); }
+KAIRN_FORCEINLINE V4 lt0(V4 a) noexcept { return _mm256_cmp_pd(a, _mm256_setzero_pd(), _CMP_LT_OQ); }
+KAIRN_FORCEINLINE V4 eq(V4 a, V4 b) noexcept { return _mm256_cmp_pd(a, b, _CMP_EQ_OQ); }
+KAIRN_FORCEINLINE V4 ispinf(V4 a) noexcept { return _mm256_cmp_pd(a, _mm256_set1_pd(kInf), _CMP_EQ_OQ); }
+KAIRN_FORCEINLINE V4 big(V4 a) noexcept { return _mm256_cmp_pd(vabs(a), _mm256_set1_pd(kMax), _CMP_NLT_UQ); }
+KAIRN_FORCEINLINE bool any(V4 m) noexcept { return _mm256_movemask_pd(m) != 0; }
+KAIRN_FORCEINLINE void bar(V4& v) noexcept { KAIRN_DETAIL_UPWARD_BARRIER(v); }
+KAIRN_FORCEINLINE void pin(V4& v) noexcept { KAIRN_DETAIL_UPWARD_PIN(v); }
+#endif
+
 // The barriers of a kernel (docs/developer/design/upward.md, "Barriers"): on each register of its
 // inputs, the first one pinned, and on each register of its result, so that nothing of the program
 // is fused into it, folded at compile time, merged across a change of mode, or moved across a scope.
@@ -288,17 +315,20 @@ KAIRN_FORCEINLINE void check_mode() noexcept { (void)::kairn::upward::detail::ch
 // normalization could be lost, never the bound). The error of a sum under a directed mode is not
 // always a number of the format (t is its rounding up), and the branch-free 2Sum of six operations
 // does not give an upper bound of it in general: neither is used.
-KAIRN_FORCEINLINE void two_sum(V a, V b, V& s, V& t) noexcept {
+// (These building blocks are templates on the register: V, or four lanes for the arrays.)
+template <class P>
+KAIRN_FORCEINLINE void two_sum(P a, P b, P& s, P& t) noexcept {
     s = add(a, b);
-    const V t1 = add(sub(a, s), b);
-    const V t2 = add(sub(b, s), a);
+    const P t1 = add(sub(a, s), b);
+    const P t2 = add(sub(b, s), a);
     t = vmin(t1, t2);
 }
 
 // fast_two_sum(a, b) -> (s, t) with s + t >= a + b for any a, b (t = RU(RU(a - s) + b), as t1
 // above: always an upper bound of the error); t is RU(error) when |a| >= |b|, by the lemma above.
 // Used only where |a| >= |b| is argued at the call.
-KAIRN_FORCEINLINE void fast_two_sum(V a, V b, V& s, V& t) noexcept {
+template <class P>
+KAIRN_FORCEINLINE void fast_two_sum(P a, P b, P& s, P& t) noexcept {
     s = add(a, b);
     t = add(sub(a, s), b);
 }
@@ -308,7 +338,8 @@ KAIRN_FORCEINLINE void fast_two_sum(V a, V b, V& s, V& t) noexcept {
 // fast_two_sum(min, max) is exact by the same lemma, in five operations instead of six. For any
 // operands it is still an upper pair of a + b (see fast_two_sum); only the exactness, the
 // normalization of the result, depends on the signs.
-KAIRN_FORCEINLINE void two_sum_nonpos(V a, V b, V& s, V& t) noexcept { fast_two_sum(vmin(a, b), vmax(a, b), s, t); }
+template <class P>
+KAIRN_FORCEINLINE void two_sum_nonpos(P a, P b, P& s, P& t) noexcept { fast_two_sum(vmin(a, b), vmax(a, b), s, t); }
 
 // --- The product of two pairs -------------------------------------------------------------------------
 
@@ -331,11 +362,12 @@ KAIRN_FORCEINLINE void two_sum_nonpos(V a, V b, V& s, V& t) noexcept { fast_two_
 // The negation of p is exact (rule U3 of the design page is about negating a rounded result in
 // place of the rounding of a negation; here the exact negation of p is what is meant, and a fused
 // a b - p is the same operation whatever instruction computes it).
-KAIRN_FORCEINLINE void pair_mul(V ph, V pl, V qh, V ql, V& p, V& zh, V& zl) noexcept {
+template <class P>
+KAIRN_FORCEINLINE void pair_mul(P ph, P pl, P qh, P ql, P& p, P& zh, P& zl) noexcept {
     p = mul(ph, qh);
-    const V e = fmadd(ph, qh, neg(p));
-    const V c = fmadd(ph, ql, fmadd(pl, qh, mul(pl, ql)));
-    const V w = add(e, c);
+    const P e = fmadd(ph, qh, neg(p));
+    const P c = fmadd(ph, ql, fmadd(pl, qh, mul(pl, ql)));
+    const P w = add(e, c);
     fast_two_sum(p, w, zh, zl);
 }
 
@@ -343,9 +375,10 @@ KAIRN_FORCEINLINE void pair_mul(V ph, V pl, V qh, V ql, V& p, V& zh, V& zl) noex
 // lexicographically (an upper-normalized pair's value is in (pred(h), h]), so the result is one of
 // the two pairs, exactly. Written with the maximum and an equality, not an ordering comparison (on
 // AArch64 eq tests the bits, so heads +0 and -0 count as different: either pair then has value 0).
-KAIRN_FORCEINLINE void lexmax(V ah, V al, V bh, V bl, V& mh, V& ml) noexcept {
+template <class P>
+KAIRN_FORCEINLINE void lexmax(P ah, P al, P bh, P bl, P& mh, P& ml) noexcept {
     mh = vmax(ah, bh);
-    const M ea = eq(mh, ah), eb = eq(mh, bh);
+    const auto ea = eq(mh, ah), eb = eq(mh, bh);
     ml = blend(mand(ea, eb), vmax(al, bl), blend(ea, al, bl));
 }
 
@@ -392,73 +425,17 @@ KAIRN_DETAIL_COLD R mul_special(R x, R y) noexcept {
     return R{nanify(e, zh), nanify(e, zl)};
 }
 
-// --- The product: the form chosen, and the forms measured against it ----------------------------------
+// --- The product: the form "branch" -------------------------------------------------------------------
 //
-// All forms compute, on a fast path, candidate pairs by pair_mul and check that every leading
-// product p computed is finite with |p| < MAX; otherwise (an empty or unbounded operand, 0 times an
-// infinity, an overflow, a head +-MAX) they return mul_special, which is right for every canonical
-// operand. On the fast path every operand is finite and nothing overflows, so pair_mul's argument
-// holds and the candidates are upper-normalized.
-
-// Form "sel2": operands selected by the signs of the bounds, without branches, two candidates per
-// lane, the greater kept. With x = [a, b], y = [c, d]:
-//   upper = max(xa * c, xb * d),   xa = (b <= 0 and c > 0) ? b : a,   xb = (a >= 0 and d < 0) ? a : b
-//   -lower = max(xa' * (-d), xb' * (-c)),  xa' = (b <= 0 and d < 0) ? b : a,  xb' = (a >= 0 and c > 0) ? a : b
-// (the second line is the first for -y). Case by case: a >= 0 makes xb * d the upper bound and xa * c
-// = a c no greater; b <= 0 makes xa * c the upper bound and xb * d = b d no greater; a < 0 < b gives
-// max(a c, b d), which is the upper bound in each of the three cases of y. In lanes: candidate A =
-// (xa * c, xa' * (-d)), candidate B = (xb * d, xb' * (-c)); a = -xn, c = -yn, so
-//   A = (ma ? xu : xn) * (ma ? -(yn, yu) : (yn, yu)),  ma = (b <= 0 and (c > 0, d < 0))
-//   B = (mb ? xn : xu) * (mb ? -(yu, yn) : (yu, yn)),  mb = (a >= 0 and (d < 0, c > 0)),
-// each "?" per lane. The signs are those of the heads (an upper-normalized head has the sign of its
-// value). At a zero bound either choice of a mask gives the same value (both candidates are 0).
-KAIRN_FORCEINLINE void select2(const R& x, const R& y, R& pa, R& qa, R& pb, R& qb) noexcept {
-    const M xle = le0(x.h);   // lanes: b <= 0, a >= 0
-    const M ylt = lt0(y.h);   // lanes: d < 0, c > 0
-    const M ma = mand(mdup0(xle), mswap(ylt));
-    const M mb = mand(mdup1(xle), ylt);
-    const V x0h = dup0(x.h), x1h = dup1(x.h), x0l = dup0(x.l), x1l = dup1(x.l);
-    pa = R{blend(ma, x0h, x1h), blend(ma, x0l, x1l)};
-    pb = R{blend(mb, x1h, x0h), blend(mb, x1l, x0l)};
-    qa = R{flip(ma, swap(y.h)), flip(ma, swap(y.l))};
-    qb = R{flip(mb, y.h), flip(mb, y.l)};
-    bar(qa);
-    bar(qb);
-}
-
-KAIRN_FORCEINLINE R mul_sel2(R x, R y) noexcept {
-    R pa, qa, pb, qb;
-    select2(x, y, pa, qa, pb, qb);
-    V p1, p2, ah, al, bh, bl;
-    pair_mul(pa.h, pa.l, qa.h, qa.l, p1, ah, al);
-    pair_mul(pb.h, pb.l, qb.h, qb.l, p2, bh, bl);
-    if (any(mor(big(p1), big(p2)))) [[unlikely]]
-        return mul_special(x, y);
-    R z;
-    lexmax(ah, al, bh, bl, z.h, z.l);
-    return z;
-}
-
-// Form "eight": the eight candidates of mul_special on the fast path, the greatest per lane.
-KAIRN_FORCEINLINE R mul_eight(R x, R y) noexcept {
-    V nyh = neg(y.h), nyl = neg(y.l);
-    bar(nyh);
-    bar(nyl);
-    const V sxh = swap(x.h), sxl = swap(x.l);
-    V p1, p2, p3, p4, h1, l1, h2, l2, h3, l3, h4, l4;
-    pair_mul(x.h, x.l, dup0(y.h), dup0(y.l), p1, h1, l1);
-    pair_mul(sxh, sxl, dup1(y.h), dup1(y.l), p2, h2, l2);
-    pair_mul(sxh, sxl, dup0(nyh), dup0(nyl), p3, h3, l3);
-    pair_mul(x.h, x.l, dup1(nyh), dup1(nyl), p4, h4, l4);
-    if (any(mor(mor(big(p1), big(p2)), mor(big(p3), big(p4))))) [[unlikely]]
-        return mul_special(x, y);
-    V ah, al, bh, bl;
-    R z;
-    lexmax(h1, l1, h2, l2, ah, al);
-    lexmax(h3, l3, h4, l4, bh, bl);
-    lexmax(ah, al, bh, bl, z.h, z.l);
-    return z;
-}
+// One candidate per lane chosen by branches on the signs of the bounds (two in the case where both
+// operands contain zero), computed by pair_mul on a fast path that checks that every leading product
+// p computed is finite with |p| < MAX; otherwise (an empty or unbounded operand, 0 times an infinity,
+// an overflow, a head +-MAX) it returns mul_special, which is right for every canonical operand. On
+// the fast path every operand is finite and nothing overflows, so pair_mul's argument holds and the
+// candidates are upper-normalized. The forms measured against it (eight candidates; two per lane by
+// blends, in two or four lanes; one per lane by a table of permutations) are in upward2_forms.hpp,
+// and the README gives their times: this one was the fastest but where the signs are random and the
+// products independent, on Zen 2.
 
 // Forms "table" and "branch": one candidate per lane, its operands chosen by the case of the signs,
 // except when both operands contain zero in their interior (two per lane, as sel2 has them there).
@@ -499,18 +476,6 @@ inline constexpr Case kCases[16] = {
     {0, 1, 0, 1, 0, 1},       // x = 0, y = 0
 };
 
-#if KAIRN_UPWARD2_FORM == KAIRN_UPWARD2_FORM_NEON
-// On AArch64 the four bits weighted in the lanes and added across them: one move to a general
-// register instead of two.
-KAIRN_FORCEINLINE int case_of(const R& x, const R& y) noexcept {
-    const uint64x2_t wx = vandq_u64(le0(x.h), vcombine_u64(vcreate_u64(1), vcreate_u64(2)));
-    const uint64x2_t wy = vandq_u64(le0(y.h), vcombine_u64(vcreate_u64(4), vcreate_u64(8)));
-    return int(vaddvq_u64(vorrq_u64(wx, wy)));
-}
-#else
-KAIRN_FORCEINLINE int case_of(const R& x, const R& y) noexcept { return bits(le0(x.h)) | (bits(le0(y.h)) << 2); }
-#endif
-
 // The two candidates of the case x ∋ 0, y ∋ 0.
 KAIRN_FORCEINLINE R mul_zero_zero(R x, R y) noexcept {
     V p1, p2, ah, al, bh, bl;
@@ -529,68 +494,6 @@ KAIRN_FORCEINLINE R mul_one(const R& p, const R& q, const R& x, const R& y) noex
     if (any(big(pr))) [[unlikely]]
         return mul_special(x, y);
     return R{zh, zl};
-}
-
-// The lanes of a register picked by a case: lane 0 from lane i0 of a, lane 1 from lane i1.
-#if KAIRN_UPWARD2_FORM == KAIRN_UPWARD2_FORM_SSE || KAIRN_UPWARD2_FORM == KAIRN_UPWARD2_FORM_NEON
-// The controls of the cases, six 64-bit words each: the lane picks of P (two words), of Q (two),
-// and the sign mask of Q (two). On x86-64 vpermilpd selects by bit 1 of each 64-bit control; on
-// AArch64 TBL takes byte indices, lane k of the source being bytes 8 k to 8 k + 7.
-#if KAIRN_UPWARD2_FORM == KAIRN_UPWARD2_FORM_SSE
-inline constexpr std::uint64_t kPick0 = 0, kPick1 = 2;
-#else
-inline constexpr std::uint64_t kPick0 = 0x0706050403020100u, kPick1 = 0x0f0e0d0c0b0a0908u;
-#endif
-inline constexpr std::uint64_t kSign = 0x8000000000000000u;
-#define KAIRN_UPWARD2_CTL(k)                                                                                     \
-    {kCases[k].p0 == 1 ? kPick1 : kPick0, kCases[k].p1 == 1 ? kPick1 : kPick0, kCases[k].q0 == 1 ? kPick1 : kPick0, \
-     kCases[k].q1 == 1 ? kPick1 : kPick0, kCases[k].s0 ? kSign : 0, kCases[k].s1 ? kSign : 0}
-alignas(16) inline constexpr std::uint64_t kCtl[16][6] = {
-    KAIRN_UPWARD2_CTL(0),  KAIRN_UPWARD2_CTL(1),  KAIRN_UPWARD2_CTL(2),  KAIRN_UPWARD2_CTL(3),
-    KAIRN_UPWARD2_CTL(4),  KAIRN_UPWARD2_CTL(5),  KAIRN_UPWARD2_CTL(6),  KAIRN_UPWARD2_CTL(7),
-    KAIRN_UPWARD2_CTL(8),  KAIRN_UPWARD2_CTL(9),  KAIRN_UPWARD2_CTL(10), KAIRN_UPWARD2_CTL(11),
-    KAIRN_UPWARD2_CTL(12), KAIRN_UPWARD2_CTL(13), KAIRN_UPWARD2_CTL(14), KAIRN_UPWARD2_CTL(15)};
-#undef KAIRN_UPWARD2_CTL
-#endif
-#if KAIRN_UPWARD2_FORM == KAIRN_UPWARD2_FORM_SSE
-KAIRN_FORCEINLINE void pick_case(const R& x, const R& y, int k, R& p, R& q) noexcept {
-    const __m128i cp = _mm_load_si128(reinterpret_cast<const __m128i*>(&kCtl[k][0]));
-    const __m128i cq = _mm_load_si128(reinterpret_cast<const __m128i*>(&kCtl[k][2]));
-    const __m128d s = _mm_castsi128_pd(_mm_load_si128(reinterpret_cast<const __m128i*>(&kCtl[k][4])));
-    p = R{_mm_permutevar_pd(x.h, cp), _mm_permutevar_pd(x.l, cp)};
-    q = R{_mm_xor_pd(_mm_permutevar_pd(y.h, cq), s), _mm_xor_pd(_mm_permutevar_pd(y.l, cq), s)};
-}
-#elif KAIRN_UPWARD2_FORM == KAIRN_UPWARD2_FORM_NEON
-KAIRN_FORCEINLINE V pick(V a, uint8x16_t c) noexcept {
-    return vreinterpretq_f64_u8(vqtbl1q_u8(vreinterpretq_u8_f64(a), c));
-}
-KAIRN_FORCEINLINE void pick_case(const R& x, const R& y, int k, R& p, R& q) noexcept {
-    const uint8x16_t cp = vld1q_u8(reinterpret_cast<const std::uint8_t*>(&kCtl[k][0]));
-    const uint8x16_t cq = vld1q_u8(reinterpret_cast<const std::uint8_t*>(&kCtl[k][2]));
-    const uint64x2_t s = vld1q_u64(&kCtl[k][4]);
-    p = R{pick(x.h, cp), pick(x.l, cp)};
-    q = R{vreinterpretq_f64_u64(veorq_u64(vreinterpretq_u64_f64(pick(y.h, cq)), s)),
-          vreinterpretq_f64_u64(veorq_u64(vreinterpretq_u64_f64(pick(y.l, cq)), s))};
-}
-#else
-KAIRN_FORCEINLINE double at(V a, int i) noexcept { return i ? a.v1 : a.v0; }
-KAIRN_FORCEINLINE void pick_case(const R& x, const R& y, int k, R& p, R& q) noexcept {
-    const Case& c = kCases[k];
-    p = R{V{at(x.h, c.p0), at(x.h, c.p1)}, V{at(x.l, c.p0), at(x.l, c.p1)}};
-    const M s{c.s0 != 0, c.s1 != 0};
-    q = R{flip(s, V{at(y.h, c.q0), at(y.h, c.q1)}), flip(s, V{at(y.l, c.q0), at(y.l, c.q1)})};
-}
-#endif
-
-// Form "table": the case's operands by a table of lane permutations, no branch but the one to the
-// case x ∋ 0, y ∋ 0.
-KAIRN_FORCEINLINE R mul_table(R x, R y) noexcept {
-    const int k = case_of(x, y);
-    if (k == 0) return mul_zero_zero(x, y);
-    R p, q;
-    pick_case(x, y, k, p, q);
-    bar(q);
-    return mul_one(p, q, x, y);
 }
 
 // Form "branch": the same cases by branches, each with its own fixed lane moves.
@@ -631,42 +534,6 @@ KAIRN_FORCEINLINE R mul_branch(R x, R y) noexcept {
     return mul_zero_zero(x, y);
 }
 
-#if KAIRN_UPWARD2_AVX2
-// Form "sel4": sel2's two candidates in the four lanes of one 256-bit register, (A | B), one
-// four-lane pair product, then the greater of its halves.
-KAIRN_FORCEINLINE __m256d wide(__m128d lo, __m128d hi) noexcept { return _mm256_set_m128d(hi, lo); }
-KAIRN_FORCEINLINE R mul_sel4(R x, R y) noexcept {
-    const M xle = le0(x.h), ylt = lt0(y.h);
-    const M ma = mand(mdup0(xle), mswap(ylt));
-    const M mb = mand(mdup1(xle), ylt);
-    const __m256d m = wide(ma, mb);
-    const __m256d xh = wide(x.h, x.h), xl = wide(x.l, x.l), yh = wide(y.h, y.h), yl = wide(y.l, y.l);
-    // P: default (xn, xn | xu, xu), alternative (xu, xu | xn, xn), where m is set.
-    const __m256d ph = _mm256_blendv_pd(_mm256_permute_pd(xh, 0x3), _mm256_permute_pd(xh, 0xC), m);
-    const __m256d pl = _mm256_blendv_pd(_mm256_permute_pd(xl, 0x3), _mm256_permute_pd(xl, 0xC), m);
-    // Q: (yn, yu | yu, yn), negated where m is set.
-    const __m256d sg = _mm256_and_pd(m, _mm256_set1_pd(-0.0));
-    __m256d qh = _mm256_xor_pd(_mm256_permute_pd(yh, 0x9), sg);
-    __m256d ql = _mm256_xor_pd(_mm256_permute_pd(yl, 0x9), sg);
-    KAIRN_DETAIL_UPWARD_BARRIER(qh);
-    KAIRN_DETAIL_UPWARD_BARRIER(ql);
-    // pair_mul on four lanes (the same steps and reasons).
-    const __m256d p = _mm256_mul_pd(ph, qh);
-    const __m256d e = _mm256_fmadd_pd(ph, qh, _mm256_xor_pd(p, _mm256_set1_pd(-0.0)));
-    const __m256d c = _mm256_fmadd_pd(ph, ql, _mm256_fmadd_pd(pl, qh, _mm256_mul_pd(pl, ql)));
-    const __m256d w = _mm256_add_pd(e, c);
-    const __m256d zh = _mm256_add_pd(p, w);
-    const __m256d zl = _mm256_add_pd(_mm256_sub_pd(p, zh), w);
-    const __m256d ap = _mm256_andnot_pd(_mm256_set1_pd(-0.0), p);
-    if (_mm256_movemask_pd(_mm256_cmp_pd(ap, _mm256_set1_pd(kMax), _CMP_NLT_UQ)) != 0) [[unlikely]]
-        return mul_special(x, y);
-    R z;
-    lexmax(_mm256_castpd256_pd128(zh), _mm256_castpd256_pd128(zl), _mm256_extractf128_pd(zh, 1),
-           _mm256_extractf128_pd(zl, 1), z.h, z.l);
-    return z;
-}
-#endif
-
 // --- The kernels of the type ---------------------------------------------------------------------------
 
 // The sum, in the form "accurate" (the type's): the two-limb sum of Joldes, Muller and Popescu
@@ -678,47 +545,26 @@ KAIRN_FORCEINLINE R mul_sel4(R x, R y) noexcept {
 //   w = RU(f + g)              w >= f + g
 //   (zh, zl) = two_sum(v, w)   zh + zl >= v + w
 // so zh + zl >= v + f + g >= s + c + f >= s + e + t + f >= xh + yh + xl + yl: each line replaces a
-// term by a number at least it, and the last two-sum makes the pair upper-normalized. The two later
-// two-sums are not Fast2Sum: when the heads cancel, |c| can exceed |s|, and the order needed for
-// exactness is not argued here (form "lean" uses fast_two_sum there; it stays an upper bound, see
-// fast_two_sum, but its result may not be upper-normalized). The specials: a head sum s = +inf (an
-// unbounded operand, or an overflow) makes the bound +inf (the steps after it compute inf - inf);
-// a head that reaches +-MAX gets a zero second limb (see special_candidate); an empty operand's NaN
-// propagates to the heads.
-// The second limbs' two-sum is two_sum_nonpos (they are not positive); on AVX2 the first two
-// two-sums are one two_sum on the four lanes (xh | xl) + (yh | yl).
-enum class SumForm { accurate, lean, sloppy };
-template <SumForm F = SumForm::accurate>
-KAIRN_FORCEINLINE R add_r(R x, R y) noexcept {
-    V s, e, zh, zl;
-    if constexpr (F == SumForm::sloppy) {
-        two_sum(x.h, y.h, s, e);
-        // The error of the second limbs' sum dropped: t = RU(xl + yl) >= xl + yl, c >= e + t.
-        const V c = add(e, add(x.l, y.l));
-        two_sum(s, c, zh, zl);
-    } else {
-        V t, f, v, g;
-#if KAIRN_UPWARD2_AVX2
-        const __m256d x4 = _mm256_set_m128d(x.l, x.h), y4 = _mm256_set_m128d(y.l, y.h);
-        const __m256d s4 = _mm256_add_pd(x4, y4);
-        const __m256d e4 = _mm256_min_pd(_mm256_add_pd(_mm256_sub_pd(x4, s4), y4), _mm256_add_pd(_mm256_sub_pd(y4, s4), x4));
-        s = _mm256_castpd256_pd128(s4);
-        t = _mm256_extractf128_pd(s4, 1);
-        e = _mm256_castpd256_pd128(e4);
-        f = _mm256_extractf128_pd(e4, 1);
-#else
-        two_sum(x.h, y.h, s, e);
-        two_sum_nonpos(x.l, y.l, t, f);
-#endif
-        const V c = add(e, t);
-        if constexpr (F == SumForm::lean) fast_two_sum(s, c, v, g);
-        else two_sum(s, c, v, g);
-        const V w = add(f, g);
-        if constexpr (F == SumForm::lean) fast_two_sum(v, w, zh, zl);
-        else two_sum(v, w, zh, zl);
-    }
+// term by a number at least it, and the last two-sum makes the pair upper-normalized. The second
+// limbs' two-sum is two_sum_nonpos (they are not positive). The two later two-sums are not Fast2Sum:
+// when the heads cancel, |c| can exceed |s|, and the order needed for exactness is not argued here
+// (the form "lean" of upward2_forms.hpp uses fast_two_sum there; it stays an upper bound, see
+// fast_two_sum, but whether its result is always upper-normalized is not argued). The specials: a
+// head sum s = +inf (an unbounded operand, or an overflow) makes the bound +inf (the steps after it
+// compute inf - inf); a head that reaches +-MAX gets a zero second limb (see special_candidate); an
+// empty operand's NaN propagates to the heads. (The first two two-sums as one two-sum on the four
+// lanes of an AVX2 register was measured slower on Zen 2, and dropped.)
+KAIRN_FORCEINLINE void sum_specials(V s, V& zh, V& zl) noexcept {
     zh = blend(ispinf(s), vset(kInf), zh);
     zl = clear(big(zh), zl);
+}
+KAIRN_FORCEINLINE R add_r(R x, R y) noexcept {
+    V s, e, t, f, v, g, zh, zl;
+    two_sum(x.h, y.h, s, e);
+    two_sum_nonpos(x.l, y.l, t, f);
+    two_sum(s, add(e, t), v, g);
+    two_sum(v, add(f, g), zh, zl);
+    sum_specials(s, zh, zl);
     return R{zh, zl};
 }
 
@@ -792,29 +638,8 @@ KAIRN_FORCEINLINE R sqr_r(R x) noexcept {
     return R{zh, zl};
 }
 
-// The product of the type: the form chosen by KAIRN_UPWARD2_MUL (a measurement switch; the README
-// says which won and by how much).
-#define KAIRN_UPWARD2_MUL_SEL2 1
-#define KAIRN_UPWARD2_MUL_EIGHT 2
-#define KAIRN_UPWARD2_MUL_TABLE 3
-#define KAIRN_UPWARD2_MUL_BRANCH 4
-#define KAIRN_UPWARD2_MUL_SEL4 5
-#if !defined(KAIRN_UPWARD2_MUL)
-#define KAIRN_UPWARD2_MUL KAIRN_UPWARD2_MUL_TABLE
-#endif
-KAIRN_FORCEINLINE R mul_r(R x, R y) noexcept {
-#if KAIRN_UPWARD2_MUL == KAIRN_UPWARD2_MUL_SEL2
-    return mul_sel2(x, y);
-#elif KAIRN_UPWARD2_MUL == KAIRN_UPWARD2_MUL_EIGHT
-    return mul_eight(x, y);
-#elif KAIRN_UPWARD2_MUL == KAIRN_UPWARD2_MUL_BRANCH
-    return mul_branch(x, y);
-#elif KAIRN_UPWARD2_MUL == KAIRN_UPWARD2_MUL_SEL4 && KAIRN_UPWARD2_AVX2
-    return mul_sel4(x, y);
-#else
-    return mul_table(x, y);
-#endif
-}
+// The product of the type: the form "branch".
+KAIRN_FORCEINLINE R mul_r(R x, R y) noexcept { return mul_branch(x, y); }
 
 // The interval of a pair of numbers, as kairn's interval_make_2 on (lo, 0), (hi, 0): [lo, hi] when
 // lo <= hi, lo < +inf and hi > -inf; the empty set when hi < lo; the whole line otherwise (a NaN, or

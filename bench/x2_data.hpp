@@ -1,5 +1,5 @@
-// The benchmark of the experimental two-limb interval rounded upward (experiments/upward2/README.md;
-// bench/README.md, "The two-limb interval rounded upward"): what the units x2_*.cpp share.
+// The benchmark of the experimental two-limb interval rounded upward (experiments/upward2/README.md,
+// which says how to build and run it): what the units x2_*.cpp share.
 // EXPERIMENTAL, NOT VERIFIED, not part of the library. Requires the rounding mode upward set by
 // kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math):
 // the unit of the type (x2_type.cpp) is compiled with the option of the target kairn::upward and
@@ -47,6 +47,8 @@ struct Ops {
     double px[kN], py[kN], pz[kN], ht[kN];
     double hc[kDeg + 1];
     double xr[4 * kRand], yr[4 * kRand];
+    // FR: kRand factors near 1 (F2) of random signs, for a chain whose sign flips unpredictably.
+    double fr[4 * kRand];
 };
 // The operands, made from the benchmark's data the first time (x2_check.cpp).
 const Ops& ops();

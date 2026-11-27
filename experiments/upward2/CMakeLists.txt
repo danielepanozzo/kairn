@@ -10,7 +10,8 @@
 # docs/concepts/upward.md (GCC and Clang -frounding-math): every program here is compiled with
 # -frounding-math. Programs, at -O2 and -O3: x2-check-native-LEVEL (the form of the target: NEON on
 # AArch64; SSE with AVX2 and FMA on x86-64), x2-check-numbers-LEVEL (the fallback of plain doubles,
-# forced), and on x86-64 x2-check-sse-LEVEL (SSE and FMA without AVX2).
+# forced), x2-check-checked-LEVEL (the form of the target with KAIRN_CHECKS 1), and on x86-64
+# x2-check-sse-LEVEL (SSE and FMA without AVX2).
 cmake_minimum_required(VERSION 3.20)
 project(kairn_upward2_experiment CXX)
 
@@ -26,7 +27,7 @@ else()
   set(_x86 OFF)
 endif()
 
-set(_variants native numbers)
+set(_variants native numbers checked)
 if(_x86)
   list(APPEND _variants sse)
 endif()
@@ -47,6 +48,11 @@ foreach(_level O2 O3)
     endif()
     if(_variant STREQUAL "numbers")
       target_compile_definitions(${_target} PRIVATE KAIRN_UPWARD2_FORM=KAIRN_UPWARD2_FORM_NUMBERS)
+    endif()
+    if(_variant STREQUAL "checked")
+      # The form of the target with KAIRN_CHECKS 1: the default types check their environment (they
+      # must never run under the mode upward) and every operation of the type asserts the mode.
+      target_compile_definitions(${_target} PRIVATE KAIRN_CHECKS=1)
     endif()
     target_compile_options(${_target} PRIVATE ${_flags})
     string(REPLACE ";" " " _text "${_flags}")

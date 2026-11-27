@@ -11,6 +11,7 @@
 // barriers as the operators. Each function has a reference: the same computation by the same
 // kernels on operands read through volatile objects, which its results must equal bit for bit.
 #include <kairn/experimental/upward2.hpp>
+#include <kairn/experimental/upward2_forms.hpp>
 #include <kairn/upward.hpp>
 
 #include <cstring>
@@ -67,7 +68,7 @@ KB_X2_INLINE U addf(const U& x, const U& y) {
         d2::R a = x.r_, b = y.r_;
         d2::pin(a);
         d2::bar(b);
-        d2::R z = F == LEAN ? d2::add_r<d2::SumForm::lean>(a, b) : d2::add_r<d2::SumForm::sloppy>(a, b);
+        d2::R z = F == LEAN ? d2::add_lean(a, b) : d2::add_sloppy(a, b);
         d2::bar(z);
         return U(z);
     } else {
@@ -88,8 +89,9 @@ KB_X2_INLINE UF<F> operator*(const UF<F>& a, const UF<F>& b) { return {mulf<F>(a
 // --- The operands ---------------------------------------------------------------------------------------
 
 U from_default(const double* p) {
+    const kairn::Interval<double, 2> k = kairn::Interval<double, 2>::from_limbs(p);   // before the scope
     ku::Scope scope;
-    return u2::from_interval(kairn::Interval<double, 2>::from_limbs(p));
+    return u2::from_interval(k);
 }
 
 using x2::kRand;
@@ -97,6 +99,7 @@ struct TypeData {
     up::Placed a{kN * sizeof(U)}, b{kN * sizeof(U)}, c{kN * sizeof(U)}, r{kRand * sizeof(U)};
     U* xr = arr(r, 0, kRand);
     U* yr = arr(r, 1, kRand);
+    U* fr = arr(r, 2, kRand);
     U* zr = arr(r, 8, kRand);
     U* x = arr(a, 0);
     U* y = arr(a, 1);
@@ -163,6 +166,7 @@ void fill() {
     for (int j = 0; j < kRand; ++j) {
         g->xr[j] = from_default(o.xr + 4 * j);
         g->yr[j] = from_default(o.yr + 4 * j);
+        g->fr[j] = from_default(o.fr + 4 * j);
     }
 }
 void clear() {
@@ -248,6 +252,7 @@ struct G1 {
     X("x2", x2, tp, det3pt, native, const G3<NATIVE> q{*g};                                        \
       KB_EACH(g->zd[i] = x2::det3pt_at<UF<NATIVE>>(q, i).v))                                       \
     KB_X2_DETS(X, sel2, SEL2)                                                                      \
+    KB_X2_DETS(X, table, TABLE)                                                                    \
     KB_X2_DETS(X, eight, EIGHT)                                                                    \
     KB_X2_DETS(X, branch, BRANCH)                                                                  \
     KB_X2_DETS(X, sel4, SEL4)                                                                      \
@@ -271,7 +276,12 @@ KB_X2_LIST(KB_X2_DEF)
     X("x2", x2, tp, interval_mul_2rand, eight, KB_EACHR(g->zr[i] = mulf<EIGHT>(g->xr[i], g->yr[i]))) \
     X("x2", x2, tp, interval_mul_2rand, table, KB_EACHR(g->zr[i] = mulf<TABLE>(g->xr[i], g->yr[i]))) \
     X("x2", x2, tp, interval_mul_2rand, branch, KB_EACHR(g->zr[i] = mulf<BRANCH>(g->xr[i], g->yr[i]))) \
-    X("x2", x2, tp, interval_mul_2rand, sel4, KB_EACHR(g->zr[i] = mulf<SEL4>(g->xr[i], g->yr[i])))
+    X("x2", x2, tp, interval_mul_2rand, sel4, KB_EACHR(g->zr[i] = mulf<SEL4>(g->xr[i], g->yr[i])))  \
+    X("x2", x2, prod, interval_mul_2rand, sel2, U p(1.0); KB_EACHR(p = mulf<SEL2>(p, g->fr[i])) g->s = p;) \
+    X("x2", x2, prod, interval_mul_2rand, eight, U p(1.0); KB_EACHR(p = mulf<EIGHT>(p, g->fr[i])) g->s = p;) \
+    X("x2", x2, prod, interval_mul_2rand, table, U p(1.0); KB_EACHR(p = mulf<TABLE>(p, g->fr[i])) g->s = p;) \
+    X("x2", x2, prod, interval_mul_2rand, branch, U p(1.0); KB_EACHR(p = mulf<BRANCH>(p, g->fr[i])) g->s = p;) \
+    X("x2", x2, prod, interval_mul_2rand, sel4, U p(1.0); KB_EACHR(p = mulf<SEL4>(p, g->fr[i])) g->s = p;)
 KB_X2_RAND(KB_X2_DEF)
 
 // --- The references: the same computations on operands read through volatile objects ---------------
@@ -399,6 +409,7 @@ int reference(const char* name, double* out) {
                 switch (f) {
                 case SEL2: r = vdet<SEL2>(i); break;
                 case EIGHT: r = vdet<EIGHT>(i); break;
+                case TABLE: r = vdet<TABLE>(i); break;
                 case BRANCH: r = vdet<BRANCH>(i); break;
                 case SEL4: r = vdet<SEL4>(i); break;
                 default: r = vdet<NATIVE>(i); break;
@@ -413,7 +424,10 @@ int reference(const char* name, double* out) {
         for (int i = 0; i < kN; ++i) s = vadd_form(f, s, g->x[i]);
     } else if (n.kind == "prod") {
         s = U(1.0);
-        for (int i = 0; i < kN; ++i) s = vmul_form(f, s, g->f[i]);
+        if (n.kernel == "interval_mul_2rand")
+            for (int i = 0; i < kRand; ++i) s = vmul_form(f, s, g->fr[i]);
+        else
+            for (int i = 0; i < kN; ++i) s = vmul_form(f, s, g->f[i]);
     } else {   // lat/horner_i2
         double zz = 0;
         for (int i = 0; i < kN; ++i) {
@@ -452,7 +466,8 @@ void step(const char* name, const double* before, int k, double* after) {
     const double p[4] = {before[2], -before[0], before[3], -before[1]};
     const U s = U::from_limbs(p);
     ku::Scope scope;
-    U r = n.kind == "sum" ? vadd_form(f, s, g->x[k]) : vmul_form(f, s, g->f[k]);
+    const U* fs = n.kernel == "interval_mul_2rand" ? g->fr : g->f;
+    U r = n.kind == "sum" ? vadd_form(f, s, g->x[k]) : vmul_form(f, s, fs[k]);
     put(r, after);
 }
 

@@ -90,6 +90,9 @@ void make_ops() {
         else std::memcpy(o.xr + 4 * j, x, 4 * sizeof(double));
         if (z & 2) neg_interval(y, o.yr + 4 * j);
         else std::memcpy(o.yr + 4 * j, y, 4 * sizeof(double));
+        const double* f = o.f + 4 * ((5 * j + 1) % kN);
+        if (z & 4) neg_interval(f, o.fr + 4 * j);
+        else std::memcpy(o.fr + 4 * j, f, 4 * sizeof(double));
     }
 }
 
@@ -344,9 +347,11 @@ bool check(const Entry& e, char* why, std::size_t size) {
             return false;
         }
         double s[4] = {1, 0, 1, 0}, nx[4];
-        for (int i = 0; i < kN; ++i) {
+        const bool rnd = kernel == "interval_mul_2rand";
+        const double* fs = rnd ? o.fr : o.f;
+        for (int i = 0; i < (rnd ? kRand : kN); ++i) {
             u->step(e.name, s, i, nx);
-            if (!contains_product(s, o.f + 4 * i, nx, p, t)) {
+            if (!contains_product(s, fs + 4 * i, nx, p, t)) {
                 std::snprintf(why, size, "step %d does not contain the exact product of its operands", i);
                 return false;
             }
