@@ -47,6 +47,14 @@ which ctest builds with `kairn::upward`, with the build's flags and under each c
 of the compiler but MSVC's, and whose output it compares with the text on this page each time
 (`api.example.concepts_upward`).
 
+How much faster, measured on the shipped header on the two test machines
+([Benchmarks](../developer/results/bench-upward.md#1-the-type-against-the-default-interval)): in a
+loop inside one scope a sum of `double` was 3.6 to 6.0 times faster than the default
+`Interval<double, 1>`'s, a product 4.7 to 8.4 times, and a 3 by 3 determinant of differences, the
+filter of an orientation test, 7.8 to 22 times. Converting from and to the default interval inside
+the loop gives most of that back (a sum 1.2 to 1.7 times faster, a product 1.6 to 3.7 times): keep
+the values in the round-up type across a computation.
+
 A typical use is a *filter* that decides a sign: an expression evaluated on intervals whose result
 excludes zero has a known sign, and only the cases where it does not fall back to something slower
 and exact:
@@ -180,6 +188,14 @@ it. The functions on arrays each hold a scope of their own, which sets the regis
 C library's mode; a program that calls them on short arrays in a loop holds one `Scope` around the
 loop, so that theirs only read.
 
+What a scope costs, measured on the shipped header
+([Benchmarks](../developer/results/bench-upward.md#5-the-scopes)), entry and exit together: a
+`Scope` that writes the mode took 23 to 25 ns on an Apple M3, and about 50 ns on an x86-64 machine
+(a Zen 2 with glibc), where it also sets the C library's mode; the scope of a function on arrays,
+which writes the register only, took about 19 ns there. A nested scope of the same mode took under
+1 ns on the M3; on the Zen 2 about 12 ns, and about 6 ns for the one that writes the register only.
+So a scope goes around a region of many operations, not around each one.
+
 ### A NearestScope inside a Scope
 
 A `NearestScope` inside a `Scope` is how a program calls the default types, or other code that
@@ -213,7 +229,11 @@ set the operator of `Interval<T>` gives on it (the bits of the NaNs of an empty 
 
 - **Each holds its own scope** for the call (upward, the register only), so a program may call it
   where the mode is to nearest; it loads after the scope is set and stores before it ends. Inside a
-  `kairn::upward::Scope` that scope costs one read.
+  `kairn::upward::Scope` that scope costs one read. Called where the mode is to nearest, the
+  scope was under 10% of a call from about 256 elements of `double` on the Zen 2, and on the M3
+  from about 256 elements for a product and about 1024 for a sum
+  ([Benchmarks](../developer/results/bench-upward.md#4-the-scope-of-a-function-on-arrays-by-length));
+  below that, hold one `Scope` around the loop of calls.
 - **The views have the same length**; for each view read, the view written has the same two
   arrays (in place, as `add(zs, zs, 1.0)` above) or arrays that overlap neither of them, and the two
   arrays it writes do not overlap each other. Every element read is a canonical state. A checked

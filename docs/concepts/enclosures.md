@@ -121,7 +121,10 @@ rounded down in about fifteen operations
 ([question 1](../developer/results/bench-milestone2.md#1-rounding-down-and-up-without-a-rounding-mode),
 which compares it with changing the mode). The opt-in round-up interval of `kairn/upward.hpp` is the
 alternative for speed: an interval of one limb computed under the rounding mode upward, which its
-scopes set, in files compiled with the options it names ([The round-up interval](upward.md)).
+scopes set, in files compiled with the options it names ([The round-up interval](upward.md)); in a
+loop inside one scope its sum was 3.6 to 6.0 times, and its product 4.7 to 8.4 times, faster than
+the default interval's on the two test machines
+([Benchmarks](../developer/results/bench-upward.md#1-the-type-against-the-default-interval)).
 
 What the interval gives back in width is small. In the same measurement, on the degree-8
 polynomial ([question 4](../developer/results/bench-milestone2.md#4-a-polynomial-cost-and-tightness),
