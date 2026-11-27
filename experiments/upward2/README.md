@@ -87,6 +87,48 @@ containing the exact range:
   in the conversion from the default type.
 - A bound whose head is $\pm\Omega$ loses its second limb (at most one step of the last limb).
 
+## What was measured (2026-11-27)
+
+`kairn-bench-up-LEVEL` with the units above, `--reps 31`, three runs per configuration at `-O2`
+and three at `-O3`: Apple M3 Max with Apple clang 21 and GCC 16; AMD EPYC 7452 (Zen 2), one logical
+CPU pinned, its SMT sibling idle, with GCC 13 and Clang 18. Times are the minimum per operation; a
+range is over the six runs of a configuration (M3 Apple clang | M3 GCC | Zen 2 GCC | Zen 2 Clang).
+
+| | the type | `Interval<double, 2>` | `Ball<double, 2>` |
+|---|---|---|---|
+| sum, loop (ns) | 2.07-2.22, 2.23-2.24, 5.15-5.34, 5.15-5.25 | 7.88-7.89, 6.67-7.28, 24.2-24.3, 18.4-18.5 | 1.83, 2.04-2.06, 4.08-4.09, 2.95-2.96 |
+| product, loop (ns) | 1.84-1.94, 2.17-2.19, 3.86-3.90, 4.12-4.18 | 27.2-27.3, 28.7-29.3, 77.6-78.3, 72.3-73.6 | 1.40-1.49, 1.52-1.54, 3.71-3.74, 2.35-2.37 |
+| 3 by 3 determinant on points (ns) | 51.7-51.8, 56.5-58.6, 146-149, 155 | 454, 459-493, 1270-1277, 989-993 | 49.0-50.3, 47.3-51.5, 147, 139 |
+| Horner of degree 8 (ns) | 77.3-77.4, 77.0-78.9, 143-144, 161-162 | 464-465, 413-418, 1162-1170, 834-836 | 63.8, 64.0, 145-146, 142 |
+
+(The product row is the form `branch`, the type's kernel timed under its own name; the operator
+itself, the same kernel, measured 5.0 to 9.2 ns between runs of one binary with Clang on Zen 2,
+cause not established.) The product's forms against `branch`, the same runs: `table` 1.01-1.14
+times slower on the M3 and 1.41-1.48 on Zen 2 in loops, 1.53-1.86 in chains, but 2.4-2.7 times
+faster on Zen 2 for independent products of random signs (16384 per call), where `branch`
+mispredicts; on the M3 `branch` stayed as fast there. The arrays form: 2.2-2.9 times faster than
+Kairn's packed `Interval<double, 2>` kernels for sums, 4.0-6.2 times for products.
+
+The widths, on points (exact values computed in integer arithmetic): the determinant's median
+width over the exact value about 6 times smaller than `Interval<double, 2>`'s, Horner's about 10
+times. The excess of a bound over the exact one, relative, in $u^2$: sums median 0.46 (default
+3.16), largest 6.0 over every class (default up to $10^7$ on cancellation); products median 2.2
+(default 4.2), largest 16 (default 8.2): the type's product is tighter in median and up to twice
+as loose in the worst case, its second limbs reaching a full step of the first instead of half.
+
+## What is argued, and what is only tested
+
+Every rounding step has its reason in a comment of the header; none is proved. Relied on and not
+reproved: the exactness of Fast2Sum's first two operations in a directed mode when the first
+operand is the larger in magnitude (Boldo, Graillat, Muller 2017); every result is an upper bound
+without it, and only the normalization (hence the product's comparison of candidates) depends on
+it. Argued informally, and tested only: that the pair product's final Fast2Sum has its operands in
+order for upper-normalized operands, near the underflow threshold included; that the fast path's
+check catches every special case (the forms that compute one candidate per lane compute only the
+corners they need); the arithmetic of a head at $\pm\Omega$ in the overflow range; that the sum
+form `lean` keeps the normalization (it gave the accurate sum's results on every case checked).
+The tightness of the bounds is measured, not stated.
+
 ## The checks
 
 `tests/check.cpp` (`x2-check-VARIANT-LEVEL`, built by `CMakeLists.txt` here, a project of its own):
