@@ -296,6 +296,12 @@ KAIRN_FORCEINLINE bool check_exact() noexcept {
 namespace {
 KAIRN_DETAIL_UPWARD_OPAQUE inline bool build_honors_mode() noexcept {
     const double one = 1.0, tiny = 0x1p-60;
+    // A comparison of constants on purpose: a build that folds it while it compiles, to nearest, is
+    // what the check reports. MSVC's code analysis warns of such a comparison (C6326), which here
+    // is no fault.
+#if defined(KAIRN_DETAIL_UPWARD_MSVC)
+#pragma warning(suppress : 6326)
+#endif
     return one + tiny > one;
 }
 }  // namespace
@@ -1780,7 +1786,8 @@ inline bool selftest_negation(::kairn::Status& s) noexcept {
 // 0 times infinity, [0, 0] times the whole line, the empty set, and numbers that are infinite or a
 // NaN (the default x op Interval<T, 1>(t)). The operands and results cross the scopes through
 // volatile objects. Every result the same set (the sign of a zero aside): no product here is below
-// 2^(2p-1) eta, where the default one may be wider.
+// 2^(2p-1) eta, where the default one may be wider. One row of operands at a time (an interval x
+// with every interval and every number), so that the results held at once are one row's.
 template <class T>
 inline bool selftest_special(::kairn::Status& s) noexcept {
     constexpr T inf = std::numeric_limits<T>::infinity(), omega = std::numeric_limits<T>::max();
@@ -1790,24 +1797,25 @@ inline bool selftest_special(::kairn::Status& s) noexcept {
     static constexpr T hi[n] = {inf, 2, -1, -1, omega, -omega, 2, 0, 1, inf, -inf};  // the last: the empty set
     static constexpr T numbers[m] = {inf, -inf, nan, 2, 0};
     using D = ::kairn::Interval<T, 1>;
-    // Seven results per pair: x + y, x - y, x y; per interval and number: x + t, x - t, t - x, x t.
-    constexpr int pairs = n * n * 3, with_numbers = n * m * 4;
-    volatile T want[pairs + with_numbers][2];
-    volatile T got[pairs + with_numbers][2];
+    // The results of a row x: x + y, x - y, x y for each interval y, then x + t, x - t, t - x, x t for
+    // each number t.
+    constexpr int pairs = n * 3, row = pairs + m * 4;
+    volatile T want[row][2];
+    volatile T got[row][2];
     volatile T vlo[n], vhi[n], vt[m];
     for (int i = 0; i < n; ++i) {
         vlo[i] = lo[i];
         vhi[i] = hi[i];
     }
     for (int k = 0; k < m; ++k) vt[k] = numbers[k];
-    {
-        int w = 0;
-        auto put = [&](const D& z) {
-            want[w][0] = z.lower().limb[0];
-            want[w][1] = z.upper().limb[0];
-            ++w;
-        };
-        for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
+        {
+            int w = 0;
+            auto put = [&](const D& z) {
+                want[w][0] = z.lower().limb[0];
+                want[w][1] = z.upper().limb[0];
+                ++w;
+            };
             const D x(::kairn::unverified(T(vlo[i])), T(vhi[i]));
             for (int j = 0; j < n; ++j) {
                 const D y(::kairn::unverified(T(vlo[j])), T(vhi[j]));
@@ -1823,18 +1831,16 @@ inline bool selftest_special(::kairn::Status& s) noexcept {
                 put(x * t);
             }
         }
-    }
-    {
-        Scope up;
-        int w = 0;
-        auto put = [&](const Interval<T>& z) {
-            T b[2] = {};
-            z.to_limbs(b);
-            got[w][0] = b[0];
-            got[w][1] = b[1];
-            ++w;
-        };
-        for (int i = 0; i < n; ++i) {
+        {
+            Scope up;
+            int w = 0;
+            auto put = [&](const Interval<T>& z) {
+                T b[2] = {};
+                z.to_limbs(b);
+                got[w][0] = b[0];
+                got[w][1] = b[1];
+                ++w;
+            };
             const Interval<T> x(::kairn::unverified(T(vlo[i])), T(vhi[i]));
             for (int j = 0; j < n; ++j) {
                 const Interval<T> y(::kairn::unverified(T(vlo[j])), T(vhi[j]));
@@ -1850,26 +1856,26 @@ inline bool selftest_special(::kairn::Status& s) noexcept {
                 put(::kairn::unverified(x) * t);
             }
         }
-    }
-    for (int w = 0; w < pairs + with_numbers; ++w) {
-        const T u = got[w][0], nl = got[w][1];
-        const bool empty = u != u;
-        const T l = empty ? inf : -nl, h = empty ? -inf : u;
-        if (!same_value(T(want[w][0]), l) || !same_value(T(want[w][1]), h)) {
-            const char* failure = "a special case differs from the default kairn::Interval<T, 1> (unbounded operands, "
-                                  "overflow, 0 times infinity, the empty set, a number that is not finite)";
-            if (w < pairs) {
-                const int op = w % 3;
+        for (int w = 0; w < row; ++w) {
+            const T u = got[w][0], nl = got[w][1];
+            const bool empty = u != u;
+            const T l = empty ? inf : -nl, h = empty ? -inf : u;
+            if (!same_value(T(want[w][0]), l) || !same_value(T(want[w][1]), h)) {
+                const char* failure = "a special case differs from the default kairn::Interval<T, 1> (unbounded "
+                                      "operands, overflow, 0 times infinity, the empty set, a number that is not finite)";
+                if (w < pairs) {
+                    const int op = w % 3;
+                    return fail(s, failure,
+                                op == 0   ? name_of<T>("upward_add_1 (double)", "upward_add_1 (float)")
+                                : op == 1 ? name_of<T>("upward_sub_1 (double)", "upward_sub_1 (float)")
+                                          : name_of<T>("upward_mul_1 (double)", "upward_mul_1 (float)"));
+                }
+                const int op = (w - pairs) % 4;
                 return fail(s, failure,
-                            op == 0   ? name_of<T>("upward_add_1 (double)", "upward_add_1 (float)")
-                            : op == 1 ? name_of<T>("upward_sub_1 (double)", "upward_sub_1 (float)")
-                                      : name_of<T>("upward_mul_1 (double)", "upward_mul_1 (float)"));
+                            op == 3 ? name_of<T>("upward_mul_num_1 (double)", "upward_mul_num_1 (float)")
+                                    : name_of<T>("upward_add_num_1 (double): x + t, x - t or t - x",
+                                                 "upward_add_num_1 (float): x + t, x - t or t - x"));
             }
-            const int op = (w - pairs) % 4;
-            return fail(s, failure,
-                        op == 3 ? name_of<T>("upward_mul_num_1 (double)", "upward_mul_num_1 (float)")
-                                : name_of<T>("upward_add_num_1 (double): x + t, x - t or t - x",
-                                             "upward_add_num_1 (float): x + t, x - t or t - x"));
         }
     }
     return true;
