@@ -1,0 +1,8 @@
+-Q ../../../../proofs/theories Kairn
+-Q ../../../../proofs/gen Kairn.Gen
+-R ../../../../proofs/third_party/mr22 Double
+-Q . KairnX2P
+
+X2Defs.v
+X2Order.v
+X2PairMul.v
