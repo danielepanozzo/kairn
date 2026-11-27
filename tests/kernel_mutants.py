@@ -38,6 +38,32 @@ interpreter's. The comparison catches a mutant if one build differs. A build tha
 built without it and noted (werror). Each mutant is then put in one class: caught by the quick
 tier, by the full tier only, by the comparison only, or by nothing.
 
+The kernels of the round-up interval ("rounding": "upward") are not in scalar.hpp, and the run above
+leaves them out. --upward plants the faults in them instead (they require the rounding mode upward
+set by kairn::upward::Scope and the options of docs/concepts/upward.md, GCC and Clang
+-frounding-math, MSVC /fp:strict): each mutant changes one statement of the two-number form of
+include/kairn/gen/upward.hpp, the form whose statements are those of the kernel's listing (the
+register and array forms are compared with it and with the interpreter, bit for bit, by
+gen/tests/test_upward_cxx.py), in its double and float code alike, with the changes above that
+apply (sign, drop, cmp, and select, an arm of which may be a constant here: upselect) and these:
+
+    neg       -a becomes a
+    ne        != becomes ==
+    logic     the first & becomes |, or the first | becomes &
+    maxswap   a > b ? a : b (max_nl in MAXPD's form) becomes b > a ? b : a, the maximum that
+              returns the NaN
+    nan       quiet_NaN() becomes infinity()
+
+Three runners of the family in the two-number form (gen/tests/upward_runner.cpp,
+KAIRN_UPWARD_FORM_NUMBERS) are built against the copy with CXX at -O3 -DNDEBUG -frounding-math: as
+they stand, with -ffp-contract=off and with -ffp-contract=fast; tests/crosscheck.py runs them on the
+kernel's binary64 and binary32 cases (seed 0) as the tiers do, guards included: 2000 cases for the
+quick tier and 20000 for the full tier (KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES and
+KAIRN_CROSSCHECK_CASES); the public type has no runner here. --bits adds the comparison of
+test_upward_cxx.py: the two-number runner built with each compiler given at -O0 and -O2 under each
+contraction setting, on that test's requests of the kernel, bit for bit the interpreter's (--max sel,
+the form of a > b ? a : b).
+
 Every applicable mutant runs, 1052 of the 63 kernels when this was written. With --jobs 32 --cxx g++
 --bits g++ clang++, 47 minutes on 32 hardware threads of a 2019 x86-64 server (GCC 13, Clang 18):
 865 caught by the full tier, 863 of them by the quick tier, 122 more by the comparison only, 65 by
@@ -62,9 +88,22 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GEN_TESTS = os.path.join(ROOT, "gen", "tests")
 STMT = re.compile(r"^(    const (?:double|float|bool) \w+ = )(.*);$")
 FIXUP_STMT = re.compile(r"^(        const (?:double|float|bool) \w+ = )(.*);$")
-HEADER = re.compile(r"^KAIRN_GEN_FORCEINLINE (?:constexpr )?void (\w+)\((double|float) ")
+# A kernel's function: KAIRN_GEN_FORCEINLINE, or inline for those of ordinary_inline (interval_mul_2);
+# its first parameter may be [[maybe_unused]] (the radii of the ball vectors).
+HEADER = re.compile(r"^(?:KAIRN_GEN_FORCEINLINE|inline) (?:constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?"
+                    r"(double|float) ")
 FIXUP_HEADER = re.compile(r"^KAIRN_GEN_COLD (?:constexpr )?result<(double|float), \d+> (\w+)\(")
 OPS = ("sign", "drop", "fma0", "textbook", "unfused", "cmp", "const", "select")
+# The round-up interval (--upward): the two-number form of include/kairn/gen/upward.hpp, between
+# "#if/#elif KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_NUMBERS" and the next directive; a statement is
+# "    [const] T x = EXPR;" (a value given to a barrier is not const).
+UPWARD_HPP = os.path.join(ROOT, "include", "kairn", "gen", "upward.hpp")
+UPWARD_RUNNER = os.path.join(GEN_TESTS, "upward_runner.cpp")
+UP_REGION = re.compile(r"^#(?:el)?if KAIRN_UPWARD_FORM == KAIRN_UPWARD_FORM_NUMBERS\b")
+UP_HEADER = re.compile(r"^KAIRN_GEN_FORCEINLINE void (upward_\w+_1)\((?:numbers<)?(double|float)\b")
+UP_STMT = re.compile(r"^(    (?:const )?(?:double|float|bool) \w+ = )(.*);$")
+UP_OPS = ("sign", "drop", "cmp", "upselect", "neg", "ne", "logic", "maxswap", "nan")
+UP_NUMBERS = ["-frounding-math", "-DKAIRN_UPWARD_FORM=KAIRN_UPWARD_FORM_NUMBERS", "-DKAIRN_UPWARD_RUNNER_ARRAYS"]
 # On x86-64 the headers need hardware FMA, which kairn::fma adds to the tests' runners (-mfma).
 X86_FMA = ["-mfma"] if platform.machine().lower() in ("x86_64", "amd64") else []
 # As tests/CMakeLists.txt: the kernels whose cross-checks do not fail on a suspicious result.
@@ -147,6 +186,23 @@ def mutate(expr, op):
     if op == "select":
         m = re.fullmatch(r"(\w+) \? ([^:]+) : (.+)", expr)
         return "%s ? %s : %s" % (m.group(1), m.group(3), m.group(2)) if m else None
+    if op == "upselect":
+        # A selection of the round-up interval, whose arm may be a constant (std::...::quiet_NaN()).
+        m = re.fullmatch(r"(\w+) \? (.+?) : (.+)", expr)
+        return "%s ? %s : %s" % (m.group(1), m.group(3), m.group(2)) if m and " ? " not in m.group(3) else None
+    if op == "neg":
+        m = re.fullmatch(r"-(\w+)", expr)
+        return m.group(1) if m else None
+    if op == "ne":
+        return expr.replace(" != ", " == ", 1) if " != " in expr else None
+    if op == "logic":
+        m = re.search(r" ([&|]) ", expr)
+        return expr[:m.start(1)] + ("|" if m.group(1) == "&" else "&") + expr[m.end(1):] if m else None
+    if op == "maxswap":
+        m = re.fullmatch(r"(\w+) > (\w+) \? \1 : \2", expr)
+        return "%s > %s ? %s : %s" % (m.group(2), m.group(1), m.group(2), m.group(1)) if m else None
+    if op == "nan":
+        return expr.replace("quiet_NaN()", "infinity()", 1) if "quiet_NaN()" in expr else None
     return None
 
 
@@ -165,6 +221,45 @@ def candidates(lines, b):
                 continue
             nd, nf = nd.replace("ZERO", "0.0"), nf.replace("ZERO", "0.0f")
             out.append((j, op, [(i, parts(i)[0] + nd + ";") for i in dl] + [(i, parts(i)[0] + nf + ";") for i in fl]))
+    return out
+
+
+def upward_blocks(lines, names):
+    """{kernel: {'double': (first, end), 'float': (first, end)}}: the bodies of the two-number form
+    of each kernel of NAMES in include/kairn/gen/upward.hpp."""
+    out, inside, i = {}, False, 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("#"):
+            inside = bool(UP_REGION.match(line))
+        elif inside:
+            m = UP_HEADER.match(line)
+            if m and m.group(1) in names:
+                j = i + 1
+                while lines[j] != "}":
+                    j += 1
+                out.setdefault(m.group(1), {})[m.group(2)] = (i + 1, j)
+                i = j
+        i += 1
+    return out
+
+
+def upward_candidates(lines, b):
+    """(statement, op, edits) of each mutant of a kernel of the round-up interval: its two-number
+    form's double and float statements, changed alike."""
+    out = []
+    double = [i for i in range(*b["double"]) if UP_STMT.match(lines[i])]
+    single = [i for i in range(*b["float"]) if UP_STMT.match(lines[i])]
+    if len(double) != len(single):
+        raise SystemExit("the double and float code of a kernel differ (%s)" % lines[b["double"][0] - 1])
+    for j, (dl, fl) in enumerate(zip(double, single)):
+        pd, ed = UP_STMT.match(lines[dl]).groups()
+        pf, ef = UP_STMT.match(lines[fl]).groups()
+        for op in UP_OPS:
+            nd, nf = mutate(ed, op), mutate(ef, op)
+            if nd is None or nf is None or nd == ed:
+                continue
+            out.append((j, op, [(dl, pd + nd + ";"), (fl, pf + nf + ";")]))
     return out
 
 
@@ -208,20 +303,52 @@ def bit_comparison(a, d, kernel):
     return differ, werror
 
 
+def upward_bit_comparison(a, d, kernel):
+    """The builds of test_upward_cxx.py's comparison, the two-number form (with each compiler of
+    --bits, at -O0 and -O2 under each contraction setting, -frounding-math), whose output on that
+    test's requests of the kernel is not the interpreter's (--max sel), with the number of lines
+    that differ; and the builds that -Werror refuses, built without it. None for the first if a build
+    fails without -Werror too."""
+    lines, want = a.expected[kernel]
+    differ, werror = [], []
+    for i, cxx in enumerate(a.bits):
+        for level in ("-O0", "-O2"):
+            for c in ("off", "on", "fast"):
+                label = "%s %s -ffp-contract=%s" % (cxx, level, c)
+                exe = os.path.join(d, "bits%d%s%s" % (i, level, c))
+                cmd = [cxx] + a.test_upward_cxx.BASE + [level, "-ffp-contract=" + c] + UP_NUMBERS
+                src = ["-I", os.path.join(d, "include"), "-I", GEN_TESTS, UPWARD_RUNNER, "-o", exe]
+                if run(cmd + src):
+                    werror.append(label)
+                    if run([x for x in cmd if x != "-Werror"] + src):
+                        return None, werror
+                r = subprocess.run([exe], input="\n".join(lines) + "\n", capture_output=True, text=True,
+                                   timeout=600)
+                n = len(lines) if r.returncode else len(a.test_upward_cxx.differences(want, r.stdout, len(lines)))
+                if n:
+                    differ.append((label, n))
+    return differ, werror
+
+
 def tiers(a, d, kernel, res):
     """Whether the mutant compiles; res['quick'] and res['full'], the tests of each tier it fails."""
     base = [a.cxx, "-std=c++20", "-O3", "-DNDEBUG", "-w", "-I", os.path.join(d, "include")] + X86_FMA
+    if a.upward:
+        base += UP_NUMBERS
     runners = []
     for label, extra in (("cxx", []), ("cxx-contract-off", ["-ffp-contract=off"]),
                          ("cxx-contract-fast", ["-ffp-contract=fast"])):
         exe = os.path.join(d, label)
-        if run(base + extra + ["-I", GEN_TESTS, os.path.join(GEN_TESTS, "runner.cpp"), "-o", exe]):
+        source = UPWARD_RUNNER if a.upward else os.path.join(GEN_TESTS, "runner.cpp")
+        if run(base + extra + ["-I", GEN_TESTS, source, "-o", exe]):
             return False
-        runners += ["--runner", label, exe]
-    api = os.path.join(d, "api")
-    if run(base + [os.path.join(ROOT, "tests", "api", "runner.cpp"), "-o", api]):
-        return False
-    forms = subprocess.run([api, "--forms", kernel], capture_output=True, text=True).stdout.split()
+        runners += ["--runner", ("upward-numbers" + label[3:]) if a.upward else label, exe]
+    forms = []
+    if not a.upward:
+        api = os.path.join(d, "api")
+        if run(base + [os.path.join(ROOT, "tests", "api", "runner.cpp"), "-o", api]):
+            return False
+        forms = subprocess.run([api, "--forms", kernel], capture_output=True, text=True).stdout.split()
     suspicious = [] if kernel in INTERMEDIATE_OVERFLOW else ["--fail-on-suspicious"]
     driver = [sys.executable, os.path.join(ROOT, "tests", "crosscheck.py")]
     for tier, (n, napi) in (("quick", a.quick), ("full", a.full)):
@@ -245,14 +372,15 @@ def one(a, mid, kernel, j, op, edits, lines):
     new = list(lines)
     for i, text in edits:
         new[i] = text
-    with open(os.path.join(d, "include", "kairn", "gen", "scalar.hpp"), "w") as f:
+    header = "upward.hpp" if a.upward else "scalar.hpp"
+    with open(os.path.join(d, "include", "kairn", "gen", header), "w") as f:
         f.write("\n".join(new) + "\n")
     res = {"id": mid, "kernel": kernel, "op": op, "stmt": j, "fixup": len(edits) == 4,
            "before": lines[edits[0][0]].strip(), "line": edits[0][1].strip(), "compiled": False}
     if a.tiers and not tiers(a, d, kernel, res):
         return res
     if a.bits:
-        differ, werror = bit_comparison(a, d, kernel)
+        differ, werror = (upward_bit_comparison if a.upward else bit_comparison)(a, d, kernel)
         if differ is None:
             return res
         # Per compiler (by its file name), the number of its builds that differ (or that -Werror
@@ -295,21 +423,46 @@ def main():
     ap.add_argument("--bits", nargs="+", metavar="CXX",
                     help="also the generator's comparison with the interpreter, with these compilers")
     ap.add_argument("--no-tiers", dest="tiers", action="store_false", help="without the tiers' tests")
+    ap.add_argument("--upward", action="store_true",
+                    help="the kernels of the round-up interval, in the two-number form of gen/upward.hpp")
     ap.add_argument("--work", help="where to build and to write results.json")
     a = ap.parse_args()
+    if a.upward:
+        # The tiers' cases of the family (KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES, KAIRN_CROSSCHECK_CASES);
+        # it has no runner of the public interface here.
+        a.quick = (2000, 0) if a.quick == (6000, 2000) else a.quick
+        a.full = (20000, 0) if a.full == (20000, 10000) else a.full
     a.work = os.path.abspath(a.work or tempfile.mkdtemp(prefix="kairn-kernel-mutants-"))
     os.makedirs(a.work, exist_ok=True)
-    with open(os.path.join(ROOT, "include", "kairn", "gen", "scalar.hpp")) as f:
+    with open(UPWARD_HPP if a.upward else os.path.join(ROOT, "include", "kairn", "gen", "scalar.hpp")) as f:
         lines = f.read().split("\n")
     if lines and lines[-1] == "":
         lines = lines[:-1]
     with open(os.path.join(ROOT, "gen", "claims.json")) as f:
-        names = [k["name"] for k in json.load(f)["kernels"]]
-    bl = blocks(lines)
-    jobs = [("m%04d" % i,) + job for i, job in enumerate((k,) + c for k in names for c in candidates(lines, bl[k]))]
+        claims = json.load(f)["kernels"]
+    # The kernels of the round-up interval are not in scalar.hpp: --upward runs theirs, and the default
+    # run leaves them out.
+    names = [k["name"] for k in claims if (k.get("rounding") == "upward") == a.upward]
+    if a.upward:
+        bl = upward_blocks(lines, set(names))
+        found = [(k,) + c for k in names for c in upward_candidates(lines, bl[k])]
+    else:
+        bl = blocks(lines)
+        found = [(k,) + c for k in names for c in candidates(lines, bl[k])]
+    jobs = [("m%04d" % i,) + job for i, job in enumerate(found)]
     jobs = [job for job in jobs if (not a.only or job[1] in a.only.split(","))
             and (not a.ids or job[0] in a.ids.split(","))]
-    if a.bits:
+    if a.bits and a.upward:
+        # The requests of test_upward_cxx.py's comparison and the interpreter's lines, once per kernel.
+        sys.path.insert(0, GEN_TESTS)
+        import test_upward_cxx
+        a.test_upward_cxx = test_upward_cxx
+        every = test_upward_cxx.requests(0)
+        a.expected = {}
+        for k in sorted({job[1] for job in jobs}):
+            mine = [line for line in every if line.split(" ", 1)[0] == k]
+            a.expected[k] = (mine, test_upward_cxx.interpret(mine, "sel"))
+    elif a.bits:
         # The cases of Kernels.test_matrix and the interpreter's results, once per kernel.
         sys.path.insert(0, GEN_TESTS)
         import common
