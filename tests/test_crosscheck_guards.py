@@ -1732,6 +1732,112 @@ class EnclosureGuards(unittest.TestCase):
             self.assertIn("did not check what it set out to", bad.stdout)
 
 
+class UpwardGuards(unittest.TestCase):
+    """The round-up interval (docs/developer/design/upward.md, "Claims and the oracle"; the kernels
+    require the rounding mode upward set by kairn::upward::Scope and the options of
+    docs/concepts/upward.md, GCC and Clang -frounding-math, MSVC /fp:strict, in their compiled forms;
+    the interpreter here needs neither): the family upward of the oracle's generator, whose strata a
+    random run must list and have a case of (crosscheck_guards.py, up_strata); the classes of the
+    kinds of the interval kernels and of the enclosure interface on the states as stored (iv_needs,
+    enc_needs: encloses_interval, interval_set, makes_interval, certain, trit), each taken out of a
+    good run; an enumeration of a format of the statements; and the driver of the compiled runners,
+    with the interpreter as its runner, on a good run and on one too short. The guards ask nothing of
+    same_set (the conversions) and of the classes of a number (`number t: ...`) beyond the strata
+    `empty` and `numspecial`, which put those cases in every random run."""
+
+    KERNELS = ("upward_add_1", "upward_sub_1", "upward_mul_1", "upward_add_num_1", "upward_mul_num_1",
+               "upward_neg_1", "upward_hull_1", "upward_intersection_1", "upward_make_1",
+               "upward_from_interval_1", "upward_to_interval_1", "upward_contains_1", "upward_subset_1",
+               "upward_less_1", "upward_equal_1", "upward_rel_interior_1", "upward_zero_1")
+
+    @classmethod
+    def setUpClass(cls):
+        # The quick tier's count of these kernels (KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES).
+        cls.args = ("--seed", "0", "--count", "2000")
+        cls.runs = {k: pipeline(k, IV, *cls.args) for k in cls.KERNELS}
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        for k, s in self.runs.items():
+            out = self.passes(s, k, IV, *self.args)
+            self.assertIn("crossnear" if k != "upward_make_1" else "nanbound", out)
+            self.assertEqual(s["coverage"][0]["desc"].get("rounding"), "upward", k)
+        for k, fmt in (("upward_mul_1", "fp:2:-2:1"), ("upward_hull_1", "fp:2:-2:1"),
+                       ("upward_make_1", "fp:3:-4:1"), ("upward_add_num_1", "fp:2:-2:1")):
+            s = pipeline(k, fmt, "--exhaustive")
+            out = self.passes(s, k, fmt, "--exhaustive")
+            self.assertIn("every operand", out)
+
+    def test_every_class_is_asked_for(self):
+        # Each class the guards ask of an entry, taken out of a good run's summary, fails the run,
+        # with that class as the reason.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        asked = 0
+        for name, good in self.runs.items():
+            with open(good["claims"], encoding="utf-8") as f:
+                kernel = next(k for k in json.load(f)["kernels"] if k["name"] == name)
+            self.assertTrue(CG.up_family(kernel), name)
+            for j, e in enumerate(kernel["ensures"]):
+                for need in CG.enc_needs(kernel, e, None) + CG.iv_needs(kernel, e, None):
+                    s = edited(good, j, lambda x: x["counts"].pop(need, None))
+                    self.fails(s, name, IV, *self.args, reason='saw no case of "%s"' % need)
+                    asked += 1
+        self.assertGreater(asked, 150)
+
+    def test_strata_of_the_family_not_promised(self):
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        for k, strata in (("upward_add_1", CG.UP_STRATA), ("upward_mul_1", CG.UP_STRATA + CG.UP_PRODUCT_STRATA),
+                          ("upward_mul_num_1", CG.UP_STRATA + CG.UP_PRODUCT_STRATA + CG.UP_NUMBER_STRATA),
+                          ("upward_contains_1", CG.UP_STRATA + CG.UP_NUMBER_STRATA),
+                          ("upward_make_1", CG.UP_MAKE_STRATA)):
+            for missing in (strata[0], strata[-1]):
+                given = ",".join([M2_COMMON] + [s for s in strata if s != missing])
+                s = pipeline(k, IV, *self.args, "--strata", given)
+                self.fails(s, k, IV, *self.args,
+                           reason="without %s, which its family upward has (the round-up interval)" % missing)
+
+    def test_not_the_interval_families(self):
+        # The family upward is chosen before the interval families: a run of the round-up interval is
+        # not asked for the strata of ivop or ivset, nor an interval kernel for those of upward.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        with open(CLAIMS, encoding="utf-8") as f:
+            ks = {k["name"]: k for k in json.load(f)["kernels"]}
+        self.assertEqual(CG.extended_strata(ks["upward_mul_1"]), [])
+        self.assertEqual(CG.up_strata(ks["interval_mul_1"]), ())
+        self.assertEqual(CG.up_strata(ks["upward_make_1"]), CG.UP_MAKE_STRATA)
+        self.assertEqual(CG.up_strata(ks["upward_add_num_1"]), CG.UP_STRATA + CG.UP_NUMBER_STRATA)
+        good = self.runs["upward_hull_1"]
+        self.passes(good, "upward_hull_1", IV, *self.args)
+        self.assertNotIn("bothspecial", good["coverage"][0]["desc"]["strata"])
+
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(kernel, *args):
+                return subprocess.run(
+                    CLAIMS_DRIVER + ["compiled"] + CLAIMS_ARGS
+                    + ["--kernel", kernel, "--format", IV, "--summary",
+                       os.path.join(d, kernel + ".json"), "--fail-on-suspicious", "--interp",
+                       "--seed", "0"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("upward_sub_1", "--count", "2000")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            bad = drive("upward_sub_1", "--count", "12")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+
+
 # The emulated tier (crosscheck_guards.py, emulated_problems; crosscheck.py --emulated): a run is in
 # a format of the statements of precision 8 to 11 and has a quarter of its cases judged; and the
 # driver fails an emulated runner whose lines are not the interpreter's, byte for byte. The

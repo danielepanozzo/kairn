@@ -20,8 +20,11 @@ class Plan(unittest.TestCase):
         cls.plan, cls.errors = brute.interp_plan(cls.kernels)
 
     def test_every_kernel_is_planned(self):
+        # Every kernel but the round-up interval's, whose enumerations are tests/brute/upward.py's.
         self.assertEqual(self.errors, [])
-        self.assertEqual({e["kernel"] for e in self.plan}, {k["name"] for k in self.kernels})
+        upward = {k["name"] for k in self.kernels if brute.is_upward(k)}
+        self.assertEqual(len(upward), 24)
+        self.assertEqual({e["kernel"] for e in self.plan}, {k["name"] for k in self.kernels} - upward)
 
     def test_every_fold_is_planned(self):
         # Every fold of the claims, in the formats of its arrays, each enumeration up to a length
@@ -101,9 +104,10 @@ class Plan(unittest.TestCase):
 
     def test_precision_one_is_planned(self):
         # The oracle reads formats of precision 1: a kernel whose claims hold from precision 1
-        # gets an enumeration of precision 1, then 2 and 3.
+        # gets an enumeration of precision 1, then 2 and 3 (the round-up interval's: precision 1 to
+        # 4 in tests/brute/upward.py).
         for k in self.kernels:
-            if k.get("min_precision") == 1:
+            if k.get("min_precision") == 1 and not brute.is_upward(k):
                 ps = {brute.parse_fmt(e["format"])[0] for e in self.plan if e["kernel"] == k["name"]}
                 self.assertTrue({1, 2, 3} <= ps, (k["name"], ps))
 
@@ -210,8 +214,9 @@ class EmulatedPlan(unittest.TestCase):
             cls.plan = brute.emulated_plan(cls.kernels, cls.folds)
 
     def test_every_kernel_and_fold_at_every_precision(self):
+        # But the round-up interval's, whose emulated kernels have a runner of their own.
         want = {(k["name"], p) for k in self.kernels + self.folds for p in brute.EMULATED_PRECISIONS
-                if (k.get("min_precision") or 1) <= p}
+                if (k.get("min_precision") or 1) <= p and not brute.is_upward(k)}
         got = {(e["kernel"], brute.parse_fmt(e["format"])[0]) for e in self.plan}
         self.assertEqual(got, want)
         self.assertEqual(len(got), len(self.plan))
@@ -449,6 +454,48 @@ class Runners(unittest.TestCase):
         self.assertEqual(by["kairn-gen-packed-runner-contract-on"]["kind"], "packed")
         self.assertEqual(by["kairn-gen-packed-runner-contract-on"]["setting"], "contract-on")
         self.assertEqual(len({r["id"] for r in found}), 4)
+
+    def test_the_runners_of_the_round_up_interval(self):
+        # kairn-gen-upward-runner-FORM and -SET-FORM (tests/CMakeLists.txt, tests/full/upward/): runners
+        # of their family alone, never taken for the library's scalar or packed runners; the
+        # family's kernels go to them and to no other, and no other kernel to them.
+        import stat
+        import tempfile
+        self.assertEqual(brute.upward_runner_target("kairn-gen-upward-runner-register"), "register")
+        self.assertEqual(brute.upward_runner_target("kairn-gen-upward-runner-O2-contract-off-numbers"),
+                         "O2-contract-off-numbers")
+        self.assertIsNone(brute.upward_runner_target("kairn-gen-upward-runner-fault"))
+        self.assertIsNone(brute.upward_runner_target("kairn-emulated-upward-runner"))
+        self.assertIsNone(brute.runner_target("kairn-gen-upward-runner-register"))
+        exe = ".exe" if brute.WINDOWS else ""
+        with tempfile.TemporaryDirectory() as bdir:
+            tests = os.path.join(bdir, "tests", "full", "upward")
+            os.makedirs(tests)
+            for target in ("kairn-gen-runner", "kairn-gen-packed-runner", "kairn-gen-upward-runner-register",
+                           "kairn-gen-upward-runner-numbers", "kairn-gen-upward-runner-debug-arrays"):
+                path = os.path.join(bdir, "tests", target + exe) if "upward" not in target or \
+                    "debug" not in target else os.path.join(tests, target + exe)
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write("")
+                os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
+            with open(os.path.join(bdir, "CMakeCache.txt"), "w", encoding="utf-8") as fh:
+                fh.write("KAIRN_TESTS_NEON:BOOL=ON\n")
+            found = brute.discover("clang", bdir)
+        by = {r["target"]: r for r in found}
+        self.assertEqual(len(found), 5)
+        self.assertEqual(by["kairn-gen-upward-runner-register"]["kind"], "upward")
+        self.assertEqual(by["kairn-gen-upward-runner-register"]["label"], "upward-register")
+        self.assertEqual(by["kairn-gen-upward-runner-register"]["setting"], "the build's flags")
+        self.assertEqual(by["kairn-gen-upward-runner-debug-arrays"]["setting"], "debug")
+        self.assertEqual(by["kairn-gen-runner"]["kind"], "scalar")
+        a = mock.Mock(seed="0", jobs=2, kernel_names=["upward_mul_1", "mul_2_2"], fold_names=["sum_2"],
+                      upward_names=["upward_mul_1"])
+        with tempfile.TemporaryDirectory() as work:
+            s = brute.Scheduler(a, work, found, [])
+            self.assertEqual({r["kind"] for r in s.runners_of("upward_mul_1")}, {"upward"})
+            self.assertEqual(len(s.runners_of("upward_mul_1")), 3)
+            self.assertEqual({r["kind"] for r in s.runners_of("mul_2_2")}, {"scalar", "packed"})
+            s.times.close()
 
     def test_every_runner_target_of_the_build_is_classified(self):
         # Every target tests/CMakeLists.txt names kairn-gen-...runner...: a runner of the library,

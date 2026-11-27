@@ -15,12 +15,20 @@ stages in its own process), only longer:
   given by --build produce (kairn-gen-runner* and kairn-gen-packed-runner*: the scalar and the
   packed kernels, under each contraction setting), and the scalar runners of a second build of
   each with the other form of the scalar fix-ups (KAIRN_GEN_FIXUP_CALL; --fixup-forms). The
-  cases come in units of --chunk; each
+  kernels of the round-up interval ("rounding": "upward"; they require the rounding mode upward
+  set by kairn::upward::Scope and the options of docs/concepts/upward.md, GCC and Clang
+  -frounding-math, MSVC /fp:strict) go through the runners of their family that the builds
+  produce (kairn-gen-upward-runner*: one register, the array forms, two numbers, with the build's
+  flags and the full tier's flag sets), each holding an upward scope, and through no other runner;
+  no other kernel goes through those. The cases come in units of --chunk; each
   unit is generated once and judged once per runner, so every runner of a machine judges the
   same cases, and a machine adds units round-robin over the kernels and formats until its
   budget is spent.
 - interp: the generator's interpreter on every operand of the toy formats of the plan below, in
-  chunks of --interp-chunk enumeration indices.
+  chunks of --interp-chunk enumeration indices. Not the round-up interval's: every case of the
+  formats of its statements of precision 1 to 4, in both forms of max_nl, is tests/brute/upward.py's.
+  Nor in the emulated part (--part emulated), whose runner has the other kernels: the generator's
+  suite and the full tier run the family's emulated kernels.
 
 `run` is restartable: every finished pipeline leaves its summary in the work directory, and a
 second `run` on the same directory starts only what is missing. No new pipeline starts after the
@@ -628,11 +636,14 @@ def ieee_shaped(p, exponents):
 
 
 def interp_plan(kernels, only=None):
-    """[{kernel, format, restrict, why}] and [errors]: what the interpreter enumerates."""
+    """[{kernel, format, restrict, why}] and [errors]: what the interpreter enumerates. The kernels
+    of the round-up interval are not in it: every case of the formats of their statements of
+    precision 1 to 4, through the interpreter in both forms of max_nl and judged by the oracle, is
+    tests/brute/upward.py's (5.3 billion lines, some hours of 46 processes of the Linux machine)."""
     plan, errors = [], []
     for k in kernels:
         name = k["name"]
-        if only and name not in only:
+        if (only and name not in only) or is_upward(k):
             continue
         shape = shape_of(k)
         extended = k.get("domain") == "extended"
@@ -801,14 +812,19 @@ def emulated_plan(kernels, folds, only=None, cache_path=None, match=None):
     """[{kernel, format, restrict, mode, total, why, domain, part}]: the emulated part, each entry
     exhaustive (total the enumeration's indices) or random (total its cases), sized with the
     oracle's gen --exhaustive --total (cached in CACHE_PATH) for the kernels of at most two limbs;
-    with MATCH, only the entries whose 'KERNEL FORMAT' it matches (re.search)."""
+    with MATCH, only the entries whose 'KERNEL FORMAT' it matches (re.search). The kernels of the
+    round-up interval are not in it: kairn-emulated-runner has the other kernels, and theirs
+    (tests/emulated/gen/upward.hpp, on the runner of the family built for the type) are compared with
+    the interpreter on every state of the small formats in both forms of max_nl by the generator's
+    suite (gen/tests/test_upward_cxx.py) and judged in fp:8:-14:1 by the full tier
+    (full.crosscheck.emulated.upward_*)."""
     cache = {}
     if cache_path and os.path.exists(cache_path):
         cache = read_json(cache_path)
     plan = []
     for k in kernels:
         name = k["name"]
-        if only and name not in only:
+        if (only and name not in only) or is_upward(k):
             continue
         limbs = input_limbs(k)
         for p in EMULATED_PRECISIONS:
@@ -1177,6 +1193,24 @@ def runner_target(target):
     return bool(m.group(1)), m.group(2)
 
 
+def upward_runner_target(target):
+    """The suffix of the target name of a runner of the round-up interval, None for any other name.
+
+    Those runners (gen/tests/upward_runner.cpp; tests/CMakeLists.txt, kairn-gen-upward-runner-FORM,
+    and the full tier's flag matrix, kairn-gen-upward-runner-SET-FORM, tests/full/upward/) run the
+    kernels of the family alone, each holding an upward scope around its evaluations: the kernels of
+    the family go to them and to no other runner, and no other kernel goes to them."""
+    m = re.match(r"^kairn-gen-upward-runner-(.+)$", target)
+    if not m or re.search(r"(^|-)fault$", m.group(1)):
+        return None
+    return m.group(1)
+
+
+def is_upward(kernel):
+    """Whether a kernel of the claims is of the round-up interval ("rounding": "upward")."""
+    return kernel.get("rounding") == "upward"
+
+
 def compiler_of(builddir):
     for f in glob.glob(os.path.join(builddir, "CMakeFiles", "*", "CMakeCXXCompiler.cmake")):
         with open(f, encoding="utf-8", errors="replace") as fh:
@@ -1289,8 +1323,20 @@ def discover(name, bdir):
     for path in sorted(glob.glob(os.path.join(bdir, "tests", "**", "kairn-gen-*runner*" + exe),
                                  recursive=True)):
         target = os.path.basename(path)[:len(os.path.basename(path)) - len(exe)]
+        if not os.path.isfile(path) or (not WINDOWS and not os.access(path, os.X_OK)):
+            continue
+        up = upward_runner_target(target)
+        if up:
+            # A runner of the round-up interval: its form (register, arrays, numbers) after its
+            # flag set, if any (tests/full/upward/).
+            label = "upward-" + up
+            setting = up.rsplit("-", 1)[0] if "-" in up else "the build's flags"
+            out.append({"id": "%s/%s" % (name, label), "build": name, "label": label, "kind": "upward",
+                        "backend": "upward", "target": target, "setting": setting, "compiler": compiler,
+                        "flags": build_flags(commands.get(target, "")), "path": path})
+            continue
         named = runner_target(target)
-        if not named or not os.path.isfile(path) or (not WINDOWS and not os.access(path, os.X_OK)):
+        if not named:
             continue
         kind = "packed" if named[0] else "scalar"
         label = (backend if kind == "packed" else "cxx") + ("-" + named[1] if named[1] else "")
@@ -1665,6 +1711,7 @@ class Scheduler:
                         else:
                             self.stopped_enums.add(x.get("key") or enum_key(x))
         self.folds = set(getattr(a, "fold_names", []))
+        self.upward = set(getattr(a, "upward_names", []))
         self.pairs = [(k, f) for k in list(a.kernel_names) + sorted(self.folds)
                       for f in ("binary64", "binary32")]
         self.stats = {"tasks": 0, "judged_cases": 0, "interp_cases": 0, "emulated_cases": 0}
@@ -1696,6 +1743,12 @@ class Scheduler:
         for e in examples[:3]:
             log("    %s: %s" % (e["kind"], e["line"]))
 
+    def runners_of(self, kernel):
+        """The runners of a kernel that is not a fold: those of the round-up interval for its kernels,
+        the others for every other kernel."""
+        up = kernel in self.upward
+        return [r for r in self.runners if (r["kind"] == "upward") == up]
+
     # The compiled part: units round-robin over (kernel, format), up to --cases per pair.
     def units(self):
         u = 0
@@ -1703,7 +1756,8 @@ class Scheduler:
             start = u * self.a.chunk
             if self.a.cases is not None and start >= self.a.cases:
                 return
-            if all(all((k, f, r["id"]) in self.stopped for r in self.runners)
+            if all(all((k, f, r["id"]) in self.stopped for r in (
+                    self.runners_of(k) if k not in self.folds else self.runners))
                    for k, f in self.pairs):
                 return
             count = self.a.chunk if self.a.cases is None else min(self.a.chunk,
@@ -1718,7 +1772,7 @@ class Scheduler:
                 if k in self.folds and fcount == 0:
                     continue
                 if k not in self.folds:
-                    groups = [(Unit(self.work, k, f, start, count), self.runners)]
+                    groups = [(Unit(self.work, k, f, start, count), self.runners_of(k))]
                 else:
                     groups = []
                     scalar = [r for r in self.runners if r["kind"] == "scalar"]
@@ -1922,6 +1976,7 @@ def cmd_run(a):
     folds = load_folds()
     only = set(a.kernels.split(",")) if a.kernels else None
     a.kernel_names = [k["name"] for k in kernels if not only or k["name"] in only]
+    a.upward_names = [k["name"] for k in kernels if is_upward(k) and (not only or k["name"] in only)]
     a.fold_names = [k["name"] for k in folds if not only or k["name"] in only]
     started = now_iso()
     t0 = time.time()
@@ -3028,6 +3083,8 @@ def report_agreement(docs, w):
 def backend_of(r):
     if r["kind"] == "packed":
         return r["backend"].upper().replace("AVX2", "AVX2").replace("NEON", "NEON")
+    if r["kind"] == "upward":
+        return "upward"
     return "scalar"
 
 
