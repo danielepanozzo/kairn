@@ -50,6 +50,19 @@
 #   ignores the mode.
 # - api.upward.limbs.O2, .O3 (api.upward.limbs with MSVC): from_limbs and to_limbs on arrays read
 #   and written as T around the calls (limbs.cpp), at -O2 and -O3 whatever the build's flags.
+# - api.upward.moves.LEVEL (levels/), .numbers, .avx2, .checked, .without_options, .unchecked: what
+#   the compiler does to code next to a scope's boundary (moves.cpp): the header's own operations
+#   and values taken across through pass(), to_interval() or memory must stay on their side (the
+#   test fails otherwise); the same computations without pass() are reported.
+# - api.upward.reject.* of the type (reject.cpp, cases 120 to 146): the conversions between the two
+#   interval types, operations that mix them, constant expressions, what the type does not have,
+#   and operations written without the marker against a copy of the headers in which kernels of
+#   gen/upward.hpp are unverified (reject_fixture.cmake).
+# - The configurations of the design page's table that no test above has: the scopes, limbs, the
+#   differential and the units in a checked build and the two-number form; with Clang, a runner and
+#   the differential built without the options; with GCC and MSVC without the options and
+#   KAIRN_UPWARD_OPTIONS_UNCHECKED, the self-check and moves.cpp reported (report_only.cmake); on
+#   arm64 macOS, both built for x86-64 and run under Rosetta, reported (api.upward.rosetta.*).
 find_package(Threads REQUIRED)
 
 function(_kairn_upward_program target)
