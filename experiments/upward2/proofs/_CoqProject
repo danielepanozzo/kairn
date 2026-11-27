@@ -1,0 +1,5 @@
+-Q ../../../proofs/theories Kairn
+-Q ../../../proofs/gen Kairn.Gen
+-Q . KairnX2
+
+X2Sum.v
