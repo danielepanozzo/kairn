@@ -2237,7 +2237,7 @@ Its advice is not checked in the builds with the options: Apple clang contracts 
 `-O2` on, and GCC 13 and Clang 18 in a release build on x86-64 (with the `-mfma` of `kairn::fma`), so
 the advice about contraction is what those builds print; MSVC under `/fp:strict` gives none. Built
 with Clang without the options, the advice is that the file's own arithmetic ignores the mode, which
-the test checks; GCC 13 and MSVC 19.52 (`/fp:precise`) built without them with
+the test checks; GCC 13, GCC 16 and MSVC 19.52 (`/fp:precise`) built without them with
 `KAIRN_UPWARD_OPTIONS_UNCHECKED` (`api.upward.self_test.unchecked`, reported) passed on 2026-11-26
 and gave the same advice.
 
@@ -2289,7 +2289,7 @@ every build: Apple clang 21 (arm64) and GCC 16 at `-O0` to `-O3`; GCC 13 and Cla
 `-O0` to `-O3`; MSVC 19.52 at `/Od`, `/O1`, `/O2` and `/O2 /GL`; with the build's flags in the
 two-number form, built for AVX2 on x86-64 Linux, and with `KAIRN_CHECKS` 1, where groups 1 and 2
 reported nothing; Clang 18 and Apple clang 21 without the options, where group 1 is gated and group
-2 held too; GCC 13 and MSVC (`/fp:precise`) without the options and with
+2 held too; GCC 13, GCC 16 and MSVC (`/fp:precise`) without the options and with
 `KAIRN_UPWARD_OPTIONS_UNCHECKED`, reported, where both held; and x86-64 under Rosetta, reported,
 where both held. For the shapes of the gap the listings of MSVC's `/O2` build and of its `/O2 /GL`
 program were also read: in each scope the pin's or and the four multiplications of each product lie
@@ -2310,8 +2310,8 @@ The third group, with the options (the same in every form, and with the checks):
 At `-O0` and `/Od` nothing moved. Without the options (reported) more moved: with Clang 18 and Apple
 clang 21 the first four rows and, below the end of a `Scope`, the program's sum of the scope used only
 after it, on registers and on operands given to `pass()` (computed to nearest), and a sum of literals
-in a `Scope` (computed while compiling, to nearest); with GCC 13 the first four rows and the sum of
-literals; with MSVC (`/fp:precise`) the sums of the program's in a `NearestScope` and after a `Scope`
+in a `Scope` (computed while compiling, to nearest); with GCC 13 and 16 the first four rows and the
+sum of literals; with MSVC (`/fp:precise`) the sums of the program's in a `NearestScope` and after a `Scope`
 merged with the same sums of the `Scope`, the sum in a `Scope` merged with the one before it, the
 invariant sum of a loop of `Scope`s, the results of a `Scope` used only after it, and the sum of
 literals. So a program cannot count on code without barriers staying on its side of a boundary when
@@ -2374,6 +2374,13 @@ it, with C4459, and with C6244 under `/analyze`; with GCC and Clang it is only r
 whether they reject it depends on their version (GCC 13 rejects it, GCC 16 and Clang accept it).
 Kairn's other tests are built as a program is, with the warnings off in the headers, and with
 their own `/W4 /WX` or `-Wall -Wextra -Wpedantic -Werror` unchanged.
+
+The builds under `/analyze` judge the rest of MSVC's code analysis too, since `/WX` makes each of
+its warnings an error. When `shadow.cpp` first included `kairn/upward.hpp` (2026-11-26) they found
+two: the self-check's special cases held all their results on the stack at once, 19 152 bytes
+(C6262), and now compute and compare one row of operands at a time; and the check of the build
+compares two constants on purpose (C6326, suppressed there with a comment). Nothing else of the
+header warns under `/analyze /W4`, with `/fp:strict` and without it.
 
 ## Hardware FMA
 
