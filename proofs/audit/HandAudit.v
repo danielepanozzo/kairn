@@ -136,7 +136,16 @@
      proofs/gen/IeeeAudit.v lists: V1 to V3 of both products, and, from
      theories/IeeeBvConvFinite.v and IeeeBvConvFinite2.v, V4 of bv_conv_1 and of bv_conv_2
      and the lemmas they rest on, beside the theorems of their generated statements
-     bv_conv_k_ieee_spec, which proofs/gen/IeeeAudit.v lists.
+     bv_conv_k_ieee_spec, which proofs/gen/IeeeAudit.v lists;
+   - the round-up interval (docs/developer/design/upward.md), beside the theorems of the
+     generated statements of its 24 kernels, which proofs/gen/UpwardAudit.v lists: the facts
+     of its vocabulary (theories/IeeeUpwardVocabulary.v), the two machine forms of its maximum
+     and what every maximum with the property max_nl_ok computes (IeeeUpwardMax.v), the sum
+     and the product rounded upward on all values (IeeeUpwardOps.v), what the seed and the
+     maxima of its products compute (IeeeUpwardProduct.v), the exact ranges of its operations
+     and the shapes of its arithmetic statements (IeeeUpwardRange.v), and the lemmas the
+     theorems of its kernels rest on beside those (IeeeUpwardArith.v, IeeeUpwardExact.v,
+     IeeeUpwardPredicates.v).
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -1644,4 +1653,231 @@ Print Assumptions IeeeBvConvFinite2.conv_radius_given_2.
 Print Assumptions IeeeBvConvFinite2.P_bound_2.
 Print Assumptions IeeeBvConvFinite2.bv_conv_2_finite_parts.
 Print Assumptions IeeeBvConvFinite2.bv_conv_2_ieee_v4.
+
+(* The round-up interval, beside the theorems of the generated statements of its 24 kernels,
+   which proofs/gen/UpwardAudit.v lists. Its vocabulary (theories/IeeeUpwardVocabulary.v): the
+   extended real number of a limb, canonical states and their lanes, members, the default
+   interval with the same members, and the members of a number of the program. *)
+From Kairn Require Import IeeeUpwardVocabulary.
+Print Assumptions IeeeUpwardVocabulary.upward_xmember_xnonempty.
+Print Assumptions IeeeUpwardVocabulary.upward_xnonempty_xmember.
+Print Assumptions IeeeUpwardVocabulary.upward_xle_opp_l.
+Print Assumptions IeeeUpwardVocabulary.upward_xval_nan.
+Print Assumptions IeeeUpwardVocabulary.upward_xval_inf.
+Print Assumptions IeeeUpwardVocabulary.upward_xval_finite.
+Print Assumptions IeeeUpwardVocabulary.upward_xval_real.
+Print Assumptions IeeeUpwardVocabulary.upward_xval_cases.
+Print Assumptions IeeeUpwardVocabulary.upward_nonempty_lanes.
+Print Assumptions IeeeUpwardVocabulary.upward_nonempty_lane_values.
+Print Assumptions IeeeUpwardVocabulary.upward_1_not_ninf.
+Print Assumptions IeeeUpwardVocabulary.upward_1_nan.
+Print Assumptions IeeeUpwardVocabulary.upward_1_nan_iff.
+Print Assumptions IeeeUpwardVocabulary.upward_1_not_nan.
+Print Assumptions IeeeUpwardVocabulary.upward_empty_not_nonempty.
+Print Assumptions IeeeUpwardVocabulary.upward_nonempty_not_empty.
+Print Assumptions IeeeUpwardVocabulary.upward_bounded_nonempty.
+Print Assumptions IeeeUpwardVocabulary.in_upward_1_iff.
+Print Assumptions IeeeUpwardVocabulary.upward_empty_no_member.
+Print Assumptions IeeeUpwardVocabulary.in_upward_nonempty.
+Print Assumptions IeeeUpwardVocabulary.upward_nonempty_member.
+Print Assumptions IeeeUpwardVocabulary.upward_whole.
+Print Assumptions IeeeUpwardVocabulary.upward_interval_same.
+Print Assumptions IeeeUpwardVocabulary.interval_1_empty_iff.
+Print Assumptions IeeeUpwardVocabulary.interval_nonempty_bounds.
+Print Assumptions IeeeUpwardVocabulary.in_number_1_finite.
+Print Assumptions IeeeUpwardVocabulary.in_number_1_not_finite.
+Print Assumptions IeeeUpwardVocabulary.in_number_1_member.
+Print Assumptions IeeeUpwardVocabulary.in_number_1_xmember.
+
+(* Its maximum (theories/IeeeUpwardMax.v): the order of the extended real numbers by cases,
+   the two machine forms (max_sel_ok, MAXPD; max_num_ok, FMAXNM) with the property max_nl_ok,
+   and what every maximum with the property computes. *)
+From Kairn Require Import IeeeUpwardMax.
+Print Assumptions IeeeUpwardMax.upward_xle_refl.
+Print Assumptions IeeeUpwardMax.upward_xlt_xle.
+Print Assumptions IeeeUpwardMax.upward_xlt_false_xle.
+Print Assumptions IeeeUpwardMax.upward_xle_xlt_false.
+Print Assumptions IeeeUpwardMax.upward_xle_xlt_eq.
+Print Assumptions IeeeUpwardMax.upward_nan_dec.
+Print Assumptions IeeeUpwardMax.upward_not_nan_xval.
+Print Assumptions IeeeUpwardMax.upward_not_nan_false.
+Print Assumptions IeeeUpwardMax.max_sel_props.
+Print Assumptions IeeeUpwardMax.max_sel_ok.
+Print Assumptions IeeeUpwardMax.upward_zero_dec.
+Print Assumptions IeeeUpwardMax.max_num_max_sel.
+Print Assumptions IeeeUpwardMax.max_num_zeros.
+Print Assumptions IeeeUpwardMax.max_num_ok.
+Print Assumptions IeeeUpwardMax.max_nl_nan.
+Print Assumptions IeeeUpwardMax.max_nl_not_nan.
+Print Assumptions IeeeUpwardMax.max_nl_xval.
+Print Assumptions IeeeUpwardMax.max_nl_xkeep.
+
+(* The sum and the product rounded upward on all values (theories/IeeeUpwardOps.v): the value
+   of the result, from Flocq's Bplus_correct and Bmult_correct with mode_UP and their overflow;
+   when it is a NaN and when -infinity; the lanes of canonical states; the lower bound of a lane
+   n; and the other operations of the listings on canonical states. *)
+From Kairn Require Import IeeeUpwardOps.
+Print Assumptions IeeeUpwardOps.xadd_opp.
+Print Assumptions IeeeUpwardOps.xmul_opp_l.
+Print Assumptions IeeeUpwardOps.xmul_opp_r.
+Print Assumptions IeeeUpwardOps.xmul0_opp_l.
+Print Assumptions IeeeUpwardOps.xmul0_opp_r.
+Print Assumptions IeeeUpwardOps.xadd_nan_iff.
+Print Assumptions IeeeUpwardOps.xmul_nan_iff.
+Print Assumptions IeeeUpwardOps.xadd_ninf.
+Print Assumptions IeeeUpwardOps.RU_opp.
+Print Assumptions IeeeUpwardOps.xrd_opp.
+Print Assumptions IeeeUpwardOps.xru_opp.
+Print Assumptions IeeeUpwardOps.upward_lane_lower.
+Print Assumptions IeeeUpwardOps.xru_nan.
+Print Assumptions IeeeUpwardOps.xru_ninf.
+Print Assumptions IeeeUpwardOps.xru_nonreal.
+Print Assumptions IeeeUpwardOps.overflow_mantissa.
+Print Assumptions IeeeUpwardOps.overflow_up_neg.
+Print Assumptions IeeeUpwardOps.ru_overflow_nonzero.
+Print Assumptions IeeeUpwardOps.ru_result_xval.
+Print Assumptions IeeeUpwardOps.Rlt_bool_mult.
+Print Assumptions IeeeUpwardOps.sign_of_value.
+Print Assumptions IeeeUpwardOps.add_ru_finite.
+Print Assumptions IeeeUpwardOps.add_ru_nonfinite.
+Print Assumptions IeeeUpwardOps.add_ru_xval.
+Print Assumptions IeeeUpwardOps.mul_ru_finite.
+Print Assumptions IeeeUpwardOps.xval_finite_nonzero.
+Print Assumptions IeeeUpwardOps.xval_zero.
+Print Assumptions IeeeUpwardOps.xval_nan_constr.
+Print Assumptions IeeeUpwardOps.mul_ru_nonfinite.
+Print Assumptions IeeeUpwardOps.xmul_nonfinite.
+Print Assumptions IeeeUpwardOps.mul_ru_xval.
+Print Assumptions IeeeUpwardOps.xval_zero_iff.
+Print Assumptions IeeeUpwardOps.xval_infinite_iff.
+Print Assumptions IeeeUpwardOps.add_ru_nan_cases.
+Print Assumptions IeeeUpwardOps.mul_ru_nan_cases.
+Print Assumptions IeeeUpwardOps.add_ru_nan_l.
+Print Assumptions IeeeUpwardOps.add_ru_nan_r.
+Print Assumptions IeeeUpwardOps.mul_ru_nan_l.
+Print Assumptions IeeeUpwardOps.mul_ru_nan_r.
+Print Assumptions IeeeUpwardOps.add_ru_ninf.
+Print Assumptions IeeeUpwardOps.mul_ru_ninf.
+Print Assumptions IeeeUpwardOps.add_ru_not_ninf.
+Print Assumptions IeeeUpwardOps.mul_ru_finite_not_ninf.
+Print Assumptions IeeeUpwardOps.upward_nonempty_lane.
+Print Assumptions IeeeUpwardOps.upward_lane_xval.
+Print Assumptions IeeeUpwardOps.add_ru_lane.
+Print Assumptions IeeeUpwardOps.upward_add_lanes.
+Print Assumptions IeeeUpwardOps.add_ru_lower.
+Print Assumptions IeeeUpwardOps.mul_ru_lower.
+Print Assumptions IeeeUpwardOps.cnan_nan.
+Print Assumptions IeeeUpwardOps.unord_nan_l.
+Print Assumptions IeeeUpwardOps.unord_nan_r.
+Print Assumptions IeeeUpwardOps.unord_not_nan.
+Print Assumptions IeeeUpwardOps.unord_state.
+Print Assumptions IeeeUpwardOps.unord_states.
+Print Assumptions IeeeUpwardOps.xval_abs.
+Print Assumptions IeeeUpwardOps.whole_mul_test.
+
+(* Its products (theories/IeeeUpwardProduct.v): the greatest of the roundings as the rounding of
+   the greatest, what the seed and the maxima compute, the case analysis of the candidates
+   dropped as NaN, and the two lanes of upward_mul_1 and of upward_mul_num_1. *)
+From Kairn Require Import IeeeUpwardProduct.
+Print Assumptions IeeeUpwardProduct.xisnan_true.
+Print Assumptions IeeeUpwardProduct.xkeep_nan.
+Print Assumptions IeeeUpwardProduct.xkeep_num.
+Print Assumptions IeeeUpwardProduct.xseed_num.
+Print Assumptions IeeeUpwardProduct.xmax_not_nan.
+Print Assumptions IeeeUpwardProduct.xmin_not_nan.
+Print Assumptions IeeeUpwardProduct.xopp_not_nan.
+Print Assumptions IeeeUpwardProduct.xmul0_not_nan.
+Print Assumptions IeeeUpwardProduct.xmul_cases0.
+Print Assumptions IeeeUpwardProduct.xgreatest4_xmax.
+Print Assumptions IeeeUpwardProduct.xgreatest4_opp_xmin.
+Print Assumptions IeeeUpwardProduct.xgreatest2_xmax.
+Print Assumptions IeeeUpwardProduct.xru_not_nan.
+Print Assumptions IeeeUpwardProduct.xru_xmax.
+Print Assumptions IeeeUpwardProduct.max_nl_xru.
+Print Assumptions IeeeUpwardProduct.unord_self.
+Print Assumptions IeeeUpwardProduct.seed_xval.
+Print Assumptions IeeeUpwardProduct.step_xval.
+Print Assumptions IeeeUpwardProduct.fold4_floats.
+Print Assumptions IeeeUpwardProduct.fold2_floats.
+Print Assumptions IeeeUpwardProduct.xseed_step.
+Print Assumptions IeeeUpwardProduct.xkeep_step.
+Print Assumptions IeeeUpwardProduct.fold4_value.
+Print Assumptions IeeeUpwardProduct.fold2_value.
+Print Assumptions IeeeUpwardProduct.xlane_not_nan.
+Print Assumptions IeeeUpwardProduct.upward_nonempty_xlane.
+Print Assumptions IeeeUpwardProduct.fold_ok_mul_u.
+Print Assumptions IeeeUpwardProduct.fold_ok_mul_n.
+Print Assumptions IeeeUpwardProduct.fold_ok_mul_num_u.
+Print Assumptions IeeeUpwardProduct.fold_ok_mul_num_n.
+Print Assumptions IeeeUpwardProduct.xmul0_opp_opp.
+Print Assumptions IeeeUpwardProduct.lanes_not_nan.
+Print Assumptions IeeeUpwardProduct.corners_not_nan.
+Print Assumptions IeeeUpwardProduct.upward_mul_lane_u.
+Print Assumptions IeeeUpwardProduct.upward_mul_lane_n.
+Print Assumptions IeeeUpwardProduct.number_value.
+Print Assumptions IeeeUpwardProduct.upward_mul_num_lane_u.
+Print Assumptions IeeeUpwardProduct.upward_mul_num_lane_n.
+
+(* The exact ranges of its operations on states, and the shapes of the statements of its
+   arithmetic kernels (theories/IeeeUpwardRange.v). *)
+From Kairn Require Import IeeeUpwardRange.
+Print Assumptions IeeeUpwardRange.range_2_ext.
+Print Assumptions IeeeUpwardRange.xmin_idem.
+Print Assumptions IeeeUpwardRange.xmax_idem.
+Print Assumptions IeeeUpwardRange.upward_range_add.
+Print Assumptions IeeeUpwardRange.upward_range_sub.
+Print Assumptions IeeeUpwardRange.upward_range_neg.
+Print Assumptions IeeeUpwardRange.upward_range_mul.
+Print Assumptions IeeeUpwardRange.number_nonempty.
+Print Assumptions IeeeUpwardRange.number_range_ext.
+Print Assumptions IeeeUpwardRange.upward_range_add_num.
+Print Assumptions IeeeUpwardRange.upward_range_mul_num.
+Print Assumptions IeeeUpwardRange.upward_range_add_whole.
+Print Assumptions IeeeUpwardRange.upward_nonzero_member.
+Print Assumptions IeeeUpwardRange.upward_range_mul_whole.
+Print Assumptions IeeeUpwardRange.upward_bounded_values.
+Print Assumptions IeeeUpwardRange.xmin_real.
+Print Assumptions IeeeUpwardRange.xmax_real.
+Print Assumptions IeeeUpwardRange.upward_range_add_real.
+Print Assumptions IeeeUpwardRange.upward_range_sub_real.
+Print Assumptions IeeeUpwardRange.upward_range_mul_real.
+Print Assumptions IeeeUpwardRange.upward_range_add_num_real.
+Print Assumptions IeeeUpwardRange.upward_range_mul_num_real.
+Print Assumptions IeeeUpwardRange.upward_arith_facts.
+Print Assumptions IeeeUpwardRange.upward_binary_facts.
+Print Assumptions IeeeUpwardRange.upward_number_facts.
+
+(* The lemmas the theorems of its kernels rest on beside those above: the state [0, 0] told
+   apart, and the lanes of x times the whole line for an empty x (theories/IeeeUpwardArith.v);
+   the sign changes of the comparisons, of the maximum and of the minimum of extended real
+   numbers, two states as empty or nonempty, the bounds of a set with the members of a state,
+   and the hull with an empty operand and of two nonempty ones (IeeeUpwardExact.v); the shape
+   of the three-valued comparisons (IeeeUpwardPredicates.v). *)
+From Kairn Require Import IeeeUpwardArith.
+Print Assumptions IeeeUpwardArith.upward_zero_pair_dec.
+Print Assumptions IeeeUpwardArith.whole_mul_nan.
+From Kairn Require Import IeeeUpwardExact.
+Print Assumptions IeeeUpwardExact.upward_xlt_opp.
+Print Assumptions IeeeUpwardExact.upward_xle_opp.
+Print Assumptions IeeeUpwardExact.upward_xeq_opp.
+Print Assumptions IeeeUpwardExact.upward_xlt_opp_swap.
+Print Assumptions IeeeUpwardExact.upward_xlt_0_opp.
+Print Assumptions IeeeUpwardExact.upward_xeq_opp_0.
+Print Assumptions IeeeUpwardExact.upward_xeq_opp_ninf.
+Print Assumptions IeeeUpwardExact.upward_xmax_opp.
+Print Assumptions IeeeUpwardExact.upward_xmax_comm.
+Print Assumptions IeeeUpwardExact.upward_xopp_xmax.
+Print Assumptions IeeeUpwardExact.upward_xlt_nan_r.
+Print Assumptions IeeeUpwardExact.upward_xle_nan_r.
+Print Assumptions IeeeUpwardExact.upward_xeq_nan_r.
+Print Assumptions IeeeUpwardExact.upward_xlt_pinf_xeq.
+Print Assumptions IeeeUpwardExact.upward_states_cases.
+Print Assumptions IeeeUpwardExact.upward_empty_xval.
+Print Assumptions IeeeUpwardExact.upward_bounds_of.
+Print Assumptions IeeeUpwardExact.upward_hull_empty_l.
+Print Assumptions IeeeUpwardExact.upward_hull_empty_r.
+Print Assumptions IeeeUpwardExact.upward_hull_nonempty.
+From Kairn Require Import IeeeUpwardPredicates.
+Print Assumptions IeeeUpwardPredicates.upward_trit_none.
+Print Assumptions IeeeUpwardPredicates.upward_trit_exclusive.
 

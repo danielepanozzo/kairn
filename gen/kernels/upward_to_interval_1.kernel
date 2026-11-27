@@ -13,10 +13,11 @@ ensures:       same_set zl zu from=xu,xn
 min_precision: 1
 source:        the negated lower bound negated, and the upper bound, the empty set after a test (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardExact.v upward_to_interval_1_correct
 entry:         yes
 cone_exempt:   both bounds are selected after a test of the empty set; same_set states what comes out for every canonical state
 

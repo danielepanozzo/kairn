@@ -128,3 +128,6 @@ theories/IeeeUpwardMax.v
 theories/IeeeUpwardOps.v
 theories/IeeeUpwardProduct.v
 theories/IeeeUpwardRange.v
+theories/IeeeUpwardArith.v
+theories/IeeeUpwardExact.v
+theories/IeeeUpwardPredicates.v

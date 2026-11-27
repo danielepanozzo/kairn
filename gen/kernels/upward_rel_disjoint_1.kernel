@@ -14,10 +14,11 @@ ensures:       certain m disjoint x y x=xu,xn y=yu,yn exact
 min_precision: 1
 source:        the lanes compared with the negated lanes, and a test of emptiness (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardPredicates.v upward_rel_disjoint_1_correct
 entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
 

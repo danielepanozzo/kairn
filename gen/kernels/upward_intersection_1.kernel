@@ -14,10 +14,11 @@ ensures:       interval_set zu zn intersection x=xu,xn y=yu,yn
 min_precision: 1
 source:        the smaller lanes, the empty set if they cross (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardExact.v upward_intersection_1_correct
 entry:         yes
 cone_exempt:   the lanes are selected among the lanes of the operands and the NaN of the empty set; interval_set states what comes out for every pair of canonical states
 

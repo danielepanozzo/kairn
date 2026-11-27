@@ -14,10 +14,11 @@ ensures:       makes_interval zu zn from=lo,hi
 min_precision: 1
 source:        constructor of an interval, the cases of interval_make_1 (the listing of the round-up interval)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
 ieee_only:     yes
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeUpwardExact.v upward_make_1_correct
 entry:         yes
 cone_exempt:   both lanes are selected after explicit tests of the two values; makes_interval states what comes out for every pair of values
 
