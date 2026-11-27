@@ -398,6 +398,85 @@ KAIRN_DETAIL_NOINLINE void op_forms(T a, T t, T* r) {
     r[6] = upper_of(s2);
 }
 
+// More shapes for the gap, each a product of a Scope used only after the Scope's end, where a
+// compiler could find it cheaper to compute it later: on one path of a real branch, which calls a
+// function; given to a function after the Scope, by reference and by value; used in the last
+// iteration of a later loop; first in a Scope that does other work after it; in the iteration of a
+// loop of Scopes that breaks out of it; stored into an object after the Scope; with its operand
+// overwritten after the Scope.
+template <class T>
+KAIRN_DETAIL_NOINLINE void consume(const I<T>& z, T* r) {
+    *r = upper_of(z);
+}
+template <class T>
+KAIRN_DETAIL_NOINLINE void consume_value(I<T> z, T* r) {
+    *r = upper_of(z);
+}
+template <class T>
+struct Holder {
+    I<T> z;
+    int k;
+};
+template <class T>
+KAIRN_DETAIL_NOINLINE void op_gap(T a, T* r, int n) {
+    const I<T> x = point(a);
+    I<T> z1, z2, z3, z4, z5, z6, w;
+    {
+        Scope up;
+        z1 = mul(x, x);
+    }
+    if (v_flag) {
+        consume(z1, r + 0);
+    } else {
+        r[0] = T(0);
+        v_count = v_count + 1;
+    }
+    {
+        Scope up;
+        z2 = mul(x, x);
+    }
+    consume(z2, r + 1);
+    {
+        Scope up;
+        z3 = mul(x, x);
+    }
+    consume_value(z3, r + 2);
+    {
+        Scope up;
+        z4 = mul(x, x);
+    }
+    for (int i = 0; i < n; ++i)
+        if (i == n - 1) r[3] = upper_of(z4);
+    {
+        Scope up;
+        z5 = mul(x, x);
+        for (int i = 0; i < n; ++i) moves_memory<T>[5] = upper_of(add(point(T(In<T>::one)), point(T(In<T>::tiny))));
+    }
+    r[4] = upper_of(z5);
+    for (int i = 0; i < n; ++i) {
+        Scope up;
+        z6 = mul(x, x);
+        if (v_flag) break;
+    }
+    r[5] = upper_of(z6);
+    Holder<T> h{};
+    {
+        Scope up;
+        w = mul(x, x);
+    }
+    h.z = w;
+    h.k = n;
+    r[6] = upper_of(h.z);
+    I<T> y = x, z7;
+    {
+        Scope up;
+        z7 = mul(y, y);
+    }
+    y = point(T(In<T>::one));
+    r[7] = upper_of(z7);
+    r[8] = upper_of(y);
+}
+
 // A NearestScope inside a Scope: the kernel's product inside the NearestScope (to nearest) and the
 // type's after it in the Scope (upward), and the reverse order; the same product either side.
 template <class T>
@@ -529,6 +608,17 @@ void group1() {
     verdict(1, "t - x in a Scope, used only after it", r[4], one_up, T(1));
     verdict(1, "the first of two Scopes in a row, used only after both", r[5], up, near);
     verdict(1, "the second of two Scopes in a row", r[6], up, near);
+
+    op_gap<T>(a, r, n);
+    verdict(1, "used only after the Scope, on one path of a branch that calls a function", r[0], up, near);
+    verdict(1, "given to a function by reference after the Scope", r[1], up, near);
+    verdict(1, "given to a function by value after the Scope", r[2], up, near);
+    verdict(1, "used in the last iteration of a loop after the Scope", r[3], up, near);
+    verdict(1, "first in a Scope that does other work after it", r[4], up, near);
+    verdict(1, "in a loop of Scopes that breaks out of its first iteration", r[5], up, near);
+    verdict(1, "stored into an object after the Scope", r[6], up, near);
+    verdict(1, "its operand overwritten after the Scope", r[7], up, near);
+    verdict(1, "the operand overwritten after the Scope", r[8], T(1), V<T>::p);
 
     op_nearest_inside<T>(a, r);
     verdict(1, "the kernel's product in a NearestScope inside a Scope", r[0], near, up);
