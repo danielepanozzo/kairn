@@ -2398,16 +2398,24 @@ seconds, the 111 labelled `upward` 57.1 seconds of its 854 of test time; the ful
 `upward`, 40 seconds (160 of test time: the cross-checks of the runners and their flag matrix 75, the
 interpreter's enumerations 43, the emulated kernels 27, the object code 15). With Apple clang 21:
 the quick tier, 1 364 tests, in 204 seconds, the 111 labelled `upward` 50.3 seconds of test time;
-the full tier's 97, 66 seconds (264). On the Windows machine with MSVC, 8 logical processors, the commands of
+the full tier's 97, 66 seconds (264). On 16 threads of the Linux machine (`--parallel 16`): with
+GCC 13 the quick tier, 1 373 tests, in 94 seconds, the 113 labelled `upward` 96.7 seconds of test
+time, and the full tier's 97 in 54 seconds, 92 with `--parallel 4` (369 of test time); with Clang 18
+1 370 tests in 99 seconds (103.4), the full tier's 97 in 53, 96 with `--parallel 4` (381). On the Windows machine with MSVC, 8 logical processors, the commands of
 the job "Windows x64, upward": configuring 49 seconds, building `kairn-upward-tests` 19, the quick
 tier's 112 tests labelled `upward` 18 seconds (22 with `--parallel 4`; 134 of test time), the full
 tier's 73 that depend on the compiler 51 (66 with `--parallel 4`; 400 of test time); and the quick
 tier without them (`-DKAIRN_UPWARD_TESTS=OFF`, before the type's tests) 337 seconds against 331 for
 `main` before the family, the 6 seconds being the 48 tests of `tests/api/` then registered for the
 family, which the type's tests have since moved to `api/upward/` (with the option off the quick tier
-now registers no test of the family). By the rule of four, the job "Windows x64, upward" takes some
-12 minutes on a hosted runner, of its 30. In the generator's suite, `test_upward.py` and
-`test_upward_cxx.py` take 61 seconds with both compilers of the Mac (`--jobs 4`), 28 and 26 with one;
+now registers no test of the family). In the generator's suite, `test_upward.py` and
+`test_upward_cxx.py` take 61 seconds with both compilers of the Mac (`--jobs 4`), 28 and 26 with one,
+and 110 to 112 with one compiler and four jobs on the Linux machine (`test_the_oracle` 42 of them).
+By the rule of four, on the hosted runners: the family's tests add about two minutes to each job of
+`build.yml` on Linux and macOS (of 30), about six to the full tier's tests of each platform in
+`full.yml`, half of it in each of its two jobs where it has two (of 60), and about seven and a half
+to the generator's suite of each compiler, half in each shard (of 60); the job "Windows x64, upward"
+takes some 12 minutes (of 30), and the other Windows jobs nothing more. Nothing had to leave a tier.
 `tests/brute/upward.py` judged 430 000 lines a second with 46 processes on the second socket of the
 Linux machine, and the 190 mutants of `kernel_mutants.py --upward` took 55 minutes with four jobs on
 the Mac.
