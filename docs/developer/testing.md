@@ -2209,10 +2209,11 @@ a NaN; the oracle reads any NaN as a NaN.
 `kairn::upward::self_test()` is tested from four starting states, inside and outside scopes, and
 the caller's state read before and after through the register and `<cfenv>` (`environment.hpp`).
 Its advice is not checked in the builds with the options: Apple clang contracts the file's own
-`a * b + c` at every level (its default `-ffp-contract=on`, FMA always there on arm64), and GCC 16
-does from `-O2` on, so the advice about contraction is what those builds print. Built with Clang
-without the options, the advice is that the file's own arithmetic ignores the mode, which the test
-checks.
+`a * b + c` at every level (its default `-ffp-contract=on`, FMA always there on arm64), GCC 16 from
+`-O2` on, and GCC 13 and Clang 18 in a release build on x86-64 (with the `-mfma` of `kairn::fma`), so
+the advice about contraction is what those builds print; MSVC under `/fp:strict` gives none. Built
+with Clang without the options, the advice is that the file's own arithmetic ignores the mode, which
+the test checks.
 
 ## The program's names
 
