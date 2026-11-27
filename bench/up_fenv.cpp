@@ -9,7 +9,8 @@
 //                                the loops of m2_fenv.cpp 16 times between one change of mode and
 //                                its reset, next to the round-up interval's native_x16
 //   sum/interval_add_1/fenv_loop_x16, prod/interval_mul_1/fenv_loop_x16
-//                                the chains of m2_fenv.cpp 16 times as long (16 kN steps)
+//                                the chains of m2_fenv.cpp 16 times as long (16 kN steps), written
+//                                as that file writes them (the sum keeps its lower bound negated)
 //
 // Not part of the library, not verified, not to be used outside bench/. Compiled as m2_fenv.cpp
 // (-frounding-math, /fp:strict with MSVC; with Clang the pragma STDC FENV_ACCESS ON), and it does
@@ -102,9 +103,9 @@ struct Coordinates {
                   r.out[2 * i + 1] = z.u)                                                          \
           KB_UP_FENCE();                                                                           \
       })                                                                                           \
-    X(sum, interval_add_1, fenv_loop_x16, up::kPasses * kN, P<double> s{0, 0};                     \
-      for (int pass = 0; pass < up::kPasses; ++pass) KB_EACH(s = s + P<double>{XL, XU})            \
-      r.cout[0] = s.l; r.cout[1] = s.u;)                                                           \
+    X(sum, interval_add_1, fenv_loop_x16, up::kPasses * kN, double nl = 0, su = 0;                 \
+      for (int pass = 0; pass < up::kPasses; ++pass) KB_EACH(nl = nl + (-XL); su = su + XU)        \
+      r.cout[0] = -nl; r.cout[1] = su;)                                                            \
     X(prod, interval_mul_1, fenv_loop_x16, up::kPasses * kN, P<double> p{1, 1};                    \
       for (int pass = 0; pass < up::kPasses; ++pass) KB_EACH(p = p * P<double>{r.fi[2 * i], r.fi[2 * i + 1]}) \
       r.cout[0] = p.l; r.cout[1] = p.u;)
