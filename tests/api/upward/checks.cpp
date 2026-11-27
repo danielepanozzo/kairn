@@ -258,7 +258,10 @@ void type_reports() {
     before = calls;
     kairn::upward::neg(kairn::upward::View<double>(zu, zu + 1, 2), unverified(kairn::upward::View<const double>(au, an, 2)));
     expect_reports("a function on arrays whose two arrays written overlap", before, r, "overlaps");
-    double cu[2] = {1, 2}, cn[2] = {-3, -1};  // (1, -3) crossed
+    // (1, -3) crossed. Storage of four for a view of two: GCC 13 at -O3 with -mavx2 warns that the
+    // AVX2 loop of the function, which runs on four elements or more, reads past an array of two
+    // (-Warray-bounds, an error with -Werror), though it never runs here.
+    double cu[4] = {1, 2}, cn[4] = {-3, -1};
     before = calls;
     kairn::upward::add(kairn::upward::View<double>(zu, zn, 2), unverified(kairn::upward::View<const double>(cu, cn, 2)), 1.0);
     expect_reports("a function on arrays with an element that is not canonical", before, r, "not a canonical state");

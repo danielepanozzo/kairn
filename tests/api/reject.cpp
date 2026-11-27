@@ -112,6 +112,28 @@
 //          without -frounding-math, MSVC without /fp:strict and with /fp:contract, given to both
 //          compilations by tests/api/upward/CMakeLists.txt, api.upward.reject.*); the control
 //          defines KAIRN_UPWARD_OPTIONS_UNCHECKED
+//   120-136 the type of upward.hpp, kairn::upward::Interval, compiled with the options of the
+//          target kairn::upward (tests/api/upward/CMakeLists.txt gives them to both compilations):
+//          the implicit conversions between it and kairn::Interval<T, 1>, in either direction
+//          (120, 121); an operation of the two types: an operator either way, a comparison, the
+//          hull (122-125); the constructor of two bounds and a sum in a constant expression (126,
+//          127: nothing of the type is constexpr); what the type deliberately does not have: the
+//          midpoint, the radius, mid_rad, split, the conversions to and from a Ball, a comparison
+//          operator, a division, the interval of an Interval<T, 2> (128-136); each control writes
+//          what compiles instead (the explicit conversion, the conversion first, the same at run
+//          time, the default interval's member, kairn::upward::less, the product, Interval<T, 1>)
+//   137-143 an UNVERIFIED operation of the type written without kairn::unverified, against a copy
+//          of the headers in which every kernel of gen/upward.hpp is marked unverified (the
+//          fixture of tests/api/upward/reject_fixture.cmake): an operator, the constructor of two
+//          bounds, a member, a comparison, a function on arrays, the conversion from the default
+//          interval, the product by a number; the control marks the operand
+//   144-146 one kernel of the type UNVERIFIED and every other proved (upward_add_num_1,
+//          upward_mul_num_1, upward_contains_1): x + t, x * t and x.contains(t) must not compile
+//          through the interval of t (Interval(T) is implicit, and its kernel upward_make_1 is
+//          proved, as are upward_add_1, upward_mul_1 and upward_subset_1); the control marks x or t
+#if KAIRN_TEST_CASE >= 120 && KAIRN_TEST_CASE <= 146
+#include <kairn/upward.hpp>
+#endif
 #if KAIRN_TEST_CASE == 119
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_UPWARD_OPTIONS_UNCHECKED
@@ -659,6 +681,155 @@ int main() {
     sink = I1::from_bounds(MARK(s), s).lower().limb[0];
 #elif KAIRN_TEST_CASE == 110
     sink = B2::from_bounds(MARK(s), s).radius();
+#elif KAIRN_TEST_CASE >= 120 && KAIRN_TEST_CASE <= 146
+    // The round-up interval. Its operands are built with the marker, which compiles against any
+    // fixture, and its results read through the marker too: only the case's own operation differs
+    // from the control. Nothing here runs: the front end only.
+    using UI = kairn::upward::Interval<double>;
+    [[maybe_unused]] const UI u(kairn::unverified(double(v)), 2 * v), w(kairn::unverified(0.5), 1.0);
+#if KAIRN_TEST_CASE == 120
+    // A default interval converted implicitly: the conversion is by name.
+#if defined(KAIRN_TEST_CONTROL)
+    const UI z(i);
+#else
+    const UI z = i;
+#endif
+    sink = kairn::unverified(z).upper();
+#elif KAIRN_TEST_CASE == 121
+    // The reverse: to_interval() by name.
+#if defined(KAIRN_TEST_CONTROL)
+    const I1 z = kairn::unverified(u).to_interval();
+#else
+    const I1 z = u;
+#endif
+    sink = z.lower().limb[0];
+#elif KAIRN_TEST_CASE == 122
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::unverified(kairn::unverified(u) + UI(i)).upper();
+#else
+    sink = kairn::unverified(u + i).upper();
+#endif
+#elif KAIRN_TEST_CASE == 123
+#if defined(KAIRN_TEST_CONTROL)
+    sink = (i * kairn::unverified(u).to_interval()).lower().limb[0];
+#else
+    sink = (i * u).lower().limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 124
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::certainly(kairn::upward::less(kairn::unverified(u), UI(i)));
+#else
+    sink = kairn::certainly(kairn::upward::less(u, i));
+#endif
+#elif KAIRN_TEST_CASE == 125
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::unverified(u.hull(kairn::unverified(UI(i)))).upper();
+#else
+    sink = kairn::unverified(u.hull(i)).upper();
+#endif
+#elif KAIRN_TEST_CASE == 126
+    // Nothing of the type is constexpr: constant evaluation rounds to nearest.
+#if defined(KAIRN_TEST_CONTROL)
+    const UI z(kairn::unverified(1.0), 2.0);
+#else
+    constexpr UI z(kairn::unverified(1.0), 2.0);
+#endif
+    sink = kairn::unverified(z).upper();
+#elif KAIRN_TEST_CASE == 127
+#if defined(KAIRN_TEST_CONTROL)
+    const double z = kairn::unverified(kairn::unverified(UI(kairn::unverified(1.0))) + UI(kairn::unverified(2.0))).upper();
+#else
+    constexpr double z = kairn::unverified(kairn::unverified(UI(kairn::unverified(1.0))) + UI(kairn::unverified(2.0))).upper();
+#endif
+    sink = z;
+#elif KAIRN_TEST_CASE == 128
+    // What the type does not have, each needing rounding to nearest: the default interval's.
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::unverified(u).to_interval().midpoint().limb[0];
+#else
+    sink = u.midpoint().limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 129
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::unverified(u).to_interval().radius();
+#else
+    sink = u.radius();
+#endif
+#elif KAIRN_TEST_CASE == 130
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::unverified(u).to_interval().mid_rad().radius;
+#else
+    sink = u.mid_rad().radius;
+#endif
+#elif KAIRN_TEST_CASE == 131
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::unverified(u).to_interval().split().left.lower().limb[0];
+#else
+    sink = u.split().left.lower().limb[0];
+#endif
+#elif KAIRN_TEST_CASE == 132
+#if defined(KAIRN_TEST_CONTROL)
+    const B1 z(kairn::unverified(u).to_interval());
+#else
+    const B1 z(u);
+#endif
+    sink = z.radius();
+#elif KAIRN_TEST_CASE == 133
+#if defined(KAIRN_TEST_CONTROL)
+    const UI z{I1(o)};
+#else
+    const UI z{o};
+#endif
+    sink = kairn::unverified(z).upper();
+#elif KAIRN_TEST_CASE == 134
+    // No comparison operator, as for the default type: the three-valued functions.
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::certainly(kairn::upward::less(kairn::unverified(u), w));
+#else
+    sink = u < w;
+#endif
+#elif KAIRN_TEST_CASE == 135
+#if defined(KAIRN_TEST_CONTROL)
+    sink = kairn::unverified(kairn::unverified(u) * w).upper();
+#else
+    sink = kairn::unverified(u / w).upper();
+#endif
+#elif KAIRN_TEST_CASE == 136
+    // No round-up interval of two limbs, and none made of an Interval<T, 2>.
+#if defined(KAIRN_TEST_CONTROL)
+    const UI z(i);
+#else
+    const UI z(j);
+#endif
+    sink = kairn::unverified(z).upper();
+#elif KAIRN_TEST_CASE == 137
+    sink = kairn::unverified(MARK(u) + w).upper();
+#elif KAIRN_TEST_CASE == 138
+    const UI z(MARK(s), s);
+    sink = kairn::unverified(z).upper();
+#elif KAIRN_TEST_CASE == 139
+    sink = MARK(u).is_empty();
+#elif KAIRN_TEST_CASE == 140
+    sink = kairn::certainly(kairn::upward::less(MARK(u), w));
+#elif KAIRN_TEST_CASE == 141
+    using UV = kairn::upward::View<double>;
+    using CV = kairn::upward::View<const double>;
+    double xu[2] = {1, 2}, xn[2] = {-1, -2}, zu[2] = {}, zn[2] = {};
+    const CV xv(xu, xn, 2);
+    kairn::upward::add(UV(zu, zn, 2), MARK(xv), xv);
+    sink = zu[0];
+#elif KAIRN_TEST_CASE == 142
+    const UI z(MARK(i));
+    sink = kairn::unverified(z).upper();
+#elif KAIRN_TEST_CASE == 143
+    sink = kairn::unverified(MARK(u) * s).upper();
+#elif KAIRN_TEST_CASE == 144
+    sink = kairn::unverified(MARK(u) + s).upper();
+#elif KAIRN_TEST_CASE == 145
+    sink = kairn::unverified(MARK(u) * s).upper();
+#elif KAIRN_TEST_CASE == 146
+    sink = u.contains(MARK(s));
+#endif
 #elif KAIRN_TEST_CASE >= 97 && KAIRN_TEST_CASE <= 107
     using BV = kairn::BallVector<double, 1, 3>;
     const BV bx({1.0, 2.0, double(v)}, 0.5);

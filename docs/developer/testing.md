@@ -87,14 +87,16 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.ball_vector.FORM`, `api.boundary.ball_vector.S`, `api.boundary.ball_vector.unguarded.S` | `BallVector` and its views in each form of `Packed`, and the products of the program passed into them under each contraction setting, with the third kind of form of `api.boundary.S` (`--factor`: the scalings and `axpy` with a product of the program beside a factor the compiler sees, 1, -1 or 2, which must agree with the guards and which the copy without them reports) ([Ball vectors](#ball-vectors)). |
 | `api.boundary.square.FORM.S` | The exception of a square, pinned as the pages state it ([below](#the-exception-of-a-square)): the squares passed straight into nine operations must not differ, but with Clang under `-ffp-contract=fast`, where they are printed; the three ways the page gives to round a square first, and eleven products that are not squares, must not differ in any build (`tests/api/boundary_square.cpp`). |
 | `api.square_probe.S`, `api.square_probe.contract-fast.O1`, `.O3` | The probe of `kairn::self_test()` ([below](#the-exception-of-a-square)): `Status::limitation` is set exactly where the fusion happens, `ok()` stays true (`tests/api/square_probe.cpp`). |
-| `api.upward.scope` | The scopes of `kairn/upward.hpp`, observed from outside through the control register, `<cfenv>` and the hardware's arithmetic ([The round-up interval's environment](#the-round-up-intervals-environment)): `Scope`, `NearestScope` and the register-only scope of the functions on arrays each set their mode with flush to zero off from every starting mode, with flush to zero off and on, and restore the state they found; a scope inside one of the same mode writes nothing; the exception flags raised inside a scope and before it are kept; the C library's mode follows the scopes of the program and not the register-only one; a `NearestScope` inside a `Scope` and the reverse; a thread started inside a scope; the barriers and the pin of the generated kernels, and `pass()`, keep every bit of every value and lane (`tests/api/upward/scope.cpp`). |
+| `api.upward.scope`, `.checked`, `.numbers` | The scopes of `kairn/upward.hpp`, observed from outside through the control register, `<cfenv>` and the hardware's arithmetic ([The round-up interval's environment](#the-round-up-intervals-environment)): `Scope`, `NearestScope` and the register-only scope of the functions on arrays each set their mode with flush to zero off from every starting mode, with flush to zero off and on, and restore the state they found; a scope inside one of the same mode writes nothing; the exception flags raised inside a scope and before it are kept; the C library's mode follows the scopes of the program and not the register-only one; a `NearestScope` inside a `Scope` and the reverse; a thread started inside a scope; the barriers and the pin of the generated kernels, and `pass()`, keep every bit of every value and lane (`tests/api/upward/scope.cpp`); with the build's flags, `KAIRN_CHECKS` 1, and the two-number form forced. |
 | `api.upward.checks`, `.off`, `.unhonored` | The assertions of a checked build of `kairn/upward.hpp`, through a `KAIRN_ENVIRONMENT_FAILURE` of the program's own that records the reason and returns: with `KAIRN_CHECKS` 1 the assertion before an operation that rounds reports outside any scope, in a `NearestScope` and under flush to zero, the one before an exact operation under flush to zero only, and an upward scope that writes the mode does not report a file built with the options; with `KAIRN_CHECKS` 0 nothing reports; in a file built without the options (where the compiler lets the header be included: Clang as it is, GCC and MSVC with `KAIRN_UPWARD_OPTIONS_UNCHECKED`) each upward scope that writes the mode reports that the file ignores it, and no other scope does. And the checks of the interval type and the functions on arrays, with `KAIRN_CHECKS` 1: an operation that rounds reports once outside any scope and in a `NearestScope`, and nothing in a `Scope`; the exact operations and the functions on arrays report nothing outside a scope; a default type that rounds reports inside a `Scope` (its own check) and not in a `NearestScope` inside it; a state that is not canonical (one NaN lane, a lane $-\infty$, crossed lanes, signaling NaNs) reports when `from_limbs` builds it and when an operation, exact or not, takes it, the empty set and the whole line do not; a default interval that is not canonical reports when converted; a function on arrays reports views of different lengths, an array written that overlaps one read or the other array written, and an element that is not canonical, and not the same view written and read; with `KAIRN_CHECKS` 0 none of them (`tests/api/upward/checks.cpp`). |
-| `api.upward.units`, `api.upward.units.ipo`, `api.upward.dll` | A scope in one file and the operation it runs in another, the product of two points of `kairn::upward::Interval<double>` (the kernel `upward_mul_1`, its first input pinned), built with `KAIRN_CHECKS` 0 since some probes run it outside any scope on purpose: linked as they are, with whole-program optimization where CMake supports it (which can inline the operation into the scope's file), and, with MSVC, the operation in a DLL; probes on literal operands, before and inside a scope, in loops, after a `NearestScope` inside a `Scope`, and used only after the scope ended; with MSVC, `kairn::upward::detail::zero` is one object in both files of a program, and another one in the DLL (`tests/api/upward/units_a.cpp`, `units_b.cpp`). |
-| `api.oracle.upward_K.F` | Every public operation of `kairn/upward.hpp` that calls the kernel `upward_K` of the round-up interval ([below](#the-interval-type-the-functions-on-arrays-and-the-self-check)), through `tests/api/upward/runner.cpp`, a runner of the line protocol over the header, on 2 000 random cases of format F judged by the oracle against the kernel's claims: the operators with an interval and with a number (`x + t`, `t + x`, `x - (-t)` and `-((-t) - x)` for `upward_add_num_1`), the compound assignments, the members, the comparisons, the relations and the conversions, each with and without the marker, and the functions on arrays (`arrays`, from rounding to nearest, and `arrays_inplace`, the view written the one read, inside a `Scope`) on blocks of 17 lines; by the runners built for it: the build's flags, contraction forced on (not with MSVC, whose `/fp:strict` excludes it), the two-number form forced, a checked build, and, on x86-64 where the build's flags do not give AVX2, built for AVX2 (three runners with MSVC, four on the Mac, five on x86-64 Linux). |
-| `api.upward.differential`, `.numbers`, `.avx2` | Every operation of `kairn::upward::Interval<T>` and every function on arrays against the default `kairn::Interval<T, 1>` on the same operands, for `double` and `float`: every pair of 35 special intervals, every special interval with 17 special numbers, every pair of special values given to the constructor, and 40 random intervals; the sums, the differences, the operations with a number but the product, the exact operations and the conversions the same set (the sign of a zero aside), the products inside the default ones, the same set where no product of finite bounds is nonzero and below $P = 2^{2p-1}\eta$ (and tighter than the default in some of the cases below $P$, or the test fails), the predicates, comparisons and relations the same answers, the functions on arrays bit for bit the operators but for the bits of a NaN, in place too; then every upward result, about 127 000 lines, judged by the oracle (`tests/api/upward/differential.cpp`, `differential.cmake`); with the build's flags, the two-number form forced, and built for AVX2 as above. |
-| `api.upward.self_test`, `.numbers`, `.checked`, `.without_options` | `kairn::upward::self_test()` passes and restores the caller's state (the register's mode and flush bits, the C library's mode), called from rounding to nearest, inside a `Scope`, inside a `NearestScope` inside it, and with the mode downward and flush to zero set by hand; with the build's flags, the two-number form forced, `KAIRN_CHECKS` 1, and, with Clang, built without the options, where it passes too and advises that the file's own arithmetic ignores the mode (`tests/api/upward/self_test.cpp`). |
-| `api.upward.limbs.O2`, `.O3` (`api.upward.limbs` with MSVC) | `Interval<T>::from_limbs` and `to_limbs` on arrays the program reads and writes as `T` around the calls, at `-O2` and `-O3` whatever the build's flags: the case of two floats loaded and stored through a pointer of another type, which GCC 13 miscompiled at both levels before `gen/upward.hpp` went through `__m128i` (`tests/api/upward/limbs.cpp`). |
-| `api.upward.reject.*` | The compile-time guard of `kairn/upward.hpp` (case 119 of `tests/api/reject.cpp`): GCC without `-frounding-math`, MSVC without `/fp:strict` and with `/fp:contract` stop the build with the guard's message, and the same options with `KAIRN_UPWARD_OPTIONS_UNCHECKED` compile. |
+| `api.upward.units`, `.ipo`, `.numbers`, `api.upward.dll` | A scope in one file and the operations it runs in another, the operations of `kairn::upward::Interval<double>` on points (the product, the sum and the product by a number, the kernels `upward_mul_1`, `upward_add_1` and `upward_mul_num_1`, each with its first input pinned) and a function on arrays, built with `KAIRN_CHECKS` 0 since some probes run an operation outside any scope on purpose: linked as they are, with whole-program optimization where CMake supports it (which can inline the operations into the scope's file), in the two-number form, and, with MSVC, the operations in a DLL. Two arrangements ([below](#the-round-up-intervals-environment)): the scope in the first file around calls into the second, with probes on literal operands, before and inside a scope, in loops, after a `NearestScope` inside a `Scope`, and used only after the scope ended; and the scope held by a function of the second file (a `Scope` of its own, or the scope of the function on arrays), called from rounding to nearest, inside a `NearestScope` inside a `Scope` and in a loop, the first file to nearest again after each call. With MSVC, `kairn::upward::detail::zero` is one object in both files of a program, and another one in the DLL (`tests/api/upward/units_a.cpp`, `units_b.cpp`). |
+| `api.oracle.upward_K.F` | Every public operation of `kairn/upward.hpp` that calls the kernel `upward_K` of the round-up interval ([below](#the-interval-type-the-functions-on-arrays-and-the-self-check)), through `tests/api/upward/runner.cpp`, a runner of the line protocol over the header, on 2 000 random cases of format F judged by the oracle against the kernel's claims: the operators with an interval and with a number (`x + t`, `t + x`, `x - (-t)` and `-((-t) - x)` for `upward_add_num_1`), the compound assignments, the members, the comparisons, the relations and the conversions, each with and without the marker, and the functions on arrays (`arrays`, from rounding to nearest, and `arrays_inplace`, the view written the one read, inside a `Scope`) on blocks of 17 lines; by the runners built for it: the build's flags, contraction forced on (not with MSVC, whose `/fp:strict` excludes it), the two-number form forced, a checked build, on x86-64 where the build's flags do not give AVX2 built for AVX2, and with Clang built without the options, where the header's results are right through its barriers (three runners with MSVC, four with GCC on the Mac and five with Apple clang, five with GCC and six with Clang on x86-64 Linux). |
+| `api.upward.differential`, `.numbers`, `.avx2`, `.checked`, `.without_options` | Every operation of `kairn::upward::Interval<T>` and every function on arrays against the default `kairn::Interval<T, 1>` on the same operands, for `double` and `float`: every pair of 35 special intervals, every special interval with 17 special numbers, every pair of special values given to the constructor, and 40 random intervals; the sums, the differences, the operations with a number but the product, the exact operations and the conversions the same set (the sign of a zero aside), the products inside the default ones, the same set where no product of finite bounds is nonzero and below $P = 2^{2p-1}\eta$ (and tighter than the default in some of the cases below $P$, or the test fails), the predicates, comparisons and relations the same answers, the functions on arrays bit for bit the operators but for the bits of a NaN, in place too; then every upward result, about 127 000 lines, judged by the oracle (`tests/api/upward/differential.cpp`, `differential.cmake`); with the build's flags, the two-number form forced, built for AVX2 as above, with `KAIRN_CHECKS` 1, and with Clang built without the options. |
+| `api.upward.self_test`, `.numbers`, `.checked`, `.without_options`, `.unchecked` | `kairn::upward::self_test()` passes and restores the caller's state (the register's mode and flush bits, the C library's mode), called from rounding to nearest, inside a `Scope`, inside a `NearestScope` inside it, and with the mode downward and flush to zero set by hand; with the build's flags, the two-number form forced, `KAIRN_CHECKS` 1, and, with Clang, built without the options, where it passes too and advises that the file's own arithmetic ignores the mode (`tests/api/upward/self_test.cpp`); with GCC and MSVC built without the options and with `KAIRN_UPWARD_OPTIONS_UNCHECKED`, its output reported and not gated (`.unchecked`, `tests/api/upward/report_only.cmake`). |
+| `api.upward.limbs.O2`, `.O3` (`api.upward.limbs` with MSVC), `.checked`, `.numbers` | `Interval<T>::from_limbs` and `to_limbs` on arrays the program reads and writes as `T` around the calls, at `-O2` and `-O3` whatever the build's flags: the case of two floats loaded and stored through a pointer of another type, which GCC 13 miscompiled at both levels before `gen/upward.hpp` went through `__m128i` (`tests/api/upward/limbs.cpp`); and at `-O3` (the build's flags with MSVC) with `KAIRN_CHECKS` 1 and in the two-number form. |
+| `api.upward.reject.*` | The compile-time guard of `kairn/upward.hpp` (case 119 of `tests/api/reject.cpp`): GCC without `-frounding-math`, MSVC without `/fp:strict` and with `/fp:contract` stop the build with the guard's message, and the same options with `KAIRN_UPWARD_OPTIONS_UNCHECKED` compile. And the type (cases 120 to 146), compiled with the option of `kairn::upward`: an implicit conversion between `kairn::upward::Interval<T>` and `kairn::Interval<T, 1>` in either direction (`implicit_from_default`, `implicit_to_default`), an operation of the two types (`mixed_operator`, `mixed_operator_default_first`, `mixed_comparison`, `mixed_hull`), the constructor and a sum in a constant expression (`not_constexpr.make`, `.add`), the members it does not have (`no_midpoint`, `no_radius`, `no_mid_rad`, `no_split`), the conversions to and from a `Ball`, a comparison operator, a division, the interval of an `Interval<T, 2>` (`no_ball`, `no_from_ball`, `no_comparison_operator`, `no_division`, `no_two_limbs`); against a copy of the headers in which every kernel of `gen/upward.hpp` is unverified (`tests/api/upward/reject_fixture.cmake`), an operator, the constructor, a member, a comparison, a function on arrays, the conversion from the default interval and the product by a number written without the marker (`unverified.*`); and with one kernel unverified, the others proved, `x + t`, `x * t` and `x.contains(t)`, which must not compile through the interval of `t` either (`unverified_only.upward_add_num_1`, `.upward_mul_num_1`, `.upward_contains_1`). Each control writes what compiles instead. |
+| `api.upward.moves.LEVEL`, `.numbers`, `.avx2`, `.checked`, `.without_options`, `.unchecked` | What the compiler does to code next to a scope's boundary (`tests/api/upward/moves.cpp`, [below](#code-next-to-a-scopes-boundary)), at each optimization level whatever the build's flags (LEVEL `O0` to `O3`; with MSVC `Od`, `O1`, `O2` and `O2_GL`, `/O2 /GL` linked with `/LTCG`; with clang-cl `Od`, `O1`, `O2`: `tests/api/upward/levels/`), and with the build's flags in the two-number form, built for AVX2 as above, with `KAIRN_CHECKS` 1 (a handler of `KAIRN_ENVIRONMENT_FAILURE` that records: the first two groups must report nothing), with Clang without the options (the first group gated, the others reported), and with GCC and MSVC without the options and with `KAIRN_UPWARD_OPTIONS_UNCHECKED` (reported, not gated). Three groups of probes, for `double` and `float`, in several shapes: the header's own operations never merged with the same operation before the scope, never computed above its write of the mode or below its restoring write (fails otherwise); values taken across a boundary through `pass()`, `to_interval()` or memory computed on the side where the program wrote them (fails otherwise); the same computations without `pass()`, and the program's own results used only after their scope, reported. |
+| `api.upward.rosetta.self_test`, `api.upward.rosetta.moves` | On arm64 macOS with Apple clang where Rosetta runs x86-64 programs: `self_test.cpp` and `moves.cpp` built for x86-64 with AVX2 and FMA, run under Rosetta, reported and not gated: whether an emulator honors MXCSR's rounding mode is not established ([below](#the-configurations-of-the-design-page)). |
 
 The cases of `api.reject.*`: `tests/api/reject.cpp` is compiled once per test with
 `KAIRN_TEST_CASE` set to the test's case (and once more as its control), and each case has one
@@ -130,8 +132,11 @@ registers each name with its number):
 | 113 | the headers, `batch.hpp` | `kairn::sequential` as the last argument of `sum`, where it is the first (`batch.order_tag_last`) |
 | 114 to 116 | the headers, `packed.hpp` | the arithmetic of `Packed<T, 1>` with an operand that is not a `Packed<T, 1>`: a `T`, an `Expansion<T, 1>`, and `x += y` with `y` of two limbs (`packed.one_limb_number_operand`, `.one_limb_expansion_operand`, `.one_limb_assign_two_limbs`) |
 | 119 | the headers, `upward.hpp` | `upward.hpp` with an option its guard refuses, given to both compilations: GCC with `-fno-rounding-math`, MSVC with `/fp:precise` and with `/fp:contract`; the control defines `KAIRN_UPWARD_OPTIONS_UNCHECKED` (`api.upward.reject.gcc_without_rounding_math`, `.msvc_without_fp_strict`, `.msvc_fp_contract`, registered by `tests/api/upward/CMakeLists.txt`) |
+| 120 to 136 | the headers, `upward.hpp`, with the option of `kairn::upward` | the type: the implicit conversions to and from `Interval<T, 1>`, an operation of the two types, the type in a constant expression, what it does not have (`api.upward.reject.implicit_from_default` and sixteen more, registered by `tests/api/upward/CMakeLists.txt`) |
+| 137 to 143 | a copy in which every kernel of `gen/upward.hpp` is unverified | an operation of the type written without the marker (`api.upward.reject.unverified.*`) |
+| 144 to 146 | a copy in which one kernel of `gen/upward.hpp` is unverified | `x + t`, `x * t`, `x.contains(t)` through the interval of `t` (`api.upward.reject.unverified_only.*`) |
 
-The next case is 120. Cases 19 and 63 to 69 are free.
+The next case is 147. Cases 19 and 63 to 69 are free.
 
 ## The full tier
 
@@ -2169,17 +2174,36 @@ thread started inside a scope found the mode upward on the Linux machine and to 
 Mac and the Windows machine; the test prints which and checks only that the thread's own scopes set
 and restore its mode.
 
-The units tests run their probes on the product of two points of `kairn::upward::Interval<double>`,
-the generated kernel `upward_mul_1` with its first input pinned (`KAIRN_DETAIL_UPWARD_PIN`) (until
-the kernels existed, on a stand-in of one product pinned the same way). With MSVC each module of Windows
-has its own `kairn::upward::detail::zero`, which the scopes of another module never write:
-`api.upward.dll` pins that (the program's and the DLL's are two objects) and runs the same probes
-with the scope in the program and the operation in the DLL, where they passed on the Windows
-machine at `/Od`, `/O2` and `/O2 /GL`, the call into the DLL being opaque to the compiler. Built
-against a copy of the header without the pin, the probe of a loop in a scope fails at `/O2 /GL`
-(the product computed at compile time, to nearest); with a `zero` of internal linkage the check that
-both files of a program share it fails; without the refresh of the scopes no probe failed there:
-MSVC 19.52 did not move the product in these shapes even then.
+The units tests run their probes on the operations of `kairn::upward::Interval<double>` on points,
+in the second file: the product, the sum and the product by a number (the kernels `upward_mul_1`,
+`upward_add_1` and `upward_mul_num_1`, each with its first input pinned, `KAIRN_DETAIL_UPWARD_PIN`),
+and the function on arrays `kairn::upward::mul` (until the kernels existed, on a stand-in of one
+product pinned the same way). With MSVC each module of Windows has its own
+`kairn::upward::detail::zero`, which the scopes of another module never write: `api.upward.dll`
+pins that (the program's and the DLL's are two objects). Two arrangements are tested, in one program
+(`api.upward.units`, `.ipo`, `.numbers`) and with the second file built into a DLL
+(`api.upward.dll`):
+
+- **The scope in the caller, around calls into the other file.** The program's `Scope` and
+  `NearestScope` around calls of the product, the sum, the product by a number and the function on
+  arrays (whose own scope then only reads). In a DLL the operations pin the DLL's `zero`, which no
+  scope of the program refreshes: nothing of the header orders them against the program's scope,
+  and what keeps them inside it is that the call into the DLL is opaque to the compiler of the
+  program. The probes passed on the Windows machine at `/Od`, `/O2` and `/O2 /GL`; what that shows
+  is that MSVC 19.52 computed the DLL's operations in the mode the program set in these shapes, not
+  that the barrier per scope reaches across modules, which it does not.
+- **The scope held by the function of the other file.** A function of the second file that holds
+  a `Scope` of its own around the product, and the function on arrays with the scope it holds,
+  called from rounding to nearest, inside a `NearestScope` inside a `Scope` and in a loop of unknown
+  length: their results upward, and the first file's own product to nearest after each call. In a
+  DLL this is the arrangement in which the scope and the operations are in the same module: the
+  DLL's scope refreshes the DLL's `zero`, which its operations' pins read, as within one program.
+  It passed on the Windows machine at `/Od`, `/O2` and `/O2 /GL`.
+
+Built against a copy of the header without the pin, the probe of a loop in a scope fails at
+`/O2 /GL` (the product computed at compile time, to nearest); with a `zero` of internal linkage the
+check that both files of a program share it fails; without the refresh of the scopes no probe failed
+there: MSVC 19.52 did not move the product in these shapes even then.
 
 ### The interval type, the functions on arrays and the self-check
 
@@ -2213,7 +2237,100 @@ Its advice is not checked in the builds with the options: Apple clang contracts 
 `-O2` on, and GCC 13 and Clang 18 in a release build on x86-64 (with the `-mfma` of `kairn::fma`), so
 the advice about contraction is what those builds print; MSVC under `/fp:strict` gives none. Built
 with Clang without the options, the advice is that the file's own arithmetic ignores the mode, which
-the test checks.
+the test checks; GCC 13, GCC 16 and MSVC 19.52 (`/fp:precise`) built without them with
+`KAIRN_UPWARD_OPTIONS_UNCHECKED` (`api.upward.self_test.unchecked`, reported) passed on 2026-11-26
+and gave the same advice.
+
+### Code next to a scope's boundary
+
+`tests/api/upward/moves.cpp` (`api.upward.moves.*`) establishes what compilers do to code next to
+the boundary of a scope ([Code around a scope](design/upward.md#code-around-a-scope) in the design
+page), at each optimization level, for `double` and `float`, in these shapes: operands in registers,
+literal operands, in a function of its own (not inlined, and inlined), a scope inside a loop of a
+length the compiler does not know and a loop inside a scope, and results used only after the scope
+has ended. Each probe computes a value whose bits differ between the mode upward and rounding to
+nearest (the square of $[p, p]$ with $p = 1 + u$, $1 + 2^{-60}$ for `double` and $1 + 2^{-30}$ for
+`float`, the midpoint of a default interval, the sum of an `Expansion<T, 1>`), so that its result
+tells on which side of the boundary it was computed. Three groups:
+
+1. **The header's own operations**: the operators with an interval and with a number, a compound
+   assignment, the functions on arrays. Never merged with the same operation computed before the
+   scope or in a `NearestScope`, never computed above the scope's write of the mode (operands in
+   registers, literal operands, an invariant of a loop of scopes), never below its restoring write.
+   This is what the barriers promise, and on MSVC the barrier per scope, whose gap is the last of
+   the three ([MSVC](design/upward.md#msvc)): every probe that uses a result only after its scope
+   looks for it, in the same function, in a branch that calls a function, in a `NearestScope` begun
+   after the operation, after a loop of scopes (the last product, a sum accumulated over the
+   scopes), returned from a function that holds the scope (inlined and not), given to a function
+   after the scope by reference and by value, with twenty products live at once, first in a scope
+   that does other work after it, in a loop of scopes that breaks out of its first iteration,
+   stored into an object after the scope, and with its operand overwritten after the scope. The test
+   fails on any of them.
+2. **Values taken across a boundary through `pass()`, `to_interval()` or memory**, into a
+   `NearestScope` inside a `Scope` (values loaded in the upward region) and out of an upward region:
+   the program's own sum, the sum of an `Expansion<T, 1>` and the midpoint of a default interval on
+   values given to `pass()`, the midpoint of `to_interval()`, the program's sum of values stored in
+   an object of static storage duration on one side and read on the other, the program's sum on the
+   limbs of `pass()` of an upward interval; the same in loops, and after an inlined function that
+   holds a scope. Each result is written to memory on the side where it is computed. What the concept
+   page's rule promises ([Code next to a scope's boundary](../concepts/upward.md#code-next-to-a-scopes-boundary)):
+   the test fails otherwise.
+3. **The same without `pass()`**, the operands in registers or in a local array that no other code
+   sees; the program's own results used only after the scope that computed them, on operands given to
+   `pass()` too (`pass()` orders what is computed from its result, not what its operand was computed
+   from); the same sum on both sides of a boundary, which a compiler may compute once; a sum of
+   literals in a scope; an invariant sum in the scope of each iteration of a loop, and in each
+   `NearestScope` of a loop inside a `Scope`. Promised by nothing: each probe is printed as
+   `report: ... moved` or `in place`, and the test fails only on a result that is neither side's
+   value, a defect of the probe.
+
+**What the tests found, on 2026-11-26.** Groups 1 and 2 held in every shape, for both types, in
+every build: Apple clang 21 (arm64) and GCC 16 at `-O0` to `-O3`; GCC 13 and Clang 18 (x86-64) at
+`-O0` to `-O3`; MSVC 19.52 at `/Od`, `/O1`, `/O2` and `/O2 /GL`; with the build's flags in the
+two-number form, built for AVX2 on x86-64 Linux, and with `KAIRN_CHECKS` 1, where groups 1 and 2
+reported nothing; Clang 18 and Apple clang 21 without the options, where group 1 is gated and group
+2 held too; GCC 13, GCC 16 and MSVC (`/fp:precise`) without the options and with
+`KAIRN_UPWARD_OPTIONS_UNCHECKED`, reported, where both held; and x86-64 under Rosetta, reported,
+where both held. For the shapes of the gap the listings of MSVC's `/O2` build and of its `/O2 /GL`
+program were also read: in each scope the pin's or and the four multiplications of each product lie
+between the scope's refresh and the call that restores the mode. The gap of MSVC was not observed in
+any shape; it remains a gap of the design, which nothing of the header closes.
+
+The third group, with the options (the same in every form, and with the checks):
+
+| Computation without `pass()` | GCC 13 and 16 | Clang 18, Apple clang 21 | MSVC 19.52 |
+|---|---|---|---|
+| a sum of the program's in a `NearestScope` inside a `Scope` (of registers, of an `Expansion<T, 1>`, of a local array), the same sum computed in the `Scope` before it | upward at `-O1` to `-O3`: merged with the `Scope`'s | in place | in place |
+| a sum of the program's and of an `Expansion<T, 1>` after a `Scope`, the same sum computed in it | upward at `-O1` to `-O3`: merged | in place | in place |
+| a sum of the program's in a `Scope`, the same sum computed before it | to nearest at `-O1` to `-O3`: merged with the one before | in place | in place |
+| an invariant sum of the program's in the `Scope` of each iteration of a loop | to nearest at `-O1` to `-O3`: hoisted out of the loop | in place | to nearest at `/O1`, `/O2`, `/O2 /GL`: hoisted |
+| an invariant sum of the program's in each `NearestScope` of a loop inside a `Scope` | in place | in place | upward at `/O1`, `/O2`, `/O2 /GL`: hoisted |
+| the others: the midpoint of a default interval in registers, and of the bounds read through `lower()` and `upper()`, either way; a sum on `upper()`, on a result of the scope, of a local array, out of a `Scope`; results used only after their scope, of a `Scope` or of a `NearestScope`; a sum of literals in a `Scope` | in place | in place | in place |
+
+At `-O0` and `/Od` nothing moved. Without the options (reported) more moved: with Clang 18 and Apple
+clang 21 the first four rows and, below the end of a `Scope`, the program's sum of the scope used only
+after it, on registers and on operands given to `pass()` (computed to nearest), and a sum of literals
+in a `Scope` (computed while compiling, to nearest); with GCC 13 and 16 the first four rows and the
+sum of literals; with MSVC (`/fp:precise`) the sums of the program's in a `NearestScope` and after a `Scope`
+merged with the same sums of the `Scope`, the sum in a `Scope` merged with the one before it, the
+invariant sum of a loop of `Scope`s, the results of a `Scope` used only after it, and the sum of
+literals. So a program cannot count on code without barriers staying on its side of a boundary when
+the same computation appears on the other side or is invariant in a loop of scopes: GCC merges and
+hoists across the scopes' writes with `-frounding-math`, and MSVC hoists out of loops under
+`/fp:strict`; Clang with `-frounding-math` moved none of these. Given to `pass()`, `to_interval()`
+or memory, every value was computed on the side where the program wrote it.
+
+### The configurations of the design page
+
+The table of configurations of [Tests and CI](design/upward.md#tests-and-ci), row by row, and the
+tests that pin each:
+
+| Configuration | Expected | Pinned by |
+|---|---|---|
+| with the options, every compiler, level, contraction setting, with and without `-mavx2 -mfma`, `KAIRN_CHECKS` 0 and 1, the two-number form forced | every test passes | in the quick tier, every test of the label `upward` with the build's flags (in CI: `Release`, so `KAIRN_CHECKS` 0, and `-mfma` from `kairn::fma` or `/arch:AVX2`), and: `KAIRN_CHECKS` 1 (`.checked` of the runners, the differential, the self-check, the scopes, `limbs`, `moves`; `api.upward.checks`), the two-number form (`.numbers` of the same and of `units`), AVX2 where the flags do not give it (`.avx2` of the runners, the differential, `moves`), contraction forced on (the runner `contract-fast`, but with MSVC), every level (`api.upward.moves.LEVEL`; `limbs` at `-O2` and `-O3`), two files with whole-program optimization (`units.ipo`). Run on 2026-11-26 with Apple clang 21, GCC 16, GCC 13, Clang 18 and MSVC 19.52 (the label at `/O2`, in a `Debug` build and at `/O2 /GL`); clang-cl was not at hand. The full tier's matrix of these flags for the tests of the public type is to come with the feature's CI |
+| GCC without `-frounding-math`, MSVC without `/fp:strict` | the build stops; with `KAIRN_UPWARD_OPTIONS_UNCHECKED`, reported | `api.upward.reject.gcc_without_rounding_math`, `.msvc_without_fp_strict`, `.msvc_fp_contract`; with the macro, `api.upward.self_test.unchecked` and `api.upward.moves.unchecked` (reported), and `api.upward.checks.unhonored`, whose checked build reports the file |
+| Clang and Apple clang without `-frounding-math` | builds; the header's results right; `self_test().limitation` set; a checked build's scope reports | the runner `without-options` of every `api.oracle.upward_K.F`, `api.upward.differential.without_options`, `api.upward.moves.without_options` (group 1); `api.upward.self_test.without_options`; `api.upward.checks.unhonored` |
+| x86-64 under Rosetta, and emulators | reported, not gated | `api.upward.rosetta.self_test` and `.moves` (Apple clang on arm64 macOS, built for x86-64 with AVX2 and FMA): on 2026-11-26 both passed under Rosetta on the Mac, and no probe of `moves.cpp` moved. No other emulator was at hand |
 
 ## The program's names
 
@@ -2239,9 +2356,10 @@ and popped `#pragma warning(disable : 4459 6244)` with MSVC, and
 compiler applies the state of the header to the templates the program instantiates later.
 
 `api.shadow` (`tests/api/shadow.py`) reads the name of every parameter and local variable of the
-headers (1440 today, the generated headers included, by a scan of their tokens, which found every name of Clang's AST of the
+headers (2842 on 2026-11-26, the generated headers and those of `kairn/upward.hpp` included, by a scan of their tokens, which found every name of Clang's AST of the
 headers), writes a global variable of each name, and compiles `tests/api/shadow.cpp`, which calls
-every public operation once for `float` and for `double`, with the build's flags and the
+every public operation once for `float` and for `double` (those of `kairn/upward.hpp` too, with
+`KAIRN_UPWARD_OPTIONS_UNCHECKED`: only the front end runs), with the build's flags and the
 strictest warnings of the compiler about a declaration that hides another, as errors, the front
 end only: `/W4 /WX` with C4456 to C4459 at level 1, and again under `/analyze` (MSVC);
 `-Wall -Wextra -Wpedantic -Wshadow -Werror` (GCC); `-Wall -Wextra -Wpedantic -Wshadow-all -Werror`
@@ -2256,6 +2374,13 @@ it, with C4459, and with C6244 under `/analyze`; with GCC and Clang it is only r
 whether they reject it depends on their version (GCC 13 rejects it, GCC 16 and Clang accept it).
 Kairn's other tests are built as a program is, with the warnings off in the headers, and with
 their own `/W4 /WX` or `-Wall -Wextra -Wpedantic -Werror` unchanged.
+
+The builds under `/analyze` judge the rest of MSVC's code analysis too, since `/WX` makes each of
+its warnings an error. When `shadow.cpp` first included `kairn/upward.hpp` (2026-11-26) they found
+two: the self-check's special cases held all their results on the stack at once, 19 152 bytes
+(C6262), and now compute and compare one row of operands at a time; and the check of the build
+compares two constants on purpose (C6326, suppressed there with a comment). Nothing else of the
+header warns under `/analyze /W4`, with `/fp:strict` and without it.
 
 ## Hardware FMA
 
