@@ -40,6 +40,9 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats), then every fold's `F_packed`; AArch64 only |
 | `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, and for the form relative to the result `unit_computed`, `tiny_computed`) and its form: `result` (R), `operands` (A) or `terms` (T, the terms of the value: `dot_step_2`); what the public headers gate on and export through `kairn::traits`; then, in `kairn::gen::bounds::loops`, per loop and limb type whether it is proved (its own status and minimum precision, and every kernel it runs), what the functions on arrays gate on |
 | `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
+| `include/kairn/gen/upward.hpp` | The round-up interval ([below](#the-round-up-interval)), in `kairn::gen::upward`: every kernel of the upward family for `double` and `float` in the form `KAIRN_UPWARD_FORM` chooses (one register: `__m128d` and `__m128` on x86-64, `float64x2_t` and `float32x2_t` on arm64; two numbers on any target, or when it is `KAIRN_UPWARD_FORM_NUMBERS`), the barriers and the pin of `include/kairn/upward.hpp` on its values; the array forms of the six kernels the functions on arrays run (AVX2, NEON, or a loop); the status of each kernel; the tables of `kairn::upward::self_test()`. Included by `include/kairn/upward.hpp` after its barriers; requires the mode upward set by `kairn::upward::Scope` and the options of `docs/concepts/upward.md` |
+| `tests/emulated/gen/upward.hpp` | The kernels of the upward family in the two-number form for the emulated limb type (`kairn::emulated::Number` with its operations rounded upward: no mode, no scope), `max_nl` in the form the runner sets; for `gen/tests/upward_runner.cpp` built with `KAIRN_UPWARD_RUNNER_EMULATED`. A test file, not shipped |
+| `gen/tests/upward_kernels.inc` | The table of kernels (input and output kinds, the call) and of the array forms of the runner of the upward family, `gen/tests/upward_runner.cpp` |
 | `gen/claims.json` | What every kernel and every fold claims, with the constants per format as exact fractions; the kernels of the upward family after the others, each with `"rounding": "upward"` |
 | `gen/constant_names.json` | The names of the constants `up(EXPR)` in the Rocq models, read first and only added to (below, "The operations") |
 | `gen/objcode.json` | Per kernel, form of its C++ (scalar with the fix-up inline, scalar with the fix-up a function of its own, packed) and limb type, the fused multiply-adds and plain multiplications its code asks for; per fold, form and limb type, those of each part of its loop: the expectations of the object-code check (`tests/objcode/`) |
@@ -74,6 +77,7 @@ is mapped to the logical path `Kairn.Gen`, and `proofs/theories` to
 | `kairn_gen/cpp.py` | The C++ printer (trusted); its functions take the limb type as a parameter: `double`, `float`, or a `cpp.Limb`, a type of a format chosen at run time |
 | `kairn_gen/emulated.py` | `tests/emulated/gen/kernels.hpp`: `cpp.scalar` with the emulated limb type, and the tables of its runner |
 | `kairn_gen/simd.py` | The AVX2 and NEON printers (trusted; tested lane by lane against the scalar code) |
+| `kairn_gen/upward_cpp.py` | The C++ printers of the upward family (trusted): `include/kairn/gen/upward.hpp` (the one-register form from the pair lines, the two-number form, the array forms, the self-check's tables), `tests/emulated/gen/upward.hpp` and `gen/tests/upward_kernels.inc`; tested bit for bit against the interpreter in every form (`test_upward_cxx.py`) |
 | `kairn_gen/consts.py` | The exact value of every constant in any format, `unit_computed(K)` and `tiny_computed(K)` included |
 | `kairn_gen/claims.py` | `gen/claims.json` |
 | `kairn_gen/objcode.py` | `gen/objcode.json`: the counts below |
@@ -787,8 +791,29 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
   claims in exact arithmetic (I1 to I5, the set operations, the constructor, the conversions, the
   predicates): three formats of precision 1 and 2 in the quick suite, four of precision 2 and 3
   with `--full`, two of precision 4 with `KAIRN_GEN_UPWARD_PRECISION=4` (a run for a machine with
-  many processors), and the same lines judged by the oracle's command line with
-  `KAIRN_GEN_UPWARD_ORACLE=1`.
+  many processors); and the same lines judged by the oracle's command line, the gate of the design
+  page, in pieces (a range of the first operand's cases each, a process of the oracle's `check` of
+  its own) that run side by side: the quick formats in the quick suite (some 1 million lines, 15
+  seconds on the Mac with four jobs) and those of precision 3 with `--full` (160 million).
+  Precision 4 (5.2 billion lines) is a run of `tests/brute/upward.py`, which keeps each piece's
+  summary, resumes, and merges them (results in `results/upward/`);
+- the C++ of the round-up interval (`test_upward_cxx.py`): the runner of the family
+  (`gen/tests/upward_runner.cpp`, which holds a `kairn::upward::Scope` around each evaluation)
+  built with each compiler at `-O0` and `-O2`, under each contraction setting, with
+  `-frounding-math`, in the form the target chooses and in the two-number form forced, on x86-64
+  with and without `-mavx2` (the AVX2 array form, or the loop), and with Clang once at `-O2`
+  without `-frounding-math` (the barriers alone); every request one by one and, through the array
+  forms of the six kernels that have one, in chunks of every length of a remainder, in place and
+  not: the interpreter's lines byte for byte with the build's form of `max_nl` (`--max nm` for
+  NEON, `sel` otherwise), on random cases of every stratum and on every combination of the special
+  operands; the runner built with `KAIRN_UPWARD_RUNNER_EMULATED` (`tests/emulated/gen/upward.hpp`)
+  on every canonical state of the quick formats, in both forms of `max_nl`, the interpreter's
+  bytes; the loads and stores of pairs and an array form at `-O2` and `-O3`, where GCC applies the
+  rules of aliasing, compiled with `-Wstrict-aliasing` as an error and run; and the
+  printers: the pin on the first input of exactly the kernels that round, a barrier on every
+  register and number given and returned, one instruction per pair line in the register form, the
+  emulated listing the two-number listing of `double` with the type's operations. With one
+  compiler and four jobs it takes some 26 seconds on the Mac.
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.

@@ -28,6 +28,10 @@ is an input of the library, of the generator, or of the proofs.
   kernel and format the best line of every quantity with its value, one file per run: from the
   strata alone, and with every seed through the interpreter and through a compiled runner;
   `docs/developer/results/brute-milestone2.md` reports it ("The adversarial search").
+- `upward/mutants.json`: the faults that `tests/kernel_mutants.py --upward` plants in the two-number
+  form of the round-up interval's kernels, a line per mutant with what caught it (each tier's
+  cross-checks, the comparison with the interpreter), from the run of
+  docs/developer/testing.md, "The round-up interval".
 - `brute-code.json`: for every commit that a summary under `*/brute/` names as the code of its
   runs, the SHA-256 of the code and of the claims of every kernel and loop at that commit, written
   from the repository's history by `docs/tools/brute_code.py`. A kernel's reference page shows the

@@ -12,7 +12,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 | Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, the kernels printed for the emulated limb type in `fp:8:-14:1` ([below](#the-emulated-formats)), and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | on 2026-11-22, on the same tree, 2 000 tests (Apple clang); on that tree before the additions to the interface of the sets, 2 000 tests with GCC 13 on the Linux machine in 20 minutes (`--parallel 16`, the tools held to one worker) ([Time](#time)); it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
-| Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), the interpreter on every operand of larger toy formats, and the kernels printed for the emulated limb type on every operand, or random cases, of formats of precision 8 to 11 ([below](#the-emulated-formats)), with the same guards and a time budget. Many of those formats are of no statement ($q_{\max} < 1$, or $\eta$ above `binary_float`'s: 582 of the plan's 1 239 enumerations, [The formats of the statements](architecture.md#number-formats); 104 more have a wider subnormal range, where such a clause is judged and a failure is a finding), and there a clause that promises a finite result is counted as not claimed (V4 of the ball vectors, the `finite_when` of `ball_of_interval` and the `bounded_when` of `interval_of_ball` of two limbs, the midpoint of a bounded interval of `ball_of_interval` with `ieee1788` and the parts of a split that rest on it; F3, B4 and I5 are judged there too, below): in `fp:4:-4:-1` and `fp:4:-5:0` the sum of the two halves of a bounded interval beside $\pm\Omega$ overflows, and the midpoint of `interval_mid_rad_2` and the point of split of `interval_split_2` are a NaN (12 and 60 lines), counted as not claimed | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
+| Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), the interpreter on every operand of larger toy formats, and the kernels printed for the emulated limb type on every operand, or random cases, of formats of precision 8 to 11 ([below](#the-emulated-formats)), with the same guards and a time budget; and `tests/brute/upward.py`, the round-up interval's kernels through the interpreter on every case of the formats of their statements of precision 1 to 4, in both forms of `max_nl`, judged by the oracle in pieces ([below](#the-round-up-interval)). Many of those formats are of no statement ($q_{\max} < 1$, or $\eta$ above `binary_float`'s: 582 of the plan's 1 239 enumerations, [The formats of the statements](architecture.md#number-formats); 104 more have a wider subnormal range, where such a clause is judged and a failure is a finding), and there a clause that promises a finite result is counted as not claimed (V4 of the ball vectors, the `finite_when` of `ball_of_interval` and the `bounded_when` of `interval_of_ball` of two limbs, the midpoint of a bounded interval of `ball_of_interval` with `ieee1788` and the parts of a split that rest on it; F3, B4 and I5 are judged there too, below): in `fp:4:-4:-1` and `fp:4:-5:0` the sum of the two halves of a bounded interval beside $\pm\Omega$ overflows, and the midpoint of `interval_mid_rad_2` and the point of split of `interval_split_2` are a NaN (12 and 60 lines), counted as not claimed | by hand on the test machines before each milestone report (`tests/brute/README.md`; results in [Brute force, Milestone 1](results/brute-milestone1.md)); and every night on the hosted runners with a smaller budget (`nightly.yml`), on new random cases and one fortieth of the enumerations | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine; a night on the hosted runners, under two hours per platform |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
@@ -43,10 +43,12 @@ The tests that `ctest` runs in the build directory, by name:
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum; the packed runners with the requests assigned to the lanes by a seeded permutation, under the guard that the registers mixed kinds, and the one with the build's flags also consecutively ([below](#packed-kernels)). |
 | `crosscheck.lanes.fault.F` | A packed runner with a fault planted in a copy of `mul_2_2_full` (its special-value select reads the mask of the neighboring lane, `tests/lanes/`) passes the cross-check of format F with the consecutive assignment where no register mixes a non-finite operand with finite ones, and fails it, by the oracle's verdict, with the permuted one; the guard refuses the consecutive assignment of the same stream ([below](#packed-kernels)). |
 | `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). A map, a fold of maxima and a convolution likewise, on 100 arrays of up to 24 elements (pairs of polynomials of up to 20 coefficients for a convolution, which has no packed form). |
+| `crosscheck.compiled.upward_K.F` | A kernel of the round-up interval ([below](#the-round-up-interval), label `upward`) through the runners of its family, `gen/tests/upward_runner.cpp` built with the build's compiler and flags and the option of `kairn::upward`, each holding an upward scope: in the form the target chooses (one register), the same with the array forms of the six kernels that have one, and the two-number form forced; on the 2 000 cases of an interval kernel (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`) from every stratum of the oracle's family `upward`. |
 | `emulated.arith`, `crosscheck.emulated.K` | The emulated limb type against the machine's `float` and `double` and the oracle's rounding, with planted faults; the kernels printed for it, on `next_up`, `two_prod`, `mul_2_2_full` and `sum_2` in `fp:8:-14:1`, through both its runners and the interpreter, the same bytes, judged by the oracle ([below](#the-emulated-formats)). |
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
+| `objcode.upward` | The kernels of the round-up interval (`tests/objcode/upward_unit.cpp`, `objcode.py --upward`), with the options of `kairn::upward`, in the quick tier's configurations of their matrix ([below](#object-code), [The round-up interval](#the-round-up-interval)): no fused multiply-add, no negated multiplication, no `fmax`, the multiplications and the maxima asked for, no call. |
 | `regression.cases` | The stored cases of `tests/regression/cases.txt` (the cases that found a problem, and those that came closest to a claim, [below](#the-regression-cases)) through every compiled runner of the build, the generator's interpreter, and both runners of the public interface with every form of each public kernel, judged by the oracle (`tests/regression/run.py`). |
 | `consume.*` | A CMake project that uses Kairn through `add_subdirectory`, and one through `find_package` after `cmake --install`, build and run a kernel. The first (`tests/consume/subproject.cmake`) also checks that Kairn as a subproject prints no line of its own when configured and that `cmake --install` installs nothing of Kairn's; and that both checks can fail: its notice about `kairn::fma`, made necessary by giving the results of its two compile checks on the command line, appears with `--log-level=VERBOSE`, and with `-DKAIRN_INSTALL=ON` the headers are installed. |
 
@@ -145,11 +147,13 @@ front:
 | `full.api.checks.S.G`, `full.api.checks.handler.S` | `api.checks.release.G` and `api.checks.handler` with the operations of `Ball` outlined (S = `outlined`) and external (`external`), whose checks are then in functions of their own: the same cases, the same verdicts. |
 | `full.api.rational.K.F` | `api.rational.K.F` on 20 000 cases instead of 2 000 (`KAIRN_RATIONAL_CASES`), the quick tier's among them, through the runner with the build's flags and the runner of every [flag set](#flag-sets), the debug build's included; the code is integer code, so every output must be the same bytes; the oracle judges each distinct output once. |
 | `full.objcode.check`, `full.objcode.controls` | `objcode.check` and `objcode.controls` in every configuration of the compiler's flag matrix: 24 for GCC, Clang and Apple clang and for clang-cl, 9 for MSVC; the operations of `Ball` outlined and external in each. |
+| `full.objcode.upward` | `objcode.upward` in every configuration of the round-up interval's matrix: 12 for GCC, Clang and Apple clang (`-O0` to `-O3`, each contraction setting), 2 for MSVC (`/Od`, `/O2`, with `/fp:strict`), 4 for clang-cl. |
+| `full.crosscheck.compiled.upward_K.F` | A kernel of the round-up interval on 20 000 cases, through the quick tier's three runners of its family and those of its flag matrix ([The round-up interval](#the-round-up-interval)): each optimization level, each contraction setting, `KAIRN_CHECKS` 0 and 1, each form, with MSVC `/O2` with whole-program optimization, with Clang, Apple clang and clang-cl a release build without the option. |
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum; and the interval kernels whose shape names a sampled format of its own (`_toy_sampled...` of `tests/CMakeLists.txt`), on 20 000 random cases of that format. |
 | `full.crosscheck.compiled.FOLD.F`, `full.crosscheck.interp.FOLD`, `full.crosscheck.interp-sampled.FOLD` | A fold: the compiled runners on 1 000 random arrays of up to 4 096 elements (the packed runners on 500), the flag sets' runners among them; the interpreter on every array of a tiny format up to a small length, in every order that differs, and on 1 000 random arrays of a toy format of up to 1 024 elements ([Cross-checks](#cross-checks)). A map the same on arrays of up to 1 024 elements, a fold of maxima as a fold, a convolution on 300 pairs of polynomials of up to 64 coefficients. |
-| `full.crosscheck.emulated.K`, `full.crosscheck.emulated.same_lines`, `full.crosscheck.emulated.fault`, `full.emulated.arith` | The exhaustive tier on emulated formats: every kernel and fold printed for the emulated limb type, in `fp:8:-14:1` (every operand of a kernel that reads one limb, random cases of the others), both runners and each path, judged by the oracle; the same lines as the interpreter's on every kernel and fold; a fault planted in the printed C++ that the oracle passes, caught by that comparison; the type's own tests at the full sizes ([below](#the-emulated-formats)). |
+| `full.crosscheck.emulated.K`, `full.crosscheck.emulated.same_lines`, `full.crosscheck.emulated.fault`, `full.emulated.arith` | The exhaustive tier on emulated formats: every kernel and fold printed for the emulated limb type, in `fp:8:-14:1` (every operand of a kernel that reads one limb, random cases of the others), both runners and each path, judged by the oracle; the same lines as the interpreter's on every kernel and fold; a fault planted in the printed C++ that the oracle passes, caught by that comparison; the type's own tests at the full sizes ([below](#the-emulated-formats)). The round-up interval's kernels through the emulated runner of their family ([The round-up interval](#the-round-up-interval)). |
 | `full.kairn-gen.test` | The four test classes of the generator that `full.tools.kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
 | `full.kairn-oracle.selftest` | The six tests of the oracle that `full.tools.kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
 | `full.search.compiled` | The adversarial search ([below](#the-adversarial-search)) on every kernel with an `error`, `upper`, `encloses` or `extends` entry, `binary64` and `binary32`, through the scalar runner with the build's flags, 5 000 cases per kernel and format from its seeds; fails on any violated claim. With four worker processes. |
@@ -174,8 +178,11 @@ Labels select groups in either tier: `-L crosscheck`, `-L compiled`, `-L interp`
 `-L restricted` and `-L sampled` among them), `-L emulated`, `-L api` (with `-L oracle`, `-L reject`,
 `-L boundary` and `-L upward` among them), `-L objcode`, `-L python`, `-L generator`, `-L tools`;
 `-R` selects by name, for example `ctest --test-dir build -R mul_2_2` for the quick tier's tests of
-`mul_2_2`. The tests of `kairn/upward.hpp` (label `upward`) are registered when the option
-`KAIRN_UPWARD_TESTS` is on, the default.
+`mul_2_2`. The tests of `kairn/upward.hpp` and of its kernels (label `upward`, in both tiers) are
+registered when the option `KAIRN_UPWARD_TESTS` is on, the default; with it off neither tier
+registers a test of the round-up interval, nor builds a program for one. The target
+`kairn-upward-tests` builds the programs the tests labelled `upward` run and nothing else (the job
+"Windows x64, upward" of the CI builds it alone).
 
 ## Cross-checks
 
@@ -1390,7 +1397,8 @@ the least, 0.56, `two_prod_dekker`, whose product by the splitter overflows).
 |---|---|
 | `crosscheck.emulated.K` (quick) | Both runners, each path, the interpreter, the same bytes, judged in `KAIRN_EMULATED_FORMAT` (`fp:8:-14:1`): every operand of `next_up`, 1 000 cases of `two_prod` (both paths) and of `mul_2_2_full` (the fix-up branch), 300 arrays of `sum_2` up to 64 elements. |
 | `full.crosscheck.emulated.K` | Every kernel and fold, both runners and each path, the same bytes, judged: every operand of the kernels that read one limb (4 354 numbers, twice or four times that with masks), `KAIRN_EMULATED_CASES` (2 000) random cases of every stratum of the others, `KAIRN_EMULATED_FOLD_CASES` (300) arrays of up to 64 elements of a fold, a map and a ball vector in place too. `bound_sum_2` and `bound_dot_2` are in `fp:8:-29:16`: their mask turns false where $m\,\mathrm{unit}(K)$ passes $\tfrac15$ to $\tfrac12$, at counts near $2^{14}$, beyond the largest number of `fp:8:-14:1` (510), and the guards fail a run that never saw it false. |
-| `full.crosscheck.emulated.same_lines` | `tests/emulated/same_lines.py`: 100 requests of every kernel and fold (about 30 000 lines, maps and ball vectors in place too), completed by the interpreter and by both runners in one process each, then those of the 161 kernels with a path of constant evaluation with `--ce`: the same bytes. |
+| `full.crosscheck.emulated.same_lines` | `tests/emulated/same_lines.py`: 100 requests of every kernel and fold (about 30 000 lines, maps and ball vectors in place too), completed by the interpreter and by both runners in one process each, then those of the 161 kernels with a path of constant evaluation with `--ce`: the same bytes; and the round-up interval's 24 kernels, 2 400 lines, by the interpreter and by the emulated runner of their family in each form of `max_nl` (`--upward-runner`; `--no-upward` leaves them out). |
+| `full.crosscheck.emulated.upward_K` | A kernel of the round-up interval printed for the emulated type, through `kairn-emulated-upward-runner`, on 2 000 random cases of `fp:8:-14:1`, the interpreter's bytes, judged ([The round-up interval](#the-round-up-interval)). |
 | `full.crosscheck.emulated.fault` | `tests/emulated/emitted_fault.py`: a runner built from a copy of the printed C++ with the arms of one select of `mul_ext_2_2` swapped, which the oracle passes on the quick tier's `binary64` cases and in `fp:8:-14:1`, and the comparison with the interpreter fails (below, "Faults planted in the printed C++"). |
 | `full.emulated.arith`, `emulated.arith` | The type's own tests, above. |
 
@@ -2138,6 +2146,116 @@ change no result. On the lines of `ball_make_1`, `ball_make_2_entry` and `ball_m
 test programs keep Microsoft's C runtime from opening a dialog on `abort()`, and Linux from
 writing a core dump, which took 0.3 seconds per case on the Linux machine
 (`tests/api/no_crash_reports.hpp`).
+
+## The round-up interval
+
+The 24 kernels of `kairn/upward.hpp` (`upward_*_1`, `"rounding": "upward"` in `gen/claims.json`;
+[design page](design/upward.md), "Tests and CI") require the rounding mode upward set by
+`kairn::upward::Scope` and the options of `docs/concepts/upward.md` (GCC and Clang
+`-frounding-math`, MSVC `/fp:strict`). Their tests have the label `upward` and are registered with
+`KAIRN_UPWARD_TESTS` on; every program that runs a kernel of the family links `kairn::upward`, which
+adds the option, but those built to show what happens without it. No runner of the other kernels
+runs them, and their runners run nothing else.
+
+**The runners.** `gen/tests/upward_runner.cpp` completes the line protocol's requests of the family
+(a state its two lanes as stored, `upward_add_1 binary64 XU XN YU YN -> ZU ZN`), each inside a
+`kairn::upward::Scope`, the parsing and printing outside it. The quick tier builds it three times
+with the build's compiler and flags (`tests/CMakeLists.txt`, `_upward_compiled`): `upward-register`,
+the form the generated header chooses (SSE2 on x86-64, NEON on arm64); `upward-arrays`, the same with
+the six kernels that have an array form run through it, in chunks of every length of a remainder,
+in place and not, with the packed backend's option (AVX2, NEON); and `upward-numbers`, the
+two-number form forced, its loop of arrays too. The full tier adds the flag matrix of the design
+page at the level of the kernels (`tests/full/upward/`), each set in the three forms:
+
+| Compiler | Sets, after the option of `kairn::upward` |
+|---|---|
+| GCC, Clang, Apple clang | `debug` (`-g`, `KAIRN_CHECKS` 1), `O1-contract-fast`, `O2-contract-off`, `O2-contract-on`, `O2-contract-fast-checks` (`KAIRN_CHECKS` 1 with `NDEBUG`), `O3-contract-fast`; with Clang and Apple clang `O2-no-option`, linked with `kairn::kairn` alone: the barriers keep the results right without `-frounding-math` |
+| MSVC | `debug` (`/Od`, `/RTC1`, the debug runtime, `KAIRN_CHECKS` 1), `O1`, `O2-GL` (whole-program optimization: `/GL` and `/LTCG`), `O2-checks` |
+| clang-cl | `debug`, `Od-contract-fast`, `O1-fp-precise`, `O2-fp-strict`, `O2-contract-fast-checks`, `O2-no-option` |
+
+The build's own flags (`Release`: `-O3`, `/O2`) are the quick tier's three runners. GCC without
+`-frounding-math` and MSVC without `/fp:strict` stop at the header's guard, which the type's reject
+tests check (`api.upward.reject.*`); MSVC's `/fp:strict` excludes contraction. On the Mac every
+runner of one form writes the same bytes: the register and array forms one output and the
+two-number form another (NEON's `FMAXNM` and the two-number form's `a > b ? a : b` order the zeros of
+a maximum differently), each judged once; with MSVC every runner the same bytes.
+
+**The cases.** `crosscheck.compiled.upward_K.F` has the 2 000 cases of an interval kernel, and
+`full.crosscheck.compiled.upward_K.F` the full tier's 20 000, of the oracle's family `upward`
+(`oracle/README.md`, "The round-up interval": the empty set, the whole line, half-lines, points,
+zero bounds, bounds near $\Omega$, subnormal bounds, lanes that cross near zero, $0 \cdot \infty$
+and products around $P$ for the products, the special numbers for the kernels with a number, the
+constructor's own). `full.crosscheck.interp.upward_K` runs the interpreter on every case of the
+oracle's enumeration of a format of the statements, a stored pair one operand (the empty set and
+every canonical state of the format, its zeros of one sign): two states in `fp:2:-2:1` (52 900
+cases), a state and a number in `fp:3:-4:1` (95 816), one state, a default interval or two numbers
+in `fp:5:-8:1` (62 480, 125 316 for `upward_make_1`). `full.objcode.upward` is the object code on the
+family's whole matrix ([Object code](#object-code)).
+
+**The emulated kernels.** `tests/emulated/gen/upward.hpp` is the two-number form printed for
+`kairn::emulated::Number`, whose `add_ru` and `mul_ru` round upward with integers: no mode, no scope.
+Its runner is the same file built with `KAIRN_UPWARD_RUNNER_EMULATED` (`kairn-emulated-upward-runner`,
+`max_nl` in the form `--max` says, `MAXPD`'s by default). `full.crosscheck.emulated.upward_K` runs it
+on 2 000 random cases of `fp:8:-14:1` (`KAIRN_EMULATED_CASES`), judged by the oracle and the
+interpreter's bytes (`--interp`); `full.crosscheck.emulated.same_lines` (`same_lines.py
+--upward-runner`) on 100 requests of every kernel of the family in both forms of `max_nl`, the
+interpreter's bytes. The generator's suite compares it with the interpreter on every canonical state
+of the quick formats in both forms (`gen/tests/test_upward_cxx.py`, `Emulated`). **A finding of
+MSVC:** built by MSVC 19.5x at `/O2`, the emulated `upward_intersection_1` returns, on some lines,
+the lane of the other operand (`(0x1.46p+6, 0x1p-14)` and `(0x1.4p-11, 0x1.14p+7)` give `zn` =
+`0x1.14p+7` for `0x1p-14`), which the comparison with the interpreter and the oracle fail; at `/O1`
+and `/Od`, and at `/O2` with the 24 emulated kernels `__declspec(noinline)`, every line is right,
+and every compiled runner of the family, on `double` and `float`, is right at every level. It is the
+miscompilation of [The emulated formats](#the-emulated-formats) (a selection of a struct of a
+`uint64_t` and an `int`, inlined at `/O2`), met in another kernel.
+
+**The oracle's judgment of every case** (the gate of the generator's suite of the design page:
+every kernel through the interpreter on every pair of canonical states of the formats of the
+statements of precision 1 to 4, both forms of `max_nl`). The cases are the generator's suite's
+(`gen/tests/test_upward.py`, `inputs()`: every canonical state with its zeros of both signs, 253
+states in `fp:2:-2:1` against the oracle enumeration's 230, every canonical default interval, every
+value of a number); a **piece** is the cases whose first operand is one of a range of the first
+group's, about two million lines, completed by the interpreter in a worker process and judged by a
+process of the oracle's `check --fail-on-suspicious --expect-valid` of its own (`oracle_jobs`,
+`oracle_piece`). `test_upward.Exhaustive.test_the_oracle` runs the pieces of the quick formats side
+by side in the quick suite (about a million lines, 15 seconds on the Mac with four jobs), and those
+of precision 3 with `--full` (160 million). `tests/brute/upward.py` runs every format of precision 1
+to 4: 243 kernels, formats and forms, 5 345 305 871 lines in 2 879 pieces, 5.2 billion of them at
+precision 4 (`fp:4:-6:1`, `fp:4:-7:2`: 10 731 and 15 931 states). It keeps a summary and a record
+per piece, starts only the pieces without one, so that a run stopped resumes, rewrites a status file
+after each piece, and `collect` requires every case of every kernel, format and form once, judged
+and passed, no invalid or suspicious line and every claim applied, and merges the summaries with the
+oracle (`tests/brute/README.md`, "The round-up interval"). Two pieces at once judged 117 000 lines a
+second on the Mac; 23 at once 430 000 on the second socket of the Linux machine.
+
+**The guards** (`full.tools.crosscheck.guards.UpwardGuards`): a random run of a kernel of the family
+must list the strata of the family `upward` (chosen before the interval families) and have a case
+of each; each class of the kinds of the interval kernels and of the enclosure interface the guards
+ask of its entries (on the states as stored) must have been seen; good runs of 17 kernels and four
+enumerations pass, and each class taken out, each stratum left out of a run, and a run too short
+for the driver, fail. The guards ask nothing of `same_set` (the conversions) and of the classes of a
+number (`number t: finite`, `infinite`, `NaN`) beyond the strata `empty` and `numspecial`, which
+put those cases in every random run.
+
+**The brute force** (`tests/brute/brute.py`) runs the family's kernels in its compiled part through
+the runners of their family that each build produces (`kairn-gen-upward-runner*`: the three forms
+and the full tier's flag sets) and no other runner through them; its interpreter's and emulated
+parts leave the family to `tests/brute/upward.py` and to the tests above.
+
+**Faults planted** (`tests/kernel_mutants.py --upward`): one statement of the two-number form of
+`include/kairn/gen/upward.hpp` changed in its double and float code (the default run's changes
+that apply, and a negation dropped, `!=` made `==`, `&` and `|` exchanged, the operands of a maximum
+exchanged, the NaN constant made an infinity): 190 mutants of the 24 kernels, each built into three
+two-number runners at `-O3` (as they stand, `-ffp-contract=off`, `=fast`) and put through the
+cross-checks of each tier's cases, and with `--bits` through the comparison of `test_upward_cxx.py`.
+On the Mac with Apple clang 21 (`--jobs 4 --bits c++`, results in `results/upward/mutants.json`):
+the quick tier's 2 000 cases catch 178, the full tier's 20 000 the same 178 and no other, and the
+comparison with the interpreter catches all 190. The 12 that only the comparison catches are a `>`
+made `>=` in a maximum or a minimum (`upward_hull_1`, `upward_intersection_1`, `upward_mul_1`,
+`upward_mul_num_1`): on equal operands it takes the other one, which differs only in the sign of a
+zero, which no claim states. Every negation dropped, sum made a difference, operand dropped, NaN test
+inverted, `&` or `|` exchanged, selection exchanged, NaN constant made an infinity and maximum with
+its operands exchanged (the one that returns the NaN) fails the cross-checks of both tiers.
 
 ## The round-up interval's environment
 
@@ -3696,12 +3814,12 @@ driver:
 
 | Workflow | Jobs |
 |---|---|
-| `build.yml`, "Build and test" | The quick tier: configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), Linux arm64 with GCC and with Clang (NEON), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2) |
-| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler, and the tools' own tests but the generator's (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, the [flag sets](#flag-sets), the object code on the whole flag matrix, the adversarial search, and the tests labelled `tools`), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
+| `build.yml`, "Build and test" | The quick tier: configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), Linux arm64 with GCC and with Clang (NEON), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2), the two Windows jobs with `-DKAIRN_UPWARD_TESTS=OFF`; and "Windows x64, upward", with MSVC and with clang-cl, which builds the target `kairn-upward-tests` alone and runs the tests labelled `upward` of the quick tier and those of the full tier that depend on the compiler ([The round-up interval](#the-round-up-interval)) |
+| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler, and the tools' own tests but the generator's (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, the [flag sets](#flag-sets), the object code on the whole flag matrix, the adversarial search, and the tests labelled `tools`), on the same seven platforms and compilers, configured and built as in `build.yml` (the Windows jobs with `-DKAIRN_UPWARD_TESTS=OFF`, the round-up interval's being the job "Windows x64, upward" of `build.yml`); and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
 | `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang, each as two jobs of every second test (`--shard 1/2`, `--shard 2/2`: as one job the suite took 58 of its 60 minutes on the hosted macOS runner at the end of Milestone 2 and was cancelled once, and on 2026-11-22 the job of GCC on Linux x86-64 took 33 to 59 minutes from one run to the next and was cancelled in a third), each job printing its 25 slowest tests (`--durations 25`); and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` and `full.tools.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs; what the audit printed is kept as the run's artifact `proof-audit` |
 | `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, Doxygen 1.18.0 on `docs/Doxyfile` with warnings as errors into the site's `api/`, `docs/tools/check_links.py`; the built site is kept as the run's artifact `site`, and on a push to `main` published at <https://danielepanozzo.github.io/kairn/> |
-| `nightly.yml`, "Nightly brute force" | Every night, not on a push: `tests/brute/brute.py` for 100 minutes per job on Linux x86-64 and arm64 (GCC and Clang), macOS arm64 (Apple clang) and Windows x64 (MSVC and clang-cl), every kernel on new random cases (the seed is the number of the run) through every runner of the quick tier, and one job that enumerates one fortieth of the toy-format domains of the plan, a different one each night, and runs the same fortieth of the plan's emulated part (it builds `kairn-emulated-runner` alone, [The emulated formats](#the-emulated-formats)); each job fails on a violated claim or a failed guard and keeps its summary as an artifact. A pull request that changes the workflow or the driver runs it for a few minutes on a few kernels |
+| `nightly.yml`, "Nightly brute force" | Every night, not on a push: `tests/brute/brute.py` for 100 minutes per job on Linux x86-64 and arm64 (GCC and Clang), macOS arm64 (Apple clang) and Windows x64 (MSVC and clang-cl), every kernel on new random cases (the seed is the number of the run) through every runner of the quick tier (the round-up interval's through the runners of its family alone), and one job that enumerates one fortieth of the toy-format domains of the plan, a different one each night, and runs the same fortieth of the plan's emulated part (it builds `kairn-emulated-runner` alone, [The emulated formats](#the-emulated-formats)); each job fails on a violated claim or a failed guard and keeps its summary as an artifact. A pull request that changes the workflow or the driver runs it for a few minutes on a few kernels |
 
 Every test of the full tier thus runs on every push and pull request: a test that depends on the
 compiler with every compiler, a test in exact arithmetic once, and the generator's tests, which
