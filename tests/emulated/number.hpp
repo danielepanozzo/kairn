@@ -15,7 +15,8 @@
 // The generated kernels for this type (tests/emulated/gen/kernels.hpp, written by
 // python3 gen/kairn-gen build through the printer of include/kairn/gen/scalar.hpp) use exactly the
 // operations declared here: + - * and the comparisons, fma_rn, abs_bits, next_up_bits,
-// next_down_bits, times_inf_ce, the constants of the format (constant), the test of constant
+// next_down_bits, times_inf_ce (and those of the round-up interval, tests/emulated/gen/upward.hpp:
+// add_ru, mul_ru, unord, max_nl), the constants of the format (constant), the test of constant
 // evaluation (constant_evaluation: a mode of the runner here, since nothing of this type is
 // evaluated at compile time), the conversions of a count (a std::size_t), and copies through a
 // volatile object (the ends of the ball vectors).
@@ -118,6 +119,21 @@ Number next_up_bits(Number a) noexcept;                // IEEE 754 nextUp in the
 Number next_down_bits(Number a) noexcept;              // IEEE 754 nextDown in the format
 Number times_inf_ce(Number t) noexcept;                // t times +infinity, from comparisons
 Number pow2(int k) noexcept;                           // RN(2^k) in the format
+
+// The operations of the round-up interval (docs/developer/design/upward.md, "The interpreter and
+// the emulated formats"), for the kernels of tests/emulated/gen/upward.hpp: the sum and the product
+// rounded toward +infinity in the format with overflow (a finite result above the largest number is
+// +infinity, one below minus the largest is minus the largest; an exact zero sum of operands of
+// opposite signs is +0, a negative result above -eta is -0), a NaN test, and the greater of two in
+// which a NaN first operand loses, in the machine form the runner sets: MAXPD's a > b ? a : b
+// (sel, the default) or FMAXNM's on quiet NaNs (nm).
+Number add_ru(Number a, Number b) noexcept;   // RU(a + b), one rounding
+Number mul_ru(Number a, Number b) noexcept;   // RU(ab), one rounding
+bool unord(Number a, Number b) noexcept;      // a or b is a NaN
+Number max_nl(Number a, Number b) noexcept;   // max_sel or max_num of the interpreter
+enum class MaxForm { sel, nm };
+void set_max_form(MaxForm form) noexcept;
+MaxForm max_form() noexcept;
 
 // The constants of the generated kernels in the current format: constant(i) is the value of the
 // i-th of the constants that tests/emulated/gen/kernels.hpp lists, which the runner loads for each

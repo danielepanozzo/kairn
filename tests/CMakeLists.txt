@@ -292,6 +292,31 @@ foreach(_kind scalar packed)
   endforeach()
 endforeach()
 
+# The runners of the round-up interval (gen/tests/upward_runner.cpp; docs/developer/design/upward.md,
+# "Tests and CI"), for crosscheck.compiled.upward_*: the kernels of include/kairn/gen/upward.hpp
+# with this build's compiler and flags and the option of kairn::upward, each holding an upward scope
+# around its evaluations: in the form the target chooses (one register), the same with the array
+# forms of the six kernels that have one (with the packed backend's option, as the packed runner),
+# and the two-number form with its loop of arrays. Built when KAIRN_UPWARD_TESTS is on.
+set(_upward_compiled "")
+if(KAIRN_UPWARD_TESTS AND EXISTS "${PROJECT_SOURCE_DIR}/gen/tests/upward_runner.cpp")
+  foreach(_variant register arrays numbers)
+    set(_target kairn-gen-upward-runner-${_variant})
+    add_executable(${_target} "${PROJECT_SOURCE_DIR}/gen/tests/upward_runner.cpp")
+    target_include_directories(${_target} PRIVATE "${PROJECT_SOURCE_DIR}/gen/tests")
+    target_link_libraries(${_target} PRIVATE kairn::upward kairn::fma)
+    target_compile_options(${_target} PRIVATE ${_warnings})
+    if(_variant STREQUAL "arrays")
+      target_compile_options(${_target} PRIVATE ${_isa_option})
+      target_compile_definitions(${_target} PRIVATE KAIRN_UPWARD_RUNNER_ARRAYS)
+    elseif(_variant STREQUAL "numbers")
+      target_compile_definitions(${_target} PRIVATE KAIRN_UPWARD_FORM=KAIRN_UPWARD_FORM_NUMBERS
+        KAIRN_UPWARD_RUNNER_ARRAYS)
+    endif()
+    list(APPEND _upward_compiled --runner "upward-${_variant}" "$<TARGET_FILE:${_target}>")
+  endforeach()
+endif()
+
 # --- The emulated formats (begin) ---------------------------------------------------------------
 #
 # tests/emulated/number.hpp is a floating-point type of a format chosen at run time, computed with
@@ -1124,8 +1149,21 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       set(_full_${_kernel}_emulated_exhaustive OFF)
     endif()
 
-    # The compiled runners, on random cases of every stratum.
-    if(_compiled)
+    # The compiled runners, on random cases of every stratum. A kernel of the round-up interval
+    # ("rounding": "upward") has runners of its own (_upward_compiled) and the cases of an interval
+    # kernel, with the label upward, when KAIRN_UPWARD_TESTS is on, and no such test otherwise.
+    string(JSON _rounding ERROR_VARIABLE _no_rounding GET "${_claims}" kernels ${_i} rounding)
+    if(_rounding STREQUAL "upward")
+      if(_upward_compiled)
+        foreach(_format binary64 binary32)
+          set(_name crosscheck.compiled.${_kernel}.${_format})
+          add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_compiled} --format ${_format}
+            --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES}"
+            --summary "${_summaries}/${_name}.json" ${_upward_compiled})
+          set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled;upward")
+        endforeach()
+      endif()
+    elseif(_compiled)
       set(_quick_args ${_random_quick_args})
       if(_kernel IN_LIST _interval_kernels OR _kernel IN_LIST _enclosure_kernels)
         set(_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES}")
