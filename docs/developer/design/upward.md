@@ -1324,9 +1324,10 @@ started. Every answer is a choice of the authors, listed with the others for the
    README's list, named "The round-up interval", with no milestone number; the version 0.4.0.
 8. **MSVC and DLLs**: the tests get a case with the scope in the program and the operations in a DLL.
    Until it passes in CI, the concept page asks that the scopes and the operations be in the same
-   module, and says that the other arrangement is not supported. (Since 2026-11-26: the case,
-   `api.upward.dll`, passed on the Windows test machine, not yet in CI; the concept page says what
-   it tests, supports that one arrangement as tested, and no other split between two modules.)
+   module, and says that the other arrangement is not supported. (Since 2026-11-27: the case,
+   `api.upward.dll`, passes on the Windows test machine and in CI, in the job "Windows x64, upward"
+   with MSVC; the concept page says what it tests, supports that one arrangement as tested, and no
+   other split between two modules.)
 9. **The names** are those of [Choices of the authors](#choices-of-the-authors), item 1.
 
 ## References

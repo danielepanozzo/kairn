@@ -2565,7 +2565,10 @@ runners: about a minute and a half more to build and four more to test in the jo
 upward" with MSVC, some 18 to 21 minutes of its 30, and, with its six sets to MSVC's four, a little
 more with clang-cl, whose job was not timed here; on Linux and macOS about a minute more to build in
 each job of `build.yml` and `full.yml`, and two to three minutes of test time spread over the shards
-of `full.yml`.
+of `full.yml`. The hosted runners then took less than that rule says: at the first run of the job
+(2026-11-27), 7 minutes 38 seconds with MSVC 19.52 (the quick tier's 154 tests labelled `upward` in
+58 seconds, the full tier's 181 in 175) and 6 minutes 1 second with clang-cl 20.1.8, which had never
+compiled the header before (152 tests in 45 seconds, 187 in 155); every test passed.
 `tests/brute/upward.py` judged 430 000 lines a second with 46 processes on the second socket of the
 Linux machine, and the 190 mutants of `kernel_mutants.py --upward` took 55 minutes with four jobs on
 the Mac.
