@@ -28,7 +28,8 @@
    - add_num_lane: one lane of add_num_r, lines 578-591, for a finite number t (lane 0
      adds t, lane 1 adds -t), without its special cases (lines 584-589).
 
-   What is proved, for every precision prec >= 1 and every emin (no other hypothesis):
+   What is proved, for every precision prec >= 1 and every emin (items 1 to 5; item 6 needs
+   prec >= 6):
    1. fast2sum_first_exact: for a, b in F with |b| <= |a| and ANY rounding o of Flocq
       (Valid_rnd: RU, RD, RZ, RN with any tie rule), o(a + b) - a is in F. This is the
       exactness of the first two operations of Fast2Sum in a directed mode; the header
@@ -44,6 +45,15 @@
       upper-normalized, for ALL real inputs (add_r_upper, add_r_normalized,
       add_lean_upper, add_lean_normalized); add_r_correct states it in the brief's words,
       for upper-normalized inputs of F.
+   5. two_sum_nonpos_exact: for a, b <= 0 in F, s + t = a + b exactly (the error of a sum
+      rounded toward zero of two numbers of the same sign is a number of F).
+   6. add_r_excess (the brief's stretch goal), for prec >= 6 and upper-normalized inputs
+      of F, with x + y the exact sum, u = 2^-prec and eta = 2^emin:
+        zh + zl - (x + y) <= 64 u^2 |x + y| + 16 eta.
+      The constant is not sharp (the checks measured at most 6 u^2); the proof bounds each
+      rounding by one step of the format and splits on Sterbenz's lemma twice: either the
+      heads' sum is exact (then the first, second and third errors vanish), or the heads
+      do not cancel (|xh| + |yh| <= 3 |xh + yh|).
 
    Why normalization needs no order of the operands (the point that the header's comments
    do not make): with s = RU(a + b) >= a + b, the number a - s is at most -b, which is in F,
@@ -55,6 +65,129 @@ From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core Plus_error Mult_error Sterbenz.
 From Kairn Require Import Format.
 Open Scope R_scope.
+
+(** * The arithmetic of the excess bound (statement 4), on real numbers only *)
+
+(* Here u stands for 2^-prec and eta for 2^emin; the products are written out so that
+   lra sees only linear combinations of monomials. The meaning of the variables is given
+   at add_r_excess below. All cases: the excess is at most 6 eta + 2 u (a1 + ... + a6),
+   which is bounded in terms of X = |xh + yh| and L = |xl + yl|. *)
+Lemma excess_master_arith :
+  forall u eta X L a1 a2 a3 a4 a5 a6 sg om : R,
+  0 < u -> u <= / 64 -> 0 <= eta -> 0 <= X -> 0 <= L ->
+  0 <= a1 -> 0 <= a2 -> 0 <= a3 -> 0 <= a4 -> 0 <= a5 -> 0 <= a6 -> 0 <= sg -> 0 <= om ->
+  a1 <= eta + 2 * u * X -> a2 <= eta + 2 * u * L -> a3 <= a1 + L ->
+  sg <= X + a1 + a3 -> a4 <= eta + 2 * u * sg -> a5 <= a2 + a4 ->
+  om <= sg + a4 + a5 -> a6 <= eta + 2 * u * om ->
+  6 * eta + 2 * u * (a1 + a2 + a3 + a4 + a5 + a6) <= 22 * (u * u) * X + 3 * u * L + 7 * eta.
+Proof.
+intros u eta X L a1 a2 a3 a4 a5 a6 sg om Hu Hu64 He HX HL H1 H2 H3 H4 H5 H6 Hsg Hom
+  B1 B2 B3 B4 B5 B6 B7 B8.
+assert (U0 : 0 <= u) by lra.
+assert (UU : 0 <= u * u) by (apply Rmult_le_pos; lra).
+assert (PX : u * X <= / 64 * X) by (apply Rmult_le_compat_r; lra).
+assert (PL : u * L <= / 64 * L) by (apply Rmult_le_compat_r; lra).
+assert (Psg : u * sg <= / 64 * sg) by (apply Rmult_le_compat_r; lra).
+assert (Pe : u * eta <= / 64 * eta) by (apply Rmult_le_compat_r; lra).
+assert (SG : sg <= 17 / 16 * X + L + 2 * eta) by lra.
+assert (A4 : a4 <= eta + / 32 * sg) by lra.
+assert (OM : om <= 17 / 16 * sg + 3 * eta + / 32 * L) by lra.
+assert (Q1 : u * a1 <= u * (eta + 2 * u * X)) by (apply Rmult_le_compat_l; lra).
+assert (Q2 : u * a2 <= u * (eta + 2 * u * L)) by (apply Rmult_le_compat_l; lra).
+assert (Q3 : u * a3 <= u * (a1 + L)) by (apply Rmult_le_compat_l; lra).
+assert (Q4 : u * a4 <= u * (eta + 2 * u * sg)) by (apply Rmult_le_compat_l; lra).
+assert (Q5 : u * a5 <= u * (a2 + a4)) by (apply Rmult_le_compat_l; lra).
+assert (Q6 : u * a6 <= u * (eta + 2 * u * om)) by (apply Rmult_le_compat_l; lra).
+assert (R1 : u * u * sg <= u * u * (17 / 16 * X + L + 2 * eta)) by (apply Rmult_le_compat_l; lra).
+assert (R2 : u * u * om <= u * u * (17 / 16 * sg + 3 * eta + / 32 * L))
+  by (apply Rmult_le_compat_l; lra).
+assert (S1 : u * u * L <= / 64 * (u * L)).
+{ replace (u * u * L) with (u * (u * L)) by ring. apply Rmult_le_compat_r; [|lra].
+  apply Rmult_le_pos; lra. }
+assert (S2 : u * u * eta <= / 64 * (u * eta)).
+{ replace (u * u * eta) with (u * (u * eta)) by ring. apply Rmult_le_compat_r; [|lra].
+  apply Rmult_le_pos; lra. }
+assert (N1 : 0 <= u * u * X) by (apply Rmult_le_pos; lra).
+assert (N2 : 0 <= u * L) by (apply Rmult_le_pos; lra).
+assert (N3 : 0 <= u * eta) by (apply Rmult_le_pos; lra).
+assert (N4 : 0 <= u * u * eta) by (apply Rmult_le_pos; lra).
+assert (N5 : 0 <= u * u * L) by (apply Rmult_le_pos; lra).
+assert (N6 : 0 <= u * u * sg) by (apply Rmult_le_pos; lra).
+lra.
+Qed.
+
+(* The case |xh| + |yh| <= 3 |xh + yh|: then L <= 4 eta + 9 u X, and X <= S + L for
+   S = |x + y|. *)
+Lemma excess_big_arith :
+  forall u eta X L S E : R,
+  0 < u -> u <= / 64 -> 0 <= eta -> 0 <= X -> 0 <= L -> 0 <= S ->
+  E <= 22 * (u * u) * X + 3 * u * L + 7 * eta ->
+  L <= 4 * eta + 9 * u * X -> X <= S + L ->
+  E <= 64 * (u * u) * S + 16 * eta.
+Proof.
+intros u eta X L S E Hu Hu64 He HX HL HS HE HLX HXS.
+assert (UU : 0 <= u * u) by (apply Rmult_le_pos; lra).
+assert (Q1 : u * L <= u * (4 * eta + 9 * u * X)) by (apply Rmult_le_compat_l; lra).
+assert (Q2 : u * u * X <= u * u * (S + 4 * eta + 9 * u * X)) by (apply Rmult_le_compat_l; lra).
+assert (S1 : u * (u * u * X) <= / 64 * (u * u * X)).
+{ apply Rmult_le_compat_r; [apply Rmult_le_pos; lra | lra]. }
+assert (Pe : u * eta <= / 64 * eta) by (apply Rmult_le_compat_r; lra).
+assert (S2 : u * u * eta <= / 64 * (u * eta)).
+{ replace (u * u * eta) with (u * (u * eta)) by ring. apply Rmult_le_compat_r; [|lra].
+  apply Rmult_le_pos; lra. }
+assert (N1 : 0 <= u * u * X) by (apply Rmult_le_pos; lra).
+assert (N2 : 0 <= u * u * S) by (apply Rmult_le_pos; lra).
+assert (N3 : 0 <= u * eta) by (apply Rmult_le_pos; lra).
+assert (N4 : 0 <= u * u * eta) by (apply Rmult_le_pos; lra).
+lra.
+Qed.
+
+(* The case where xh + yh is exact and s + t is not, with P = |s + t| and F = |f|. *)
+Lemma excess_exact_heads_arith :
+  forall u eta P F S a4 a5 om a6 E : R,
+  0 < u -> u <= / 64 -> 0 <= eta -> 0 <= P -> 0 <= F -> 0 <= S ->
+  0 <= a4 -> 0 <= a5 -> 0 <= om -> 0 <= a6 ->
+  a4 <= eta + 2 * u * P -> F <= eta + 2 * u * (3 * P + F) -> a5 <= F + a4 ->
+  om <= P + a4 + a5 -> a6 <= eta + 2 * u * om ->
+  E <= 3 * eta + 2 * u * (a4 + a5 + a6) -> P <= S + F ->
+  E <= 64 * (u * u) * S + 16 * eta.
+Proof.
+intros u eta P F S a4 a5 om a6 E Hu Hu64 He HP HF HS H4 H5 H6 H7 B4 BF B5 B6 B7 HE HPS.
+assert (UU : 0 <= u * u) by (apply Rmult_le_pos; lra).
+assert (PP : u * P <= / 64 * P) by (apply Rmult_le_compat_r; lra).
+assert (PF : u * F <= / 64 * F) by (apply Rmult_le_compat_r; lra).
+assert (Pe : u * eta <= / 64 * eta) by (apply Rmult_le_compat_r; lra).
+assert (Pom : u * om <= / 64 * om) by (apply Rmult_le_compat_r; lra).
+assert (F1 : 31 / 32 * F <= eta + 6 * u * P) by lra.
+assert (OM : om <= 2 * P + 5 * eta) by lra.
+assert (Q4 : u * a4 <= u * (eta + 2 * u * P)) by (apply Rmult_le_compat_l; lra).
+assert (Q5 : u * a5 <= u * (F + a4)) by (apply Rmult_le_compat_l; lra).
+assert (QF : u * (31 / 32 * F) <= u * (eta + 6 * u * P)) by (apply Rmult_le_compat_l; lra).
+assert (Q6 : u * a6 <= u * (eta + 2 * u * om)) by (apply Rmult_le_compat_l; lra).
+assert (Qom : u * u * om <= u * u * (P + a4 + a5)) by (apply Rmult_le_compat_l; lra).
+assert (Qa4 : u * u * a4 <= u * u * (eta + 2 * u * P)) by (apply Rmult_le_compat_l; lra).
+assert (Qa5 : u * u * a5 <= u * u * (F + a4)) by (apply Rmult_le_compat_l; lra).
+assert (QF2 : u * u * (31 / 32 * F) <= u * u * (eta + 6 * u * P))
+  by (apply Rmult_le_compat_l; lra).
+assert (QP : u * u * P <= u * u * (S + F)) by (apply Rmult_le_compat_l; lra).
+assert (T1 : u * (u * u * P) <= / 64 * (u * u * P)).
+{ apply Rmult_le_compat_r; [apply Rmult_le_pos; lra | lra]. }
+assert (T2 : u * u * eta <= / 64 * (u * eta)).
+{ replace (u * u * eta) with (u * (u * eta)) by ring. apply Rmult_le_compat_r; [|lra].
+  apply Rmult_le_pos; lra. }
+assert (T3 : u * (u * u * eta) <= / 64 * (u * u * eta)).
+{ apply Rmult_le_compat_r; [apply Rmult_le_pos; lra | lra]. }
+assert (N1 : 0 <= u * u * P) by (apply Rmult_le_pos; lra).
+assert (N2 : 0 <= u * u * S) by (apply Rmult_le_pos; lra).
+assert (N3 : 0 <= u * eta) by (apply Rmult_le_pos; lra).
+assert (N4 : 0 <= u * u * eta) by (apply Rmult_le_pos; lra).
+assert (N5 : 0 <= u * u * F) by (apply Rmult_le_pos; lra).
+assert (N6 : 0 <= u * F) by (apply Rmult_le_pos; lra).
+assert (N7 : 0 <= u * u * a4) by (apply Rmult_le_pos; lra).
+assert (N8 : 0 <= u * u * a5) by (apply Rmult_le_pos; lra).
+assert (N9 : 0 <= u * (u * u * P)) by (apply Rmult_le_pos; lra).
+lra.
+Qed.
 
 Section Model.
 Variable emin prec : Z.
@@ -535,6 +668,311 @@ intros h l t. unfold add_num_lane. destruct (two_sum h t) as [s e].
 apply two_sum_normalized. unfold add_up. apply RU_fmt.
 Qed.
 
+(** * Stretch: the excess of the sum kernel over the exact sum *)
+
+Notation u := (bpow radix2 (- prec)).
+Notation eta := (bpow radix2 emin).
+
+(* The gap of the format at z is at most max(eta, 2 u |z|) (the library's
+   Directed2.ulp_le_max, repeated here so that this file needs only Format.v). *)
+Lemma ulp_le_max : forall z, ulp radix2 fexp z <= Rmax eta (2 * u * Rabs z).
+Proof.
+intros z. destruct (Rle_or_lt (bpow radix2 (emin + prec - 1)) (Rabs z)) as [H|H].
+- apply Rle_trans with (2 := Rmax_r _ _).
+  apply Rle_trans with (Rabs z * bpow radix2 (1 - prec)); [now apply ulp_FLT_le|].
+  right. replace (1 - prec)%Z with (1 + - prec)%Z by ring.
+  rewrite bpow_plus, pow2_1. ring.
+- apply Rle_trans with (2 := Rmax_l _ _). right.
+  apply ulp_FLT_small; auto with typeclass_instances.
+  apply Rlt_le_trans with (1 := H). apply bpow_le. lia.
+Qed.
+
+(* Rounding up moves z by at most eta + 2 u |z|. *)
+Lemma gap_bound : forall z, 0 <= RU z - z <= eta + 2 * u * Rabs z.
+Proof.
+intros z. assert (G : z <= RU z) by apply RU_ge. split; [lra|].
+generalize (error_le_ulp radix2 fexp Zceil z). intros E.
+rewrite Rabs_pos_eq in E by lra.
+assert (P : 0 <= 2 * u * Rabs z).
+{ apply Rmult_le_pos; [generalize (bpow_gt_0 radix2 (- prec)); lra | apply Rabs_pos]. }
+assert (P' : 0 < eta) by apply bpow_gt_0.
+generalize (ulp_le_max z). unfold Rmax. destruct (Rle_dec eta (2 * u * Rabs z)); lra.
+Qed.
+
+Lemma RU_of_nonpos : forall z, z <= 0 -> z <= RU z <= 0.
+Proof. intros z H. split; [apply RU_ge | apply RU_nonpos; exact H]. Qed.
+
+Lemma two_sum_spec : forall a b s t, format a -> format b -> two_sum a b = (s, t) ->
+  s = RU (a + b) /\ t = RU (a + b - s).
+Proof.
+intros a b s t Fa Fb E.
+generalize (two_sum_fst a b) (two_sum_error a b Fa Fb). rewrite E. cbn [fst snd].
+intros H1 H2. split; assumption.
+Qed.
+
+Lemma two_sum_nonpos_spec : forall a b s t, format a -> format b -> a <= 0 -> b <= 0 ->
+  two_sum_nonpos a b = (s, t) -> s = RU (a + b) /\ t = RU (a + b - s).
+Proof.
+intros a b s t Fa Fb Ha Hb E.
+generalize (two_sum_nonpos_fst a b) (two_sum_nonpos_error a b Fa Fb Ha Hb). rewrite E.
+cbn [fst snd]. intros H1 H2. split; assumption.
+Qed.
+
+(* A sum of two numbers of F is exact (Sterbenz), or it does not cancel much. *)
+Lemma sum_exact_or_big : forall a b, format a -> format b ->
+  format (a + b) \/ Rabs a + Rabs b <= 3 * Rabs (a + b).
+Proof.
+intros a b Fa Fb.
+destruct (Rle_or_lt 0 a) as [Ha|Ha]; destruct (Rle_or_lt 0 b) as [Hb|Hb].
+- right. rewrite 3!Rabs_pos_eq by lra. lra.
+- destruct (Rle_or_lt a (2 * - b)) as [H1|H1];
+    [destruct (Rle_or_lt (- b) (2 * a)) as [H2|H2]|].
+  + left. replace (a + b) with (a - - b) by ring. apply sterbenz; auto with typeclass_instances.
+    * now apply generic_format_opp.
+    * lra.
+  + right. rewrite (Rabs_pos_eq a), (Rabs_left b), (Rabs_left (a + b)) by lra. lra.
+  + right. rewrite (Rabs_pos_eq a), (Rabs_left b), (Rabs_pos_eq (a + b)) by lra. lra.
+- destruct (Rle_or_lt b (2 * - a)) as [H1|H1];
+    [destruct (Rle_or_lt (- a) (2 * b)) as [H2|H2]|].
+  + left. replace (a + b) with (b - - a) by ring. apply sterbenz; auto with typeclass_instances.
+    * now apply generic_format_opp.
+    * lra.
+  + right. rewrite (Rabs_left a), (Rabs_pos_eq b), (Rabs_left (a + b)) by lra. lra.
+  + right. rewrite (Rabs_left a), (Rabs_pos_eq b), (Rabs_pos_eq (a + b)) by lra. lra.
+- right. rewrite 3!Rabs_left by lra. lra.
+Qed.
+
+(* For a, b <= 0 the error of RU(a + b) is a number of F: RU rounds toward zero there,
+   and the error is a multiple of the spacing at b no larger than |b|. *)
+Lemma nonpos_error_exact_aux : forall a b, format a -> format b -> a <= 0 -> b <= 0 ->
+  Rabs b <= Rabs a -> format (a + b - RU (a + b)).
+Proof.
+intros a b Fa Fb Ha Hb Hab.
+destruct (Req_dec b 0) as [Zb|Zb].
+{ subst b. rewrite Rplus_0_r, (RU_id a Fa). replace (a - a) with 0 by ring.
+  apply generic_format_0. }
+assert (Ht1 : RU (a + b) <= a) by (apply RU_least; [exact Fa | lra]).
+assert (Ht2 : a + b <= RU (a + b)) by apply RU_ge.
+assert (Mb : (mag radix2 b <= mag radix2 a)%Z) by (apply mag_le_abs; assumption).
+assert (Mt : (mag radix2 b <= mag radix2 (RU (a + b)))%Z).
+{ apply mag_le_abs; [exact Zb|]. rewrite (Rabs_left1 (RU (a + b))) by lra.
+  rewrite (Rabs_left1 a) in Hab by lra. lra. }
+assert (Ka : (cexp radix2 fexp b <= cexp radix2 fexp a)%Z) by (unfold cexp, FLT_exp; lia).
+assert (Kt : (cexp radix2 fexp b <= cexp radix2 fexp (RU (a + b)))%Z)
+  by (unfold cexp; apply monotone_exp; [auto with typeclass_instances | exact Mt]).
+destruct (ex_shift radix2 fexp b (cexp radix2 fexp b) Fb (Z.le_refl _)) as [mb Hmb].
+destruct (ex_shift radix2 fexp a (cexp radix2 fexp b) Fa Ka) as [ma Hma].
+destruct (ex_shift radix2 fexp (RU (a + b)) (cexp radix2 fexp b) (RU_fmt _) Kt) as [mt Hmt].
+assert (E : a + b - RU (a + b) = IZR (ma + mb - mt) * bpow radix2 (cexp radix2 fexp b)).
+{ rewrite minus_IZR, plus_IZR, Rmult_minus_distr_r, Rmult_plus_distr_r, <- Hma, <- Hmb, <- Hmt.
+  reflexivity. }
+rewrite E. apply (format_multiple emin prec).
+- unfold cexp. unfold FLT_exp. apply Z.le_max_r.
+- rewrite <- E. rewrite Rabs_left1 by lra.
+  apply Rle_trans with (Rabs b). { rewrite (Rabs_left1 b) by lra. lra. }
+  apply Rlt_le, Rlt_le_trans with (1 := bpow_mag_gt radix2 b). apply bpow_le.
+  unfold cexp, FLT_exp. lia.
+Qed.
+
+Lemma nonpos_error_exact : forall a b, format a -> format b -> a <= 0 -> b <= 0 ->
+  format (a + b - RU (a + b)).
+Proof.
+intros a b Fa Fb Ha Hb.
+destruct (Rle_or_lt (Rabs b) (Rabs a)) as [H|H].
+- now apply nonpos_error_exact_aux.
+- rewrite (Rplus_comm a b). apply nonpos_error_exact_aux; trivial. lra.
+Qed.
+
+(* So the second limbs' two-sum of the kernel is exact: t + f = xl + yl. *)
+Theorem two_sum_nonpos_exact : forall a b, format a -> format b -> a <= 0 -> b <= 0 ->
+  fst (two_sum_nonpos a b) + snd (two_sum_nonpos a b) = a + b.
+Proof.
+intros a b Fa Fb Ha Hb.
+rewrite (two_sum_nonpos_error a b Fa Fb Ha Hb), two_sum_nonpos_fst.
+rewrite (RU_id (a + b - RU (a + b))) by now apply nonpos_error_exact. ring.
+Qed.
+
+(* The second limb of an upper-normalized pair: l <= 0 and |l| <= 2 eta + 3 u |h|. *)
+Lemma tail_bound : forall h l, format h -> upper_normalized h l -> u <= / 64 ->
+  l <= 0 /\ - l <= 2 * eta + 3 * u * Rabs h.
+Proof.
+intros h l Fh N Hu.
+destruct (proj1 (upper_normalized_iff h l Fh) N) as [Hl _].
+split; [exact Hl|].
+destruct (gap_bound (h + l)) as [_ G].
+unfold upper_normalized in N. rewrite <- N in G.
+assert (A : Rabs (h + l) <= Rabs h + - l).
+{ generalize (Rabs_triang h l). rewrite (Rabs_left1 l) by exact Hl. lra. }
+assert (U0 : 0 < u) by apply bpow_gt_0.
+assert (P1 : u * Rabs (h + l) <= u * (Rabs h + - l)) by (apply Rmult_le_compat_l; lra).
+assert (P2 : u * - l <= / 64 * - l) by (apply Rmult_le_compat_r; lra).
+assert (P3 : 0 <= u * Rabs h) by (apply Rmult_le_pos; [lra | apply Rabs_pos]).
+assert (P4 : 0 < eta) by apply bpow_gt_0.
+lra.
+Qed.
+
+Lemma abs_le_of : forall a d, 0 <= d -> Rabs (a + d) <= Rabs a + d.
+Proof. intros a d Hd. generalize (Rabs_triang a d). rewrite (Rabs_pos_eq d) by exact Hd. lra. Qed.
+
+(* Statement 4 of the brief: for precision at least 6 and upper-normalized inputs, the
+   excess of the kernel over the exact sum x + y is at most 64 u^2 |x + y| + 16 eta,
+   u = 2^-prec, eta = 2^emin (the term for underflow). The constant is not sharp (the
+   checks measured at most 6 u^2): every rounding is bounded by one step of its result,
+   and the cases are those of Sterbenz's lemma, without the finer analysis of the
+   published proofs for rounding to nearest. *)
+Theorem add_r_excess : (6 <= prec)%Z -> forall xh xl yh yl,
+  format xh -> format xl -> format yh -> format yl ->
+  upper_normalized xh xl -> upper_normalized yh yl ->
+  fst (add_r xh xl yh yl) + snd (add_r xh xl yh yl) - ((xh + xl) + (yh + yl))
+  <= 64 * (u * u) * Rabs ((xh + xl) + (yh + yl)) + 16 * eta.
+Proof.
+intros Hp xh xl yh yl Fxh Fxl Fyh Fyl Nx Ny.
+assert (Hu : 0 < u) by apply bpow_gt_0.
+assert (Hu64 : u <= / 64).
+{ apply Rle_trans with (bpow radix2 (-6)); [apply bpow_le; lia | right; reflexivity]. }
+assert (Heta : 0 < eta) by apply bpow_gt_0.
+destruct (tail_bound xh xl Fxh Nx Hu64) as [Lx Tx].
+destruct (tail_bound yh yl Fyh Ny Hu64) as [Ly Ty].
+replace ((xh + xl) + (yh + yl)) with ((xh + yh) + (xl + yl)) by ring.
+unfold add_r.
+destruct (two_sum xh yh) as [s e] eqn:E1. cbv beta iota zeta.
+destruct (two_sum_spec xh yh s e Fxh Fyh E1) as [Hs He].
+destruct (two_sum_nonpos xl yl) as [t f] eqn:E2. cbv beta iota zeta.
+destruct (two_sum_nonpos_spec xl yl t f Fxl Fyl Lx Ly E2) as [Ht Hf].
+assert (Fs : format s) by (rewrite Hs; apply RU_fmt).
+assert (Ft : format t) by (rewrite Ht; apply RU_fmt).
+assert (Fc : format (add_up e t)) by (unfold add_up; apply RU_fmt).
+destruct (two_sum s (add_up e t)) as [v g] eqn:E3. cbv beta iota zeta.
+destruct (two_sum_spec s (add_up e t) v g Fs Fc E3) as [Hv Hg].
+assert (Fv : format v) by (rewrite Hv; apply RU_fmt).
+assert (Fw : format (add_up f g)) by (unfold add_up; apply RU_fmt).
+destruct (two_sum v (add_up f g)) as [zh zl] eqn:E4. cbn [fst snd].
+destruct (two_sum_spec v (add_up f g) zh zl Fv Fw E4) as [Hzh Hzl].
+unfold add_up in *.
+(* the gaps of the ten roundings *)
+destruct (gap_bound (xh + yh)) as [G1a G1b]. rewrite <- Hs in G1a, G1b.
+destruct (gap_bound (xl + yl)) as [G2a G2b]. rewrite <- Ht in G2a, G2b.
+destruct (gap_bound (xh + yh - s)) as [G3a G3b]. rewrite <- He in G3a, G3b.
+destruct (gap_bound (xl + yl - t)) as [G4a G4b]. rewrite <- Hf in G4a, G4b.
+destruct (gap_bound (e + t)) as [G5a G5b].
+destruct (gap_bound (s + RU (e + t))) as [G6a G6b]. rewrite <- Hv in G6a, G6b.
+destruct (gap_bound (s + RU (e + t) - v)) as [G7a G7b]. rewrite <- Hg in G7a, G7b.
+destruct (gap_bound (f + g)) as [G8a G8b].
+destruct (gap_bound (v + RU (f + g))) as [G9a G9b]. rewrite <- Hzh in G9a, G9b.
+destruct (gap_bound (v + RU (f + g) - zh)) as [G0a G0b]. rewrite <- Hzl in G0a, G0b.
+(* the signs of the second limbs *)
+assert (Se : xh + yh - s <= e <= 0) by (rewrite He; apply RU_of_nonpos; lra).
+assert (St : xl + yl <= t <= 0) by (rewrite Ht; apply RU_of_nonpos; lra).
+assert (Sc : e + t <= RU (e + t) <= 0) by (apply RU_of_nonpos; lra).
+assert (Sg : s + RU (e + t) - v <= g <= 0) by (rewrite Hg; apply RU_of_nonpos; lra).
+assert (Sf : xl + yl - t <= f <= 0) by (rewrite Hf; apply RU_of_nonpos; lra).
+assert (Sw : f + g <= RU (f + g) <= 0) by (apply RU_of_nonpos; lra).
+destruct Se as [Se1 Se2]. destruct St as [St1 St2]. destruct Sc as [Sc1 Sc2].
+destruct Sg as [Sg1 Sg2]. destruct Sf as [Sf1 Sf2]. destruct Sw as [Sw1 Sw2].
+set (c := RU (e + t)) in *. set (w := RU (f + g)) in *.
+set (X := xh + yh) in *. set (Lo := xl + yl) in *.
+assert (HLo : Lo <= 0) by (unfold Lo; lra).
+rewrite (Rabs_left1 (X - s)) in G3b by lra.
+rewrite (Rabs_left1 (Lo - t)) in G4b by lra.
+rewrite (Rabs_left1 (e + t)) in G5b by lra.
+rewrite (Rabs_left1 (s + c - v)) in G7b by lra.
+rewrite (Rabs_left1 (f + g)) in G8b by lra.
+rewrite (Rabs_left1 (v + w - zh)) in G0b by lra.
+assert (AS : Rabs s <= Rabs X + (s - X)).
+{ generalize (abs_le_of X (s - X)). replace (X + (s - X)) with s by ring. intros K.
+  apply K. lra. }
+assert (AV : Rabs v <= Rabs (s + c) + (v - (s + c))).
+{ generalize (abs_le_of (s + c) (v - (s + c))). replace (s + c + (v - (s + c))) with v by ring.
+  intros K. apply K. lra. }
+assert (ASC : Rabs (s + c) <= Rabs s + - c).
+{ generalize (Rabs_triang s c). rewrite (Rabs_left1 c) by lra. lra. }
+assert (AVW : Rabs (v + w) <= Rabs v + - w).
+{ generalize (Rabs_triang v w). rewrite (Rabs_left1 w) by lra. lra. }
+assert (ALo : Rabs Lo = - Lo) by (apply Rabs_left1; lra).
+assert (AXS : Rabs X <= Rabs (X + Lo) + - Lo).
+{ generalize (abs_le_of (X + Lo) (- Lo)). replace (X + Lo + - Lo) with X by ring. intros K.
+  apply K. lra. }
+destruct (sum_exact_or_big xh yh Fxh Fyh) as [FX|BX].
+- (* xh + yh is exact: s = X, e = 0, c = t, and t + f = Lo exactly *)
+  change (format X) in FX.
+  assert (Es : s = X) by (rewrite Hs; apply RU_id; exact FX).
+  assert (Ee : e = 0).
+  { rewrite He, Es. replace (X - X) with 0 by ring. apply round_0; auto with typeclass_instances. }
+  assert (Ec : c = t).
+  { unfold c. rewrite Ee, Rplus_0_l. apply RU_id. exact Ft. }
+  assert (Ef : f = Lo - t).
+  { rewrite Hf, Ht. apply RU_id. change (format (xl + yl - RU (xl + yl))).
+    apply nonpos_error_exact; assumption. }
+  clearbody c. subst c.
+  destruct (sum_exact_or_big s t Fs Ft) as [Fst|Bst].
+  + (* s + t is exact too: v = s + t, g = 0, w = f, and v + w = x + y *)
+    assert (Ev : v = s + t) by (rewrite Hv; apply RU_id; exact Fst).
+    assert (Eg : g = 0).
+    { rewrite Hg, Ev. replace (s + t - (s + t)) with 0 by ring.
+      apply round_0; auto with typeclass_instances. }
+    assert (Ew : w = f).
+    { unfold w. rewrite Eg, Rplus_0_r. apply RU_id. rewrite Hf. apply RU_fmt. }
+    assert (EVW : v + w = X + Lo) by (rewrite Ev, Ew, Ef, Es; ring).
+    rewrite EVW in G9b, G0b.
+    assert (Q : u * (zh - (X + Lo)) <= u * (eta + 2 * u * Rabs (X + Lo)))
+      by (apply Rmult_le_compat_l; lra).
+    assert (Pe : u * eta <= / 64 * eta) by (apply Rmult_le_compat_r; lra).
+    assert (N1 : 0 <= u * u * Rabs (X + Lo))
+      by (apply Rmult_le_pos; [apply Rmult_le_pos; lra | apply Rabs_pos]).
+    rewrite EVW in G0a. lra.
+  + (* s + t does not cancel much *)
+    rewrite Es in Bst.
+    assert (ALt : Rabs Lo <= 3 * Rabs (X + t) + - f).
+    { replace Lo with (t + f) by (rewrite Ef; ring).
+      generalize (Rabs_triang t f). rewrite (Rabs_left1 f) by lra.
+      generalize (Rabs_pos X). lra. }
+    assert (APS : Rabs (X + t) <= Rabs (X + Lo) + - f).
+    { generalize (abs_le_of (X + Lo) (- f)). replace (X + Lo + - f) with (X + t) by (rewrite Ef; ring).
+      intros K. apply K. lra. }
+    rewrite Es in *.
+    apply (excess_exact_heads_arith u eta (Rabs (X + t)) (- f) (Rabs (X + Lo))
+             (v - (X + t)) (- (f + g)) (Rabs (v + w)) (zh - (v + w))).
+    * exact Hu.
+    * exact Hu64.
+    * lra.
+    * apply Rabs_pos.
+    * lra.
+    * apply Rabs_pos.
+    * lra.
+    * lra.
+    * apply Rabs_pos.
+    * lra.
+    * exact G6b.
+    * assert (K : u * Rabs Lo <= u * (3 * Rabs (X + t) + - f)) by (apply Rmult_le_compat_l; lra).
+      lra.
+    * lra.
+    * lra.
+    * exact G9b.
+    * assert (Z1 : e - (X - X) = 0) by (rewrite Ee; ring).
+      assert (Z2 : f - (Lo - t) = 0) by (rewrite Ef; ring).
+      lra.
+    * exact APS.
+- (* |xh| + |yh| <= 3 |xh + yh| *)
+  change (Rabs xh + Rabs yh <= 3 * Rabs X) in BX.
+  assert (BL : Rabs Lo <= 4 * eta + 9 * u * Rabs X).
+  { assert (K : u * (Rabs xh + Rabs yh) <= u * (3 * Rabs X)) by (apply Rmult_le_compat_l; lra).
+    rewrite ALo. unfold Lo. lra. }
+  apply (excess_big_arith u eta (Rabs X) (Rabs Lo) (Rabs (X + Lo))).
+  + exact Hu.
+  + exact Hu64.
+  + lra.
+  + apply Rabs_pos.
+  + apply Rabs_pos.
+  + apply Rabs_pos.
+  + apply Rle_trans with (6 * eta + 2 * u * ((s - X) + (t - Lo) + - (e + t) + (v - (s + c))
+                                           + - (f + g) + (zh - (v + w)))).
+    * lra.
+    * apply (excess_master_arith u eta (Rabs X) (Rabs Lo) _ _ _ _ _ _ (Rabs (s + c)) (Rabs (v + w)));
+        try lra; try apply Rabs_pos.
+  + exact BL.
+  + lra.
+Qed.
+
 End Model.
 
 (* The assumptions of every main theorem: only the standard library's axioms of the real
@@ -558,3 +996,5 @@ Print Assumptions add_lean_upper.
 Print Assumptions add_lean_normalized.
 Print Assumptions add_num_lane_upper.
 Print Assumptions add_num_lane_normalized.
+Print Assumptions two_sum_nonpos_exact.
+Print Assumptions add_r_excess.
