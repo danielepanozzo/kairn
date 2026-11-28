@@ -198,7 +198,10 @@ $6.6\cdot 10^{-63}$ of the value against $1.5\cdot 10^{-30}$ for two limbs and $
 The excess of a bound over the exact one (2 million cases per class at `-O2`, units of $u^4 = 2^{-212}$
 relative): the accurate sum and the difference at most 2 in every class (cancellations included); the
 sloppy sum up to $9\cdot 10^4$ outside cancellation and up to $3\cdot 10^{15}$ under it; the product
-median 2-5, 99th percentile 17-37, largest 128; the square largest 91; away from underflow. Below about
+median 2-5, 99th percentile 17-37, largest 148; the square largest 93, the product by a number 37;
+away from underflow, with every compiler (the classes' operands differ slightly between compilers: the
+check program's generator has expressions that Clang contracts into fused operations and GCC does
+not). Below about
 $2^{-860}$ (the classes of tiny values and of $2^{\pm 500}$) a product's result has fewer than 212 bits
 of the format below it, and the excess is that of the best upper quadruple, which the cold path gives.
 
