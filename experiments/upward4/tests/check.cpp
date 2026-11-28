@@ -5,12 +5,13 @@
 // under rounding to nearest.
 //
 // For each class of operands (n pairs each, from a fixed seed, the same with every compiler) and each
-// operation (+ in both forms, -, the four forms of *, the square, x + t, x * t, -x, the conversions,
+// operation (+ in both forms, -, the four forms of *, the square in both forms, x + t, x * t, -x, the conversions,
 // the bounds as numbers, the predicates, the width, the functions on arrays): the result must contain
 // the exact range (exact arithmetic, ../../upward2/tests/exact.hpp) and satisfy the invariant (each
 // adjacent pair of limbs (a, b) with b <= 0 and |b| below the gap under a; zero later limbs after a
 // first limb +inf or +-MAX); the excess of each bound over the exact one, relative, in units of u^4 =
-// 2^-212, is printed (median, 99th percentile, largest), with the calls of the cold paths. Then every
+// 2^-212, is printed (median, 99th percentile, largest), with the calls of the cold paths and, per
+// operation, the share of its results that took one ("cold=", counted with KAIRN_UPWARD4_COUNT). Then every
 // pair of a list of special values, against the exact range in the extended reals (0 times infinity is
 // 0), and the answers compared with the two-limb experiment's (which follow Interval<double, 2>'s).
 // Exit status 0 when nothing failed.
@@ -224,10 +225,10 @@ struct Verdict {
     bool measured[2] = {false, false};
 };
 
-enum Op { ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG, CONV_I2, TO_I2, TO_U2, FROM_U2,
-          TO_U1, FROM_U1, BOUNDS, ARR_ADD, ARR_SUB, ARR_MUL, N_OPS };
-const char* const kOpName[N_OPS] = {"add", "add.sloppy", "sub", "mul.branch", "mul.table", "mul.sel2", "mul.sel4", "sqr", "add_num",
-                                    "mul_num", "neg", "from_i2", "to_i2", "to_u2", "from_u2", "to_u1", "from_u1", "bounds",
+enum Op { ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, SQR_SEL, ADD_NUM, MUL_NUM, NEG, CONV_I2, TO_I2, TO_U2,
+          FROM_U2, TO_U1, FROM_U1, BOUNDS, ARR_ADD, ARR_SUB, ARR_MUL, N_OPS };
+const char* const kOpName[N_OPS] = {"add", "add.sloppy", "sub", "mul.branch", "mul.table", "mul.sel2", "mul.sel4", "sqr", "sqr.sel",
+                                    "add_num", "mul_num", "neg", "from_i2", "to_i2", "to_u2", "from_u2", "to_u1", "from_u1", "bounds",
                                     "arrays.add", "arrays.sub", "arrays.mul"};
 Op judged(Op op) { return op == ARR_ADD ? ADD : op == ARR_SUB ? SUB : op == ARR_MUL ? MUL_BRANCH : op; }
 
@@ -262,7 +263,7 @@ int cmp_corner(const XV& v, const XV& a, const XV& b, Exact& t, double* diff, do
 
 Verdict judge(Op op, const Res& x, const Res& y, double t, const Res& z, bool type_result, const I4* zs, Exact& e) {
     Verdict v;
-    const bool unary = op == SQR || op == NEG || op >= CONV_I2 || op == ADD_NUM || op == MUL_NUM;
+    const bool unary = op == SQR || op == SQR_SEL || op == NEG || op >= CONV_I2 || op == ADD_NUM || op == MUL_NUM;
     const bool empty_in = x.empty || (!unary && y.empty);
     if (empty_in) {
         if (!z.empty) {
@@ -360,7 +361,8 @@ Verdict judge(Op op, const Res& x, const Res& y, double t, const Res& z, bool ty
         }
         break;
     case NEG: check_sum(negx(x.hi), zero, negx(x.lo), zero); break;
-    case SQR: {
+    case SQR:
+    case SQR_SEL: {
         const int sl = sgn(x.lo), sh = sgn(x.hi);
         if (sl >= 0) check_corners({{x.lo, x.lo}}, {{x.hi, x.hi}});
         else if (sh <= 0) check_corners({{x.hi, x.hi}}, {{x.lo, x.lo}});
@@ -416,6 +418,7 @@ u4::Interval apply(Op op, const u4::Interval& x, const u4::Interval& y, double t
     case MUL_SEL4: z = d4::mul_sel4(a, b); break;
 #endif
     case SQR: return u4::sqr(x);
+    case SQR_SEL: z = d4::sqr_sel(a); break;
     case ADD_NUM: return x + t;
     case MUL_NUM: return x * t;
     case NEG: return -x;
@@ -481,6 +484,8 @@ double worst_of(const Verdict& v) {
 
 struct Stat {
     long n = 0, bad = 0, unnormalized = 0, zero_ref = 0, exact = 0;
+    long cold = 0;     // results that took a cold path (counted with KAIRN_UPWARD4_COUNT)
+    long differ = 0;   // the functions on arrays: results not bit for bit the type's operator's
     std::vector<float> rel;
     std::string first_bad;
     double worst = -1;
@@ -686,6 +691,15 @@ void check_members(const u4::Interval& x, const I4& xs, Stat* st, Exact& e, cons
 
 long g_dump = 0;
 
+// The calls of the cold paths so far on this thread (every cause), to count the results that took one.
+long cold_calls() {
+#if KAIRN_UPWARD4_COUNT
+    return d4::cold_count[0] + d4::cold_count[1] + d4::cold_count[2];
+#else
+    return 0;
+#endif
+}
+
 // The exact paths (the accumulator of the cold paths) against the best upper quadruple of the exact
 // value (x2test::upper4): the sum and the product of two quadruples, one lane. "equal": the same limbs;
 // "above": an upper bound above the best one (allowed: the parts of terms below 2^-1080 are rounded up
@@ -795,7 +809,9 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
         cy.push_back(y);
         for (Op op : ops) {
             if (!op_available(op) || op >= CONV_I2) continue;
+            const long cold_before = cold_calls();
             const u4::Interval z = apply(op, x, y, t);
+            if (cold_calls() != cold_before) ++mine[op].cold;
             ++ops_run;
             const I4 zs = state(z);
             const Verdict v = judge(op, rx, ry, t, res_of(zs), true, &zs, e);
@@ -817,9 +833,20 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
         if (cx.size() == 256 || i == n - 1) {
             for (Op op : {ARR_ADD, ARR_SUB, ARR_MUL}) {
                 std::vector<u4::Interval> cz;
+                const long cold_before = cold_calls();
                 apply_arrays(op, cx, cy, cz);
+                // the calls of the cold paths (one element can make two: the cold path of a product
+                // network calls the general one for special values)
+                mine[op].cold += cold_calls() - cold_before;
                 for (std::size_t k = 0; k < cz.size(); ++k) {
                     const I4 zs = state(cz[k]);
+                    const I4 rs = state(apply(judged(op), cx[k], cy[k], 0));   // the type's operator
+                    if (std::memcmp(&zs, &rs, sizeof zs) != 0) {
+                        std::lock_guard<std::mutex> lock(out_mutex);
+                        if (mine[op].differ++ < 3)
+                            std::printf("  DIFFERS %s %s: x=%s y=%s arrays %s, operator %s\n", kOpName[op], cls, hex(state(cx[k])).c_str(),
+                                        hex(state(cy[k])).c_str(), hex(zs).c_str(), hex(rs).c_str());
+                    }
                     const Verdict v = judge(judged(op), res_of(state(cx[k])), res_of(state(cy[k])), 0, res_of(zs), true, &zs, e);
                     if (!v.ok || !v.normalized) {
                         std::lock_guard<std::mutex> lock(out_mutex);
@@ -841,11 +868,14 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
         Stat& s = mine[op];
         if (s.n == 0) continue;
         const long over = long(std::count_if(s.rel.begin(), s.rel.end(), [](float r) { return r > 1000.f; }));
-        std::printf("%-11s %-44s n=%ld invalid=%ld unnormalized=%ld exact_bounds=%ld median=%.3g p99=%.3g max=%.3g (u^4) above_1000=%ld zero_ref=%ld\n",
-                    kOpName[op], cls, s.n, s.bad, s.unnormalized, s.exact, s.q(0.5), s.q(0.99), s.mx(), over, s.zero_ref);
+        std::printf("%-11s %-44s n=%ld invalid=%ld unnormalized=%ld exact_bounds=%ld median=%.3g p99=%.3g max=%.3g (u^4) above_1000=%ld zero_ref=%ld "
+                    "cold=%ld (%.3g%%)\n",
+                    kOpName[op], cls, s.n, s.bad, s.unnormalized, s.exact, s.q(0.5), s.q(0.99), s.mx(), over, s.zero_ref, s.cold,
+                    100.0 * double(s.cold) / double(s.n));
         if (!s.first_bad.empty()) std::printf("  first: %s\n", s.first_bad.c_str());
         if (s.worst > 1e4 && op < CONV_I2) std::printf("  largest (%.3g u^4): %s\n", s.worst, s.worst_case.c_str());
-        if (s.bad || s.unnormalized) failures += 1;
+        if (op >= ARR_ADD) std::printf("  %s %s: %ld of %ld results differ from the type's operator's\n", kOpName[op], cls, s.differ, s.n);
+        if (s.bad || s.unnormalized || s.differ) failures += 1;
     }
 #if KAIRN_UPWARD4_COUNT
     std::printf("cold paths %-44s per %ld operations (and the members' widths): sum %ld, product %ld, with a number or square %ld\n", cls,
@@ -931,12 +961,12 @@ void run_special() {
         }
         check_members(x, sx, dummy, e, "special");
         const u2::Interval x2 = u4::to_upward2(x);
-        for (Op op : {SQR, NEG}) {
+        for (Op op : {SQR, SQR_SEL, NEG}) {
             const u4::Interval z = apply(op, x, x, 0);
             const I4 zs = state(z);
             record(kOpName[op], hx, judge(op, rx, rx, 0, res_of(zs), true, &zs, e));
             kairn::upward::Scope scope;
-            compare2(kOpName[op], hx, zs, op == SQR ? u2::sqr(x2) : -x2);
+            compare2(kOpName[op], hx, zs, op == NEG ? -x2 : u2::sqr(x2));
         }
         for (double t : ts) {
             for (Op op : {ADD_NUM, MUL_NUM}) {
@@ -980,8 +1010,13 @@ void run_special() {
             apply_arrays(op, ax, ay, az);
             for (std::size_t k = 0; k < az.size(); ++k) {
                 const I4 zs = state(az[k]);
-                record(kOpName[op], hex(state(ax[k])) + " " + hex(state(ay[k])),
-                       judge(judged(op), res_of(state(ax[k])), res_of(state(ay[k])), 0, res_of(zs), true, &zs, e));
+                Verdict vz = judge(judged(op), res_of(state(ax[k])), res_of(state(ay[k])), 0, res_of(zs), true, &zs, e);
+                const I4 rs = state(apply(judged(op), ax[k], ay[k], 0));   // the type's operator
+                if (std::memcmp(&zs, &rs, sizeof zs) != 0) {
+                    vz.ok = false;
+                    vz.why += "not bit for bit the type's operator's result " + hex(rs) + "; ";
+                }
+                record(kOpName[op], hex(state(ax[k])) + " " + hex(state(ay[k])), vz);
             }
         }
     }
@@ -1009,7 +1044,7 @@ int main(int argc, char** argv) {
                 "?"
 #endif
     );
-    std::vector<Op> all = {ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG};
+    std::vector<Op> all = {ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, SQR_SEL, ADD_NUM, MUL_NUM, NEG};
     if (const char* only = std::getenv("X4_OPS")) {   // a comma-separated list of operations, for debugging
         std::vector<Op> keep;
         for (Op op : all)

@@ -14,7 +14,8 @@
 //
 // The functions, BACKEND/KIND/KERNEL/VARIANT (every backend the same kernels where it has them): tp/add,
 // tp/sub, tp/mul, tp/mulpos (one sign), tp/mulzero (around zero), tp/mulrand (random signs, kRand per
-// call), tp/sqr, sum/add (a chain of sums), prod/mul and prod/mulrand (chains of products), tp/det3pt
+// call), tp/sqr, tp/sqrrand (the square on XR, random signs; four limbs only), sum/add (a chain of sums),
+// prod/mul and prod/mulrand (chains of products), tp/det3pt
 // (on points), tp/horner_pt (on points), tp/horner_i (on intervals). Backends: x4 (the four-limb type;
 // variants native and the forms), x4u (kairn::upward::Interval<double>, variant u1), x4d (the default
 // types: i1 Interval<double, 1>, b1 Ball<double, 1>, i2 Interval<double, 2>, b2 Ball<double, 2>), x4f

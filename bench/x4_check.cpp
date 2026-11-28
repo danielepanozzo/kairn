@@ -8,8 +8,8 @@
 // volatile objects), and, for an enclosure, contain in exact arithmetic
 // (experiments/upward2/tests/exact.hpp) on the two-limb operands of x2::ops() (which every type's
 // operands contain):
-// - a loop of +, -, * (each kind of operands): the exact range of each element's operation; the square:
-//   the exact range of t^2;
+// - a loop of +, -, * (each kind of operands): the exact range of each element's operation; the square
+//   (on X, and on XR of random signs): the exact range of t^2;
 // - a chain of sums: the exact range of the sum; a chain of products: step by step through the unit's
 //   step (each step containing the exact range of its operands' product; a ball's state cannot be
 //   rebuilt from its bounds, and its chain is checked against its reference only), the end equal to the
@@ -245,6 +245,7 @@ bool check(const Entry& e, char* why, std::size_t size) {
             if (k == K_MULPOS) x = o.xp + 4 * i, y = o.yp + 4 * i;
             if (k == K_MULZERO) x = o.xz + 4 * i, y = o.yz + 4 * i;
             if (k == K_MULRAND) x = o.xr + 4 * i, y = o.yr + 4 * i;
+            if (k == K_SQRRAND) x = o.xr + 4 * i;
             if (k == K_ADD || k == K_SUB) {
                 const bool sub = k == K_SUB;
                 ex.clear();
@@ -269,7 +270,7 @@ bool check(const Entry& e, char* why, std::size_t size) {
                     ex.add(y[3]);
                 }
                 if (cmp(z + 4, ex, t) < 0) return fail(i, "the exact upper bound");
-            } else if (k == K_SQR) {
+            } else if (k == K_SQR || k == K_SQRRAND) {
                 for (int a = 0; a < 4; a += 2) {
                     p.clear();
                     p.add_product(x[a], x[a]);

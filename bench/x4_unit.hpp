@@ -58,7 +58,7 @@ struct GW {
     W<T, Ops> z(int j) const { return {a(d.pz[j])}; }
 };
 
-enum Kernel { K_ADD, K_SUB, K_MUL, K_MULPOS, K_MULZERO, K_MULRAND, K_SQR, K_SUM, K_PROD, K_PRODRAND, K_DET, K_HORNER_PT, K_HORNER_I, K_NONE };
+enum Kernel { K_ADD, K_SUB, K_MUL, K_MULPOS, K_MULZERO, K_MULRAND, K_SQR, K_SQRRAND, K_SUM, K_PROD, K_PRODRAND, K_DET, K_HORNER_PT, K_HORNER_I, K_NONE };
 
 // The computation of kernel k by Ops, the operands through the accessor a, the results into d's
 // result arrays (or d.s for a chain).
@@ -73,6 +73,7 @@ KB_X2_INLINE void run(int k, const Local<T>& d, A a) {
     case K_MULZERO: KB_X4_EACH(d.zc[i] = Ops::mul(a(d.xz[i]), a(d.yz[i]))) break;
     case K_MULRAND: KB_X4_EACHR(d.zr[i] = Ops::mul(a(d.xr[i]), a(d.yr[i]))) break;
     case K_SQR: KB_X4_EACH(d.z[i] = Ops::sqr(a(d.x[i]))) break;
+    case K_SQRRAND: KB_X4_EACHR(d.zr[i] = Ops::sqr(a(d.xr[i]))) break;
     case K_SUM: {
         T s = Ops::zero();
         KB_X4_EACH(s = Ops::add(s, a(d.x[i])))
@@ -131,6 +132,7 @@ inline Name parse(const char* s) {
     else if (kernel == "mulzero") k = K_MULZERO;
     else if (kernel == "mulrand") k = K_MULRAND;
     else if (kernel == "sqr") k = K_SQR;
+    else if (kernel == "sqrrand") k = K_SQRRAND;
     else if (kernel == "det3pt") k = K_DET;
     else if (kernel == "horner_pt") k = K_HORNER_PT;
     else if (kernel == "horner_i") k = K_HORNER_I;
@@ -147,7 +149,7 @@ int read_results(int k, const Data<T>& d, Put put, double* out) {
     }
     if (k == K_MULPOS) r = d.zb;
     if (k == K_MULZERO) r = d.zc;
-    if (k == K_MULRAND) r = d.zr, n = kRand;
+    if (k == K_MULRAND || k == K_SQRRAND) r = d.zr, n = kRand;
     if (k == K_DET || k == K_HORNER_PT) r = d.zd;
     for (int i = 0; i < n; ++i) put(r[i], out + 8 * i);
     return n;
@@ -171,6 +173,7 @@ void clear_results(Data<T>& d) {
     }
 #define KB_X4_ROW(B, SUF, KIND, KERNEL, VAR, K, OPS, SCOPE)                                        \
     {B "/" #KIND "/" #KERNEL "/" #VAR, kb_##SUF##_##KIND##_##KERNEL##__##VAR, 64, 1,               \
-     (::kairn_bench::x4::K == ::kairn_bench::x4::K_MULRAND || ::kairn_bench::x4::K == ::kairn_bench::x4::K_PRODRAND) \
+     (::kairn_bench::x4::K == ::kairn_bench::x4::K_MULRAND || ::kairn_bench::x4::K == ::kairn_bench::x4::K_PRODRAND || \
+      ::kairn_bench::x4::K == ::kairn_bench::x4::K_SQRRAND)                                         \
          ? ::kairn_bench::x4::kRand : ::kairn_bench::x4::kN,                                        \
      0, 0, ::kairn_bench::x4::check},
