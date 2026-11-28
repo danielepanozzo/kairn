@@ -2496,11 +2496,11 @@ Linux machine, at `-O2` and `-O3`.
 
 **Time**, on 2026-11-28, on the code of version 0.5.0 with the four-limb functions on arrays, each
 run alone with `ctest --parallel 4`: on the Mac with Apple clang 21 and GCC 16, the ten tests of the
-quick tier took 16 and 17 seconds of processor time (about 5 s elapsed), the two checks 1.7 to 1.9 s
-and 3.1 s; the twelve of the full tier 288 and 294 seconds of processor time (73 s elapsed), each 8
-to 16 s. On the Linux machine (Zen 2) with GCC 13 and Clang 18: the quick tier's ten 40 and 42
-seconds of processor time (12 to 13 s elapsed), the two checks 4.8 to 4.9 s and 7.5 to 8.0 s; the
-sixteen of the full tier 953 to 1014 seconds of processor time (239 to 254 s elapsed), each 22 to
+quick tier took 14 and 18 seconds of processor time (4 to 5 s elapsed), the two checks 1.6 to 1.7 s
+and 2.9 to 3.1 s; the twelve of the full tier 288 and 294 seconds of processor time (72 to 74 s
+elapsed), each 8 to 16 s. On the Linux machine (Zen 2) with GCC 13 and Clang 18: the quick tier's
+ten 40 and 42 seconds of processor time (13 s elapsed), the two checks 4.9 s and 7.5 to 8.0 s; the
+sixteen of the full tier 948 to 1015 seconds of processor time (237 to 254 s elapsed), each 22 to
 43 s. The hosted runners of the CI are slower; the full tier's sixteen are spread over the two
 shards of each Linux x86-64 job.
 
