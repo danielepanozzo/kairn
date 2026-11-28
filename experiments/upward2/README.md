@@ -35,6 +35,14 @@ scopes, barriers and conventions it reuses.
   same with a `double` operand. Each operation that rounds runs inside a `kairn::upward::Scope`;
   every one has internal linkage and is forced inline; the class has external linkage and only
   exact members.
+- **Added on 2026-11-27 with the four-limb experiment** (`experiments/upward4/README.md`), so that the
+  two types are used alike: `lower()` and `upper()` (the bounds rounded outward to numbers: the heads,
+  exact), `certainly_positive()`, `certainly_negative()`, `contains_zero()`; `width(x)` and `radius(x)`
+  rounded up (under the mode upward: the head of the type's sum of the two pairs); `from_upward1` and
+  `to_upward1`, the conversions from and to `kairn::upward::Interval<double>` (exact, any mode). They
+  are checked by `tests/check.cpp` on every fourth case of every class (the bounds the tightest
+  numbers, each predicate its definition on the exact bounds, the width at least the exact one and at
+  most one number above its rounding up). The header refuses MSVC with a message.
 
 ### The sum
 

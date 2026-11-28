@@ -354,8 +354,10 @@ KAIRN_FORCEINLINE void fast_two_sum_x(P a, P b, P& s, P& t, typename Mask<P>::ty
 
 // --- Renormalization: the fixed sequences ---------------------------------------------------------------
 //
-// vs_*: a vector sum from the bottom (the VecSum of Ogita, Rump and Oishi 2005, as Joldes, Muller,
-// Popescu and Tucker 2016 use it in their renormalization), each step a two-sum rounded up, so that
+// A vector sum from the bottom (the VecSum of Ogita, Rump and Oishi, "Accurate sum and dot product",
+// SIAM J. Sci. Comput. 2005, as Joldes, Marty, Muller and Popescu, "Arithmetic algorithms for extended
+// precision using floating-point expansions", IEEE Trans. Computers 2016, use it in their
+// renormalization), each step a two-sum rounded up, so that
 // the head is the sum of everything rounded up step by step and the errors, all not positive, carry
 // what each step rounded away. renorm_*: the vector sum, then the same on its errors, then on theirs:
 // each limb is the head of a vector sum of what remains below the limbs before it. Every step is an
