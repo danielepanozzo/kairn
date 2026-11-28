@@ -98,8 +98,10 @@
 // The register layer is the two-limb experiment's (kairn/experimental/upward2.hpp), selected by
 // KAIRN_UPWARD2_FORM: SSE (x86-64 with FMA, __m128d), NEON (AArch64, float64x2_t; every comparison an
 // integer test of the bits), NUMBERS (two plain doubles per register, any target: the fallback, slow
-// and right). An FMA is required: on x86-64 without -mfma the header falls back to NUMBERS, whose
-// fused operation is std::fma (correctly rounded in every mode, slow where it is not an instruction).
+// and right). An FMA is required: on x86-64 without -mfma the library's headers that this one includes
+// stop the build (kairn/gen/prelude.hpp: "Kairn needs hardware FMA"), and AArch64 always has it; NUMBERS,
+// the form of other targets or where it is forced, computes its fused operation with std::fma
+// (correctly rounded in every mode, slow where it is not an instruction).
 //
 // KAIRN_UPWARD4_SUM: the sum of the type, KAIRN_UPWARD4_SUM_ACCURATE (default) or
 // KAIRN_UPWARD4_SUM_SLOPPY (experiments/upward4/README.md, "The sum"). KAIRN_UPWARD4_COUNT (0 by
@@ -712,7 +714,9 @@ inline void split_double(double v, std::uint64_t& m, int& k, bool& negative) noe
         k = e - 1075;
     }
 }
-using u128 = unsigned __int128;
+// unsigned __int128 is an extension of GCC and Clang; __extension__ keeps GCC's -Wpedantic from warning
+// of it in a client's file (checked with GCC 13 and 16, Clang 18 and Apple clang 21, -Wpedantic -Werror).
+__extension__ using u128 = unsigned __int128;
 inline int bitlen(u128 m) noexcept {
     const std::uint64_t hi = std::uint64_t(m >> 64), lo = std::uint64_t(m);
     return hi ? 128 - __builtin_clzll(hi) : lo ? 64 - __builtin_clzll(lo) : 0;

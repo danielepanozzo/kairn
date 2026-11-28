@@ -2,21 +2,18 @@
 // experimental.consume.*): EXPERIMENTAL, NOT VERIFIED, opt-in, like the headers, in which no bound
 // is proved. It compiles only if linking kairn::upward and kairn::fma is enough to include every
 // header of kairn/experimental/ in a file that defines KAIRN_EXPERIMENTAL_UNVERIFIED first, as
-// docs/concepts/experimental.md says; it runs an operation of each type and of the two-limb
-// functions on arrays, and fails unless each result contains the exact value (computed by hand
-// below).
+// docs/concepts/experimental.md says, and the project compiles it with -Wall -Wextra -Wpedantic
+// -Werror, as a client may; it runs an operation of each type and of the functions on arrays of two
+// and of four limbs, and fails unless each result contains the exact value (computed by hand below)
+// and the four-limb function on arrays gives the type's operator's result bit for bit.
 #define KAIRN_EXPERIMENTAL_UNVERIFIED
 #include <kairn/experimental/upward2.hpp>
 #include <kairn/experimental/upward2_arrays.hpp>
 #include <kairn/experimental/upward4.hpp>
-#if __has_include(<kairn/experimental/upward4_arrays.hpp>)
 #include <kairn/experimental/upward4_arrays.hpp>
-#define CONSUME_UPWARD4_ARRAYS 1
-#else
-#define CONSUME_UPWARD4_ARRAYS 0
-#endif
 
 #include <cstdio>
+#include <cstring>
 
 namespace u2 = kairn::experimental::upward2;
 namespace u4 = kairn::experimental::upward4;
@@ -26,8 +23,16 @@ int main() {
     u2::Interval p2;
     u4::Interval p4;
     double uh[1], ul[1], nh[1], nl[1];
+    // One four-limb element, [a, a], in the eight arrays of upward4::View: u = (a, 0, 0, 0), n = (-a, 0, 0, 0).
+    const double au[1] = {a}, an[1] = {-a}, zero[1] = {0.0};
+    const u4::View<const double> x4{{au, zero, zero, zero}, {an, zero, zero, zero}, 1};
+    double zu[4][1], zn[4][1];
+    const u4::View<double> z4{{zu[0], zu[1], zu[2], zu[3]}, {zn[0], zn[1], zn[2], zn[3]}, 1};
+    u4::mul(z4, x4, x4);   // holds its own scope: called here, where the mode is to nearest
+    u4::Interval q4;
     {
         kairn::upward::Scope scope;
+        q4 = u4::Interval(a) * u4::Interval(a);
         // (1 + 2^-52)^2 = 1 + 2^-51 + 2^-104, which two limbs hold exactly.
         p2 = u2::Interval(a) * u2::Interval(a);
         // (1 + 2^-52)^3 - 1 - 3 2^-52 - 3 2^-104 = 2^-156, which four limbs hold exactly.
@@ -52,8 +57,25 @@ int main() {
         std::printf("upward2 arrays: [1, 1] + [1, 1] is not [2, 2]\n");
         ++failures;
     }
+    // The square of a = 1 + 2^-52 is 1 + 2^-51 + 2^-104: four limbs hold it, so both bounds are it,
+    // the upper one as (1 + 2^-51 + 2^-52, -(2^-52 - 2^-104), 0, 0) and the lower one exactly.
+    double op[8], ar[8];
+    q4.to_limbs(op);
+    for (int i = 0; i < 4; ++i) {
+        ar[2 * i] = zu[i][0];
+        ar[2 * i + 1] = zn[i][0];
+    }
+    if (std::memcmp(op, ar, sizeof op) != 0) {
+        std::printf("upward4 arrays: mul differs from the operator's result\n");
+        ++failures;
+    }
+    if (!(q4.lower() == 1 + 0x1p-51 && q4.upper() == 1 + 0x1p-51 + 0x1p-52 && op[2] == -(0x1p-52 - 0x1p-104) &&
+          op[3] == -0x1p-104)) {
+        std::printf("upward4: the square of 1 + 2^-52 is not held exactly\n");
+        ++failures;
+    }
     if (failures == 0)
-        std::printf("the experimental headers (NOT VERIFIED): upward2.hpp, upward2_arrays.hpp, upward4.hpp%s\n",
-                    CONSUME_UPWARD4_ARRAYS ? ", upward4_arrays.hpp" : "");
+        std::printf("the experimental headers (NOT VERIFIED): upward2.hpp, upward2_arrays.hpp, upward4.hpp, "
+                    "upward4_arrays.hpp\n");
     return failures == 0 ? 0 : 1;
 }

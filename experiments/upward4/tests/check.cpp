@@ -19,12 +19,8 @@
 // Usage: x4-check [N per class (default 2000000)] [seed] [threads]
 #include <kairn/experimental/upward4.hpp>
 #include <kairn/experimental/upward4_forms.hpp>
-#if __has_include(<kairn/experimental/upward4_arrays.hpp>)
 #include <kairn/experimental/upward4_arrays.hpp>
-#define X4_ARRAYS 1
-#else
-#define X4_ARRAYS 0
-#endif
+#define X4_ARRAYS 1   // the functions on arrays are always checked
 #include <kairn/kairn.hpp>
 
 #include <algorithm>

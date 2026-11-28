@@ -308,9 +308,9 @@ if(KAIRN_BENCH_UPWARD)
   # The experimental four-limb interval rounded upward (include/kairn/experimental/upward4.hpp, NOT VERIFIED,
   # opt-in; its forms of the measurements in experiments/upward4/include; bench/x4_data.hpp)
   # and the benchmark of 1, 2 and 4 limbs on the two-limb experiment's operands, added when KAIRN_BENCH_UPWARD4
-  # is on (default off; needs KAIRN_BENCH_UPWARD2): x4_type.cpp (the type) and x4_one.cpp (the one-limb
-  # round-up interval) with the option of kairn::upward and the flags of packed code, x4_default.cpp (the
-  # default types), x4_floor.cpp (plain double) and x4_check.cpp as m2.cpp.
+  # is on (default off; needs KAIRN_BENCH_UPWARD2): x4_type.cpp (the type and its functions on arrays) and
+  # x4_one.cpp (the one-limb round-up interval) with the option of kairn::upward and the flags of packed
+  # code, x4_default.cpp (the default types), x4_floor.cpp (plain double) and x4_check.cpp as m2.cpp.
   option(KAIRN_BENCH_UPWARD4 "Add the experimental four-limb interval rounded upward (kairn/experimental/upward4.hpp, NOT VERIFIED) to kairn-bench-up-LEVEL" OFF)
   if(KAIRN_BENCH_UPWARD4)
     if(NOT KAIRN_BENCH_UPWARD2)

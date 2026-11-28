@@ -18,7 +18,7 @@
 
 namespace x2test {
 
-using u128 = unsigned __int128;
+__extension__ using u128 = unsigned __int128;   // an extension of GCC and Clang: no -Wpedantic warning
 
 class Exact {
     static constexpr int kDigits = 140;

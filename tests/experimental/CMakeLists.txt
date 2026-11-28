@@ -1,6 +1,6 @@
 # The tests of the experimental intervals rounded upward of two and four limbs
-# (include/kairn/experimental/upward2.hpp, upward2_arrays.hpp, upward4.hpp; docs/concepts/
-# experimental.md): EXPERIMENTAL, NOT VERIFIED, opt-in. No bound of these headers is proved; these
+# (include/kairn/experimental/upward2.hpp, upward2_arrays.hpp, upward4.hpp, upward4_arrays.hpp;
+# docs/concepts/experimental.md): EXPERIMENTAL, NOT VERIFIED, opt-in. No bound of these headers is proved; these
 # tests are exact checks on the cases they run, not proofs. Label experimental, in the quick tier
 # (../CMakeLists.txt, "The two tiers"; this file labels its tests quick) and, through
 # _kairn_experimental_full_tier below, in the full tier (../full/CMakeLists.txt, full.experimental.*).
@@ -8,9 +8,8 @@
 # headers refuse MSVC, and clang-cl and Windows were never part of the experiments, so with MSVC or
 # clang-cl nothing here is built (../CMakeLists.txt says so when CMake runs). Every program defines
 # KAIRN_EXPERIMENTAL_UNVERIFIED, the opt-in, and links kairn::upward (-frounding-math, the option of
-# docs/concepts/upward.md) and kairn::fma; the programs of the checks are built with the experiments'
-# own warnings, -Wall -Wextra (GCC's -Wpedantic warns of the four-limb header's unsigned __int128),
-# and with GCC -Wno-ignored-attributes (below).
+# docs/concepts/upward.md) and kairn::fma, and is built with the warnings of Kairn's tests, -Wall
+# -Wextra -Wpedantic (as errors where the build asks for them, as the CI does).
 #
 # The quick tier:
 #
@@ -20,22 +19,26 @@
 #   where the packed kernels are (../CMakeLists.txt, _isa_option), on
 #   KAIRN_EXPERIMENTAL_QUICK_CASES cases of each class of operands, seed 1, two threads: every
 #   result must contain the exact range, computed in exact integer arithmetic
-#   (experiments/upward2/tests/exact.hpp), and keep the type's invariant, on every operation; then
-#   every pair of a list of special values against the exact range in the extended reals. The
-#   program's exit status is the test's.
+#   (experiments/upward2/tests/exact.hpp), and keep the type's invariant, on every operation; each
+#   function on arrays (upward2_arrays.hpp, upward4_arrays.hpp) must give the type's operators'
+#   results bit for bit; then every pair of a list of special values against the exact range in the
+#   extended reals. The program's exit status is the test's.
 # - experimental.headers (headers.cmake): every header of include/kairn/experimental/ starts with
 #   the banner and the guard of the opt-in; nothing of the library includes one or defines the
 #   opt-in; experiments/ holds only the forms of the measurements; no claim and no reference page
 #   names them.
 # - experimental.opt_in.HEADER (opt_in.cpp, through ../api/compile_fail.cmake): each header refuses
-#   to compile without KAIRN_EXPERIMENTAL_UNVERIFIED, with its message, and compiles with it.
+#   to compile without KAIRN_EXPERIMENTAL_UNVERIFIED, with its message, and compiles with it under
+#   -Wall -Wextra -Wpedantic -Werror (built for AVX2 where the packed kernels are), as a client may
+#   compile it.
 # - experimental.example: the example of docs/concepts/experimental.md
 #   (docs/examples/cpp/concepts_experimental.cpp), which checks its own results; what it prints must
 #   be the text the page shows (../api/example_output.cmake).
 # - experimental.consume.add_subdirectory, experimental.consume.find_package: a project
 #   (../consume/experimental/) whose program includes every experimental header through
-#   kairn::upward and kairn::fma in a file that defines the opt-in, as the page says, and runs an
-#   operation of each type: with Kairn added by add_subdirectory, and found by find_package after
+#   kairn::upward and kairn::fma in a file that defines the opt-in, as the page says, compiled with
+#   -Wall -Wextra -Wpedantic -Werror, and runs an operation of each type and of each header of
+#   functions on arrays: with Kairn added by add_subdirectory, and found by find_package after
 #   consume.install has installed this build tree (KAIRN_INSTALL).
 #
 # The full tier: the same checks in each variant of the experiments' own projects, at -O2 and at -O3,
@@ -63,14 +66,7 @@ function(_kairn_experimental_check target limbs variant level)
     target_include_directories(${target} PRIVATE "${PROJECT_SOURCE_DIR}/experiments/upward4/include")
     target_compile_definitions(${target} PRIVATE KAIRN_UPWARD4_COUNT=1)
   endif()
-  set(_options -Wall -Wextra)
-  # GCC (13, x86-64 with AVX2) warns that the attributes of __m256d are ignored where the four-limb
-  # header names it as a template argument (a specialization of its trait of masks); the warning is
-  # about the header's code, not about what it computes, and is silenced here until the header
-  # avoids it. Clang does not warn.
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    list(APPEND _options -Wno-ignored-attributes)
-  endif()
+  set(_options ${_warnings})
   if(level)
     list(APPEND _options -${level})
   endif()
@@ -128,26 +124,23 @@ add_test(NAME experimental.headers
   COMMAND "${CMAKE_COMMAND}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}" -P "${CMAKE_CURRENT_SOURCE_DIR}/headers.cmake")
 
 # The opt-in, through ../api/compile_fail.cmake: the front end only, with the options of
-# kairn::upward and kairn::fma. The four-limb functions on arrays when their header is there.
+# kairn::upward and kairn::fma, the packed kernels' AVX2 where they use it, and the tests' warnings as
+# errors, so that each control is compiled as a strict client would compile it.
 get_target_property(_upward kairn::upward INTERFACE_COMPILE_OPTIONS)
 get_target_property(_fma kairn::fma INTERFACE_COMPILE_OPTIONS)
 if(NOT _fma)
   set(_fma "")
 endif()
 list(JOIN _upward "|" _common)
-if(_fma)
-  list(JOIN _fma "|" _fma_bars)
-  string(APPEND _common "|${_fma_bars}")
-endif()
+foreach(_option IN LISTS _fma _isa_option _warnings ITEMS -Werror)
+  string(APPEND _common "|${_option}")
+endforeach()
 set(_opt_in_common "-DCXX=${CMAKE_CXX_COMPILER}" -DSTYLE=gnu "-DINCLUDE=${PROJECT_SOURCE_DIR}/include"
   "-DSOURCE=${CMAKE_CURRENT_SOURCE_DIR}/opt_in.cpp" "-DCOMMON=${_common}" "-DOPTIONS=")
 if(CMAKE_OSX_SYSROOT)
   list(APPEND _opt_in_common "-DSYSROOT=${CMAKE_OSX_SYSROOT}")
 endif()
-set(_opt_in_cases 1:upward2 2:upward2_arrays 3:upward4)
-if(EXISTS "${PROJECT_SOURCE_DIR}/include/kairn/experimental/upward4_arrays.hpp")
-  list(APPEND _opt_in_cases 4:upward4_arrays)
-endif()
+set(_opt_in_cases 1:upward2 2:upward2_arrays 3:upward4 4:upward4_arrays)
 foreach(_case_name IN LISTS _opt_in_cases)
   string(REPLACE ":" ";" _pair "${_case_name}")
   list(GET _pair 0 _case)
@@ -158,10 +151,10 @@ foreach(_case_name IN LISTS _opt_in_cases)
       -P "${PROJECT_SOURCE_DIR}/tests/api/compile_fail.cmake")
 endforeach()
 
-# The example of the concept page, with the build's flags and the experiments' warnings as errors.
+# The example of the concept page, with the build's flags and the warnings of the tests as errors.
 add_executable(kairn-experimental-example "${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_experimental.cpp")
 target_link_libraries(kairn-experimental-example PRIVATE kairn::upward kairn::fma)
-target_compile_options(kairn-experimental-example PRIVATE -Wall -Wextra -Werror)
+target_compile_options(kairn-experimental-example PRIVATE ${_warnings} -Werror)
 add_test(NAME experimental.example
   COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-experimental-example>"
     "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/concepts_experimental.txt"

@@ -1,5 +1,18 @@
+// EXPERIMENTAL, NOT VERIFIED: no bound stated in this file is proved. Kairn's rule is that every
+// bound it ships is machine-checked; by the owner's decision recorded on 2026-11-28 (the decisions
+// log, docs/developer/design/phase0/decisions.md) this header is an exception, shipped without
+// proofs so that clients can experiment while the proofs are worked on. What protects a user
+// meanwhile: this banner, the opt-in below, and the exact checks of its tests (label experimental),
+// which are tests, not proofs. Its interface may change or disappear in any version. GCC and Clang
+// only: MSVC is refused, and no Windows build was ever tested. A file that includes it defines
+// KAIRN_EXPERIMENTAL_UNVERIFIED first, so that the choice is written in the client's code
+// (docs/concepts/experimental.md).
+#if !defined(KAIRN_EXPERIMENTAL_UNVERIFIED)
+#error "kairn/experimental/upward4_arrays.hpp is EXPERIMENTAL and NOT VERIFIED (no bound in it is proved): define KAIRN_EXPERIMENTAL_UNVERIFIED before including it to accept that (docs/concepts/experimental.md)"
+#endif
+
 /// @file
-/// EXPERIMENTAL, NOT VERIFIED, not part of the library: no bound stated here is proved. The functions on
+/// EXPERIMENTAL, NOT VERIFIED, opt-in: no bound stated here is proved (the banner above). The functions on
 /// arrays of the four-limb interval rounded upward (experiments/upward4/README.md): element by element
 /// sum, difference and product of intervals held as eight plain arrays, the limbs u0..u3 of the upper
 /// quadruples and n0..n3 of the negated lower ones. Requires the options of docs/concepts/upward.md
@@ -213,8 +226,11 @@ KAIRN_FORCEINLINE Pack mul_pack(const Pack& x, const Pack& y, AM& ok) noexcept {
 enum class ArrayOp { add, sub, mul };
 template <ArrayOp Op>
 KAIRN_FORCEINLINE void apply(const View<double>& z, const View<const double>& x, const View<const double>& y) noexcept {
-    ::kairn::upward::detail::RegisterScope scope;
+    // The length is read before the scope, whose barriers clobber memory: after them GCC no longer
+    // knows a length it could see, and may warn (-Warray-bounds) of the loads of the vector loop on a
+    // shorter array, a loop that never runs there (seen in the two-limb functions).
     const std::size_t n = z.size;
+    ::kairn::upward::detail::RegisterScope scope;
     std::size_t k = 0;
     for (; k + kAW <= n; k += kAW) {
         Pack a = load(x, k), b = load(y, k);

@@ -3,7 +3,8 @@
 // It requires the rounding mode upward set by kairn::upward::Scope and the options of
 // docs/concepts/upward.md (GCC and Clang -frounding-math), and is not built with MSVC, which the
 // headers refuse. A sign that one and two limbs cannot decide and four can; the conversions from
-// and to the default Interval<double, 2>. ctest builds it with kairn::upward and kairn::fma and the
+// and to the default Interval<double, 2>; a four-limb function on arrays. ctest builds it with
+// kairn::upward and kairn::fma and the
 // build's flags (tests/experimental/CMakeLists.txt, experimental.example) and compares what it
 // prints with concepts_experimental.txt, which the page shows; it also checks each result itself,
 // against the exact values, and exits with 1 if one is not what the page says.
@@ -13,6 +14,7 @@
 #define KAIRN_EXPERIMENTAL_UNVERIFIED
 #include <kairn/experimental/upward2.hpp>
 #include <kairn/experimental/upward4.hpp>
+#include <kairn/experimental/upward4_arrays.hpp>
 // --8<-- [end:opt_in]
 
 #include <kairn/kairn.hpp>
@@ -99,6 +101,21 @@ int main() {
     // --8<-- [end:convert]
     check(y.lower() == -5 && y.upper() == 7 && w == 12, "[1, 9] - [2, 6] is [-5, 7]");
     check(back.lower().limb[0] == -5 && back.upper().limb[0] == 7, "the conversion back keeps the bounds");
+
+    // --8<-- [start:arrays]
+    // [1, 1] and [-1, 2] in the eight plain arrays of a four-limb View: u[i][k] and n[i][k] are the
+    // limb i of element k's upper bound and of its lower bound negated.
+    double u[4][2] = {{1, 2}, {0, 0}, {0, 0}, {0, 0}}, n[4][2] = {{-1, 1}, {0, 0}, {0, 0}, {0, 0}};
+    double zu[4][2], zn[4][2];
+    const u4::View<const double> xs{{u[0], u[1], u[2], u[3]}, {n[0], n[1], n[2], n[3]}, 2};
+    const u4::View<double> zs{{zu[0], zu[1], zu[2], zu[3]}, {zn[0], zn[1], zn[2], zn[3]}, 2};
+    u4::mul(zs, xs, xs);   // element by element; it holds its own scope
+    for (int k = 0; k < 2; ++k)
+        std::printf("x[%d] * x[%d]: [%s, %s]\n", k, k, hex(-zn[0][k]).c_str(), hex(zu[0][k]).c_str());
+    // --8<-- [end:arrays]
+    check(zu[0][0] == 1 && zn[0][0] == -1 && zu[0][1] == 4 && zn[0][1] == 2, "[1, 1]^2 = [1, 1], [-1, 2]^2 = [-2, 4]");
+    for (int i = 1; i < 4; ++i)
+        check(zu[i][0] == 0 && zn[i][0] == 0 && zu[i][1] == 0 && zn[i][1] == 0, "the later limbs are zero");
 
     return failures == 0 ? 0 : 1;
 }
