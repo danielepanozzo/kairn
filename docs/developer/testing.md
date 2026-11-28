@@ -2494,16 +2494,15 @@ programs for longer runs: before the headers came to the library the experiments
 million cases per class with Apple clang 21 and GCC 16 on the Mac and GCC 13 and Clang 18 on the
 Linux machine, at `-O2` and `-O3`.
 
-**Time**, on 2026-11-28, with `ctest --parallel 4`: on the Mac with Apple clang 21, the nine tests
-of the quick tier took 13 seconds of processor time run alone (4.4 s elapsed; 16 and 18 s inside a
-whole quick tier with `--parallel 8`, with Apple clang and GCC 16), the two checks 1.8 to 2.0 s and
-2.5 to 2.8 s; the twelve of the full tier 251 to 260 seconds of processor time with Apple clang 21
-and GCC 16 (63 to 65 s elapsed), each 8 to 13 s. On the Linux machine (Zen 2) with GCC 13 and
-Clang 18, run alone: the quick
-tier's nine 34 to 36 seconds of processor time (11 to 12 s elapsed), the two checks 5.0 s and
-6.3 to 6.6 s; the sixteen of the full tier 840 to 903 seconds of processor time (212 to 226 s
-elapsed), each 22 to 31 s. The hosted runners of the CI are slower; the full tier's sixteen are
-spread over the two shards of each Linux x86-64 job.
+**Time**, on 2026-11-28, on the code of version 0.5.0 with the four-limb functions on arrays, each
+run alone with `ctest --parallel 4`: on the Mac with Apple clang 21 and GCC 16, the ten tests of the
+quick tier took 16 and 17 seconds of processor time (about 5 s elapsed), the two checks 1.7 to 1.9 s
+and 3.1 s; the twelve of the full tier 288 and 294 seconds of processor time (73 s elapsed), each 8
+to 16 s. On the Linux machine (Zen 2) with GCC 13 and Clang 18: the quick tier's ten 40 and 42
+seconds of processor time (12 to 13 s elapsed), the two checks 4.8 to 4.9 s and 7.5 to 8.0 s; the
+sixteen of the full tier 953 to 1014 seconds of processor time (239 to 254 s elapsed), each 22 to
+43 s. The hosted runners of the CI are slower; the full tier's sixteen are spread over the two
+shards of each Linux x86-64 job.
 
 **What they do not test**: a result on operands that no class samples (tests sample; a proof would
 cover every operand); MSVC, clang-cl and Windows; and nothing here measures speed (the benchmarks,
