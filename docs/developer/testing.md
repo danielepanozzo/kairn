@@ -4091,4 +4091,10 @@ fails the job, and the job is run again by hand. Whether a run under Rosetta tha
 repeated once by the test itself, and fail only when it fails again, was open issue 20 of the
 [Milestone 2 report](results/milestone2.md#open-issues); the owner decided on 2026-11-23 that it
 is not: the tests stay strict, and each such failure is added to this paragraph. Told of the four
-on 2026-11-27, the owner kept that decision.
+on 2026-11-27, the owner kept that decision. Later on 2026-11-27, on the Mac, a run of the
+generator's suite (at `9e41729c`) did not finish: the x86-64 build of a runner of `test_cxx` did not
+start under Rosetta, its process waiting in the kernel with no time on the processor, and every
+x86-64 program started there in the next 47 minutes did the same (a program of one line built to see
+it among them), until all of them ran or ended at once; no other process of the machine was waiting
+so. The run was stopped, and the whole suite passed on the next commit (`07d511aa`, 476 tests), its
+builds under Rosetta included. Not reproduced and not explained.
