@@ -1,6 +1,7 @@
-# The checks of the experimental four-limb interval rounded upward (experiments/upward4/README.md):
-# EXPERIMENTAL, NOT VERIFIED, not part of the library and not part of Kairn's build. A project of
-# its own:
+# The checks of the experimental four-limb interval rounded upward (experiments/upward4/README.md,
+# include/kairn/experimental/upward4.hpp): EXPERIMENTAL, NOT VERIFIED, opt-in. Kairn's own build
+# registers the same program as ctest tests (tests/experimental/, label experimental); this is a
+# project of its own, for every variant below and long runs:
 #
 #   cmake -S experiments/upward4 -B build-x4 -DCMAKE_BUILD_TYPE=Release [-DCMAKE_CXX_COMPILER=g++]
 #   cmake --build build-x4
@@ -40,7 +41,8 @@ foreach(_level O2 O3)
     target_include_directories(${_target} PRIVATE "${_root}/include" "${_root}/experiments/upward2/include"
                                "${CMAKE_CURRENT_SOURCE_DIR}/include")
     target_link_libraries(${_target} PRIVATE Threads::Threads)
-    target_compile_definitions(${_target} PRIVATE KAIRN_UPWARD4_COUNT=1)
+    # The opt-in of the experimental headers (their banner), and the counts of the cold paths.
+    target_compile_definitions(${_target} PRIVATE KAIRN_EXPERIMENTAL_UNVERIFIED KAIRN_UPWARD4_COUNT=1)
     set(_flags -${_level} -frounding-math -Wall -Wextra)
     if(_x86)
       if(_variant STREQUAL "sse")

@@ -1,11 +1,15 @@
 # A two-limb interval rounded upward (experiment)
 
-**EXPERIMENTAL, NOT VERIFIED, not part of the library. No bound stated here is proved.** Nothing in
-`include/` uses it, no test of the library runs it, and no documentation page describes it. It
-exists to measure what a two-limb ("double double") interval computed under the rounding mode
-upward gains over `kairn::Interval<double, 2>` before anyone decides whether to prove it. No MSVC
-and no Windows were part of this experiment (GCC and Clang on Linux x86-64, Apple clang and GCC on
-macOS arm64 only).
+**EXPERIMENTAL, NOT VERIFIED, opt-in. No bound stated here is proved.** Since version 0.5.0 its
+header is in the library's tree, `include/kairn/experimental/upward2.hpp` (with
+`upward2_arrays.hpp`), shipped without proofs by the owner's decision recorded on 2026-11-28 so
+that clients can experiment while the proofs are worked on: a file that includes it defines
+`KAIRN_EXPERIMENTAL_UNVERIFIED` first, nothing else in `include/` includes it, its exact checks run
+as ctest tests (label `experimental`), and
+[the concept page](../../docs/concepts/experimental.md) describes it. It began as a measurement of
+what a two-limb ("double double") interval computed under the rounding mode upward gains over
+`kairn::Interval<double, 2>`. No MSVC and no Windows were part of this experiment (GCC and Clang on
+Linux x86-64, Apple clang and GCC on macOS arm64 only).
 
 Requires the rounding mode upward set by `kairn::upward::Scope` and the options of
 `docs/concepts/upward.md` (GCC and Clang `-frounding-math`), exactly as `kairn/upward.hpp`, whose

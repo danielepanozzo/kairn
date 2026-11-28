@@ -1,5 +1,5 @@
 // The functions on arrays of the experimental two-limb interval rounded upward
-// (experiments/upward2/include/kairn/experimental/upward2_arrays.hpp; bench/x2_data.hpp), backend
+// (include/kairn/experimental/upward2_arrays.hpp; bench/x2_data.hpp), backend
 // x2a: add, sub, mul on four plain arrays (uh, ul, nh, nl) of kN elements, X2 and Y2, time per
 // element. EXPERIMENTAL, NOT VERIFIED. Requires the options of docs/concepts/upward.md (GCC and Clang
 // -frounding-math): compiled with the option of the target kairn::upward and the flags of packed

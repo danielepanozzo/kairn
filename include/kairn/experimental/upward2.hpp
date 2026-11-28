@@ -1,6 +1,19 @@
+// EXPERIMENTAL, NOT VERIFIED: no bound stated in this file is proved. Kairn's rule is that every
+// bound it ships is machine-checked; by the owner's decision recorded on 2026-11-28 (the decisions
+// log, docs/developer/design/phase0/decisions.md) this header is an exception, shipped without
+// proofs so that clients can experiment while the proofs are worked on. What protects a user
+// meanwhile: this banner, the opt-in below, and the exact checks of its tests (label experimental),
+// which are tests, not proofs. Its interface may change or disappear in any version. GCC and Clang
+// only: MSVC is refused, and no Windows build was ever tested. A file that includes it defines
+// KAIRN_EXPERIMENTAL_UNVERIFIED first, so that the choice is written in the client's code
+// (docs/concepts/experimental.md).
+#if !defined(KAIRN_EXPERIMENTAL_UNVERIFIED)
+#error "kairn/experimental/upward2.hpp is EXPERIMENTAL and NOT VERIFIED (no bound in it is proved): define KAIRN_EXPERIMENTAL_UNVERIFIED before including it to accept that (docs/concepts/experimental.md)"
+#endif
+
 /// @file
-/// EXPERIMENTAL, NOT VERIFIED, not part of the library: no bound stated here is proved. A two-limb
-/// ("double double") interval computed under the rounding mode upward, for measurement
+/// EXPERIMENTAL, NOT VERIFIED, opt-in: no bound stated here is proved (the banner above). A two-limb
+/// ("double double") interval computed under the rounding mode upward
 /// (experiments/upward2/README.md). Requires the rounding mode upward set by kairn::upward::Scope
 /// and the options of docs/concepts/upward.md (GCC and Clang -frounding-math), as
 /// kairn/upward.hpp does; MSVC and Windows are not part of this experiment.

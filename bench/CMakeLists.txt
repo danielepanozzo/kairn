@@ -292,24 +292,26 @@ if(KAIRN_BENCH_UPWARD)
   set_source_files_properties(up_fenv_packed.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math};${_packed_isa}")
   set(_up_sources m2_main.cpp m2.cpp m2_fenv.cpp m2_packed.cpp m2_fenv_packed.cpp up_parts.cpp up_check.cpp
       up_type.cpp up_arrays.cpp up_default.cpp up_packed.cpp up_fenv.cpp up_fenv_packed.cpp)
-  # The experimental two-limb interval rounded upward (experiments/upward2/, NOT VERIFIED; bench/x2_data.hpp),
-  # added to kairn-bench-up-LEVEL when KAIRN_BENCH_UPWARD2 is on (default off): x2_type.cpp (the type, and the
+  # The experimental two-limb interval rounded upward (include/kairn/experimental/upward2.hpp, NOT VERIFIED,
+  # opt-in; its forms of the measurements in experiments/upward2/include; bench/x2_data.hpp), added to
+  # kairn-bench-up-LEVEL when KAIRN_BENCH_UPWARD2 is on (default off): x2_type.cpp (the type, and the
   # one-limb round-up interval on its points) with the option of kairn::upward and the flags of packed code,
   # x2_proto.cpp (the earlier prototype) as m2_fenv.cpp, x2_default.cpp (the default two-limb types) and
   # x2_check.cpp as m2.cpp.
-  option(KAIRN_BENCH_UPWARD2 "Add the experimental two-limb interval rounded upward (experiments/upward2) to kairn-bench-up-LEVEL" OFF)
+  option(KAIRN_BENCH_UPWARD2 "Add the experimental two-limb interval rounded upward (kairn/experimental/upward2.hpp, NOT VERIFIED) to kairn-bench-up-LEVEL" OFF)
   if(KAIRN_BENCH_UPWARD2)
     set_source_files_properties(x2_type.cpp x2_arrays.cpp PROPERTIES COMPILE_OPTIONS "${_upward_option};${_packed_isa}")
     set_source_files_properties(x2_proto.cpp PROPERTIES COMPILE_OPTIONS "${_rounding_math}")
     set_source_files_properties(x2_packed.cpp PROPERTIES COMPILE_OPTIONS "${_packed_isa}")
     list(APPEND _up_sources x2_type.cpp x2_arrays.cpp x2_proto.cpp x2_default.cpp x2_packed.cpp x2_check.cpp)
   endif()
-  # The experimental four-limb interval rounded upward (experiments/upward4/, NOT VERIFIED; bench/x4_data.hpp)
+  # The experimental four-limb interval rounded upward (include/kairn/experimental/upward4.hpp, NOT VERIFIED,
+  # opt-in; its forms of the measurements in experiments/upward4/include; bench/x4_data.hpp)
   # and the benchmark of 1, 2 and 4 limbs on the two-limb experiment's operands, added when KAIRN_BENCH_UPWARD4
   # is on (default off; needs KAIRN_BENCH_UPWARD2): x4_type.cpp (the type) and x4_one.cpp (the one-limb
   # round-up interval) with the option of kairn::upward and the flags of packed code, x4_default.cpp (the
   # default types), x4_floor.cpp (plain double) and x4_check.cpp as m2.cpp.
-  option(KAIRN_BENCH_UPWARD4 "Add the experimental four-limb interval rounded upward (experiments/upward4) to kairn-bench-up-LEVEL" OFF)
+  option(KAIRN_BENCH_UPWARD4 "Add the experimental four-limb interval rounded upward (kairn/experimental/upward4.hpp, NOT VERIFIED) to kairn-bench-up-LEVEL" OFF)
   if(KAIRN_BENCH_UPWARD4)
     if(NOT KAIRN_BENCH_UPWARD2)
       message(FATAL_ERROR "KAIRN_BENCH_UPWARD4 needs KAIRN_BENCH_UPWARD2 (its operands and the two-limb type)")
@@ -333,7 +335,9 @@ if(KAIRN_BENCH_UPWARD)
       add_executable(${_target} ${_up_sources})
       target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
       if(KAIRN_BENCH_UPWARD2)
+        # The forms of the measurements, and the opt-in of the experimental headers (their banner).
         target_include_directories(${_target} PRIVATE "${PROJECT_SOURCE_DIR}/experiments/upward2/include")
+        target_compile_definitions(${_target} PRIVATE KAIRN_EXPERIMENTAL_UNVERIFIED)
       endif()
       if(KAIRN_BENCH_UPWARD4)
         target_include_directories(${_target} PRIVATE "${PROJECT_SOURCE_DIR}/experiments/upward4/include")

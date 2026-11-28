@@ -1,7 +1,11 @@
 # A four-limb interval rounded upward (experiment)
 
-**EXPERIMENTAL, NOT VERIFIED, not part of the library. No bound stated here is proved.** Nothing in
-`include/` uses it, no test of the library runs it, and no documentation page describes it. It exists
+**EXPERIMENTAL, NOT VERIFIED, opt-in. No bound stated here is proved.** Since version 0.5.0 its header
+is in the library's tree, `include/kairn/experimental/upward4.hpp`, shipped without proofs by the
+owner's decision recorded on 2026-11-28 so that clients can experiment while the proofs are worked on:
+a file that includes it defines `KAIRN_EXPERIMENTAL_UNVERIFIED` first, nothing else in `include/`
+includes it, its exact checks run as ctest tests (label `experimental`), and
+[the concept page](../../docs/concepts/experimental.md) describes it. It exists
 so that a client can try a four-limb ("quad double") interval computed under the rounding mode upward,
 and to measure it next to the one-limb and two-limb round-up intervals, before anyone decides whether
 to prove it. No MSVC and no Windows were part of this experiment (GCC and Clang on Linux x86-64, Apple
@@ -14,8 +18,8 @@ four-lane form of the measurements); without it the header falls back to its for
 whose fused operation is `std::fma` (correct, slow where it is not an instruction).
 
 ```cpp
-#include <kairn/experimental/upward4.hpp>   // include paths: include/, experiments/upward2/include,
-                                            // experiments/upward4/include
+#define KAIRN_EXPERIMENTAL_UNVERIFIED       // the opt-in: no bound of the header is proved
+#include <kairn/experimental/upward4.hpp>   // through the CMake targets kairn::upward and kairn::fma
 namespace u4 = kairn::experimental::upward4;
 u4::Interval x(1.0, 2.0), y(0.1);
 u4::Interval z;

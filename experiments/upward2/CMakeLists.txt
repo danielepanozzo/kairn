@@ -1,6 +1,7 @@
-# The checks of the experimental two-limb interval rounded upward (experiments/upward2/README.md):
-# EXPERIMENTAL, NOT VERIFIED, not part of the library and not part of Kairn's build. A project of
-# its own:
+# The checks of the experimental two-limb interval rounded upward (experiments/upward2/README.md,
+# include/kairn/experimental/upward2.hpp): EXPERIMENTAL, NOT VERIFIED, opt-in. Kairn's own build
+# registers the same program as ctest tests (tests/experimental/, label experimental); this is a
+# project of its own, for every variant below and long runs:
 #
 #   cmake -S experiments/upward2 -B build-x2 -DCMAKE_BUILD_TYPE=Release [-DCMAKE_CXX_COMPILER=g++]
 #   cmake --build build-x2
@@ -38,6 +39,8 @@ foreach(_level O2 O3)
     add_executable(${_target} tests/check.cpp)
     target_include_directories(${_target} PRIVATE "${_root}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include")
     target_link_libraries(${_target} PRIVATE Threads::Threads)
+    # The opt-in of the experimental headers (their banner).
+    target_compile_definitions(${_target} PRIVATE KAIRN_EXPERIMENTAL_UNVERIFIED)
     set(_flags -${_level} -frounding-math -Wall -Wextra)
     if(_x86)
       if(_variant STREQUAL "sse")
