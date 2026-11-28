@@ -305,24 +305,33 @@ class Upward(unittest.TestCase):
         self.assertEqual((len(c.maximum), len(c.negmul), len(c.fmax), len(c.mul)), (1, 1, 1, 1))
 
     def test_one_function(self):
-        e = {'mul': 4, 'max': 3}
+        e = {'mul': 4, 'max': 3, 'fmax': 0}
         self.assertIsNone(objcode.judge_upward(self.count(4, 3), e, False))
         self.assertIn('5 multiplications, expected 4', objcode.judge_upward(self.count(5, 3), e, False))
         self.assertIn('2 maxima, expected 3', objcode.judge_upward(self.count(4, 2), e, False))
         self.assertIn('fused multiply-adds', objcode.judge_upward(self.count(4, 3, fused=1), e, False))
         self.assertIn('negated multiplications', objcode.judge_upward(self.count(4, 3, negmul=1), e, False))
         self.assertIn('fmax', objcode.judge_upward(self.count(4, 3, fmax=1), e, False))
+        # On arm64 the NaN test of two operands is one FMAX (detail::unord): exactly those asked for,
+        # so that a max_nl compiled to FMAX fails, by one FMAX too many and one maximum too few.
+        n = {'mul': 4, 'max': 3, 'fmax': 1}
+        self.assertIsNone(objcode.judge_upward(self.count(4, 3, fmax=1), n, False))
+        self.assertIn('0 maxima that return a NaN (fmax), expected 1', objcode.judge_upward(self.count(4, 3), n, False))
+        self.assertIn('2 maxima that return a NaN (fmax), expected 1',
+                      objcode.judge_upward(self.count(4, 3, fmax=2), n, False))
+        wrong = objcode.judge_upward(self.count(4, 2, fmax=2), n, False)
+        self.assertIn('2 maxima, expected 3', wrong)
+        self.assertIn('2 maxima that return a NaN (fmax), expected 1', wrong)
         # The two-number form does not count its maxima; where it branches, a product may be copied
         # onto the paths of a branch, and the multiplications are at least those asked for.
-        self.assertIsNone(objcode.judge_upward(self.count(8, 7), {'mul': 8, 'max': None}, False))
-        self.assertIn('12 multiplications, expected 8', objcode.judge_upward(self.count(12), {'mul': 8, 'max': None},
-                                                                               False))
-        self.assertIsNone(objcode.judge_upward(self.count(12), {'mul': 8, 'max': None}, False, duplicated=True))
-        self.assertIn('expected at least 8', objcode.judge_upward(self.count(7), {'mul': 8, 'max': None}, False,
-                                                                  duplicated=True))
+        numbers = {'mul': 8, 'max': None, 'fmax': 0}
+        self.assertIsNone(objcode.judge_upward(self.count(8, 7), numbers, False))
+        self.assertIn('12 multiplications, expected 8', objcode.judge_upward(self.count(12), numbers, False))
+        self.assertIsNone(objcode.judge_upward(self.count(12), numbers, False, duplicated=True))
+        self.assertIn('expected at least 8', objcode.judge_upward(self.count(7), numbers, False, duplicated=True))
 
     def test_calls(self):
-        e = {'mul': 0, 'max': 0}
+        e = {'mul': 0, 'max': 0, 'fmax': 0}
         kernel = '__ZN5kairn3gen6upward12_GLOBAL__N_112upward_add_1EDv2_dS2_RS2_'
         arrays = '__ZN5kairn3gen6upward12_GLOBAL__N_119upward_add_1_arraysEPKdS4_S4_S4_PdS5_m'
         msvc = '?upward_hull_1@upward@gen@kairn@@YAXT__m128d@@0AEAT1@@Z'
@@ -332,11 +341,20 @@ class Upward(unittest.TestCase):
         self.assertIsNone(objcode.judge_upward(self.count(calls=[arrays, '__ZNSt3__18bit_castB9']), e, False))
 
     def test_parts(self):
-        parts = [{'part': 'packed', 'least': 1, 'mul': 4, 'max': 3}, {'part': 'tail', 'least': 1, 'mul': 4, 'max': 3}]
+        parts = [{'part': 'packed', 'least': 1, 'mul': 4, 'max': 3, 'fmax': 0},
+                 {'part': 'tail', 'least': 1, 'mul': 4, 'max': 3, 'fmax': 0}]
         for muls, maxima in ((8, 6), (12, 9), (16, 12)):
             self.assertIsNone(objcode.judge_upward(self.count(muls, maxima), parts, False))
         self.assertIn('which no number of copies', objcode.judge_upward(self.count(4, 3), parts, False))
         self.assertIn('which no number of copies', objcode.judge_upward(self.count(9, 6), parts, False))
+        self.assertIn('fmax', objcode.judge_upward(self.count(8, 6, fmax=1), parts, False))
+        # The NEON array form of the product: two FMAX per pass of the loop, one in the rest.
+        neon = [{'part': 'packed', 'least': 1, 'mul': 8, 'max': 6, 'fmax': 2},
+                {'part': 'tail', 'least': 1, 'mul': 4, 'max': 3, 'fmax': 1}]
+        for fmax in (3, 4, 5):     # 2 a + b, a and b at least 1
+            self.assertIsNone(objcode.judge_upward(self.count(12, 9, fmax=fmax), neon, False), fmax)
+        for fmax in (0, 1, 2):
+            self.assertIn('maxima that return a NaN', objcode.judge_upward(self.count(12, 9, fmax=fmax), neon, False))
 
     def test_the_expectations(self):
         expected = objcode.load_upward_expected(os.path.join(objcode.ROOT, 'gen', 'objcode.json'))
@@ -345,11 +363,26 @@ class Upward(unittest.TestCase):
         for k, forms in expected.items():
             want = {'sse2', 'neon', 'numbers'} | ({'avx2', 'neon_arrays'} if k in arrays else set())
             self.assertEqual(set(forms), want, k)
-        self.assertEqual(expected['upward_mul_1']['sse2']['double'], {'mul': 4, 'max': 3})
-        self.assertEqual(expected['upward_mul_1']['numbers']['float'], {'mul': 8, 'max': None})
+        self.assertEqual(expected['upward_mul_1']['sse2']['double'], {'mul': 4, 'max': 3, 'fmax': 0})
+        self.assertEqual(expected['upward_mul_1']['neon']['double'], {'mul': 4, 'max': 3, 'fmax': 1})
+        self.assertEqual(expected['upward_mul_1']['numbers']['float'], {'mul': 8, 'max': None, 'fmax': 0})
         self.assertEqual(expected['upward_mul_num_1']['avx2']['double'],
-                         [{'part': 'packed', 'least': 1, 'mul': 4, 'max': 2},
-                          {'part': 'tail', 'least': 1, 'mul': 2, 'max': 1}])
+                         [{'part': 'packed', 'least': 1, 'mul': 4, 'max': 2, 'fmax': 0},
+                          {'part': 'tail', 'least': 1, 'mul': 2, 'max': 1, 'fmax': 0}])
+        self.assertEqual(expected['upward_mul_1']['neon_arrays']['float'],
+                         [{'part': 'packed', 'least': 1, 'mul': 8, 'max': 6, 'fmax': 2},
+                          {'part': 'tail', 'least': 1, 'mul': 4, 'max': 3, 'fmax': 1}])
+        self.assertEqual(expected['upward_intersection_1']['neon']['double']['fmax'], 1)
+        # FMAX only where a kernel tests two operands for a NaN (unord): never on x86-64, never in the
+        # two-number form, and in no kernel without such a test.
+        for k, forms in expected.items():
+            for form, types in forms.items():
+                for t, c in types.items():
+                    for part in (c if isinstance(c, list) else [c]):
+                        if form not in ('neon', 'neon_arrays'):
+                            self.assertEqual(part['fmax'], 0, (k, form, t))
+        self.assertEqual(sorted(k for k, forms in expected.items() if forms['neon']['double']['fmax']),
+                         ['upward_intersection_1', 'upward_mul_1'])
         for family in ('gnu', 'msvc', 'clang-cl'):
             full = objcode.upward_configurations(family, 'full')
             for c in objcode.upward_configurations(family, 'quick'):

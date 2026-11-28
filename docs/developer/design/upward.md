@@ -669,8 +669,11 @@ machine code, so `/O2 /GL` is left to the runners):
   the two-number and the array forms (in the two-number form at least one, where the function
   branches: Clang 18 at `-O3` copies a product onto the paths of the branches of its selections);
 - **the maxima**: one `maxpd` (`vmaxpd`) or `fmaxnm` per `max_nl` in the register and the array
-  forms (the two-number form's `a > b ? a : b` may be a selection or a branch), and no `fmax`, which
-  returns the NaN and would make the product wrong;
+  forms (the two-number form's `a > b ? a : b` may be a selection or a branch), and no `fmax` for a
+  `max_nl`, which returns the NaN and would make the product wrong: since version 0.4.1 an `fmax` is
+  counted on arm64 exactly where the code tests two operands for a NaN (`unord`, one per pair line of
+  the register form and one per statement of the loop of the array form,
+  [The printers](#the-printers)), and nowhere else;
 - **no call**: every kernel is inlined into its caller (but with MSVC at `/Od`, which inlines nothing).
 
 ## Statements
