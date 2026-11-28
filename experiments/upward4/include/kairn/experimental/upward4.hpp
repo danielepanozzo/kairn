@@ -401,20 +401,44 @@ KAIRN_FORCEINLINE void renorm5_sum(P c0, P c1, P c2, P c3, P c4, P& z0, P& z1, P
 }
 
 // Four terms of either sign with |c0| >= |c1 + c2 + c3| (the product, whose head is the product of the
-// heads): z0 + z1 + z2 + z3 >= c0 + c1 + c2 + c3. The last step of the first vector sum is a
-// fast_two_sum, whose order |c0| >= |v| holds for normalized operands whose head product is normal
-// (|v| is about 3 2^-52 |c0| at most); for any operands it is still an upper pair (fast_two_sum). The
-// two upper steps, where an error that is not a number of the format would cost more than the last
-// limb (level 0 with level 1, level 1 with level 2), test their exactness (two_sum_x, fast_two_sum_x):
-// a product of bounds whose level 2 is positive while level 1 is not (the product of the second
-// limbs, p1 q1, has the sign of the head) can make the second one inexact.
+// heads; c1 is level 1, c2 level 2, c3 level 3): z0 + z1 + z2 + z3 >= c0 + c1 + c2 + c3. The step of
+// level 0 is a fast_two_sum, whose order |c0| >= |s1| holds for normalized operands whose head product is
+// normal (|s1| is about 3 2^-52 |c0| at most); for any operands it is still an upper pair. The two upper
+// steps are where an error that is not a number of the format would cost more than the last limb:
+// - level 0 with level 1: fast_two_sum_x tests that its error w1 is exact (its second operand s1 is not
+//   positive on the fast path of the case table, so it always is there; the forms that mix signs need it);
+// - level 1 with level 2: s1 = RU(c1 + v). Its error is NOT a number of the format when v is positive
+//   and far below the last place of c1: a product of bounds of the sign of the head has a positive
+//   p1 q1 in level 2 (the square of the second limb, for the upper bound of a square), and where it
+//   outweighs the level's errors, v > 0. The two-sum would then round the error up, losing as much as
+//   2^-53 of it (2^-159 of the result, far more than the last limb), which an earlier version of this
+//   function tested and sent to the exact cold path (0.7 to 2.7% of the squares and 0.04 to 1.3% of the
+//   products of the checks' classes away from underflow and overflow took it, at a cost of hundreds of
+//   nanoseconds each). Here the error is kept EXACTLY as two numbers instead:
+//   r = RU(c1 - s1) is exact when |c1| >= |v| (the first two operations of Fast2Sum are exact in a
+//   directed mode when the first operand is the larger: Boldo, Graillat and Muller 2017, relied on; the
+//   order is tested, ge_abs, and holds on the fast path, level 2 being below level 1), so the error of
+//   s1 is exactly r + v. Then (y, k) = fast_two_sum(r, v): when that error is a number (v not positive,
+//   or not far below), y = RU(r + v) is it, RU(r - y) = -v exactly and k = 0; when it is not, v > 0 and
+//   r <= -v (s1 >= c1 + v), so |r| >= |v| and RU(r - y) is exact (the same lemma), and k is the exact
+//   error of y unless v is more than about 2^-53 below the step |r| (fast_two_sum_x tests it: then the
+//   cold path). So y + k = r + v exactly on the fast path; y <= 0 (RU of the error of a sum rounded up,
+//   which is not positive), k <= 0 (fast_two_sum's error, any operands).
+// The rest, w1 + y + k + w3, has every term not positive: k + w3 (both below level 2) is added rounded up
+// (exactly w3 when k = 0, the usual case; otherwise one rounding at the level of the last limb's last
+// place), then the vector sums: (v', k3) of y with it, (z1, k2) of w1 with v', (z2, z3) of k2 with k3,
+// each a two_sum_nonpos (exact errors). The errors left out: the rounding of k + w3, and the error of the
+// level-2 with level-3 step (two_sum(c2, c3), rounded up), both at the level of the last limb.
 template <class P>
 KAIRN_FORCEINLINE void renorm4_mul(P c0, P c1, P c2, P c3, P& z0, P& z1, P& z2, P& z3, typename Mask<P>::type& ok) noexcept {
-    P v, w1, w2, w3, k2, k3;
+    P v, w1, w3, y, k, k2, k3;
     two_sum(c2, c3, v, w3);
-    two_sum_x(c1, v, v, w2, ok);
-    fast_two_sum_x(c0, v, z0, w1, ok);
-    two_sum_nonpos(w2, w3, v, k3);
+    const P s1 = add(c1, v);
+    const P r = sub(c1, s1);   // exact: |c1| >= |v| (tested)
+    ok = mand(ok, ge_abs(c1, v));
+    fast_two_sum_x(r, v, y, k, ok);   // y + k = c1 + v - s1 (tested)
+    fast_two_sum_x(c0, s1, z0, w1, ok);
+    two_sum_nonpos(y, add(k, w3), v, k3);
     two_sum_nonpos(w1, v, z1, k2);
     two_sum_nonpos(k2, k3, z2, z3);
 }
@@ -529,7 +553,8 @@ KAIRN_FORCEINLINE void qadd_sloppy(P x0, P x1, P x2, P x3, P y0, P y1, P y2, P y
 // sign relative to their heads (an upper quadruple of a positive value, or the negation of one of a
 // negative value, with one of the same kind), so that level 1 (p0 q1, p1 q0, e00) is never positive and
 // its two-sums are exact; level 2's p1 q1 has the sign of the head, so the renormalization's step of
-// level 1 with level 2, and its first step, test their exactness (renorm4_mul). With kMixed (the forms
+// level 1 with level 2 keeps its error exactly as two numbers, and its first step tests its exactness
+// (renorm4_mul). With kMixed (the forms
 // that compute every candidate, whose other pairs mix the signs) level 1's two-sums test theirs too.
 // The fast path also needs |p| >= 2^-860 (or p = 0), so that no term down to the fourth level
 // underflows: below, the errors of the products are not numbers of the format, and the exact cold
@@ -638,10 +663,15 @@ KAIRN_FORCEINLINE R4 of_lanes(const Q& u, const Q& n) noexcept {
 // rounding up) and not so low that the terms' range does not fit. Used by the cold paths only: its
 // results are the best upper quadruple of the sum it holds (each limb the exact rest below the limbs
 // before it rounded up, the invariant in its strong form), at a cost of a few hundred instructions.
+// Only the nw lowest words are used: as many as the terms' range needs (acc_init), so that a sum or a
+// product of quadruples whose limbs have no wide gaps works on 4 to 8 words, not 34 (every loop over the
+// words, the carries and borrows included, stops at nw; the value is held modulo 2^(64 nw) in two's
+// complement, which holds it exactly since it fits, see acc_init).
 struct Acc {
     static constexpr int kW = 34;
     std::uint64_t w[kW];
     int lsb;
+    int nw;
 };
 // The integer significand and the exponent of its last bit of a finite nonzero double.
 inline void split_double(double v, std::uint64_t& m, int& k, bool& negative) noexcept {
@@ -668,12 +698,13 @@ struct Term {
     int k;
     bool negative;
 };
-// Adds (or subtracts) v << s (v < 2^128, s < 64) at word i and above, with the carry (or borrow).
+// Adds (or subtracts) v << s (v < 2^128, s < 64) at word i and above, with the carry (or borrow), modulo
+// 2^(64 nw).
 inline void acc_add_at(Acc& a, int i, u128 v, int s, bool negative) noexcept {
     std::uint64_t part[3] = {std::uint64_t(v << s), std::uint64_t((v << s) >> 64), s ? std::uint64_t(v >> (128 - s)) : 0};
     if (s == 0) part[1] = std::uint64_t(v >> 64);
     std::uint64_t carry = 0;
-    for (int j = 0; i + j < Acc::kW; ++j) {
+    for (int j = 0; i + j < a.nw; ++j) {
         const std::uint64_t p = j < 3 ? part[j] : 0;
         if (j >= 3 && carry == 0) break;
         if (!negative) {
@@ -701,8 +732,9 @@ inline void acc_term(Acc& a, const Term& t) noexcept {
     }
     acc_add_at(a, off / 64, m, off % 64, t.negative);
 }
-// The accumulator of a set of terms: its unit from their range (the top word keeps the sign and room
-// for 64 carries).
+// The accumulator of a set of terms: its unit from their range, and its words: top + 8 - lsb bits, so
+// that the top word keeps the sign and room for 2^7 carries (every term is below 2^top in magnitude, and
+// there are at most 16 of them: the sum is below 2^(top + 4)).
 inline void acc_init(Acc& a, const Term* t, int n) noexcept {
     int top = -1080, low = 4000;
     for (int i = 0; i < n; ++i) {
@@ -712,7 +744,8 @@ inline void acc_init(Acc& a, const Term* t, int n) noexcept {
     }
     int lsb = std::max(low, -1080);
     if (top + 8 - lsb > 64 * Acc::kW) lsb = top + 8 - 64 * Acc::kW;
-    std::memset(a.w, 0, sizeof a.w);
+    a.nw = std::max(1, std::min(Acc::kW, (top + 8 - lsb + 63) / 64));
+    std::memset(a.w, 0, sizeof(std::uint64_t) * std::size_t(a.nw));
     a.lsb = lsb;
     for (int i = 0; i < n; ++i) acc_term(a, t[i]);
 }
@@ -720,19 +753,20 @@ inline void acc_init(Acc& a, const Term* t, int n) noexcept {
 // Respects the grid of the subnormal numbers (no bit below 2^-1074); a value above the largest finite
 // number gives +inf, one below -MAX gives -MAX (RU of it).
 inline double acc_limb(Acc& a) noexcept {
-    const bool negative = (a.w[Acc::kW - 1] >> 63) != 0;
+    const int nw = a.nw;
+    const bool negative = (a.w[nw - 1] >> 63) != 0;
     std::uint64_t mag[Acc::kW];
     if (negative) {   // the magnitude: two's complement negation
         std::uint64_t c = 1;
-        for (int i = 0; i < Acc::kW; ++i) {
+        for (int i = 0; i < nw; ++i) {
             const u128 t = u128(~a.w[i]) + c;
             mag[i] = std::uint64_t(t);
             c = std::uint64_t(t >> 64);
         }
     } else {
-        std::memcpy(mag, a.w, sizeof mag);
+        std::memcpy(mag, a.w, sizeof(std::uint64_t) * std::size_t(nw));
     }
-    int tw = Acc::kW - 1;
+    int tw = nw - 1;
     while (tw >= 0 && mag[tw] == 0) --tw;
     if (tw < 0) return 0.0;
     const int top = 64 * tw + 63 - __builtin_clzll(mag[tw]);
@@ -747,21 +781,29 @@ inline double acc_limb(Acc& a) noexcept {
         m = mag[0] << -lo;
     } else {
         const int w = lo / 64, sh = lo % 64;
-        const u128 two = u128(mag[w]) | (w + 1 < Acc::kW ? u128(mag[w + 1]) << 64 : u128(0));
+        const u128 two = u128(mag[w]) | (w + 1 < nw ? u128(mag[w + 1]) << 64 : u128(0));
         m = std::uint64_t(two >> sh) & ((std::uint64_t(1) << (top - lo + 1)) - 1);   // top - lo + 1 <= 53 bits
         rest = (mag[w] & ((std::uint64_t(1) << sh) - 1)) != 0;
         for (int i = 0; i < w && !rest; ++i) rest = mag[i] != 0;
     }
     if (!negative && rest) ++m;   // rounding up the magnitude of a positive value; a negative one truncates
     if (m == 0) return 0.0;
-    const int e = a.lsb + lo;
-    double z = std::ldexp(double(m), e);   // m <= 2^53: exact unless out of range
+    const int e = a.lsb + lo;   // >= -1074 (lo >= jmin)
+    if (e > 1023) return negative ? -kMax : kInf;   // m 2^e > MAX (a product of special bounds)
+    // m 2^e, exact unless above MAX: double(m) is exact (m <= 2^53), 2^e a number (normal, or subnormal
+    // below 2^-1022), and the product of two numbers whose exact value is a number is exact in every
+    // rounding mode (it is: its bits are on the grid of 2^-1074 and span at most 53 bits); above MAX
+    // it is +inf, tested below. (std::ldexp gives the same, as a call of the C library.)
+    const std::uint64_t pb = e >= -1022 ? std::uint64_t(e + 1023) << 52 : std::uint64_t(1) << (e + 1074);
+    double p2;
+    std::memcpy(&p2, &pb, 8);
+    double z = double(m) * p2;
     if (negative) z = -z;
     if (!(std::fabs(z) <= kMax)) return negative ? -kMax : kInf;
     // the rest: the value minus the limb, exactly (a limb whose last bit is below the unit holds every
     // bit of the value: the rest is 0)
     if (lo >= 0) acc_add_at(a, lo / 64, u128(m), lo % 64, !negative);
-    else std::memset(a.w, 0, sizeof a.w);
+    else std::memset(a.w, 0, sizeof(std::uint64_t) * std::size_t(nw));
     return z;
 }
 // The best upper quadruple of the value held: four limbs taken out in turn. A first limb +inf gives
