@@ -6,7 +6,7 @@
 /// kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math).
 #pragma once
 
-#include "upward2.hpp"
+#include <kairn/experimental/upward2.hpp>
 
 namespace kairn::experimental::upward2::detail {
 namespace {
