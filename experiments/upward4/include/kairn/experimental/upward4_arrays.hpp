@@ -36,19 +36,21 @@ struct View {
 namespace detail {
 namespace {
 
+// AP: a register of kAW elements; AM: its mask (Mask<AP>::type, named directly).
 #if KAIRN_UPWARD2_AVX2
 using AP = V4;
+using AM = V4;
 inline constexpr std::size_t kAW = 4;
 KAIRN_FORCEINLINE AP ald(const double* p) noexcept { return _mm256_loadu_pd(p); }
 KAIRN_FORCEINLINE void ast(double* p, AP v) noexcept { _mm256_storeu_pd(p, v); }
 KAIRN_FORCEINLINE AP mandnot(AP a, AP b) noexcept { return _mm256_andnot_pd(b, a); }   // a and not b
 #else
 using AP = V;
+using AM = M;
 inline constexpr std::size_t kAW = 2;
 KAIRN_FORCEINLINE AP ald(const double* p) noexcept { return vload(p); }
 KAIRN_FORCEINLINE void ast(double* p, AP v) noexcept { vstore(p, v); }
 #endif
-using AM = typename Mask<AP>::type;
 
 // normal_lanes: the test of normal(), lane by lane: each lane (one element) satisfies the invariant with
 // a first limb of magnitude below MAX. The same tests as normal() (its comment says why each means what
