@@ -424,11 +424,14 @@ KAIRN_FORCEINLINE void renorm5_sum(P c0, P c1, P c2, P c3, P c4, P& z0, P& z1, P
 //   error of y unless v is more than about 2^-53 below the step |r| (fast_two_sum_x tests it: then the
 //   cold path). So y + k = r + v exactly on the fast path; y <= 0 (RU of the error of a sum rounded up,
 //   which is not positive), k <= 0 (fast_two_sum's error, any operands).
-// The rest, w1 + y + k + w3, has every term not positive: k + w3 (both below level 2) is added rounded up
-// (exactly w3 when k = 0, the usual case; otherwise one rounding at the level of the last limb's last
-// place), then the vector sums: (v', k3) of y with it, (z1, k2) of w1 with v', (z2, z3) of k2 with k3,
-// each a two_sum_nonpos (exact errors). The errors left out: the rounding of k + w3, and the error of the
-// level-2 with level-3 step (two_sum(c2, c3), rounded up), both at the level of the last limb.
+// The rest, w1 + y + k + w3, has every term not positive. The vector sums of the version before on (w1, y,
+// w3), y in place of the error of s1: (v', k3) of y with w3, (z1, k2) of w1 with v', each a
+// two_sum_nonpos (exact errors); then k, below level 2, joins the last step: (z2, z3) = two_sum_nonpos(k2,
+// RU(k3 + k)). So the path to z1 is as short as before (k is not on it: a dependent chain of products,
+// Horner's, measured 3 to 10% slower on the Zen 2 when k was added to w3 first), and the results are those
+// of the version before wherever its test passed (k = 0 there, RU(k3 + 0) = k3). The errors left out: the
+// rounding of k3 + k (zero when k = 0; otherwise one rounding at the level of the last limb's last place),
+// and the error of the level-2 with level-3 step (two_sum(c2, c3), rounded up), at the same level.
 template <class P>
 KAIRN_FORCEINLINE void renorm4_mul(P c0, P c1, P c2, P c3, P& z0, P& z1, P& z2, P& z3, typename Mask<P>::type& ok) noexcept {
     P v, w1, w3, y, k, k2, k3;
@@ -438,9 +441,9 @@ KAIRN_FORCEINLINE void renorm4_mul(P c0, P c1, P c2, P c3, P& z0, P& z1, P& z2, 
     ok = mand(ok, ge_abs(c1, v));
     fast_two_sum_x(r, v, y, k, ok);   // y + k = c1 + v - s1 (tested)
     fast_two_sum_x(c0, s1, z0, w1, ok);
-    two_sum_nonpos(y, add(k, w3), v, k3);
+    two_sum_nonpos(y, w3, v, k3);
     two_sum_nonpos(w1, v, z1, k2);
-    two_sum_nonpos(k2, k3, z2, z3);
+    two_sum_nonpos(k2, add(k3, k), z2, z3);
 }
 
 // --- The sum of two quadruples ----------------------------------------------------------------------------
