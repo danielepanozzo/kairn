@@ -10,7 +10,8 @@
 // the exact range (exact arithmetic, ../../upward2/tests/exact.hpp) and satisfy the invariant (each
 // adjacent pair of limbs (a, b) with b <= 0 and |b| below the gap under a; zero later limbs after a
 // first limb +inf or +-MAX); the excess of each bound over the exact one, relative, in units of u^4 =
-// 2^-212, is printed (median, 99th percentile, largest), with the calls of the cold paths. Then every
+// 2^-212, is printed (median, 99th percentile, largest), with the calls of the cold paths and, per
+// operation, the share of its results that took one ("cold=", counted with KAIRN_UPWARD4_COUNT). Then every
 // pair of a list of special values, against the exact range in the extended reals (0 times infinity is
 // 0), and the answers compared with the two-limb experiment's (which follow Interval<double, 2>'s).
 // Exit status 0 when nothing failed.
@@ -481,6 +482,7 @@ double worst_of(const Verdict& v) {
 
 struct Stat {
     long n = 0, bad = 0, unnormalized = 0, zero_ref = 0, exact = 0;
+    long cold = 0;   // results that took a cold path (counted with KAIRN_UPWARD4_COUNT)
     std::vector<float> rel;
     std::string first_bad;
     double worst = -1;
@@ -686,6 +688,15 @@ void check_members(const u4::Interval& x, const I4& xs, Stat* st, Exact& e, cons
 
 long g_dump = 0;
 
+// The calls of the cold paths so far on this thread (every cause), to count the results that took one.
+long cold_calls() {
+#if KAIRN_UPWARD4_COUNT
+    return d4::cold_count[0] + d4::cold_count[1] + d4::cold_count[2];
+#else
+    return 0;
+#endif
+}
+
 // The exact paths (the accumulator of the cold paths) against the best upper quadruple of the exact
 // value (x2test::upper4): the sum and the product of two quadruples, one lane. "equal": the same limbs;
 // "above": an upper bound above the best one (allowed: the parts of terms below 2^-1080 are rounded up
@@ -795,7 +806,9 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
         cy.push_back(y);
         for (Op op : ops) {
             if (!op_available(op) || op >= CONV_I2) continue;
+            const long cold_before = cold_calls();
             const u4::Interval z = apply(op, x, y, t);
+            if (cold_calls() != cold_before) ++mine[op].cold;
             ++ops_run;
             const I4 zs = state(z);
             const Verdict v = judge(op, rx, ry, t, res_of(zs), true, &zs, e);
@@ -817,7 +830,9 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
         if (cx.size() == 256 || i == n - 1) {
             for (Op op : {ARR_ADD, ARR_SUB, ARR_MUL}) {
                 std::vector<u4::Interval> cz;
+                const long cold_before = cold_calls();
                 apply_arrays(op, cx, cy, cz);
+                mine[op].cold += cold_calls() - cold_before;   // the elements that took a cold path
                 for (std::size_t k = 0; k < cz.size(); ++k) {
                     const I4 zs = state(cz[k]);
                     const Verdict v = judge(judged(op), res_of(state(cx[k])), res_of(state(cy[k])), 0, res_of(zs), true, &zs, e);
@@ -841,8 +856,10 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
         Stat& s = mine[op];
         if (s.n == 0) continue;
         const long over = long(std::count_if(s.rel.begin(), s.rel.end(), [](float r) { return r > 1000.f; }));
-        std::printf("%-11s %-44s n=%ld invalid=%ld unnormalized=%ld exact_bounds=%ld median=%.3g p99=%.3g max=%.3g (u^4) above_1000=%ld zero_ref=%ld\n",
-                    kOpName[op], cls, s.n, s.bad, s.unnormalized, s.exact, s.q(0.5), s.q(0.99), s.mx(), over, s.zero_ref);
+        std::printf("%-11s %-44s n=%ld invalid=%ld unnormalized=%ld exact_bounds=%ld median=%.3g p99=%.3g max=%.3g (u^4) above_1000=%ld zero_ref=%ld "
+                    "cold=%ld (%.3g%%)\n",
+                    kOpName[op], cls, s.n, s.bad, s.unnormalized, s.exact, s.q(0.5), s.q(0.99), s.mx(), over, s.zero_ref, s.cold,
+                    100.0 * double(s.cold) / double(s.n));
         if (!s.first_bad.empty()) std::printf("  first: %s\n", s.first_bad.c_str());
         if (s.worst > 1e4 && op < CONV_I2) std::printf("  largest (%.3g u^4): %s\n", s.worst, s.worst_case.c_str());
         if (s.bad || s.unnormalized) failures += 1;
