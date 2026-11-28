@@ -39,14 +39,20 @@ Read them in this order:
    in one register and computed under the rounding mode upward, for speed; what the program must
    guarantee, how it differs from the default interval, its checks and their limits, and MSVC's
    weaker assurance.
+9. [Two and four limbs rounded upward](experimental.md), **EXPERIMENTAL and NOT VERIFIED**: the
+   opt-in headers `kairn/experimental/upward2.hpp` and `upward4.hpp`, intervals of two and four
+   limbs computed like the round-up interval, shipped without proofs so that clients can try them;
+   how to opt in, what they have, what is tested, and the little that is machine-checked so far.
 
 ## What the library does not have yet
 
 Kairn is in development ([Status](../index.md#status)), and these pages describe only what its
 headers have today: numbers of one and two limbs of `float` or `double`, intervals, balls and ball
 vectors around them, and functions on arrays of them, on the CPU. The rest is planned for later
-milestones and does not exist yet: three and four limbs, eight limbs and a number of limbs chosen at
-run time; division, square root and the elementary functions; decimal input and output; code for
+milestones and does not exist yet: three and four limbs (the experimental four-limb interval rounded
+upward of [Two and four limbs rounded upward](experimental.md) is not them: it has no proof, where
+Milestone 4 plans numbers, balls and intervals of three and four limbs with proofs), eight limbs and
+a number of limbs chosen at run time; division, square root and the elementary functions; decimal input and output; code for
 GPUs (CUDA and Metal), and with it any comparison of `float` and `double` limbs on a GPU;
 conversions between limb types; matrix products (`gemv`, `gemm`); AVX-512 and the choice of an
 instruction set at run time; and the C interface for other languages

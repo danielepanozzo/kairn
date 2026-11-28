@@ -8,7 +8,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | on 2026-11-22, on the tree with the functions on arrays, the ball vectors, the strict rule for the factors of a fused operation and the exhaustive tier, 1 202 tests with Apple clang, none failing, in 192 seconds on the Mac with `ctest --parallel 4`; on the Linux machine, on that tree before the additions to the interface of the sets and the Concepts pages (1 162 to 1 171 tests), 81 to 96 seconds with GCC 13 and Clang 18, with and without `-mavx2 -mfma` (`--parallel 16`); on the hosted runners of the CI, the same day (`main` at `5f597fb`, 1 198 to 1 202 tests), 228 to 317 seconds on Linux and macOS and 727 to 746 on Windows ([Time](#time) has the measurements, tree by tree; on the hosted runners the tier is over the two minutes the brief asks: [deviation 24](design/phase0/decisions.md#deviations-from-the-brief-flagged)) |
+| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, the exact checks of the experimental headers, which are not verified ([below](#the-experimental-headers)), and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | on 2026-11-22, on the tree with the functions on arrays, the ball vectors, the strict rule for the factors of a fused operation and the exhaustive tier, 1 202 tests with Apple clang, none failing, in 192 seconds on the Mac with `ctest --parallel 4`; on the Linux machine, on that tree before the additions to the interface of the sets and the Concepts pages (1 162 to 1 171 tests), 81 to 96 seconds with GCC 13 and Clang 18, with and without `-mavx2 -mfma` (`--parallel 16`); on the hosted runners of the CI, the same day (`main` at `5f597fb`, 1 198 to 1 202 tests), 228 to 317 seconds on Linux and macOS and 727 to 746 on Windows ([Time](#time) has the measurements, tree by tree; on the hosted runners the tier is over the two minutes the brief asks: [deviation 24](design/phase0/decisions.md#deviations-from-the-brief-flagged)) |
 | Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, the kernels printed for the emulated limb type in `fp:8:-14:1` ([below](#the-emulated-formats)), and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | on 2026-11-22, on the same tree, 2 000 tests (Apple clang); on that tree before the additions to the interface of the sets, 2 000 tests with GCC 13 on the Linux machine in 20 minutes (`--parallel 16`, the tools held to one worker) ([Time](#time)); it leaves a build tree of about 0.5 GB ([The size of the summaries](#the-size-of-the-summaries)) |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
@@ -2462,6 +2462,45 @@ tests that pin each:
 | GCC without `-frounding-math`, MSVC without `/fp:strict` | the build stops; with `KAIRN_UPWARD_OPTIONS_UNCHECKED`, reported | `api.upward.reject.gcc_without_rounding_math`, `.msvc_without_fp_strict`, `.msvc_fp_contract`; with the macro, `api.upward.self_test.unchecked` and `api.upward.moves.unchecked` (reported), and `api.upward.checks.unhonored`, whose checked build reports the file |
 | Clang and Apple clang without `-frounding-math` | builds; the header's results right; `self_test().limitation` set; a checked build's scope reports | the runner `without-options` of every `api.oracle.upward_K.F`, `api.upward.differential.without_options`, `api.upward.moves.without_options` (group 1); `api.upward.self_test.without_options`; `api.upward.checks.unhonored` |
 | x86-64 under Rosetta, and emulators | reported, not gated | `api.upward.rosetta.self_test` and `.moves` (Apple clang on arm64 macOS, built for x86-64 with AVX2 and FMA): on 2026-11-26 both passed under Rosetta on the Mac, and no probe of `moves.cpp` moved. No other emulator was at hand |
+
+## The experimental headers
+
+The headers of `kairn/experimental/`, the intervals of two and four limbs rounded upward, are
+**EXPERIMENTAL and NOT VERIFIED** ([Two and four limbs rounded upward](../concepts/experimental.md)):
+they have no kernel, so no cross-check, no oracle and no proof covers them. Their tests are the exact
+checks of the experiments they came from, which are tests, not proofs, in `tests/experimental/`
+(label `experimental`). They are registered with `KAIRN_EXPERIMENTAL_TESTS` on, the default, and
+only with GCC- and Clang-style compilers: with MSVC and clang-cl none is built, since the headers
+refuse MSVC and Windows was never part of the experiments, and CMake says so when it runs. Every
+program defines `KAIRN_EXPERIMENTAL_UNVERIFIED`, the opt-in, and links `kairn::upward` and
+`kairn::fma`; the programs of the checks are built with the experiments' warnings, `-Wall -Wextra`
+(GCC's `-Wpedantic` warns of the `unsigned __int128` of the four-limb header).
+
+| Test | What it checks |
+|---|---|
+| `experimental.upward2.check`, `experimental.upward4.check` | The programs of the experiments, `experiments/upward2/tests/check.cpp` and `experiments/upward4/tests/check.cpp`, with the build's flags and, where the packed kernels use it, AVX2; on `KAIRN_EXPERIMENTAL_QUICK_CASES` cases (20 000) of each class of operands, seed 1, two threads. Each operation's result must contain the exact range, computed in exact integer arithmetic (`experiments/upward2/tests/exact.hpp`), and keep the type's invariant, for the type and for the forms of the measurements (`experiments/upward*/include/`), and the two-limb functions on arrays; then every pair of a list of special values, against the exact range in the extended reals; the four-limb program also compares its exact path with the best quadruple of exact arithmetic. The program's exit status is the test's |
+| `experimental.headers` | `tests/experimental/headers.cmake` reads the tree: every header of `include/kairn/experimental/` starts with the banner, and its first preprocessor lines are the guard of the opt-in; no other header of `include/kairn/` includes one, and nothing of the library or of its CMake package defines `KAIRN_EXPERIMENTAL_UNVERIFIED`; under `experiments/`, `kairn/experimental/` holds only the forms of the measurements (`*_forms.hpp`), so that a header a client includes cannot stay there without the banner; `gen/claims.json` and the reference pages name none of them |
+| `experimental.opt_in.HEADER` | Each header, included in a file that has not defined the opt-in, stops the build with its message, and the control, which defines it, compiles (`opt_in.cpp`, through `tests/api/compile_fail.cmake`) |
+| `experimental.example` | The example of the concept page (`docs/examples/cpp/concepts_experimental.cpp`), which checks its own results against the exact values; what it prints must be the text the page shows |
+| `experimental.consume.add_subdirectory`, `experimental.consume.find_package` | A project (`tests/consume/experimental/`) whose program includes every experimental header through `kairn::upward` and `kairn::fma` in a file that defines the opt-in, and runs an operation of each type and of the functions on arrays: with Kairn added by `add_subdirectory`, and found by `find_package` after `consume.install` |
+
+**The full tier**: `full.experimental.upwardL.VARIANT.LEVEL`, the same checks of both types in each
+variant of the experiments' own projects, at `-O2` and at `-O3`, on `KAIRN_EXPERIMENTAL_CASES`
+cases (100 000) of each class, seed 2: `native`, as in the quick tier; `numbers`, the form of plain
+doubles forced (`KAIRN_UPWARD2_FORM_NUMBERS`); `checked`, with `KAIRN_CHECKS` 1; and, on x86-64,
+`sse`, FMA without AVX2. That is 12 tests on arm64 and 16 on x86-64. The experiments' own projects,
+`experiments/upward2/CMakeLists.txt` and `experiments/upward4/CMakeLists.txt`, build the same
+programs for longer runs: before the headers came to the library the experiments ran them on 2
+million cases per class with Apple clang 21 and GCC 16 on the Mac and GCC 13 and Clang 18 on the
+Linux machine, at `-O2` and `-O3`.
+
+**Time**, on 2026-11-28, with `ctest --parallel 4`: on the Mac with Apple clang, the nine tests of
+the quick tier took 13 seconds of processor time (4.4 s elapsed), the two checks 1.8 s and 2.5 s;
+the twelve of the full tier 252 seconds of processor time (63 s elapsed), each 9 to 13 s.
+
+**What they do not test**: a result on operands that no class samples (tests sample; a proof would
+cover every operand); MSVC, clang-cl and Windows; and nothing here measures speed (the benchmarks,
+`KAIRN_BENCH_UPWARD2` and `KAIRN_BENCH_UPWARD4`, are off by default and run by hand).
 
 ## The program's names
 
