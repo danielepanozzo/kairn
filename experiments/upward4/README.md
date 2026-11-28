@@ -13,9 +13,11 @@ clang and GCC on macOS arm64 only); the header refuses MSVC with a message.
 
 Requires the rounding mode upward set by `kairn::upward::Scope` and the options of
 `docs/concepts/upward.md` (GCC and Clang `-frounding-math`), exactly as `kairn/upward.hpp`, whose scopes,
-barriers and conventions it reuses, and an FMA: on x86-64 compile with `-mfma` (and `-mavx2` for the
-four-lane form of the measurements); without it the header falls back to its form of plain numbers,
-whose fused operation is `std::fma` (correct, slow where it is not an instruction).
+barriers and conventions it reuses, and an FMA: on x86-64 compile with `-mfma`, which the CMake target
+`kairn::fma` adds (and `-mavx2` for the four-lane forms: the functions on arrays, and a form of the
+measurements); without it the library's headers that it includes stop the build. Its form of plain
+numbers, whose fused operation is `std::fma` (correct, slow where it is not an instruction), is the
+form of other targets, or of any target where it is forced.
 
 ```cpp
 #define KAIRN_EXPERIMENTAL_UNVERIFIED       // the opt-in: no bound of the header is proved
@@ -102,6 +104,14 @@ place for cancellations up to 48 bits (beyond, the exact cold path); **sloppy**
 (`KAIRN_UPWARD4_SUM_SLOPPY`): the fourth limbs' error and the third level's errors rounded up, whose
 excess is relative to the operands rather than to the result. Their times and tightness are below.
 
+**The sum's cold path.** Where the two operands' magnitudes differ by more than about $2^{53}$, one of
+the sum's two lanes adds a positive head far below the other, whose error rounded up is not a number of
+the format, and the test of the heads' two-sum sends the sum to the exact cold path (about 100 to
+120 ns on the M3): right, but slow there. It happens to 30% of the sums of numbers spread over
+$2^{\pm 60}$ and to 82 to 83% of those over $2^{\pm 300}$ or $2^{\pm 500}$, and to none on the
+benchmark's operands, whose magnitudes are within $2^{\pm 8}$ ("How often each operation takes the cold
+path", below). No fast path for sums of very different magnitudes exists yet.
+
 ### The product
 
 The shape of the accurate multiplication of quad-double arithmetic: the products $p_i q_j$ by level
@@ -113,9 +123,13 @@ bug). Each level is gathered by two-sums rounded up, and a renormalization ends 
 The inexact errors of sums rounded up meet the product where a positive term of one level is added to
 a larger term of the level above. The products of the interval case table pair operands whose tails
 have the same sign relative to their heads, so level 1 is never positive and its two-sums are exact;
-level 2's $p_1 q_1$ has the sign of the head, so the renormalization's step of levels 1 and 2 and its
-first step test their exactness, and the product takes the exact cold path where they fail (about 1
-product in 1000 on the measured operands). The square has its own network (14 products instead of 22).
+level 2's $p_1 q_1$ has the sign of the head, so the renormalization's step of levels 1 and 2 keeps its
+error exactly as two numbers ($r = c_1 - s_1$, exact because $|c_1| \ge |v|$, which is tested, and $v$,
+gathered by a fast two-sum whose exactness is tested), and its first step tests its own exactness; the
+product takes the exact cold path only where a test fails, which on the checks' classes happens only
+below $2^{-860}$ and at the overflow threshold ("How often each operation takes the cold path",
+below). The square has its own network (14 products instead of 22), and chooses its operands by
+branches on the signs of the first limbs, as the product's form `branch` does.
 
 **The interval product** decides the case from the signs of the bounds' first limbs, one quadruple
 product per bound except where both intervals contain zero (two candidates per bound, the
@@ -124,7 +138,8 @@ lexicographic greater; only the chosen candidate's exactness matters). Forms (`u
 lanes of each case by a table of permutations, a branch only to the case of two zeros), `sel2`
 (branch-free: two candidates per bound always), `sel4` (AVX2: `sel2`'s two candidates in the four lanes
 of 256-bit registers). The forms that compute every candidate also test level 1's two-sums (their
-other pairs mix the signs).
+other pairs mix the signs). The square's form without branches on the signs, its two bounds' maximum
+taken by masks for every interval, is `sqr_sel`, kept for the measurements.
 
 ### What a client has
 
@@ -141,12 +156,23 @@ an upper quadruple) and `to_interval` (**under rounding to nearest**: the first 
 The exact members are the same in every mode and under every option; every operation that rounds needs
 a `kairn::upward::Scope`.
 
+The functions on arrays (`include/kairn/experimental/upward4_arrays.hpp`): `add`, `sub` and `mul`,
+`z = x + y`, `x - y`, `x y` element by element, on views `View<double>` (written) and
+`View<const double>` (read) of eight plain arrays, `u[0..3]` and `n[0..3]` (element $k$ has the upper
+quadruple $(u_0[k], \dots, u_3[k])$ and the negated lower one $(n_0[k], \dots, n_3[k])$, a canonical
+state, as `to_limbs` gives them) and a length. The views have the same length; the result may be
+written into an operand's arrays or into arrays that overlap neither. Each function holds its own
+scope of the mode upward, so it may be called where the mode is to nearest; each element is the type's
+operator's result for it, bit for bit. They are called by their qualified names
+(`kairn::experimental::upward4::add`), being in an unnamed namespace.
+
 The two-limb type (`experiments/upward2`) has the same members added: `lower()`, `upper()`, the three
 predicates, `width`, `radius`, `from_upward1`, `to_upward1`.
 
 **Missing**: division, square root, hull, intersection, comparisons beyond the sign predicates, `float`,
-MSVC, Windows; the functions on arrays (the second stage of the work, not done); a checked build's
-reports (`KAIRN_CHECKS` asserts the mode, as `kairn/upward.hpp`, and checks nothing of the operands).
+MSVC, Windows; a fast path for sums of operands whose magnitudes differ by more than about $2^{53}$
+("The sum's cold path", above); a checked build's reports (`KAIRN_CHECKS` asserts the mode, as
+`kairn/upward.hpp`, and checks nothing of the operands).
 
 ### Special values
 
@@ -358,11 +384,20 @@ arithmetic, and so is every result.
 around zero, zeros, any kind over $2^{\pm 500}$, tiny values whose later limbs underflow, huge values
 near overflow, cancellation of 30 to 210 bits, limbs with gaps, magnitudes up to $2^{300}$ apart,
 results of earlier operations), each operation (both sums, the difference, the four products, the
-square, the operations with a number, the negation, the conversions, the members); every result must
-contain the exact range (exact integer arithmetic, `../upward2/tests/exact.hpp`, extended for these
-checks) and satisfy the invariant; the excess of each bound over the exact one is printed relative, in
-units of $u^4 = 2^{-212}$; the exact cold path is compared with the best quadruple of exact arithmetic.
-Then every pair of the special values.
+square in both forms, the type's and `sqr_sel`, the operations with a number, the negation, the
+conversions, the members, the functions on arrays); every result must contain the exact range (exact
+integer arithmetic, `../upward2/tests/exact.hpp`, extended for these checks) and satisfy the invariant;
+each element of a function on arrays must be the type's operator's result bit for bit; the excess of
+each bound over the exact one is printed relative, in units of $u^4 = 2^{-212}$, with the share of each
+operation's results that took a cold path; the exact cold path is compared with the best quadruple of
+exact arithmetic. Then every pair of the special values, through the operators and through the
+functions on arrays.
+
+Kairn's own tests run this program (`tests/experimental/`, label `experimental`):
+`experimental.upward4.check` in the quick tier, on 20 000 cases per class with the build's flags, and
+`full.experimental.upward4.VARIANT.LEVEL` in the full tier, on 100 000 per class in each variant of
+this project (the form of the target, the form of plain numbers forced, a checked build, and on x86-64
+FMA without AVX2) at `-O2` and `-O3`. This project builds the same programs for longer runs:
 
 ```sh
 cmake -S experiments/upward4 -B build-x4 -DCMAKE_BUILD_TYPE=Release [-DCMAKE_CXX_COMPILER=g++]
@@ -376,8 +411,12 @@ The units `bench/x4_*.cpp`, added to `kairn-bench-up-LEVEL` by `-DKAIRN_BENCH_UP
 needs `-DKAIRN_BENCH_UPWARD2=ON`): the type (backend `x4`, with its forms), the one-limb round-up
 interval (`x4u`), `Interval` and `Ball` of one and two limbs (`x4d`) and plain `double` (`x4f`), all on
 the two-limb experiment's operands converted outside the timed functions; the two-limb round-up type is
-the backend `x2` on the same operands. Every function is checked before it is timed: bit for bit against
-the same kernels on operands read through volatile objects, and in exact arithmetic.
+the backend `x2` on the same operands. Among the type's functions, the square on operands of random
+signs, the type's form and `sqr_sel` (`x4/tp/sqrrand/native`, `x4/tp/sqrrand/sel`); and the functions
+on arrays (backend `x4a`: `x4a/tp/OP/native`, the function, and `x4a/tp/OP/loop`, the loop of the
+type's operators over the same eight arrays inside one scope). Every function is checked before it is
+timed: bit for bit against the same kernels on operands read through volatile objects, and in exact
+arithmetic.
 
 ```sh
 cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DKAIRN_BUILD_TESTS=OFF -DKAIRN_BUILD_BENCHMARKS=ON \

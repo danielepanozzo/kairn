@@ -20,11 +20,10 @@ and an interval of four limbs of `double`, `kairn::experimental::upward2::Interv
 106 or 212 bits), the upper bound and the lower bound negated, so that every rounding goes the same
 way and one operation on registers of two lanes computes both bounds. They are the multi-limb
 counterparts of `kairn::upward::Interval<double>`, and use its scopes, its options and its
-conventions. `kairn/experimental/upward2_arrays.hpp` has the sum, the difference and the product
-of two-limb intervals element by element on four plain arrays, each function holding its own scope,
-as the round-up interval's functions on arrays do.
-<!-- After the merge with the four-limb work: kairn/experimental/upward4_arrays.hpp, the same for
-four limbs; name it here and in "What a program can do" once it is in include/kairn/experimental/. -->
+conventions. `kairn/experimental/upward2_arrays.hpp` and `kairn/experimental/upward4_arrays.hpp`
+have the sum, the difference and the product of such intervals element by element on plain arrays
+(four of them for two limbs, eight for four), each function holding its own scope, as the round-up
+interval's functions on arrays do.
 
 They are not the numbers of three and four limbs of [Milestone 4](../developer/design/phase0/plan.md#milestones):
 those are `Expansion`, `Ball` and `Interval` of three and four limbs under rounding to nearest,
@@ -36,21 +35,24 @@ written by hand, round upward, are intervals only, and have no proof.
 The rules of the [round-up interval](upward.md#what-the-program-guarantees) hold as they are: every
 file that includes a header is compiled with `-frounding-math`, which the CMake target
 `kairn::upward` adds; every operation that rounds runs inside a `kairn::upward::Scope`; the mode
-is never set by hand. They also need hardware fused multiply-add, which `kairn::fma` gives on
-x86-64 (on AArch64 every compiler has it): without it the headers fall back to a form of plain
-numbers whose fused operation is `std::fma`, right and slow. On x86-64 with AVX2 (`-mavx2`) the
-functions on arrays use 256-bit registers. And the file defines `KAIRN_EXPERIMENTAL_UNVERIFIED`
-before it includes the first experimental header, or the header stops the build:
+is never set by hand. They also need hardware fused multiply-add, as the rest of the library does:
+on x86-64 `kairn::fma` adds `-mfma`, without which the library's headers that these include stop
+the build, and AArch64 always has it (a form of plain numbers, whose fused operation is `std::fma`,
+is used on other targets, slowly). On x86-64 with AVX2 (`-mavx2`) the functions on arrays use 256-bit
+registers, four elements at a time. And the file defines `KAIRN_EXPERIMENTAL_UNVERIFIED` before it
+includes the first experimental header, or the header stops the build:
 
 ```cpp
 --8<-- "docs/examples/cpp/concepts_experimental.cpp:opt_in"
 ```
 
 The headers are installed with the library, and the targets are the round-up interval's; there is
-no target of their own, so that the opt-in stays in the program's code:
+no target of their own, so that the opt-in stays in the program's code. A file that includes them
+compiles under `-Wall -Wextra -Wpedantic -Werror` with GCC and Clang, as the consumer project of the
+tests does:
 
 ```cmake
---8<-- "tests/consume/experimental/CMakeLists.txt:12:13"
+--8<-- "tests/consume/experimental/CMakeLists.txt:13:15"
 ```
 
 A typical use is the one of the round-up interval, a filter that decides a sign, where one limb
@@ -81,6 +83,16 @@ mode: from it under the mode upward, to it under rounding to nearest, outside th
 --8<-- "docs/examples/cpp/concepts_experimental.txt:4:5"
 ```
 
+The functions on arrays take the limbs in plain arrays, one array per limb of each bound:
+
+```cpp
+--8<-- "docs/examples/cpp/concepts_experimental.cpp:arrays"
+```
+
+```text
+--8<-- "docs/examples/cpp/concepts_experimental.txt:6:7"
+```
+
 The program is
 [`docs/examples/cpp/concepts_experimental.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/concepts_experimental.cpp),
 which ctest builds with `kairn::upward` and `kairn::fma` and whose output it compares with the text
@@ -99,15 +111,26 @@ conversions `from_upward1` and `to_upward1` from and to `kairn::upward::Interval
 `to_interval` to it (under rounding to nearest). The four-limb type also has `from_upward2` and
 `to_upward2` (exact, in any mode), and `upper_limb(i)` and `neg_lower_limb(i)`. The members of the
 classes are exact and the same in every mode; every function that rounds needs a scope, except the
-functions on arrays, which hold their own. Those of two limbs, `kairn::experimental::upward2::add`,
-`sub` and `mul`, take views `View<double>` and `View<const double>` of four plain arrays (the
-upper pairs' heads and tails, then the negated lower pairs'), each element a state as an operation
-returns it; the views have the same length, and the result is written into an operand's arrays or
-into arrays that overlap neither. They are called by their qualified names.
+functions on arrays, which hold their own, so that they may be called where the mode is to nearest.
+Those are `add`, `sub` and `mul` of each namespace (`kairn::experimental::upward2::add`, ...), on views
+`View<double>` (written) and `View<const double>` (read): of four plain arrays for two limbs (the upper
+pairs' heads and tails, then the negated lower pairs'), of eight for four limbs (`u[0..3]`, the limbs of
+the upper bounds, and `n[0..3]`, those of the lower bounds negated). Each element is a state as an
+operation returns it, and comes out as the type's operator gives it, bit for bit; the views have the
+same length, and the result is written into an operand's arrays or into arrays that overlap neither.
+They are called by their qualified names.
 
 They do not have: division, square root, hull, intersection, comparisons beyond the three sign
 predicates, `float` limbs, `constexpr`, MSVC or any Windows build, and a checked build's reports on
 operands (`KAIRN_CHECKS` asserts the mode, and checks nothing else).
+
+**A four-limb sum of numbers of very different magnitudes is slow.** Where the two operands'
+magnitudes differ by more than about $2^{53}$, the four-limb sum (and the difference) takes its exact
+path: the result is right, and costs about 100 to 120 ns on an Apple M3 instead of about 12. On
+operands spread over $2^{\pm 60}$ that is 30% of the sums, over $2^{\pm 300}$ 82 to 83%; on the
+benchmark's operands below, whose magnitudes are within $2^{\pm 8}$, none. There is no fast path for
+those sums yet. The product and the square leave their fast path only below about $2^{-860}$ and at
+the overflow threshold.
 
 **Special values** follow `Interval<double, 2>`: the empty set, unbounded intervals,
 $0 \cdot \infty = 0$, and an infinite or NaN number operand of an operation with a number is the
@@ -135,7 +158,11 @@ dropped, only rounded up**. It then tests its own result in a few instructions (
 the exactness of the few steps whose error might not be a number); where a test fails it returns an
 exact result instead, computed as an integer in a fixed-point accumulator and rounded up limb by
 limb. So every result keeps the invariant by construction, and what is argued but only tested is
-how tight the fast sequences are and how rarely they leave the fast path.
+how tight the fast sequences are and how rarely they leave the fast path. The product keeps exactly,
+as two numbers, the one error of its network that is not always a number of the format, so that on
+the checks' classes it and the square leave the fast path only near underflow and overflow; the sum
+leaves it where its operands' magnitudes are far apart (above). The square chooses its operands by
+the signs of the first limbs, and costs 0.70 to 0.94 of a product.
 
 Every rounding step of both headers has its reason in a comment; the experiments' READMEs say what
 is argued, what is relied on from the literature, and what is only tested.
@@ -147,9 +174,11 @@ The exact checks of each type, the programs of the experiments (`experiments/upw
 operands (the benchmark's, points, narrow and wide intervals, around zero, zeros, values whose later
 limbs underflow, values near overflow, heavy cancellation, limbs with gaps, results of earlier
 operations) and for each operation, every result must contain the exact range, computed in exact
-integer arithmetic, and keep the type's invariant; then every pair of a list of special values,
+integer arithmetic, and keep the type's invariant; each function on arrays must give, element by
+element, the type's operator's result bit for bit; then every pair of a list of special values,
 against the exact range in the extended reals. A result that does not contain the exact range fails
-the test.
+the test. The four-limb program also prints, per operation and class, the share of results that took
+the exact path.
 
 - The quick tier runs them with the build's flags on 20 000 cases per class
   (`experimental.upward2.check`, `experimental.upward4.check`), with a test that each header
@@ -197,33 +226,43 @@ does not build it**; its files are kept so that the proofs can continue from the
 
 ## How fast they are
 
-<!-- The table and the four-limb numbers of the paragraph after it are copied from
-experiments/upward4/README.md ("What was measured"), and the two-limb comparisons from
-experiments/upward2/README.md: refresh them together when those READMEs' measurements change. -->
-
 Measured with the benchmark program of the round-up interval (`kairn-bench-up-LEVEL` with
-`KAIRN_BENCH_UPWARD2` and `KAIRN_BENCH_UPWARD4` on, both off by default), on 2026-11-27, `--reps 31`,
-three runs per configuration at `-O2` and three at `-O3`: an Apple M3 Max with Apple clang 21 and
-GCC 16 (not pinned), and an AMD EPYC 7452 (Zen 2), one logical CPU pinned with its SMT sibling idle,
+`KAIRN_BENCH_UPWARD2` and `KAIRN_BENCH_UPWARD4` on, both off by default) on 2026-11-28, on the code of
+this version, `--reps 31`, three runs per configuration at `-O2` and three at `-O3`: an Apple M3 Max
+with Apple clang 21 and GCC 16 (not pinned; that day the Mac was shared with other work, and code that
+had not changed took up to 10% longer than on 2026-11-27, so the ratios within a run are the fairer
+comparison there), and an AMD EPYC 7452 (Zen 2), one logical CPU pinned with its SMT sibling idle,
 with GCC 13 and Clang 18. The same operands for every type (intervals of half-width $2^{-80}$, and
-points); the time per operation in nanoseconds, the minimum of each run, as the range over the six
-runs of a configuration, in the order M3 Apple clang | M3 GCC | Zen 2 GCC | Zen 2 Clang; the ratio
-taken within each run:
+points, of magnitudes within $2^{\pm 8}$); the time per operation in nanoseconds, the minimum of each
+run, as the range over the six runs of a configuration, in the order M3 Apple clang | M3 GCC | Zen 2
+GCC | Zen 2 Clang; the ratio taken within each run:
 
 | ns | 1 limb (`kairn::upward`) | 2 limbs | 4 limbs | 4 limbs / 2 limbs |
 |---|---|---|---|---|
-| sum, loop | 0.37-0.38, 0.38-0.39, 0.59-0.60, 0.60 | 2.21, 2.21-2.22, 5.19-5.51, 5.17-5.34 | 11.6-12.0, 11.9-12.2, 27.6-27.7, 27.8-28.4 | 5.3-5.4, 5.4-5.5, 5.0-5.3, 5.2-5.5 |
-| product, loop | 1.17, 1.17-1.18, 1.99-2.00, 1.99-2.00 | 1.84-1.85, 2.16-2.23, 3.88-3.92, 4.35-9.23 | 16.3-17.6, 21.4-21.7, 50.1-50.8, 41.6-42.3 | 8.8-9.5, 9.6-10, 12.9-13.1, 4.5-9.6 |
-| sum, chain | 0.71, 0.73-0.79, 1.01-1.19, 1.01 | 8.57, 8.52-8.55, 10.2, 10.2-10.8 | 22.1, 22.0-23.4, 28.0-28.2, 26.9-27.1 | 2.6, 2.6-2.7, 2.7-2.8, 2.5-2.6 |
-| product, chain | 4.67-4.87, 4.79-4.87, 3.17-3.54, 3.55-4.05 | 5.77-5.80, 5.64-6.24, 7.61-8.12, 10.0-10.2 | 23.6-25.9, 32.8-34.4, 49.5-49.9, 40.7-41.5 | 4.1-4.5, 5.4-5.9, 6.1-6.6, 4.1 |
-| 3 by 3 determinant on points | 11.8, 11.7, 22.5, 23.2-23.4 | 53.6-55.5, 57.3-58.7, 147-150, 154-156 | 379-401, 458-461, 853-890, 754-764 | 6.8-7.2, 7.8-8.0, 5.8-6.0, 4.8-4.9 |
-| Horner of degree 8 | 15.1-15.2, 14.4-16.5, 27.0-27.1, 27.0-27.1 | 77.3-78.0, 81.4-81.7, 143-144, 161-162 | 330, 348-362, 502-503, 478 | 4.2-4.3, 4.3-4.5, 3.5, 3.0 |
+| sum, loop | 0.39, 0.39-0.40, 0.60-1.03, 0.60-0.82 | 2.25-2.26, 2.26-2.27, 5.18-5.56, 5.17-5.60 | 11.7-12.8, 12.4-12.5, 27.6-28.2, 27.8-28.4 | 5.2-5.7, 5.5, 5.0-5.4, 5.0-5.4 |
+| product, loop | 1.19-1.20, 1.20-1.21, 2.00, 1.98-2.00 | 1.88-1.91, 2.20-2.40, 3.88-4.37, 9.20-9.66 | 12.8, 13.0-13.3, 34.4, 32.5 | 6.7-6.8, 5.6-6.1, 7.9-8.9, 3.4-3.5 |
+| sum, chain | 0.78, 0.79-0.82, 1.01-1.02, 1.01 | 8.66-9.38, 9.32-9.37, 10.2-10.3, 10.3-10.8 | 24.2, 23.4-24.0, 28.0-28.6, 26.9-27.2 | 2.6-2.8, 2.5-2.6, 2.7-2.8, 2.5-2.7 |
+| product, chain | 4.87-4.96, 4.97-4.98, 3.17-3.43, 3.55-3.77 | 6.32-6.35, 5.50-6.39, 7.59-7.80, 10.2-10.5 | 21.3-21.5, 23.2-23.6, 34.0, 31.3-31.6 | 3.4, 3.7-4.2, 4.4-4.5, 3.0-3.1 |
+| 3 by 3 determinant on points | 12.0, 11.7-12.0, 22.1-23.0, 23.2-23.3 | 56.6-56.7, 58.6-60.1, 146-150, 154-156 | 373-389, 406-409, 737-753, 691-695 | 6.6-6.9, 6.8-6.9, 4.9-5.1, 4.4-4.5 |
+| Horner of degree 8 | 15.1-15.5, 15.6-16.8, 27.0-27.1, 26.6-27.0 | 84.6-84.7, 82.5-83.5, 143-144, 162 | 355-356, 351-353, 507-508, 472-474 | 4.2, 4.2-4.3, 3.5, 2.9 |
+
+The four-limb square took 0.72 to 0.84 of the time of a product in loops (10.1 to 26.9 ns), and 0.70
+to 0.94 on operands of random signs; the product where both intervals contain zero (two candidates per
+bound) 1.9 to 2.1 times the product of one sign. The four-limb functions on arrays, per element on
+arrays of 256 elements: on the Zen 2 (AVX2, four elements per register) 0.38 to 0.51 of the time of a
+loop of the type's operators over the same eight arrays, and about half that of the type's own loop;
+on the M3 (NEON, two elements per register, as many as the type's own registers hold) 0.79 to 0.96 of
+that loop, and 0.93 to 1.23 times the type's loop on its own layout. The sums above never meet the
+slow case of very different magnitudes ([above](#what-a-program-can-do-with-them-and-what-it-cannot-yet)).
 
 In the two-limb experiment's own runs, the two-limb type was 6.4 to 8.8 times faster than the
 default `Interval<double, 2>` on the determinant, and its median width over the exact value about 6
-times smaller there (10 times on Horner); in the runs above, `Ball<double, 2>` took 0.85 to 1.05 of
+times smaller there (10 times on Horner); in the runs above, `Ball<double, 2>` took 0.88 to 1.05 of
 its time on the determinant. There is no default type of four limbs to compare with; against
-`Interval<double, 2>`, the four-limb type took 0.65 to 0.94 of its time on the determinant, and its
-determinant on these points was exact. The experiments' READMEs have the other measurements: the
-forms of the product that were rejected, the tightness of each operation in units of $u^2$ and
-$u^4$, and how often the four-limb operations take their exact path.
+`Interval<double, 2>` on the same operands, the four-limb type took 0.57 to 0.81 of its time on the
+determinant, 0.43 to 0.72 on Horner and 0.43 to 0.45 on a product, and its determinant on these
+points was exact. The experiments' READMEs ([two limbs](https://github.com/danielepanozzo/kairn/blob/main/experiments/upward2/README.md),
+[four limbs](https://github.com/danielepanozzo/kairn/blob/main/experiments/upward4/README.md)) have
+the other measurements: the forms that were rejected, the times before and after the changes of
+2026-11-28, the tightness of each operation in units of $u^2$ and $u^4$, and how often each four-limb
+operation takes its exact path, class by class.

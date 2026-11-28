@@ -151,7 +151,12 @@ result must contain the exact range (exact integer arithmetic, `tests/exact.hpp`
 upper-normalized; the same operands through `Interval<double, 2>` are checked the same way, and the
 excess of each bound over the exact one is printed for both, relative, in units of $u^2 = 2^{-106}$.
 Then every pair of a list of special values, against the exact range in the extended reals and
-against `Interval<double, 2>`'s answer.
+against `Interval<double, 2>`'s answer. The functions on arrays are checked on every class too.
+
+Kairn's own tests run this program (`tests/experimental/`, label `experimental`):
+`experimental.upward2.check` in the quick tier, on 20 000 cases per class with the build's flags, and
+`full.experimental.upward2.VARIANT.LEVEL` in the full tier, on 100 000 per class in each variant of
+this project at `-O2` and `-O3`. This project builds the same programs for longer runs:
 
 ```sh
 cmake -S experiments/upward2 -B build-x2 -DCMAKE_BUILD_TYPE=Release [-DCMAKE_CXX_COMPILER=g++]
