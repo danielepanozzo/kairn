@@ -726,6 +726,10 @@ void check_exact_paths(const I4& sx, const I4& sy, ExactStat& es, Exact& e) {
             ++es.n;
             Q4 zz;
             std::memcpy(zz.a, z.a, sizeof zz.a);
+            if (zz.a[0] == kInf) {   // an upper bound of anything: the best one where the sum overflows
+                (best.a[0] == kInf ? es.equal : es.above)++;
+                continue;
+            }
             Exact d = e;   // z - exact >= 0
             add_q(d, zz, true);
             const int up = -d.sign();

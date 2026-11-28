@@ -296,6 +296,14 @@ template <class P>
 struct Mask {
     using type = M;
 };
+// A number in every lane of a register P.
+template <class P>
+KAIRN_FORCEINLINE P bcast(double a) noexcept {
+    if constexpr (sizeof(P) == sizeof(V)) return vset(a);
+#if KAIRN_UPWARD2_AVX2
+    else return u2d::vset4(a);
+#endif
+}
 template <class P>
 KAIRN_FORCEINLINE typename Mask<P>::type all_mask() noexcept {
     return mall();
@@ -314,6 +322,9 @@ KAIRN_FORCEINLINE V4 ge_abs(V4 a, V4 b) noexcept { return _mm256_cmp_pd(vabs(a),
 KAIRN_FORCEINLINE V4 mblend(V4 m, V4 a, V4 b) noexcept { return _mm256_blendv_pd(b, a, m); }
 KAIRN_FORCEINLINE bool all_set(V4 m) noexcept { return _mm256_movemask_pd(m) == 15; }
 KAIRN_FORCEINLINE V4 mornot(V4 a, V4 b) noexcept { return _mm256_or_pd(a, _mm256_xor_pd(b, all_mask<V4>())); }
+KAIRN_FORCEINLINE V4 not_small(V4 z, V4 t) noexcept {
+    return _mm256_or_pd(_mm256_cmp_pd(vabs(z), t, _CMP_GE_OQ), _mm256_cmp_pd(z, _mm256_setzero_pd(), _CMP_EQ_OQ));
+}
 KAIRN_FORCEINLINE V4 veq(V4 a, V4 b) noexcept { return _mm256_cmp_pd(a, b, _CMP_EQ_OQ); }
 #endif
 
@@ -551,7 +562,7 @@ KAIRN_FORCEINLINE void qmul(P a0, P a1, P a2, P a3, P b0, P b1, P b2, P b3, P& p
     two_sum(u, k, t2, g3);
     const P t3 = add(add(add(g1, g2), add(g3, h1)), add(add(h2, h3), add(add(e02, e11), add(e20, add(c3, c4)))));
     renorm4_mul(p, t1, t2, t3, z0, z1, z2, z3, ok);
-    ok = mand(ok, not_small(p, vset(0x1p-860)));
+    ok = mand(ok, not_small(p, bcast<P>(0x1p-860)));
 }
 
 // The square of a quadruple times a sign, lane by lane: A (s A) for A = (a0..a3) and B = s A, s = +-1 per
@@ -578,7 +589,7 @@ KAIRN_FORCEINLINE void qsqr(P a0, P a1, P a2, P a3, P b0, P b1, P b2, P b3, P& p
     two_sum(u, k, t2, g2);
     const P t3 = add(add(add(g1, g2), h1), add(add(e02, e11), add(c3, c4)));
     renorm4_mul(p, t1, t2, t3, z0, z1, z2, z3, ok);
-    ok = mand(ok, not_small(p, vset(0x1p-860)));
+    ok = mand(ok, not_small(p, bcast<P>(0x1p-860)));
 }
 
 // The greater of two quadruples, lane by lane: the lexicographic maximum of their limbs, which is the
@@ -719,14 +730,10 @@ inline double acc_limb(Acc& a) noexcept {
     } else {
         std::memcpy(mag, a.w, sizeof mag);
     }
-    int top = -1;
-    for (int i = Acc::kW - 1; i >= 0; --i)
-        if (mag[i]) {
-            top = 64 * i + 63 - __builtin_clzll(mag[i]);
-            break;
-        }
-    if (top < 0) return 0.0;
-    auto bit = [&](int j) noexcept { return j >= 0 && ((mag[j / 64] >> (j % 64)) & 1u) != 0; };
+    int tw = Acc::kW - 1;
+    while (tw >= 0 && mag[tw] == 0) --tw;
+    if (tw < 0) return 0.0;
+    const int top = 64 * tw + 63 - __builtin_clzll(mag[tw]);
     const int jmin = -1074 - a.lsb;   // the bit of 2^-1074
     int lo = std::max(top - 52, jmin);
     std::uint64_t m = 0;
@@ -734,15 +741,14 @@ inline double acc_limb(Acc& a) noexcept {
     if (lo > top) {
         lo = jmin;   // a value below 2^-1074 in magnitude
         rest = true;
+    } else if (lo < 0) {   // every bit of the value in the limb (the value is below 2^53 units)
+        m = mag[0] << -lo;
     } else {
-        for (int j = top; j >= lo; --j) m = (m << 1) | (bit(j) ? 1u : 0u);
-        for (int j = lo - 1; j >= 0 && !rest; --j) {
-            if (j % 64 == 63 && mag[j / 64] == 0) {
-                j -= 63;
-                continue;
-            }
-            rest = bit(j);
-        }
+        const int w = lo / 64, sh = lo % 64;
+        const u128 two = u128(mag[w]) | (w + 1 < Acc::kW ? u128(mag[w + 1]) << 64 : u128(0));
+        m = std::uint64_t(two >> sh) & ((std::uint64_t(1) << (top - lo + 1)) - 1);   // top - lo + 1 <= 53 bits
+        rest = (mag[w] & ((std::uint64_t(1) << sh) - 1)) != 0;
+        for (int i = 0; i < w && !rest; ++i) rest = mag[i] != 0;
     }
     if (!negative && rest) ++m;   // rounding up the magnitude of a positive value; a negative one truncates
     if (m == 0) return 0.0;
@@ -876,6 +882,26 @@ KAIRN_DETAIL_COLD R4 qmul_special(R4 p, R4 q, R4 x, R4 y) noexcept {
     return z;
 }
 
+// The greater of the products P Q and P' Q' lane by lane, each exactly rounded up (the cold path of the
+// case where both operands contain zero): mul_special(x, y) where a leading product is not finite or
+// reaches MAX.
+KAIRN_DETAIL_COLD R4 qmul2_special(R4 p, R4 q, R4 p2, R4 q2, R4 x, R4 y) noexcept {
+    KAIRN_UPWARD4_COUNTED(1);
+    pin(p);
+    bar(q);
+    bar(p2);
+    bar(q2);
+    Q z[2];
+    for (int lane = 0; lane < 2; ++lane) {
+        const Q a = lane_of(p, lane), b = lane_of(q, lane), c = lane_of(p2, lane), d = lane_of(q2, lane);
+        if (!(std::fabs(a.a[0] * b.a[0]) < kMax) || !(std::fabs(c.a[0] * d.a[0]) < kMax)) return mul_special(x, y);
+        z[lane] = sgreater(sprod(a, b), sprod(c, d));
+    }
+    R4 r = of_lanes(z[0], z[1]);
+    bar(r);
+    return r;
+}
+
 // --- The product of intervals: the form "branch" ---------------------------------------------------------
 //
 // One candidate per lane chosen by branches on the signs of the bounds' first limbs (normalized: the
@@ -932,12 +958,14 @@ KAIRN_FORCEINLINE R4 mul_zero_zero(const R4& x, const R4& y) noexcept {
     const R4 pa = lanes4<1, 1>(x), qa = lanes4<1, 0>(y), pb = lanes4<0, 0>(x);
     V p1, p2;
     R4 a, b, z;
-    M ok = mall();
-    qmul(pa.r0, pa.r1, pa.r2, pa.r3, qa.r0, qa.r1, qa.r2, qa.r3, p1, a.r0, a.r1, a.r2, a.r3, ok);
-    qmul(pb.r0, pb.r1, pb.r2, pb.r3, y.r0, y.r1, y.r2, y.r3, p2, b.r0, b.r1, b.r2, b.r3, ok);
-    qmax(a.r0, a.r1, a.r2, a.r3, b.r0, b.r1, b.r2, b.r3, z.r0, z.r1, z.r2, z.r3);
+    M oka = mall(), okb = mall();
+    qmul(pa.r0, pa.r1, pa.r2, pa.r3, qa.r0, qa.r1, qa.r2, qa.r3, p1, a.r0, a.r1, a.r2, a.r3, oka);
+    qmul(pb.r0, pb.r1, pb.r2, pb.r3, y.r0, y.r1, y.r2, y.r3, p2, b.r0, b.r1, b.r2, b.r3, okb);
+    // Only the chosen candidate's exactness matters: the other is an upper bound of a corner at most
+    // the chosen one (an inexact one that came out above the exact one would have been chosen).
+    const M ok = mblend(qmax(a.r0, a.r1, a.r2, a.r3, b.r0, b.r1, b.r2, b.r3, z.r0, z.r1, z.r2, z.r3), oka, okb);
     if (!(all_set(ok) && normal(z)) || any(mor(big(p1), big(p2)))) [[unlikely]]
-        return mul_special(x, y);
+        return qmul2_special(pa, qa, pb, y, x, y);
     return z;
 }
 
