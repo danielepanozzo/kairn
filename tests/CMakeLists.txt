@@ -4,8 +4,8 @@
 #   ctest --test-dir build --output-on-failure               the quick tier
 #   ctest --test-dir build/tests/full --output-on-failure    the full tier
 #
-# The quick tier is the tests of this directory and of api/: the library, with this build's
-# compiler and flags. The full tier is what left it to keep it quick: the same cross-checks on more
+# The quick tier is the tests of this directory, of api/ and of experimental/: the library, with
+# this build's compiler and flags. The full tier is what left it to keep it quick: the same cross-checks on more
 # cases, the interpreter's enumerations of toy formats, and the tools' own tests (the generator's,
 # the oracle's, those of the cross-checks' guards, of the script of the reference pages and of the
 # brute-force driver). Its tests are registered in full/ and named full.*; the file
@@ -29,6 +29,10 @@
 #   add_subdirectory, in which Kairn prints nothing when configured and installs nothing unless
 #   asked (KAIRN_INSTALL), and one that uses them through find_package after this build tree is
 #   installed into a prefix under the build directory.
+# - The tests of the experimental headers, kairn/experimental/ (EXPERIMENTAL, NOT VERIFIED,
+#   opt-in), in experimental/ (label experimental): their exact checks, which are tests and not
+#   proofs, the guard of their opt-in, their example and a consumer project; with GCC- and
+#   Clang-style compilers only.
 
 find_package(Python3 COMPONENTS Interpreter)
 include(CheckCXXSourceCompiles)
@@ -37,6 +41,11 @@ include(CMakePushCheckState)
 # The tests of <kairn/upward.hpp>, the round-up interval (api/upward/, label upward): on by default;
 # a job that runs them on its own turns them off in the others.
 option(KAIRN_UPWARD_TESTS "Register the tests of kairn/upward.hpp, the round-up interval (label upward)" ON)
+# The tests of the experimental headers, kairn/experimental/ (EXPERIMENTAL, NOT VERIFIED, opt-in;
+# experimental/, label experimental): on by default; registered with GCC- and Clang-style compilers
+# only, since the headers refuse MSVC and Windows was never part of the experiments.
+option(KAIRN_EXPERIMENTAL_TESTS
+  "Register the tests of the experimental headers kairn/experimental/ (NOT VERIFIED; label experimental)" ON)
 
 # MSVC and clang-cl take MSVC-style options; everything else here takes GCC-style ones.
 if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR
@@ -1510,6 +1519,21 @@ if(KAIRN_INSTALL)
 endif()
 add_subdirectory(api)
 
+# --- The experimental headers -------------------------------------------------------------------
+#
+# The two-limb and four-limb intervals rounded upward of kairn/experimental/ (EXPERIMENTAL, NOT
+# VERIFIED, opt-in: docs/concepts/experimental.md): their exact checks, the guard of the opt-in, the
+# example of their page and a consumer project, in experimental/ (label experimental), which also
+# defines the full tier's (full/, full.experimental.*). Not with MSVC or clang-cl.
+set(_experimental_tests OFF)
+if(KAIRN_EXPERIMENTAL_TESTS AND NOT _msvc_style)
+  set(_experimental_tests ON)
+  add_subdirectory(experimental)
+elseif(KAIRN_EXPERIMENTAL_TESTS)
+  message(STATUS "Kairn tests: the experimental headers (NOT VERIFIED) have no test with MSVC or "
+    "clang-cl: the headers refuse MSVC, and Windows was never part of the experiments")
+endif()
+
 # --- The emulated formats: the cross-checks (begin) ---------------------------------------------
 #
 # The kernels printed for the emulated type (above), run by kairn-emulated-runner and
@@ -1596,6 +1620,10 @@ list(APPEND _quick_tests ${_api_tests})
 if(KAIRN_UPWARD_TESTS)
   get_property(_upward_tests DIRECTORY api/upward PROPERTY TESTS)
   list(APPEND _quick_tests ${_upward_tests})
+endif()
+if(_experimental_tests)
+  get_property(_experimental_quick DIRECTORY experimental PROPERTY TESTS)
+  list(APPEND _quick_tests ${_experimental_quick})
 endif()
 list(LENGTH _quick_tests _n_quick)
 

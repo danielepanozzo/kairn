@@ -655,3 +655,13 @@ if(_api_rational_common)
     endforeach()
   endforeach()
 endif()
+
+# --- The experimental headers --------------------------------------------------------------------
+#
+# full.experimental.upwardL.VARIANT.LEVEL (label experimental): the exact checks of the experimental
+# intervals rounded upward of two and four limbs (EXPERIMENTAL, NOT VERIFIED, opt-in), in every
+# variant of the experiments' own projects at -O2 and -O3, on more cases than the quick tier's
+# (../experimental/CMakeLists.txt, which defines the function). Not with MSVC or clang-cl.
+if(_experimental_tests)
+  _kairn_experimental_full_tier()
+endif()
