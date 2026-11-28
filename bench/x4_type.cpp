@@ -4,9 +4,10 @@
 // bench/CMakeLists.txt compiles this file with the option of the target kairn::upward (and the flags of
 // packed code), and every timed function here holds one Scope around its loop or chain.
 //
-// Variants: native (the type's operators: the accurate sum, the product "branch"), sloppy (the sloppy
-// sum, KAIRN_UPWARD4_SUM_SLOPPY's), table, sel2 and, with AVX2, sel4 (the forms of the product,
-// upward4_forms.hpp), each through the same barriers as the operators.
+// Variants: native (the type's operators: the accurate sum, the product "branch", the square by
+// branches), sloppy (the sloppy sum, KAIRN_UPWARD4_SUM_SLOPPY's), table, sel2 and, with AVX2, sel4 (the
+// forms of the product), sel (the square without branches on the signs) (upward4_forms.hpp), each
+// through the same barriers as the operators.
 #include <kairn/experimental/upward4.hpp>
 #include <kairn/experimental/upward4_forms.hpp>
 #include <kairn/upward.hpp>
@@ -33,6 +34,13 @@ KB_X2_INLINE T mulf(const T& x, const T& y) {
     else if constexpr (F == SEL4) z = d4::mul_sel4(a, b);
 #endif
     else z = d4::mul_sel2(a, b);
+    d4::bar(z);
+    return T(z);
+}
+KB_X2_INLINE T sqr_sel(const T& x) {
+    d4::R4 a = x.r_;
+    d4::pin(a);
+    d4::R4 z = d4::sqr_sel(a);
     d4::bar(z);
     return T(z);
 }
@@ -63,6 +71,9 @@ struct MulForm : Native {
 using Table = MulForm<TABLE>;
 using Sel2 = MulForm<SEL2>;
 using Sel4 = MulForm<SEL4>;
+struct SqrSel : Native {
+    static KB_X2_INLINE T sqr(const T& a) { return sqr_sel(a); }
+};
 
 x4::Data<T>* g = nullptr;
 
@@ -100,6 +111,7 @@ int reference(const char* name, double* out) {
     else if (n.variant == "table") ref_run<Table>(n.kernel);
     else if (n.variant == "sel2") ref_run<Sel2>(n.kernel);
     else if (n.variant == "sel4") ref_run<Sel4>(n.kernel);
+    else if (n.variant == "sel") ref_run<SqrSel>(n.kernel);
     else ref_run<Native>(n.kernel);
     return read(name, out);
 }
@@ -150,6 +162,9 @@ x4::Unit unit{"x4", nullptr, true, fill, clear, read, reference, step, nullptr};
     X("x4", x4, tp, mulrand, table, K_MULRAND, Table, KB_SCOPE)                                    \
     X("x4", x4, tp, mulrand, sel2, K_MULRAND, Sel2, KB_SCOPE)                                      \
     X("x4", x4, tp, sqr, native, K_SQR, Native, KB_SCOPE)                                          \
+    X("x4", x4, tp, sqr, sel, K_SQR, SqrSel, KB_SCOPE)                                             \
+    X("x4", x4, tp, sqrrand, native, K_SQRRAND, Native, KB_SCOPE)                                  \
+    X("x4", x4, tp, sqrrand, sel, K_SQRRAND, SqrSel, KB_SCOPE)                                     \
     X("x4", x4, sum, add, native, K_SUM, Native, KB_SCOPE)                                         \
     X("x4", x4, sum, add, sloppy, K_SUM, Sloppy, KB_SCOPE)                                         \
     X("x4", x4, prod, mul, native, K_PROD, Native, KB_SCOPE)                                       \

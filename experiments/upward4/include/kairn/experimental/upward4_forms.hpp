@@ -1,6 +1,6 @@
 /// @file
 /// EXPERIMENTAL, NOT VERIFIED, not part of the library: no bound stated here is proved. The forms of
-/// the product and of the sum of the four-limb interval rounded upward that were measured against the
+/// the product, the square and the sum of the four-limb interval rounded upward that were measured against the
 /// ones the type uses (experiments/upward4/README.md), kept for the measurements and the checks only:
 /// the type itself (upward4.hpp) does not use them. Requires the rounding mode upward set by
 /// kairn::upward::Scope and the options of docs/concepts/upward.md (GCC and Clang -frounding-math).
@@ -124,6 +124,32 @@ KAIRN_FORCEINLINE R4 mul_sel2(const R4& x, const R4& y) noexcept {
     if (!(all_set(ok) && normal(z)) || any(mor(big(p1), big(p2)))) [[unlikely]]
         return mul_special(x, y);
     return z;
+}
+
+// The square, form "sel" (branch-free on the signs; the type's sqr_r chooses by branches): A = (M, m) of
+// sqr_r by masks. Where the first limbs differ (u0 != n0), M is the quadruple of the greater one (d =
+// RU(u0 - n0) has the sign of u0 - n0: a nonzero difference of two numbers does not round to zero); where
+// they are equal (a symmetric interval, [0, 0]: a branch that the signs do not move), qmax's. Limb i of A
+// from x_i = (u_i, n_i) and swap(x_i) = (n_i, u_i): lane 0 n_i where u0 < n0, else u_i; lane 1 u_i where
+// b <= 0 (u0 <= 0), else n_i; then lane 1 zero where a < 0 < b.
+KAIRN_FORCEINLINE R4 sqr_sel(const R4& x) noexcept {
+    const M xle = le0(x.r0);   // lanes: b <= 0, a >= 0
+    const M l1 = mlane1(), keep = mor(mdup0(xle), mdup1(xle));   // keep: x has one sign
+    const V d = sub(x.r0, swap(x.r0));                             // (RU(u0 - n0), RU(n0 - u0))
+    R4 a;
+    if (!any(veq(d, vzero()))) [[likely]] {
+        const M s = mblend(l1, mdup0(xle), le0(d)), k = mornot(keep, l1);
+        auto pick = [&](V xr) noexcept { return blend(k, blend(s, swap(xr), xr), vzero()); };
+        a = R4{pick(x.r0), pick(x.r1), pick(x.r2), pick(x.r3)};
+    } else {
+        R4 mx;
+        qmax(x.r0, x.r1, x.r2, x.r3, swap(x.r0), swap(x.r1), swap(x.r2), swap(x.r3), mx.r0, mx.r1, mx.r2, mx.r3);
+        const M ap = mdup1(xle);
+        // Lane 1: xn where a >= 0 (lane 1 of x), else xu where b <= 0 (lane 1 of swap(x)), else 0.
+        auto lane_m = [&](V xr, V mr) noexcept { return blend(l1, blend(keep, blend(ap, xr, swap(xr)), vzero()), mr); };
+        a = R4{lane_m(x.r0, mx.r0), lane_m(x.r1, mx.r1), lane_m(x.r2, mx.r2), lane_m(x.r3, mx.r3)};
+    }
+    return sqr_of(a, x);
 }
 
 #if KAIRN_UPWARD2_AVX2

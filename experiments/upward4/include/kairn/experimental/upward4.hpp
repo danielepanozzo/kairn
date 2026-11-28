@@ -1116,16 +1116,17 @@ KAIRN_FORCEINLINE R4 mul_num_r(const R4& x, double t) noexcept {
 // negated lower bound is -(a^2) = xn (-xn) when a >= 0, -(b^2) = xu (-xu) when b <= 0, and 0 when a < 0 <
 // b. One square network of A = (M, m) by B = (M, -m). The specials go to the product x x, which encloses
 // the square (looser where x contains zero).
+// The case by branches on the signs of the first limbs, as the product's form "branch" (normalized: the
+// sign of a first limb is the sign of the bound): a >= 0 (n0 <= 0): M = xu, m = xn, A = x; b <= 0
+// (u0 <= 0): M = xn, m = xu, A = swap(x); a < 0 < b: m = 0 and M the greater of xu and xn, which, where
+// the first limbs differ, is the one of the greater first limb (the order of normalized quadruples is the
+// lexicographic order of their limbs), and where they are equal (a symmetric interval) qmax's. The version
+// before this one computed qmax and the lanes by masks for every square (about 45 operations, 25 of them
+// on the critical path); the one-sign cases now take one register move per limb.
 KAIRN_DETAIL_COLD R4 sqr_special(R4 x) noexcept;
-KAIRN_FORCEINLINE R4 sqr_r(const R4& x) noexcept {
-    R4 mx;
-    qmax(x.r0, x.r1, x.r2, x.r3, swap(x.r0), swap(x.r1), swap(x.r2), swap(x.r3), mx.r0, mx.r1, mx.r2, mx.r3);
-    const M xle = le0(x.r0);   // lanes: b <= 0, a >= 0
-    const M ap = mdup1(xle), bn = mdup0(xle), keep = mor(ap, bn), l1 = mlane1();
-    // Lane 1 of m: xn where a >= 0 (lane 1 of x), else xu where b <= 0 (lane 1 of swap(x)), else 0.
-    auto lane_m = [&](V xr, V mr) noexcept { return blend(l1, blend(keep, blend(ap, xr, swap(xr)), vzero()), mr); };
-    R4 a{lane_m(x.r0, mx.r0), lane_m(x.r1, mx.r1), lane_m(x.r2, mx.r2), lane_m(x.r3, mx.r3)};
-    R4 b = flip4(l1, a);
+// The square network on A = (M, m) and B = (M, -m), or the cold path.
+KAIRN_FORCEINLINE R4 sqr_of(const R4& a, const R4& x) noexcept {
+    R4 b = flip4(mlane1(), a);
     bar(b);
     V p;
     R4 z;
@@ -1134,6 +1135,24 @@ KAIRN_FORCEINLINE R4 sqr_r(const R4& x) noexcept {
     if (!(all_set(ok) && normal(z)) || any(big(p))) [[unlikely]]
         return any(big(p)) ? sqr_special(x) : qmul_special(a, b, x, x);   // the exact square, lane by lane
     return z;
+}
+KAIRN_FORCEINLINE R4 sqr_r(const R4& x) noexcept {
+    const M l1 = mlane1();
+    const double u0 = lane0(x.r0), n0 = lane1(x.r0);
+    R4 a;
+    if (n0 <= 0) {
+        a = x;
+    } else if (u0 <= 0) {
+        a = R4{swap(x.r0), swap(x.r1), swap(x.r2), swap(x.r3)};
+    } else if (u0 != n0) {
+        a = u0 > n0 ? R4{clear(l1, x.r0), clear(l1, x.r1), clear(l1, x.r2), clear(l1, x.r3)}
+                    : R4{clear(l1, swap(x.r0)), clear(l1, swap(x.r1)), clear(l1, swap(x.r2)), clear(l1, swap(x.r3))};
+    } else {   // u0 = n0 > 0 (the empty set, NaN heads, took the branch before: then the cold path)
+        R4 mx;
+        qmax(x.r0, x.r1, x.r2, x.r3, swap(x.r0), swap(x.r1), swap(x.r2), swap(x.r3), mx.r0, mx.r1, mx.r2, mx.r3);
+        a = R4{clear(l1, mx.r0), clear(l1, mx.r1), clear(l1, mx.r2), clear(l1, mx.r3)};
+    }
+    return sqr_of(a, x);
 }
 
 // The product of the type: the form "branch".

@@ -5,7 +5,7 @@
 // under rounding to nearest.
 //
 // For each class of operands (n pairs each, from a fixed seed, the same with every compiler) and each
-// operation (+ in both forms, -, the four forms of *, the square, x + t, x * t, -x, the conversions,
+// operation (+ in both forms, -, the four forms of *, the square in both forms, x + t, x * t, -x, the conversions,
 // the bounds as numbers, the predicates, the width, the functions on arrays): the result must contain
 // the exact range (exact arithmetic, ../../upward2/tests/exact.hpp) and satisfy the invariant (each
 // adjacent pair of limbs (a, b) with b <= 0 and |b| below the gap under a; zero later limbs after a
@@ -225,10 +225,10 @@ struct Verdict {
     bool measured[2] = {false, false};
 };
 
-enum Op { ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG, CONV_I2, TO_I2, TO_U2, FROM_U2,
-          TO_U1, FROM_U1, BOUNDS, ARR_ADD, ARR_SUB, ARR_MUL, N_OPS };
-const char* const kOpName[N_OPS] = {"add", "add.sloppy", "sub", "mul.branch", "mul.table", "mul.sel2", "mul.sel4", "sqr", "add_num",
-                                    "mul_num", "neg", "from_i2", "to_i2", "to_u2", "from_u2", "to_u1", "from_u1", "bounds",
+enum Op { ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, SQR_SEL, ADD_NUM, MUL_NUM, NEG, CONV_I2, TO_I2, TO_U2,
+          FROM_U2, TO_U1, FROM_U1, BOUNDS, ARR_ADD, ARR_SUB, ARR_MUL, N_OPS };
+const char* const kOpName[N_OPS] = {"add", "add.sloppy", "sub", "mul.branch", "mul.table", "mul.sel2", "mul.sel4", "sqr", "sqr.sel",
+                                    "add_num", "mul_num", "neg", "from_i2", "to_i2", "to_u2", "from_u2", "to_u1", "from_u1", "bounds",
                                     "arrays.add", "arrays.sub", "arrays.mul"};
 Op judged(Op op) { return op == ARR_ADD ? ADD : op == ARR_SUB ? SUB : op == ARR_MUL ? MUL_BRANCH : op; }
 
@@ -263,7 +263,7 @@ int cmp_corner(const XV& v, const XV& a, const XV& b, Exact& t, double* diff, do
 
 Verdict judge(Op op, const Res& x, const Res& y, double t, const Res& z, bool type_result, const I4* zs, Exact& e) {
     Verdict v;
-    const bool unary = op == SQR || op == NEG || op >= CONV_I2 || op == ADD_NUM || op == MUL_NUM;
+    const bool unary = op == SQR || op == SQR_SEL || op == NEG || op >= CONV_I2 || op == ADD_NUM || op == MUL_NUM;
     const bool empty_in = x.empty || (!unary && y.empty);
     if (empty_in) {
         if (!z.empty) {
@@ -361,7 +361,8 @@ Verdict judge(Op op, const Res& x, const Res& y, double t, const Res& z, bool ty
         }
         break;
     case NEG: check_sum(negx(x.hi), zero, negx(x.lo), zero); break;
-    case SQR: {
+    case SQR:
+    case SQR_SEL: {
         const int sl = sgn(x.lo), sh = sgn(x.hi);
         if (sl >= 0) check_corners({{x.lo, x.lo}}, {{x.hi, x.hi}});
         else if (sh <= 0) check_corners({{x.hi, x.hi}}, {{x.lo, x.lo}});
@@ -417,6 +418,7 @@ u4::Interval apply(Op op, const u4::Interval& x, const u4::Interval& y, double t
     case MUL_SEL4: z = d4::mul_sel4(a, b); break;
 #endif
     case SQR: return u4::sqr(x);
+    case SQR_SEL: z = d4::sqr_sel(a); break;
     case ADD_NUM: return x + t;
     case MUL_NUM: return x * t;
     case NEG: return -x;
@@ -948,12 +950,12 @@ void run_special() {
         }
         check_members(x, sx, dummy, e, "special");
         const u2::Interval x2 = u4::to_upward2(x);
-        for (Op op : {SQR, NEG}) {
+        for (Op op : {SQR, SQR_SEL, NEG}) {
             const u4::Interval z = apply(op, x, x, 0);
             const I4 zs = state(z);
             record(kOpName[op], hx, judge(op, rx, rx, 0, res_of(zs), true, &zs, e));
             kairn::upward::Scope scope;
-            compare2(kOpName[op], hx, zs, op == SQR ? u2::sqr(x2) : -x2);
+            compare2(kOpName[op], hx, zs, op == NEG ? -x2 : u2::sqr(x2));
         }
         for (double t : ts) {
             for (Op op : {ADD_NUM, MUL_NUM}) {
@@ -1026,7 +1028,7 @@ int main(int argc, char** argv) {
                 "?"
 #endif
     );
-    std::vector<Op> all = {ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, ADD_NUM, MUL_NUM, NEG};
+    std::vector<Op> all = {ADD, ADD_SLOPPY, SUB, MUL_BRANCH, MUL_TABLE, MUL_SEL2, MUL_SEL4, SQR, SQR_SEL, ADD_NUM, MUL_NUM, NEG};
     if (const char* only = std::getenv("X4_OPS")) {   // a comma-separated list of operations, for debugging
         std::vector<Op> keep;
         for (Op op : all)
