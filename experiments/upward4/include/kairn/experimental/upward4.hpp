@@ -310,10 +310,19 @@ KAIRN_FORCEINLINE typename Mask<P>::type all_mask() noexcept {
 }
 #if KAIRN_UPWARD2_AVX2
 using u2d::V4;
+// GCC warns that the vector attribute of __m256d is ignored on a template argument (-Wignored-attributes);
+// the specialization only names the type, so the warning is silenced here.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
 template <>
 struct Mask<V4> {
     using type = V4;
 };
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 template <>
 KAIRN_FORCEINLINE V4 all_mask<V4>() noexcept {
     return _mm256_castsi256_pd(_mm256_set1_epi32(-1));
