@@ -20,6 +20,11 @@
 # kernels, the interpreter on its toy formats), run in these jobs on Linux and macOS. The Windows jobs configure
 # -DKAIRN_UPWARD_TESTS=OFF: the jobs "Windows x64, upward" of build.yml run the family's tests that
 # depend on the compiler with MSVC and clang-cl, and the python jobs below its enumerations.
+#
+# The full tier's tests of the experimental headers (label experimental, full.experimental.*: the
+# exact checks of the two-limb and four-limb intervals rounded upward, EXPERIMENTAL and NOT
+# VERIFIED, in every variant at -O2 and -O3) depend on the compiler: they run in the compiled jobs
+# on Linux and macOS. With MSVC and clang-cl they are not registered, so no Windows job runs them.
 name: Full tier
 
 on:

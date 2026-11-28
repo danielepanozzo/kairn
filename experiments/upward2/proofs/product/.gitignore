@@ -1,0 +1,9 @@
+Makefile.rocq
+Makefile.rocq.conf
+.Makefile.rocq.d
+*.vo
+*.vok
+*.vos
+*.glob
+.*.aux
+X2Audit.out

@@ -4,11 +4,12 @@ Rigorous floating-point expansions ("k-numbers") with interval and ball arithmet
 header-only C++20. Every error bound is meant to carry a machine-checked proof, and the shipped
 code is generated from the same source the proofs are about.
 
-**Status: pre-release (version 0.4.1). Phase 0 (specification and feasibility) and Milestone 1
+**Status: pre-release (version 0.5.0). Phase 0 (specification and feasibility) and Milestone 1
 are complete ([report](docs/developer/results/milestone1.md)); Milestone 2 is complete, and the
 changes decided at the owner's review of 2026-11-23 are made
 ([report](docs/developer/results/milestone2.md#the-owners-review)); the opt-in round-up interval
-is complete and was reviewed by the owner on 2026-11-27; Milestone 3 has not started ([what each milestone adds](#milestones)). Nothing here should be relied on yet.** The
+is complete and was reviewed by the owner on 2026-11-27; the experimental intervals of two and four
+limbs rounded upward are on `main` as opt-in code that is NOT VERIFIED; Milestone 3 has not started ([what each milestone adds](#milestones)). Nothing here should be relied on yet.** The
 documentation is at <https://danielepanozzo.github.io/kairn/>.
 
 Public on `main`, for `T` = `float` or `double`:
@@ -35,6 +36,16 @@ Public on `main`, for `T` = `float` or `double`:
 
 `kairn/kairn.hpp` does not include the last five headers. The later milestones are not built.
 
+Also on `main`, and **EXPERIMENTAL, NOT VERIFIED: no bound of theirs is proved**: the headers of
+`kairn/experimental/`, intervals of two and four limbs of `double` computed like the round-up
+interval (`kairn::experimental::upward2::Interval`, `kairn::experimental::upward4::Interval`) and
+functions on arrays of them. They are the one stated exception to the rule that every shipped bound
+is machine-checked, by the owner's decision recorded on 2026-11-28, so that clients can experiment
+while the proofs are worked on; a file includes them only after defining
+`KAIRN_EXPERIMENTAL_UNVERIFIED`, their exact checks are tests and not proofs, and their interface
+may change or disappear ([Two and four limbs rounded upward](docs/concepts/experimental.md)). They
+are not Milestone 4's numbers of three and four limbs.
+
 **What is proved.** The kernels these operations call have proved claims: error bounds and the
 containment of ball arithmetic in a model where nothing overflows; what happens at overflow and
 for infinities and NaN, every claim of the intervals and of the interface of the sets, and the
@@ -52,9 +63,10 @@ checked against its statement for each constant computed at compile time, and wi
 ball of such a constant contains it; a few compositions of two proved kernels in the headers,
 argued and not proved as one statement; the integer bookkeeping of the bounds of arrays and of the
 accumulator (the count of terms and its conversion to the limb type); the tests of bit
-patterns written by hand (`sign`, `isfinite`, `is_normalized`, the states of a ball); and, for the
+patterns written by hand (`sign`, `isfinite`, `is_normalized`, the states of a ball); for the
 round-up interval, that each of its operations that rounds runs as the IEEE operation rounded
-upward, which is the program's to arrange with the options and the scopes.
+upward, which is the program's to arrange with the options and the scopes; and everything in the
+experimental headers above.
 [What holds today](docs/getting-started/guarantees.md) says what is proved, in which model, and
 what is not yet.
 
@@ -79,6 +91,7 @@ documentation for what it added. The table with each milestone's exit criteria a
 | 1 | The vertical slice: numbers of one and two limbs (`double`, and `float`, which came with the proofs); addition, subtraction, multiplication, operations with a `T` operand, `ldexp`, comparisons, conversions; scalar, AVX2 and NEON; `Ball`; the generator; the Rocq proofs, with gradual underflow; the oracle with its quick and brute-force tiers; CI with the matrix of compiler flags and the object-code check; the self-test and the check of the floating-point environment; the documentation site | done ([report](docs/developer/results/milestone1.md)) |
 | 2 | `Interval`; one enclosure interface shared by `Interval` and `Ball` (predicates, comparisons, hull, intersection, midpoint and radius, conversions, split); the building blocks as public functions (`two_sum`, `two_prod`, sums and products rounded down and up without changing the rounding mode); numbers built at compile time from an integer or a rational; `BallVector`, arrays of centers with one radius, and the functions on arrays (sum, dot product, `axpy`, convolution, an upper bound of the norm, the accumulator) with their bounds as functions of the length; containers in structure-of-arrays form and the packed SIMD type; exhaustive tests on small emulated formats; each cross-check of the quick tier in one process. It ends when the first client's ball path can be written against it | done; reviewed by the owner on 2026-11-23, and the changes decided then are made: the operators of `Packed<T, 1>`, guards in the constructors of two limbs, the report of the environment check out of line, reference pages that show every stored run of unchanged code; one limitation found then is documented and not repaired, a square passed straight in under Clang's `-ffp-contract=fast` ([report](docs/developer/results/milestone2.md#the-owners-review), [design](docs/developer/design/milestone2.md)) |
 | — | The round-up interval, between Milestones 2 and 3 and not a milestone: the opt-in header `kairn/upward.hpp`, an interval of one limb of `float` or `double` kept in one SIMD register and computed under the rounding mode upward, used only for speed, with every special case answered as `Interval<T, 1>` answers it; scopes that set the mode, functions on two plain arrays, a self-check, a compile-time guard of the options and the CMake target `kairn::upward`; 24 kernels of their own, proved in the model of IEEE 754 with their sums and products rounded upward. Decided by the owner on 2026-11-24 and 2026-11-25; the default types do not change. Version 0.4.0 | complete, reviewed by the owner on 2026-11-27: the header, its 24 kernels, all proved, its tests in both tiers with MSVC and clang-cl in jobs of their own in CI, the measurements on the shipped code ([results](docs/developer/results/bench-upward.md)) and its documentation ([concept](docs/concepts/upward.md), [design](docs/developer/design/upward.md)) |
+| — | The experimental intervals of two and four limbs rounded upward, between Milestones 2 and 3 and not a milestone, **NOT VERIFIED**: the opt-in headers `kairn/experimental/upward2.hpp` and `kairn/experimental/upward4.hpp`, intervals of two and four limbs of `double` kept in registers of two lanes and computed under the rounding mode upward like the round-up interval, with functions on arrays; written by hand, with no kernel, no claim and no proof. On `main` without proofs by the owner's decision recorded on 2026-11-28, so that clients can experiment while the proofs are worked on: the one stated exception to the rule that every shipped bound is machine-checked. The four limbs here are not Milestone 4's numbers of three and four limbs, which are `Expansion`, `Ball` and `Interval` under rounding to nearest, generated and proved. Version 0.5.0 | on `main`, experimental and not verified: the headers with their banner and opt-in, their exact checks in both tiers on Linux and macOS (not with MSVC or clang-cl), their documentation ([concept](docs/concepts/experimental.md)); machine-checked so far: a probe of the two-limb sum and of the fast path of its product, in the model without overflow, which the CI does not build; nothing of four limbs |
 | 3 | The CUDA backend, for the kernels and loops that are proved today, with `float` limbs and with `double` limbs: the generated code for the device; the public operations callable from device code, element by element, with helpers for a program that spreads an array over the threads of a warp; a self-test on the device; the oracle's cross-checks run on the devices; and benchmarks of `float` against `double` on the GPUs. No new theorem is planned: by default CUDA's arithmetic is the IEEE arithmetic the proofs are about, which Phase 0 measured on three cards ([environment](docs/developer/design/phase0/environment.md#cuda)). To be measured there: what the device compiler does with a product the program passes in. The scope is the owner's decision of 2026-11-23; what this row held besides is in Milestone 4 | planned; not started |
 | 4 | Numbers of three and four limbs: the networks first, marked unverified, then their Rocq proofs. The highest proof risk of the plan. Moved here from Milestone 3 by the owner's decision of 2026-11-23: the conversions of numbers and balls between limb types (`double` limbs to `float` limbs with the enclosure kept, and back), which need a second number format in the generator, its Rocq model and the oracle, and with them the bounds of a ball or an interval as numbers of another limb type ([design](docs/developer/design/milestone2.md#limbs-of-another-type)): two `float` limbs hold 48 bits, fewer than one `double`, so numbers of `float` limbs pass `double` only with four; the Metal backend, with the proofs for flush-to-zero arithmetic that its devices need, its device code and its self-test; and the flush-to-zero variant of the exhaustive tests on emulated formats, which needs those statements to be judged against | planned |
 | 5 | Division and square root (two limbs from the existing proofs; three and four limbs by Newton iteration); matrix-vector and matrix-matrix products; dispatch to AVX-512 | planned |

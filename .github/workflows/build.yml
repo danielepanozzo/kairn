@@ -13,6 +13,12 @@
 # macOS jobs of the quick tier with the rest. The two Windows jobs of the quick tier are near their
 # limit: they configure -DKAIRN_UPWARD_TESTS=OFF, and the jobs "Windows x64, upward" below build
 # and run those tests alone with each compiler, so that the long jobs do not get longer.
+#
+# The tests of the experimental headers, kairn/experimental/ (label experimental: the two-limb and
+# four-limb intervals rounded upward, EXPERIMENTAL and NOT VERIFIED, opt-in, whose exact checks are
+# tests, not proofs; docs/concepts/experimental.md), run in the Linux and macOS jobs of the quick
+# tier with the rest. No Windows job runs them: with MSVC and clang-cl they are not registered,
+# since the headers refuse MSVC and Windows was never part of the experiments.
 name: Build and test
 
 on:

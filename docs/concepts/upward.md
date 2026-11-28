@@ -19,6 +19,12 @@ calls). This page says what it is for, how its intervals are stored, what a prog
 guarantee for its results to hold, how it differs from the default interval, and what its checks
 see and do not see.
 
+Intervals of two and four limbs of `double` computed the same way, with these scopes and options,
+are in the headers `kairn/experimental/upward2.hpp` and `kairn/experimental/upward4.hpp`, which are
+**EXPERIMENTAL and NOT VERIFIED**: no bound of theirs is proved, and a file opts in to include them
+([Two and four limbs rounded upward](experimental.md)). Everything this page says of proofs is
+about `kairn/upward.hpp` alone.
+
 ## What it is for
 
 For intervals of one limb in a hot loop, where the default interval's bounds cost more than the

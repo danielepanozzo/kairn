@@ -16,6 +16,10 @@ structure-of-arrays form (`kairn/packed.hpp`, `kairn/soa.hpp`), the functions on
 (`kairn/batch.hpp`), `BallVector` (`kairn/ball_vector.hpp`), and the opt-in round-up interval
 (`kairn/upward.hpp`), an interval of one limb computed under the rounding mode upward, for speed,
 which requires compiler options and the header's scopes ([The round-up interval](concepts/upward.md)).
+Apart from all of these, `kairn/experimental/` has intervals of two and four limbs computed the same
+way, which are **EXPERIMENTAL and NOT VERIFIED**: no bound of theirs is proved, a program opts in
+to include them, and nothing below about proofs applies to them
+([Two and four limbs rounded upward](concepts/experimental.md)).
 The rest of the plan is to come.
 The kernels these operations call have checked proofs of their
 claims: the error bounds, normalization and the containment of ball arithmetic in a model where
@@ -73,7 +77,11 @@ k-number center with a radius of the limb type. The library is to be used as the
   constants are not exported, and its measured errors are reported as measurements, never as
   bounds. No release
   happens before every public operation is proved, documented and exercised by a tutorial example
-  in CI ([Plan](developer/design/phase0/plan.md#milestones)).
+  in CI ([Plan](developer/design/phase0/plan.md#milestones)). The one stated exception, by the
+  owner's decision recorded on 2026-11-28: the experimental headers of `kairn/experimental/`, which
+  ship without proofs so that clients can experiment while the proofs are worked on, compile only
+  in a file that defines `KAIRN_EXPERIMENTAL_UNVERIFIED`, and state no bound
+  ([Two and four limbs rounded upward](concepts/experimental.md)).
 
 ## What Phase 0 found
 
@@ -113,6 +121,12 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   `kairn/upward.hpp`, an interval of one limb computed under the rounding mode upward, for speed,
   with its scopes, its functions on arrays and its self-check. Its 24 kernels are proved, in the
   model of IEEE 754 with their sums and products rounded upward. Version 0.4.0.
+- **The experimental intervals of two and four limbs rounded upward**, not a milestone and **NOT
+  VERIFIED**, by the owner's decision recorded on 2026-11-28 ([concept](concepts/experimental.md)):
+  the opt-in headers of `kairn/experimental/` (`upward2.hpp`, `upward4.hpp`, and functions on
+  arrays), tested by exact checks in both tiers, with no proof (a probe of part of the two-limb type, not
+  built by the CI, is the only machine-checked work so far). They are not Milestone 4's numbers of
+  three and four limbs. Version 0.5.0.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 
 ## Where to go next
@@ -120,8 +134,8 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 - [Getting started](getting-started/index.md): build and test the repository, and a first program.
 - [Concepts](concepts/index.md): what a number of several limbs is, how many digits it has at each
   magnitude, intervals, balls and ball vectors and when to use which, what a guarantee says and how
-  it is established, what the library needs of the floating-point environment, arrays, and the
-  opt-in round-up interval.
+  it is established, what the library needs of the floating-point environment, arrays, the
+  opt-in round-up interval, and the experimental intervals of two and four limbs, not verified.
 - [Accurate sums and dot products](tutorials/accurate-sums.md): a tutorial with two-limb numbers
   and balls, on a sum that `double` gets entirely wrong.
 - [The range of a polynomial](tutorials/intervals.md): a tutorial with intervals and balls, on the

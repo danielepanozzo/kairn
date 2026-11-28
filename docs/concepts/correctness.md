@@ -198,6 +198,12 @@ is written, and tested, often in exact arithmetic:
   program's responsibility, by the owner's decision of 2026-11-24; the header's self-check and the
   assertions of a checked build are evidence of the rest, not a proof of it
   ([The self-check](upward.md#the-self-check)).
+- **Everything in the experimental headers** of `kairn/experimental/`, the intervals of two and four
+  limbs rounded upward, which are **NOT VERIFIED**: they ship without proofs by the owner's decision
+  recorded on 2026-11-28, have no kernel, claim or statement, and are tested by exact checks only; a
+  file opts in to include them ([Two and four limbs rounded upward](experimental.md), whose
+  [last sections](experimental.md#what-is-machine-checked-so-far) say what a proof probe covers of
+  the two-limb type).
 
 One more thing is not machine-checked, by design: that what Kairn states of the functions named
 after IEEE 1788 is the standard's meaning. Each statement is proved as it is written; that it is
@@ -225,7 +231,10 @@ have no marked form: each compiles only while its kernels are proved.
 
 **In this version every kernel of the default types is proved**, so none of their operations needs
 the marker; [the reference](../reference/index.md) gives the status of every kernel, those of the
-opt-in round-up interval included. A program can ask all the same, at compile time:
+opt-in round-up interval included. The experimental headers are not kernels and are outside this
+mechanism: no operation of theirs is proved, the marker does not apply to them, and a file opts in
+to them with `KAIRN_EXPERIMENTAL_UNVERIFIED` instead ([Two and four limbs rounded
+upward](experimental.md)). A program can ask all the same, at compile time:
 
 ```cpp
 --8<-- "docs/examples/cpp/concepts_correctness.cpp:has_sum"

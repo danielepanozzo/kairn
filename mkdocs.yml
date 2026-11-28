@@ -107,6 +107,7 @@ nav:
       - Values, threads and constant expressions: concepts/values.md
       - Arrays: concepts/arrays.md
       - The round-up interval: concepts/upward.md
+      - "Experimental, not verified: two and four limbs rounded upward": concepts/experimental.md
   - Tutorials:
       - Accurate sums and dot products: tutorials/accurate-sums.md
       - The range of a polynomial: tutorials/intervals.md

@@ -3,7 +3,9 @@
 Kairn's public headers cover `Expansion<T, 1>`, `Expansion<T, 2>`, `Ball<T, 1>`, `Ball<T, 2>` and
 `Interval<T, 1>`, `Interval<T, 2>` for `T` = `float` and `double`, `Packed` and the arrays of
 numbers, the functions on arrays and the accumulator, and the opt-in round-up interval
-`kairn::upward::Interval<T>` ([below](#the-round-up-interval)). This page says, for each
+`kairn::upward::Interval<T>` ([below](#the-round-up-interval)); the experimental headers of
+`kairn/experimental/` are **not verified**, and nothing this page says is proved holds of them
+([below](#the-experimental-headers-nothing-is-proved)). This page says, for each
 operation, what is proved, what the
 library returns at overflow and for infinite and NaN values, and what is not proved yet. It
 describes the repository as `gen/claims.json` stands in this version; the compiler enforces the
@@ -55,7 +57,9 @@ round-up interval included, so no operation needs the marker; the kernels of Mil
 arrays call loops all of whose kernels are proved ([below](#sums-dot-products-and-maps-of-arrays));
 a function on arrays has no marked form, and compiles only while the kernels of its loop are. It is how the
 operations still to come (three and four limbs, division, square root) will ship before their
-proofs.
+proofs. The experimental headers are outside this mechanism: they have no kernel of
+`gen/claims.json`, so the marker neither applies to them nor tells anything about them, and a file
+opts in to all of them at once ([below](#the-experimental-headers-nothing-is-proved)).
 
 ## The operations
 
@@ -740,6 +744,23 @@ around them ([What the program guarantees](../concepts/upward.md#what-the-progra
 compile-time guard, the assertions of a build with `KAIRN_CHECKS` and `kairn::upward::self_test()`
 are evidence of it, not a proof ([What is not machine-checked](../concepts/correctness.md#what-is-not-machine-checked)).
 On MSVC the assurance is weaker ([MSVC](../concepts/upward.md#msvc)).
+
+## The experimental headers: nothing is proved
+
+`kairn/experimental/upward2.hpp` and `kairn/experimental/upward4.hpp`, with their functions on
+arrays, hold intervals of two and four limbs of `double` computed under the rounding mode upward
+([Two and four limbs rounded upward](../concepts/experimental.md)). They are **EXPERIMENTAL and NOT
+VERIFIED**: the stated exception, by the owner's decision recorded on 2026-11-28, to the rule that
+every bound Kairn ships is machine-checked, so that clients can experiment while the proofs are
+worked on. No bound of theirs is proved, and they state none: that a result contains the exact
+range, and how tight it is, are tested and measured only, by exact checks in both tiers of the
+tests. A file includes them only after it defines `KAIRN_EXPERIMENTAL_UNVERIFIED`; nothing else of
+the library includes them, and they have no claim, no reference page and no entry in
+`kairn::traits`. A proof probe of the two-limb sum and of the fast path of its product, in the model
+without overflow, is the only machine-checked work on them so far, and the CI does not build it
+([What is machine-checked so far](../concepts/experimental.md#what-is-machine-checked-so-far)). Their
+assumptions are those of the round-up interval ([above](#the-round-up-interval)), and their
+interface may change or disappear in any version.
 
 ## The environment
 

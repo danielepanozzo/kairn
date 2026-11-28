@@ -41,6 +41,7 @@ derived from it or checked against it:
 | `include/kairn/gen/` | Generated and committed C++ kernels. | — |
 | `tests/emulated/gen/` | Generated and committed: the scalar kernels for the emulated limb type of the tests ([below](#the-kernel-ir), "A limb type of a format chosen at run time"), a test file that is not shipped. | — |
 | `include/kairn/` | The hand-written public headers. | `include/kairn/gen/` |
+| `include/kairn/experimental/` | Hand-written headers that are **EXPERIMENTAL and NOT VERIFIED**: the intervals of two and four limbs rounded upward, opt-in (a file defines `KAIRN_EXPERIMENTAL_UNVERIFIED` before including one), with no kernel, no claim and no proof ([Experimental](../concepts/experimental.md)). Nothing else in `include/` includes them. | `include/kairn/upward.hpp` |
 | `proofs/gen/` | Generated Rocq files: model, statements, audit. | Flocq |
 | `proofs/theories/` | Hand-written Rocq proofs and the lemma library. | `proofs/gen/`, Flocq |
 | `oracle/` | The oracle: Python, standard library only. | `gen/claims.json` as data, and nothing else: **no code shared with `gen/` or the library** |
@@ -49,6 +50,7 @@ derived from it or checked against it:
 | `results/` | Stored summaries of brute-force runs and benchmarks, by milestone. | — |
 | `docs/` | The MkDocs site; this page; the Phase 0 report. | — |
 | `experiments/phase0/` | Phase 0 experiments, kept as recorded. | — |
+| `experiments/upward2/`, `experiments/upward4/` | The experiments behind the experimental headers: their READMEs (the design, the measurements, what is argued and what is only tested), the forms kept for the measurements, the exact checks that `tests/experimental/` registers, and, for two limbs, a proof probe in Rocq that the CI does not build. | `include/kairn/experimental/` |
 
 Entry points, so that CMake, CI and people call the same thing:
 
