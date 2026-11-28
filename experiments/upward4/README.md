@@ -156,54 +156,181 @@ structure of every answer (empty, which bounds are infinite) compared with the t
 all but 79 of 9576 cases, all at the overflow threshold, where four limbs keep a finite bound that two
 limbs make infinite (listed by the check program).
 
-## What was measured (2026-11-27)
+## What was measured (2026-11-27, and again 2026-11-28 after the changes below)
+
+**What changed on 2026-11-28** (the reasons in the header's comments):
+
+- **The product's step of level 1 with level 2.** A product of bounds of the sign of the head has a
+  positive term in level 2, the product of the second limbs (the square of the second limb, for the
+  upper bound of a square). Where it outweighs the level's errors and lies far below the last place of
+  level 1, the error of their sum rounded up is not a number of the format; the fast path tested it
+  and sent the operation to the exact cold path: 0.7-2.7% of the squares and 0.04-1.3% of the products
+  of the checks' classes away from underflow and overflow, 2.1% of the squares on the benchmark's kind
+  of operands, at about half a microsecond each (this made the square 1.9 to 3.0 times slower than a
+  product). The renormalization now keeps that error exactly as two numbers, $r = c_1 - s_1$ (exact
+  when $|c_1| \ge |v|$, tested) and $v$, gathered by one more fast two-sum whose exactness is tested,
+  the second of its two terms joining the last step so that no path to the first two limbs gets
+  longer. Wherever the earlier version's test passed, the results are the same.
+- **The square** chooses its operands by branches on the signs of the first limbs, as the product's form
+  `branch` does, instead of computing the lexicographic maximum of its two bounds over the four limbs
+  and the lanes by masks for every interval; the maximum is taken only where the two first limbs are
+  equal (a symmetric interval). The form without branches on the signs is kept for the measurements
+  (`sqr_sel` in `upward4_forms.hpp`).
+- **The cold paths' accumulator** uses only the words the terms' range needs (4 to 8 of its 34 for
+  quadruples without wide gaps) and builds each limb without a call of the C library: one cold path
+  takes about 100-120 ns for a sum and 130-175 ns for a product on the M3 instead of 160-220 and
+  180-250.
+- **The functions on arrays** (`upward4_arrays.hpp`): `add`, `sub`, `mul` element by element over eight
+  plain arrays (the limbs $u_0..u_3$ and $n_0..n_3$, `View`), each function holding its own scope of the
+  mode upward, vectorized across elements (four per register on AVX2, two elsewhere) with the type's
+  kernels and tests lane by lane, the product's case chosen by masks with the type's pairs (two
+  candidates only in packs where an element has both operands containing zero); a pack in which an
+  element fails a test, and the remainder, go through the type's operators. Each element is the type's
+  result for it, bit for bit (the checks compare them).
 
 `kairn-bench-up-LEVEL` with `KAIRN_BENCH_UPWARD2` and `KAIRN_BENCH_UPWARD4` on, `--reps 31`, three runs
 per configuration at `-O2` and three at `-O3`: Apple M3 Max with Apple clang 21 and GCC 16 (not
 pinned); AMD EPYC 7452 (Zen 2), one logical CPU of the second socket pinned, its SMT sibling idle, with
 GCC 13 and Clang 18. The same operands for every type (the two-limb experiment's intervals of half-width
 $2^{-80}$, points). Time per operation, the minimum per run, the range over the six runs of a
-configuration (M3 Apple clang | M3 GCC | Zen 2 GCC | Zen 2 Clang); ratios taken within each run.
+configuration (M3 Apple clang | M3 GCC | Zen 2 GCC | Zen 2 Clang); ratios taken within each run. The
+"before" of 2026-11-28: the program of the code before the changes, built and run once per level in the
+same session, and the three runs per level of 2026-11-27. On the M3 the runs of 2026-11-28 shared the
+machine with other work (one-minute load average 2.5 to 3 at their start, each run waiting for it to
+fall below 3): code that did not change (the two-limb type, the sums) took up to 10% more time than on
+2026-11-27, so there the ratios to the two-limb type within a run are the fairer comparison, given
+below.
 
 | ns | 1 limb (`kairn::upward`) | 2 limbs | 4 limbs | 4 limbs / 2 limbs |
 |---|---|---|---|---|
-| sum, loop | 0.37-0.38, 0.38-0.39, 0.59-0.60, 0.60 | 2.21, 2.21-2.22, 5.19-5.51, 5.17-5.34 | 11.6-12.0, 11.9-12.2, 27.6-27.7, 27.8-28.4 | 5.3-5.4, 5.4-5.5, 5.0-5.3, 5.2-5.5 |
-| product, loop | 1.17, 1.17-1.18, 1.99-2.00, 1.99-2.00 | 1.84-1.85, 2.16-2.23, 3.88-3.92, 4.35-9.23 | 16.3-17.6, 21.4-21.7, 50.1-50.8, 41.6-42.3 | 8.8-9.5, 9.6-10, 12.9-13.1, 4.5-9.6 |
-| sum, chain | 0.71, 0.73-0.79, 1.01-1.19, 1.01 | 8.57, 8.52-8.55, 10.2, 10.2-10.8 | 22.1, 22.0-23.4, 28.0-28.2, 26.9-27.1 | 2.6, 2.6-2.7, 2.7-2.8, 2.5-2.6 |
-| product, chain | 4.67-4.87, 4.79-4.87, 3.17-3.54, 3.55-4.05 | 5.77-5.80, 5.64-6.24, 7.61-8.12, 10.0-10.2 | 23.6-25.9, 32.8-34.4, 49.5-49.9, 40.7-41.5 | 4.1-4.5, 5.4-5.9, 6.1-6.6, 4.1 |
-| 3 by 3 determinant on points | 11.8, 11.7, 22.5, 23.2-23.4 | 53.6-55.5, 57.3-58.7, 147-150, 154-156 | 379-401, 458-461, 853-890, 754-764 | 6.8-7.2, 7.8-8.0, 5.8-6.0, 4.8-4.9 |
-| Horner of degree 8 | 15.1-15.2, 14.4-16.5, 27.0-27.1, 27.0-27.1 | 77.3-78.0, 81.4-81.7, 143-144, 161-162 | 330, 348-362, 502-503, 478 | 4.2-4.3, 4.3-4.5, 3.5, 3.0 |
+| sum, loop | 0.39, 0.39-0.40, 0.60-1.03, 0.60-0.82 | 2.25-2.26, 2.26-2.27, 5.18-5.56, 5.17-5.60 | 11.7-12.8, 12.4-12.5, 27.6-28.2, 27.8-28.4 | 5.2-5.7, 5.5, 5.0-5.4, 5.0-5.4 |
+| product, loop | 1.19-1.20, 1.20-1.21, 2.00, 1.98-2.00 | 1.88-1.91, 2.20-2.40, 3.88-4.37, 9.20-9.66 | 12.8, 13.0-13.3, 34.4, 32.5 | 6.7-6.8, 5.6-6.1, 7.9-8.9, 3.4-3.5 |
+| sum, chain | 0.78, 0.79-0.82, 1.01-1.02, 1.01 | 8.66-9.38, 9.32-9.37, 10.2-10.3, 10.3-10.8 | 24.2, 23.4-24.0, 28.0-28.6, 26.9-27.2 | 2.6-2.8, 2.5-2.6, 2.7-2.8, 2.5-2.7 |
+| product, chain | 4.87-4.96, 4.97-4.98, 3.17-3.43, 3.55-3.77 | 6.32-6.35, 5.50-6.39, 7.59-7.80, 10.2-10.5 | 21.3-21.5, 23.2-23.6, 34.0, 31.3-31.6 | 3.4, 3.7-4.2, 4.4-4.5, 3.0-3.1 |
+| 3 by 3 determinant on points | 12.0, 11.7-12.0, 22.1-23.0, 23.2-23.3 | 56.6-56.7, 58.6-60.1, 146-150, 154-156 | 373-389, 406-409, 737-753, 691-695 | 6.6-6.9, 6.8-6.9, 4.9-5.1, 4.4-4.5 |
+| Horner of degree 8 | 15.1-15.5, 15.6-16.8, 27.0-27.1, 26.6-27.0 | 84.6-84.7, 82.5-83.5, 143-144, 162 | 355-356, 351-353, 507-508, 472-474 | 4.2, 4.2-4.3, 3.5, 2.9 |
+
+**The square and the product, four limbs** (same runs; the square on X, and on XR whose signs are random
+and do not repeat within a call, as the product's):
+
+| | ns | over the product of the same operands |
+|---|---|---|
+| product, loop | 12.8, 13.0-13.3, 34.4, 32.5 | |
+| square, loop | 10.5-10.7, 10.1-10.3, 26.7-26.9, 23.5-23.9 | 0.82-0.84, 0.77-0.78, 0.78, 0.72-0.74 |
+| product, random signs | 13.4-13.8, 13.2-14.0, 45.8-46.0, 39.9-40.0 | |
+| square, random signs | 12.5-12.6, 10.3-10.7, 32.0-32.1, 28.5-28.9 | 0.91-0.94, 0.74-0.81, 0.70, 0.71-0.72 |
+| square without branches on the signs (`sqr_sel`), loop | 13.3, 12.2-12.3, 28.3-28.5, 27.1-28.2 | 1.04, 0.92-0.94, 0.82-0.83, 0.83-0.87 |
+| the same, random signs | 13.1-13.2, 12.0-12.1, 28.2-28.4, 27.0-27.8 | 0.95-0.98, 0.86-0.91, 0.62, 0.68-0.70 |
+
+The square is now faster than the product everywhere: 0.72-0.84 of its time in loops, 0.70-0.94 on
+random signs (before: 1.9 to 3.0 times). Its form without branches is slower on the usual operands
+(1.05-1.26 times the type's) and faster on random signs only on the Zen 2 (0.88-0.98 times; 1.04-1.17 on
+the M3), as the product's forms are; the type keeps the branches. The product where both intervals contain zero (two
+candidates per bound) is 1.9 to 2.1 times the product of one sign.
+
+**Before and after**, the time of this round over the time of the code before the changes, the range over
+every pair of runs of a level (M3 Apple clang | M3 GCC | Zen 2 GCC | Zen 2 Clang):
+
+| | over the code before, run in the same session | over the runs of 2026-11-27 |
+|---|---|---|
+| sum, loop (unchanged) | 0.89-1.00, 1.00-1.02, 0.99-1.02, 0.98-1.03 | 0.98-1.10, 1.02-1.05, 1.00-1.02, 0.99-1.02 |
+| product, loop | 0.68-0.76, 0.62, 0.68-0.69, 0.76-0.77 | 0.73-0.79, 0.60-0.63, 0.68-0.69, 0.77-0.78 |
+| product, one sign | 0.67-0.75, 0.58-0.61, 0.68, 0.75-0.78 | 0.71-0.78, 0.59-0.62, 0.68, 0.77-0.79 |
+| product, around zero | 0.59-0.68, 0.49-0.50, 0.54-0.55, 0.77-0.79 | 0.63-0.73, 0.50-0.51, 0.54-0.55, 0.77-0.79 |
+| product, random signs | 0.83-0.91, 0.79-0.82, 0.90-0.91, 0.92-0.93 | 0.89-0.92, 0.78-0.82, 0.91, 0.91-0.92 |
+| square, loop | 0.24-0.29, 0.15-0.16, 0.21, 0.28-0.30 | 0.25-0.31, 0.16, 0.21, 0.28-0.30 |
+| product, chain | 0.78-0.84, 0.67-0.69, 0.68-0.69, 0.75-0.77 | 0.82-0.91, 0.68-0.71, 0.68-0.69, 0.76-0.77 |
+| product chain, random signs | 0.89-0.94, 0.82-0.86, 0.91-0.92, 0.91 | 0.98-1.02, 0.82-0.90, 0.91, 0.91-0.92 |
+| 3 by 3 determinant on points | 0.87-0.95, 0.87-0.89, 0.87-0.89, 0.91-0.92 | 0.93-1.03, 0.88-0.89, 0.83-0.88, 0.91-0.92 |
+| Horner of degree 8 | 0.95-0.99, 0.95-1.01, 1.01, 0.99 | 1.08, 0.97-1.01, 1.01, 0.99 |
+
+On the M3 with Apple clang, where the shared machine slowed the unchanged code, the four-limb time over
+the two-limb type's in the same run, this round over 2026-11-27: Horner 0.98-0.99, the determinant
+0.91-1.01, a product loop 0.71-0.77, a product chain 0.75-0.83, the sum chain 1.00-1.08. Horner did not
+gain: its products have the full tails of earlier results, which never took the cold path; a first
+version of the change, which added the second error term before the second vector sum (two operations
+more on the path to the second limb), made it 3 to 10% slower on the Zen 2, and the version kept is
+within 1% there.
+
+**The functions on arrays**, time per element (the same X and Y, 256 elements per call; the loop of the
+type's operators over the same eight arrays, element by element inside one scope, is what a client
+would write without them; three runs per level after the last change of the header, the functions on
+arrays alone with the loops they are measured against):
+
+| ns per element | functions on arrays | loop of the operators over the same arrays | arrays over that loop | arrays over the type's loop on its own layout | 4 limbs over 2 limbs (arrays) |
+|---|---|---|---|---|---|
+| sum | 14.0-15.9, 11.8-12.3, 13.9, 14.7-14.8 | 15.4-17.4, 14.6-14.7, 34.6-34.7, 29.0 | 0.81-0.92, 0.81-0.84, 0.40, 0.51 | 0.93-1.12, 0.96-0.99, 0.50, 0.53 | 5.1-6.8, 5.1-5.4, 5.7, 5.8-5.9 |
+| difference | 13.9-16.0, 11.8-12.4, 13.9-14.0, 14.7-14.8 | 15.8-18.2, 14.9-15.1, 35.5-35.9, 29.8 | 0.81-0.93, 0.79-0.83, 0.39, 0.49-0.50 | 1.03-1.11, 0.93-0.97, 0.49-0.50, 0.51-0.53 | 5.2-5.7, 5.1-5.4, 5.7, 5.9 |
+| product | 14.3-16.5, 14.2-15.3, 15.6-16.1, 15.1-17.4 | 15.2-17.5, 15.9-16.1, 40.9-41.3, 34.5-34.9 | 0.86-0.95, 0.89-0.96, 0.38-0.39, 0.43-0.51 | 0.95-1.23, 1.07-1.18, 0.46-0.47, 0.46-0.54 | 3.6-4.3, 4.1-4.5, 4.3-4.4, 3.2-3.8 |
+
+On the Zen 2 (AVX2, four elements per register) the functions take 0.38-0.51 of the loop of the
+operators over the same arrays and about half the time of the type's own loop; on the M3 (NEON, two
+elements per register, as many as the type's own registers hold) 0.79-0.96 of that loop, and from 0.93
+to 1.23 times the type's loop on its own layout: there they save the gathering of each element's limbs,
+not arithmetic. GCC 16 at `-O2` kept the header's loops over the four limbs as loops (the arrays of
+registers then in memory, the product 1.3 times that loop) until they were marked for complete
+unrolling.
 
 There is no default type of four limbs. Against the default `Interval<double, 2>` on the same operands
-(same runs), the four-limb round-up type takes 0.79-0.84, 0.93-0.94, 0.65-0.68 and 0.76-0.77 of its
-time for the determinant, 0.43-0.78 for Horner and 0.56-0.75 for a product; `Ball<double, 2>` takes
-0.85-1.05 of the two-limb round-up type's time for the determinant. The product where both intervals
-contain zero (two candidates per bound) is 2.0 to 2.5 times the product of one sign. The square measured 1.9 to 3.0 times the product, because on these
-operands (short tails, and a square's correlated limbs) 5% of squares fail the exactness test of the
-product's levels 1 and 2 and take the exact cold path, which costs about half a microsecond (0.6% of
-the products of independent operands do).
+(same runs), the four-limb round-up type takes 0.75-0.80, 0.80-0.81, 0.57-0.58 and 0.69-0.70 of its
+time for the determinant, 0.43-0.72 for Horner and 0.43-0.45 for a product; `Ball<double, 2>` takes
+0.88-1.05 of the two-limb round-up type's time for the determinant.
 
-The forms of the product, against `branch` within a run: `table` 1.09-1.21 times in loops (0.92-0.94 on
-Zen 2 for random signs, where `branch` mispredicts); `sel2` 1.3-3.1 times; `sel4` (AVX2, Zen 2) 1.15-2.2
-times: the 256-bit registers do not pay for the branch-free form. The sloppy sum takes 0.72-0.79 of the
-accurate sum's time in loops and chains and 0.82-0.91 in the determinant and Horner.
+The forms of the product, against `branch` within a run: `table` 1.14-1.22 times in loops (0.91-0.93 on
+Zen 2 for random signs, where `branch` mispredicts; 1.13-1.19 on the M3); `sel2` 1.9-2.6 times; `sel4`
+(AVX2, Zen 2) 1.23-1.39 times: the 256-bit registers do not pay for the branch-free form. The sloppy sum
+takes 0.72-0.79 of the accurate sum's time in loops and chains and 0.82-0.93 in the determinant and
+Horner.
 
-The machine code of the loops: the sum 158-182 instructions (one path; the cold path a call), the
-product 381-487 over all its cases (the case of two zeros has two product networks), against 38-39 and
-114-245 for two limbs and 7 and 22 for one; nothing is called but the cold paths. The widths, on points
-(the exact values in integer arithmetic): the four-limb determinant is exact on these points (width 0:
-its exact value, about 170 bits, fits in four limbs); Horner of degree 8 has a median width of
-$6.6\cdot 10^{-63}$ of the value against $1.5\cdot 10^{-30}$ for two limbs and $1.3\cdot 10^{-14}$ for one.
+The machine code of the loops (x86-64; the widest loop of each function, all its paths): the sum 168-182
+instructions, the product 450-482 over all its cases (381-487 before), the square 217-234 (by masks,
+`sqr_sel`, 221-250), against 39 and 114-216 for two limbs and 7-18 and 23 for one; nothing is called in
+them but the cold paths. The widths, on points (the exact values in integer arithmetic), the same as
+before: the four-limb determinant is exact on these points (width 0: its exact value, about 170 bits,
+fits in four limbs); Horner of degree 8 has a median width of $6.6\cdot 10^{-63}$ of the value against
+$1.5\cdot 10^{-30}$ for two limbs and $1.3\cdot 10^{-14}$ for one.
 
-The excess of a bound over the exact one (2 million cases per class at `-O2`, units of $u^4 = 2^{-212}$
-relative): the accurate sum and the difference at most 2 in every class (cancellations included); the
-sloppy sum up to $9\cdot 10^4$ outside cancellation and up to $3\cdot 10^{15}$ under it; the product
-median 2-5, 99th percentile 17-37, largest 148; the square largest 93, the product by a number 37;
-away from underflow, with every compiler (the classes' operands differ slightly between compilers: the
-check program's generator has expressions that Clang contracts into fused operations and GCC does
-not). Below about
-$2^{-860}$ (the classes of tiny values and of $2^{\pm 500}$) a product's result has fewer than 212 bits
-of the format below it, and the excess is that of the best upper quadruple, which the cold path gives.
+**How often each operation takes the cold path**, per class of the checks (the share of results; the same
+with every compiler and level, the classes' operands differing slightly between compilers), before the
+changes (100 000 cases per class, Apple clang `-O2`) and after (2 million per class):
+
+| class | square, before | square, after | product, before | product, after | sum (unchanged) |
+|---|---|---|---|---|---|
+| as the benchmark (two limbs, $2^{-80}$, $2^{\pm 8}$) | 2.1% | 0 | 0.12% | 0 | 0 |
+| points, $2^{\pm 60}$ | 1.5% | 0 | 0.05% | 0 | 30% |
+| narrow, $2^{-20}..2^{-200}$ | 1.8% | 0 | 0.10% | 0 | 30% |
+| wide (unrelated bounds) | 1.5% | 0 | 0.09% | 0 | 32% |
+| around zero | 1.4% | 0 | 0.15% | 0 | 46% |
+| zeros (a bound 0, [0, 0]) | 0.72% | 0 | 0.04% | 0 | 7.6-7.8% |
+| cancellation (30..210 bits) | 1.9% | 0 | 1.3% | 0 | 38% |
+| limbs with gaps | 1.8% | 0 | 0.23% | 0 | 35% |
+| magnitudes apart (up to $2^{300}$) | 1.7% | 0 | 0.19% | 0 | 82% |
+| results of earlier operations | 2.7% | 0 | 0.50% | 0 | 2.1-2.2% |
+| any kind, $2^{\pm 500}$ | 7.3% | 5.6-5.7% | 1.4% | 1.2% | 83% |
+| tiny (later limbs underflow) | 100% | 100% | 87% | 87% | 76% |
+| huge (near overflow) | 100% | 100% | 73% | 73% | 63% |
+
+What remains for the square and the product is by design: below $2^{-860}$ (tiny values, and the
+squares and products of $2^{\pm 500}$ that fall there) and at the overflow threshold the fast path does
+not hold. **The sum takes the cold path far more often than the product** wherever the two operands'
+magnitudes differ by more than about $2^{53}$ (30% of the pairs of numbers spread over $2^{\pm 60}$,
+82-83% over $2^{\pm 300}$ or $2^{\pm 500}$): one of its two lanes then adds a positive head far below the
+other, whose error rounded up is not a number of the format, and the test of the heads' two-sum sends
+it to the exact path (100-120 ns on the M3 now). The benchmark's operands (magnitudes within $2^{\pm 8}$)
+never meet it; a fast path for sums of very different magnitudes was not part of this work.
+
+The excess of a bound over the exact one (units of $u^4 = 2^{-212}$ relative; 2 million cases per class on
+the Zen 2 for every program, and on the M3 for the form of the target at `-O2`, fewer for the others),
+away from underflow: the accurate sum and the difference at most 2 in every class (cancellations
+included); the sloppy sum up to $9\cdot 10^{11}$ at the 99th percentile and $4\cdot 10^{15}$ under
+cancellation; the product median 3.0-4.8, 99th percentile 19-37, largest 148; the square median 1.9-2.9,
+99th percentile up to 33, largest 93; the product by a number 37. Against the checks of 2026-11-27 with
+the same cases (the programs that ran as many), no largest excess grew but that of the measured form
+`sel2` (76.5 to 79.2 in one class at `-O3`); the 99th percentiles of the square and of the type's product
+grew by at most 0.2 (the cases that took the exact path before now take the fast one), those of `sel2` by
+at most 1.8. Below about $2^{-860}$ (the classes of tiny values and of $2^{\pm 500}$) a product's result
+has fewer than 212 bits of the format below it, and the excess is that of the best upper quadruple, which
+the cold path gives.
 
 ## What is argued, and what is only tested
 
