@@ -55,6 +55,10 @@ tests does:
 --8<-- "tests/consume/experimental/CMakeLists.txt:13:15"
 ```
 
+One false warning is known: given arrays whose length it can see and that are shorter than a
+register of the functions on arrays (two elements, four with AVX2), GCC 16 at `-O3` warns
+(`-Warray-bounds`) of their vector loop, which does not run there.
+
 A typical use is the one of the round-up interval, a filter that decides a sign, where one limb
 cannot. The value below is exactly $2^{-156}$, but on the way the cube
 $x^3 = 1 + 3 \cdot 2^{-52} + 3 \cdot 2^{-104} + 2^{-156}$ needs 157 bits, which one and two limbs

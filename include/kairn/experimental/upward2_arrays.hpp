@@ -148,11 +148,8 @@ KAIRN_FORCEINLINE Pack mul_pack(const Pack& x, const Pack& y, bool& special) noe
 enum class ArrayOp { add, sub, mul };
 template <ArrayOp Op>
 KAIRN_FORCEINLINE void apply(const View<double>& z, const View<const double>& x, const View<const double>& y) noexcept {
-    // The length is read before the scope, whose barriers clobber memory: after them GCC no longer
-    // knows a length it could see, and warns (-Warray-bounds) of the loads of the vector loop on a
-    // shorter array, a loop that never runs there.
-    const std::size_t n = z.size;
     ::kairn::upward::detail::RegisterScope scope;
+    const std::size_t n = z.size;
     std::size_t i = 0;
     for (; i + kW <= n; i += kW) {
         Pack a = load(x, i), b = load(y, i);
