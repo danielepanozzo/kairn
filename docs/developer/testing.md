@@ -48,7 +48,7 @@ The tests that `ctest` runs in the build directory, by name:
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
-| `objcode.upward` | The kernels of the round-up interval (`tests/objcode/upward_unit.cpp`, `objcode.py --upward`), with the options of `kairn::upward`, in the quick tier's configurations of their matrix ([below](#object-code), [The round-up interval](#the-round-up-interval)): no fused multiply-add, no negated multiplication, no `fmax`, the multiplications and the maxima asked for, no call. |
+| `objcode.upward` | The kernels of the round-up interval (`tests/objcode/upward_unit.cpp`, `objcode.py --upward`), with the options of `kairn::upward`, in the quick tier's configurations of their matrix ([below](#object-code), [The round-up interval](#the-round-up-interval)): no fused multiply-add, no negated multiplication, the multiplications and the maxima asked for, an `fmax` only for each NaN test of two operands on arm64 (`unord`, since 0.4.1) and none for a `max_nl`, no call. |
 | `regression.cases` | The stored cases of `tests/regression/cases.txt` (the cases that found a problem, and those that came closest to a claim, [below](#the-regression-cases)) through every compiled runner of the build, the generator's interpreter, and both runners of the public interface with every form of each public kernel, judged by the oracle (`tests/regression/run.py`). |
 | `consume.*` | A CMake project that uses Kairn through `add_subdirectory`, and one through `find_package` after `cmake --install`, build and run a kernel. The first (`tests/consume/subproject.cmake`) also checks that Kairn as a subproject prints no line of its own when configured and that `cmake --install` installs nothing of Kairn's; and that both checks can fail: its notice about `kairn::fma`, made necessary by giving the results of its two compile checks on the command line, appears with `--log-level=VERBOSE`, and with `-DKAIRN_INSTALL=ON` the headers are installed. |
 
@@ -4091,4 +4091,10 @@ fails the job, and the job is run again by hand. Whether a run under Rosetta tha
 repeated once by the test itself, and fail only when it fails again, was open issue 20 of the
 [Milestone 2 report](results/milestone2.md#open-issues); the owner decided on 2026-11-23 that it
 is not: the tests stay strict, and each such failure is added to this paragraph. Told of the four
-on 2026-11-27, the owner kept that decision.
+on 2026-11-27, the owner kept that decision. Later on 2026-11-27, on the Mac, a run of the
+generator's suite (at `9e41729c`) did not finish: the x86-64 build of a runner of `test_cxx` did not
+start under Rosetta, its process waiting in the kernel with no time on the processor, and every
+x86-64 program started there in the next 47 minutes did the same (a program of one line built to see
+it among them), until all of them ran or ended at once; no other process of the machine was waiting
+so. The run was stopped, and the whole suite passed on the next commit (`07d511aa`, 476 tests), its
+builds under Rosetta included. Not reproduced and not explained.

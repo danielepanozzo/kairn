@@ -296,16 +296,26 @@ def objcode(kernels):
 # - `numbers`: the two-number form; one multiplication per mul_ru, and no count of maxima (max_nl is
 #   `a > b ? a : b`, which a compiler may emit as a maximum, a selection or a branch): null;
 # - `avx2`, `neon_arrays`: the array forms, a loop of registers of W lanes and the rest of the
-#   elements by the one-register form, as parts [part, least, mul, max]: the loop's statement by
-#   statement (one multiplication per mul_ru, one maximum per max_nl), and the one-register form's,
-#   each at least once in the function (a compiler may unroll either loop).
+#   elements by the one-register form, as parts [part, least, mul, max, fmax]: the loop's statement
+#   by statement (one multiplication per mul_ru, one maximum per max_nl), and the one-register form's,
+#   each at least once in the function (a compiler may unroll either loop);
+# - and the maxima that return a NaN (arm64's FMAX): on arm64 (`neon`, `neon_arrays`) one per unord of
+#   two operands, the NaN test of their maximum (detail::unord, since version 0.4.1), per pair line in
+#   the register form and per statement in the loop of the array form; none elsewhere, and never for
+#   a max_nl, whose arm64 form is FMAXNM.
 #
-# Every form has, whatever the options, no fused multiply-add, no negated multiplication, no maximum
-# that returns a NaN (arm64's FMAX) and no call outside the object; the rule is the check's
+# Every form has, whatever the options, no fused multiply-add, no negated multiplication, no other
+# maximum that returns a NaN and no call outside the object; the rule is the check's
 # (tests/objcode/objcode.py, --upward).
 UPWARD_FORMS = ('sse2', 'neon', 'numbers', 'avx2', 'neon_arrays')
-UPWARD_COUNTS = ('mul', 'max')
+UPWARD_COUNTS = ('mul', 'max', 'fmax')
 UPWARD_PARTS = ('part', 'least') + UPWARD_COUNTS
+
+
+def _unord_of_two(st):
+    """Whether a statement is unord of two operands, which detail::unord prints as the NaN test of
+    their maximum on arm64 (unord(a, a) is the NaN test of a alone)."""
+    return st.op == 'unord' and st.args[0] != st.args[1]
 
 
 def upward_counts(k):
@@ -314,11 +324,12 @@ def upward_counts(k):
     lines = k.pair_lines()
     reg = [sum(1 for s0, _ in lines if s0.op == 'mul_ru'), sum(1 for s0, _ in lines if s0.op == 'max_nl')]
     stmts = [sum(1 for st in k.body if st.op == 'mul_ru'), sum(1 for st in k.body if st.op == 'max_nl')]
-    out = {'sse2': reg, 'neon': reg, 'numbers': [stmts[0], None]}
+    reg_fmax = sum(1 for s0, _ in lines if _unord_of_two(s0))
+    stmts_fmax = sum(1 for st in k.body if _unord_of_two(st))
+    out = {'sse2': reg + [0], 'neon': reg + [reg_fmax], 'numbers': [stmts[0], None, 0]}
     if k.name in upward_cpp.ARRAYS:
-        parts = [['packed', 1] + stmts, ['tail', 1] + reg]
-        out['avx2'] = parts
-        out['neon_arrays'] = parts
+        out['avx2'] = [['packed', 1] + stmts + [0], ['tail', 1] + reg + [0]]
+        out['neon_arrays'] = [['packed', 1] + stmts + [stmts_fmax], ['tail', 1] + reg + [reg_fmax]]
     return out
 
 

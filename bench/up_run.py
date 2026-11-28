@@ -18,7 +18,9 @@ the 2 s before it, and the usage of the two is sampled every 5 s during the run 
 A run is set aside and made again (up to --attempts times per kept run) when the sibling was busy
 (above --busy, 10%, in one sample or more), or when its spread at the median function (the median
 over the functions of the median over the minimum of a function's samples) is above --spread
-(1.05). Elsewhere (macOS, which has no affinity; Windows, unpinned) only the spread decides. Every
+(1.05). Elsewhere (macOS, which has no affinity; Windows, unpinned) only the spread decides. With
+--max-load L each attempt starts when the 1-minute load average is under L (os.getloadavg, so
+not on Windows), after waiting up to 30 minutes. Every
 attempt, kept or set aside, is listed in ATTEMPTS-NAME-ITEM.json with its CPU, the sibling's
 busiest sample and its mean, the spread and the reason; each kept run's JSON gets the same record
 as "run_conditions". Standard library only.
@@ -181,6 +183,13 @@ def run_once(args, program, cpu, path, item):
     return not reasons, cond
 
 
+def wait_for_load(limit, most=1800):
+    """Wait, up to `most` seconds, until the 1-minute load average is under limit (--max-load)."""
+    start = time.time()
+    while os.getloadavg()[0] >= limit and time.time() - start < most:
+        time.sleep(10)
+
+
 def parse_cpus(text):
     out = []
     for part in text.split(','):
@@ -212,6 +221,7 @@ def main():
     ap.add_argument('--busy', type=float, default=0.10)
     ap.add_argument('--spread', type=float, default=1.05)
     ap.add_argument('--timeout', type=float, default=1800, help='seconds per run')
+    ap.add_argument('--max-load', type=float, help='start each attempt when the 1-minute load average is under this')
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     pin = platform.system() == 'Linux' and args.cpus
@@ -223,6 +233,8 @@ def main():
     while kept < args.runs:
         done = False
         for attempt in range(1, args.attempts + 1):
+            if args.max_load:
+                wait_for_load(args.max_load)
             cpu = choose_cpu(cpus, args.sibling) if pin else None
             if args.mode == 'runs':
                 stem = '%s-%s-r%d' % (args.item, args.name, index)

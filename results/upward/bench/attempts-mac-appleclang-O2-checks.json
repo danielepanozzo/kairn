@@ -3,60 +3,60 @@
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0094,
+  "spread": 1.0034,
   "reason": "kept",
   "file": "checks-mac-appleclang-O2-c0-r1.json",
   "attempt": 1,
-  "time": "2026-11-26 22:25:59"
+  "time": "2026-11-27 17:05:00"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.044,
+  "spread": 1.0102,
   "reason": "kept",
   "file": "checks-mac-appleclang-O2-c1-r1.json",
   "attempt": 1,
-  "time": "2026-11-26 22:26:06"
+  "time": "2026-11-27 17:05:07"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0369,
+  "spread": 1.0026,
   "reason": "kept",
   "file": "checks-mac-appleclang-O2-c0-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:26:12"
+  "time": "2026-11-27 17:05:14"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0419,
+  "spread": 1.0018,
   "reason": "kept",
   "file": "checks-mac-appleclang-O2-c1-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:26:19"
+  "time": "2026-11-27 17:05:20"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0325,
+  "spread": 1.0026,
   "reason": "kept",
   "file": "checks-mac-appleclang-O2-c0-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:26:26"
+  "time": "2026-11-27 17:05:27"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0178,
+  "spread": 1.0031,
   "reason": "kept",
   "file": "checks-mac-appleclang-O2-c1-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:26:32"
+  "time": "2026-11-27 17:05:34"
  }
 ]

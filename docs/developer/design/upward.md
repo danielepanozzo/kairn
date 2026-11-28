@@ -577,7 +577,7 @@ The description declares pair inputs and outputs, `input: pair stored x = xu xn`
 |---|---|---|---|---|
 | `add_ru`, `mul_ru` | `_mm_add_pd`, `_mm_mul_pd` | `vaddq_f64`, `vmulq_f64`; a broadcast operand as `vmulq_laneq_f64` | `a + b`, `a * b` | `_mm256_add_pd`, ... / `vaddq_f64`, ... |
 | `max_nl a b` | `_mm_max_pd(a, b)` | `vmaxnmq_f64(a, b)` | `a > b ? a : b` | `_mm256_max_pd(a, b)` / `vmaxnmq_f64(a, b)` |
-| `unord a b` | `_mm_cmpunord_pd(a, b)` | a test of the bits of each (exponent all ones, fraction not zero), then `vorrq_u64` | `a != a \|\| b != b` | `_mm256_cmp_pd(a, b, _CMP_UNORD_Q)` / the bit test |
+| `unord a b` | `_mm_cmpunord_pd(a, b)` | a test of the bits (exponent all ones, fraction not zero) of `vmaxq_f64(a, b)`; `unord a a` the test of `a` | `a != a \|\| b != b` | `_mm256_cmp_pd(a, b, _CMP_UNORD_Q)` / the bit test of `vmaxq` |
 | `neg`, `abs` | exclusive or, and-not with $-0$ | `vnegq_f64`, `vabsq_f64` | `-a`, `abs_bits(a)` | as the existing packed printers |
 | `lt`, `le`, `eq` (pair lines) | `_mm_cmplt_pd` and the others, `lt(a, b)` as `b > a` | `vcltq_f64` and the others | as the scalar printer | as the existing packed printers |
 | `select m a b` | `_mm_blendv_pd(b, a, m)` with SSE4.1 or AVX, else and, and-not, or; an arm `0` as one and or and-not; an arm `const nan` as one or with the mask | `vbslq_f64`; an arm `0` as `vbicq_u64` or `vandq_u64`; an arm `const nan` as `vorrq_u64` | `m ? a : b` | blend / `vbslq` |
@@ -591,10 +591,22 @@ input.
 - **x86-64**: SSE2 intrinsics, compiled to the VEX encoding where the file has `-mavx`. `float` uses
   the two low lanes of an `__m128`, the two upper lanes $+0$ in every value (constants are made with
   zeros there), so that the unused lanes hold no NaN or subnormal number.
-- **arm64**: `float64x2_t` and `float32x2_t`; `unord` by integer tests on the bits, because Clang
-  under strict floating point turns a vector comparison of doubles into scalar code. The other
-  comparisons in pair lines (the hull, the intersection) keep `vcltq_f64`: correct, and slower with
-  Clang under the options.
+- **arm64**: `float64x2_t` and `float32x2_t`; `unord` by an integer test on the bits, because Clang
+  under strict floating point turns a vector comparison of doubles into scalar code. Since version
+  0.4.1 (the follow-up of 2026-11-27, [log](phase0/decisions.md#decisions-log)), `unord a b` with two
+  operands is the test of their maximum `vmaxq` (`FMAX`), which is a NaN in a lane where either
+  operand is one ([Arm ARM](#arm-arm): `FMAX` (vector) and its pseudocode `FPMax`, with FPCR.AH 0,
+  which the environment requires before every operation and every scope sets): one maximum and one
+  test, three instructions where the two tests and their or took four or five. It is
+  exact, the same in every rounding mode, and raises Invalid Operation only for a signaling NaN,
+  which the kernels that use it (the product, the intersection) raise already on the same operands
+  through their products or comparisons: on every pair of 12 special values in each lane, signed
+  quiet and signaling NaNs among them, the result bits and the exception flags of each kernel were
+  the same as with the two tests, with Apple clang 21 and GCC 16 at `-O2` and `-O3`, in a scope and,
+  for the intersection, outside one. With FPCR.AH 1 `FMAX` returns its second operand where one is
+  a NaN, which the environment excludes (a checked build reports it). The IR, the listings, the
+  statements and the claims are unchanged. The other comparisons in pair lines (the hull, the
+  intersection) keep `vcltq_f64`: correct, and slower with Clang under the options.
 - **Two numbers**, on every other target, and on any target with `KAIRN_UPWARD_FORM` set to
   `KAIRN_UPWARD_FORM_NUMBERS` (so that the tests run it everywhere): each pair line is its two scalar
   statements, the scalar printer's code; `max_nl` is `a > b ? a : b`, the `MAXPD` form.
@@ -657,8 +669,11 @@ machine code, so `/O2 /GL` is left to the runners):
   the two-number and the array forms (in the two-number form at least one, where the function
   branches: Clang 18 at `-O3` copies a product onto the paths of the branches of its selections);
 - **the maxima**: one `maxpd` (`vmaxpd`) or `fmaxnm` per `max_nl` in the register and the array
-  forms (the two-number form's `a > b ? a : b` may be a selection or a branch), and no `fmax`, which
-  returns the NaN and would make the product wrong;
+  forms (the two-number form's `a > b ? a : b` may be a selection or a branch), and no `fmax` for a
+  `max_nl`, which returns the NaN and would make the product wrong: since version 0.4.1 an `fmax` is
+  counted on arm64 exactly where the code tests two operands for a NaN (`unord`, one per pair line of
+  the register form and one per statement of the loop of the array form,
+  [The printers](#the-printers)), and nowhere else;
 - **no call**: every kernel is inlined into its caller (but with MSVC at `/Od`, which inlines nothing).
 
 ## Statements
@@ -1355,6 +1370,7 @@ and accepted with them on 2026-11-27.
 - <a id="intel-sdm"></a>Intel 64 and IA-32 Architectures Software Developer's Manual, volume 2, `MAXPD`
   (the second operand returned when either operand is a NaN or both are zeros), and volume 1 for
   MXCSR; <a id="arm-arm"></a>Arm Architecture Reference Manual for A-profile, `FMAXNM` (vector) and
-  its pseudocode `FPMaxNum`, and FPCR.
+  its pseudocode `FPMaxNum`, and FPCR; and the A64 instruction set (Arm DDI 0602, 2024-12), `FMAX`
+  (vector) and its shared pseudocode `FPMax`, `FPProcessNaNs` and `FPProcessNaN`.
 - Flocq ([references](phase0/references.md#proof-assistants)): `Bplus`, `Bmult`, `mode_UP`,
   `round_opp`.

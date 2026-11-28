@@ -73,8 +73,10 @@ each configuration in the form the target chooses (one register: SSE2 or NEON; w
 options its array form, AVX2 or NEON), in the two-number form forced (and its loop of arrays), and on
 x86-64 also without the packed options (the loop of the one-register form). Judged against the
 section "upward" of gen/objcode.json (gen/kairn_gen/objcode.py, upward_counts), by this rule
-(judge_upward): no fused multiply-add of any kind, no negated multiplication (fnmul), no maximum that
-returns a NaN (fmax); the multiplications exactly those asked for, and the maxima (maxpd, vmaxpd,
+(judge_upward): no fused multiply-add of any kind, no negated multiplication (fnmul), the maxima that
+return a NaN (fmax) exactly those of the NaN tests of two operands on arm64 (unord, printed as the test
+of their maximum since 0.4.1; none for a max_nl, whose form is FMAXNM, and none on x86-64 or in the
+two-number form); the multiplications exactly those asked for, and the maxima (maxpd, vmaxpd,
 maxps, vmaxps, fmaxnm) exactly those asked for where the form counts them (not in the two-number
 form, whose a > b ? a : b may be a selection or a branch); an array form as the sums of copies of its
 parts, each at least once (the rule of the folds); in the two-number form, where the function
@@ -1090,9 +1092,8 @@ def judge_upward(count, e, calls_allowed, duplicated=False):
         problems.append(f'{len(count.fma)} fused multiply-adds, expected none')
     if count.negmul:
         problems.append(f'{len(count.negmul)} negated multiplications, expected none (rule U3)')
-    if count.fmax:
-        problems.append(f'{len(count.fmax)} maxima that return a NaN (fmax), expected none: max_nl is FMAXNM')
-    m, x = len(count.mul), len(count.maximum)
+    m, x, f = len(count.mul), len(count.maximum), len(count.fmax)
+    why = 'max_nl is FMAXNM, and FMAX only the NaN test of two operands (unord)'
     if isinstance(e, list):
         described = ', '.join(f'{p["part"]} {p["mul"]} and {p["max"]} at least {p["least"]} times' for p in e)
         least = sum(p['mul'] * p['least'] for p in e)
@@ -1104,11 +1105,16 @@ def judge_upward(count, e, calls_allowed, duplicated=False):
         counted = [p for p in e if p['max'] is not None]
         if len(counted) == len(e) and x not in _sums(e, 'max', 'max', x):
             problems.append(f'{x} maxima, which no number of copies of the parts makes ({described})')
+        if f not in _sums(e, 'fmax', 'fmax', f):
+            problems.append(f'{f} maxima that return a NaN (fmax), which no number of copies of the parts makes '
+                            f'({", ".join(str(p["fmax"]) for p in e)}): {why}')
     else:
         if (m < e['mul']) if duplicated else (m != e['mul']):
             problems.append(f'{m} multiplications, expected {"at least " if duplicated else ""}{e["mul"]}')
         if e['max'] is not None and x != e['max']:
             problems.append(f'{x} maxima, expected {e["max"]}')
+        if f != e['fmax']:
+            problems.append(f'{f} maxima that return a NaN (fmax), expected {e["fmax"]}: {why}')
     for fn, sym in count.external:
         problems.append(f'calls {sym} outside the object (in {fn})')
     for fn, insn in count.unknown:
@@ -1174,7 +1180,7 @@ def check_upward_program(program, expected, limb_types, calls_allowed):
             n += 1
             if arrays == 'loop':
                 c = forms[form][t]
-                e = [{'part': 'tail', 'least': 1, 'mul': c['mul'], 'max': c['max']}]
+                e = [{'part': 'tail', 'least': 1, 'mul': c['mul'], 'max': c['max'], 'fmax': c['fmax']}]
             else:
                 e = forms['avx2' if arrays == 'avx2' else 'neon_arrays'][t]
             text = judge_upward(program.count(f), e, calls_allowed, form == 'numbers' and branches(program, f))

@@ -208,9 +208,14 @@ KAIRN_GEN_FORCEINLINE uint32x2_t is_nan(float32x2_t a) noexcept {
 KAIRN_GEN_FORCEINLINE uint32x4_t is_nan(float32x4_t a) noexcept {
     return vcgtq_u32(vandq_u32(vreinterpretq_u32_f32(a), vdupq_n_u32(0x7fffffffu)), vdupq_n_u32(0x7f800000u));
 }
-KAIRN_GEN_FORCEINLINE uint64x2_t unord(float64x2_t a, float64x2_t b) noexcept { return vorrq_u64(is_nan(a), is_nan(b)); }
-KAIRN_GEN_FORCEINLINE uint32x2_t unord(float32x2_t a, float32x2_t b) noexcept { return vorr_u32(is_nan(a), is_nan(b)); }
-KAIRN_GEN_FORCEINLINE uint32x4_t unord(float32x4_t a, float32x4_t b) noexcept { return vorrq_u32(is_nan(a), is_nan(b)); }
+// Whether a or b is a NaN, in each lane: the NaN test of their maximum, which FMAX makes a NaN when
+// either is one (Arm ARM, FMAX (vector) and FPMax, under FPCR.AH 0: the environment that the
+// header requires and every scope sets). FMAX is exact, the same in every rounding mode, and raises
+// Invalid Operation only for a signaling NaN, which the kernels that test with it raise already:
+// each operand is also an operand of their products or comparisons.
+KAIRN_GEN_FORCEINLINE uint64x2_t unord(float64x2_t a, float64x2_t b) noexcept { return is_nan(vmaxq_f64(a, b)); }
+KAIRN_GEN_FORCEINLINE uint32x2_t unord(float32x2_t a, float32x2_t b) noexcept { return is_nan(vmax_f32(a, b)); }
+KAIRN_GEN_FORCEINLINE uint32x4_t unord(float32x4_t a, float32x4_t b) noexcept { return is_nan(vmaxq_f32(a, b)); }
 // The complement of a lane mask (there is no vmvnq_u64).
 KAIRN_GEN_FORCEINLINE uint64x2_t not_mask(uint64x2_t m) noexcept { return vreinterpretq_u64_u32(vmvnq_u32(vreinterpretq_u32_u64(m))); }
 KAIRN_GEN_FORCEINLINE uint32x2_t not_mask(uint32x2_t m) noexcept { return vmvn_u32(m); }

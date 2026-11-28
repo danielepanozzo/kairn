@@ -52,6 +52,22 @@ struct ArrayData {
 ArrayData<double>* g64 = nullptr;
 ArrayData<float>* g32 = nullptr;
 
+// The pointers of ArrayData in a timed function's locals, as up_type.cpp holds them (Local): reached
+// through the structure in memory, they were loaded again before every call of the loops by length.
+template <class T>
+struct ArrayLocal {
+    T* xu;
+    T* xn;
+    T* yu;
+    T* yn;
+    T* zu;
+    T* zn;
+};
+template <class T>
+ArrayLocal<T> local(const ArrayData<T>& d) {
+    return {d.xu, d.xn, d.yu, d.yn, d.zu, d.zn};
+}
+
 template <class T>
 ArrayData<T>& data();
 template <>
@@ -174,7 +190,7 @@ bool check(const Entry& e, char* why, std::size_t size) {
 #define KB_DEF(B, SUF, TYPE, KIND, KERNEL, VAR, LANES, OPS, ...)                                   \
     extern "C" KB_NOINLINE void kb_##SUF##_##KIND##_##KERNEL##__##VAR(void*) {                     \
         using T = TYPE;                                                                            \
-        [[maybe_unused]] ArrayData<T>& d = data<T>();                                              \
+        [[maybe_unused]] const ArrayLocal<T> d = local(data<T>());                                 \
         __VA_ARGS__;                                                                               \
     }
 #define KB_ROW(B, SUF, T, KIND, KERNEL, VAR, LANES, OPS, ...)                                      \

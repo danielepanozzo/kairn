@@ -3,30 +3,30 @@
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0057,
+  "spread": 1.0028,
   "reason": "kept",
   "file": "main-mac-gcc16-O2-r1.json",
   "attempt": 1,
-  "time": "2026-11-26 22:17:38"
+  "time": "2026-11-27 17:07:30"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0053,
+  "spread": 1.003,
   "reason": "kept",
   "file": "main-mac-gcc16-O2-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:17:57"
+  "time": "2026-11-27 17:07:49"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0124,
+  "spread": 1.0029,
   "reason": "kept",
   "file": "main-mac-gcc16-O2-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:16"
+  "time": "2026-11-27 17:08:08"
  }
 ]

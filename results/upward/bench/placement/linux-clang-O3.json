@@ -1,0 +1,207 @@
+{
+ "what": "kairn-bench-up on Zen 2: the program of the earlier runs (A, built from 4710839b) and the program of these runs (B, built from e4328d39), with the same compiler and flags, run alternately on one logical CPU of the second socket (taskset -c 36, its SMT sibling 100 idle when they started), the order swapped every pair; per function the ratio B/A of the minimum times of each pair, its median, lowest and highest over the pairs, and the lowest and highest minimum time of each program",
+ "date": "2026-11-27",
+ "tag": "linux-clang-O3",
+ "machine": {
+  "description": "M3 A/B",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "os": "Linux",
+  "arch": "x86-64",
+  "pinning": "not pinned"
+ },
+ "compiler": "Clang 18.1.3 (1ubuntu1)",
+ "flags": "-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma)",
+ "upward_flags": "-Wall -Wextra -Werror -O3 -DNDEBUG -O3 -ffp-contract=off -mfma (packed code also -mavx2 -mfma) -frounding-math",
+ "reps": 31,
+ "sample_ms": 4,
+ "commits": {
+  "A": "4710839b",
+  "B": "e4328d39"
+ },
+ "pairs": 4,
+ "filter": "upw/tp/interval_add_1/,upw/tp/interval_sub_1/,upw/tp/interval_mul_1/native,upw/tp/from_interval_1/op,upw/tp/to_interval_1/op,upw/sum/interval_add_1/native,m2/tp/interval_add_1/op,upwa/tp/interval_add_1/fenv_loop",
+ "runs": [
+  {
+   "pair": 0,
+   "program": "A",
+   "spread": 1.0049
+  },
+  {
+   "pair": 0,
+   "program": "B",
+   "spread": 1.0038
+  },
+  {
+   "pair": 1,
+   "program": "B",
+   "spread": 1.0044
+  },
+  {
+   "pair": 1,
+   "program": "A",
+   "spread": 1.0057
+  },
+  {
+   "pair": 2,
+   "program": "A",
+   "spread": 1.0049
+  },
+  {
+   "pair": 2,
+   "program": "B",
+   "spread": 1.0042
+  },
+  {
+   "pair": 3,
+   "program": "B",
+   "spread": 1.0035
+  },
+  {
+   "pair": 3,
+   "program": "A",
+   "spread": 1.0047
+  }
+ ],
+ "summary": {
+  "m2/tp/interval_add_1/op": {
+   "ratio_median": 1.0013,
+   "ratio_min": 1.0,
+   "ratio_max": 1.0022,
+   "a_min": 4.505,
+   "a_max": 4.513,
+   "b_min": 4.51,
+   "b_max": 4.517,
+   "pairs": 4
+  },
+  "upw/sum/interval_add_1/native": {
+   "ratio_median": 1.0,
+   "ratio_min": 0.8481,
+   "ratio_max": 1.1392,
+   "a_min": 1.027,
+   "a_max": 1.211,
+   "b_min": 1.027,
+   "b_max": 1.17,
+   "pairs": 4
+  },
+  "upw/sum/interval_add_1/native_x16": {
+   "ratio_median": 0.9886,
+   "ratio_min": 0.9756,
+   "ratio_max": 1.0014,
+   "a_min": 0.9068,
+   "a_max": 0.938,
+   "b_min": 0.9064,
+   "b_max": 0.9176,
+   "pairs": 4
+  },
+  "upw/tp/from_interval_1/op": {
+   "ratio_median": 1.2208,
+   "ratio_min": 1.2182,
+   "ratio_max": 1.2212,
+   "a_min": 1.129,
+   "a_max": 1.132,
+   "b_min": 1.378,
+   "b_max": 1.381,
+   "pairs": 4
+  },
+  "upw/tp/interval_add_1/conv": {
+   "ratio_median": 1.0999,
+   "ratio_min": 1.0988,
+   "ratio_max": 1.1005,
+   "a_min": 3.274,
+   "a_max": 3.279,
+   "b_min": 3.603,
+   "b_max": 3.605,
+   "pairs": 4
+  },
+  "upw/tp/interval_add_1/native": {
+   "ratio_median": 0.6739,
+   "ratio_min": 0.4593,
+   "ratio_max": 0.8031,
+   "a_min": 1.217,
+   "a_max": 1.787,
+   "b_min": 0.82,
+   "b_max": 0.9782,
+   "pairs": 4
+  },
+  "upw/tp/interval_add_1/native_x16": {
+   "ratio_median": 0.4295,
+   "ratio_min": 0.4278,
+   "ratio_max": 0.4635,
+   "a_min": 0.9301,
+   "a_max": 0.9381,
+   "b_min": 0.4009,
+   "b_max": 0.4311,
+   "pairs": 4
+  },
+  "upw/tp/interval_mul_1/native": {
+   "ratio_median": 1.0059,
+   "ratio_min": 0.9744,
+   "ratio_max": 1.3121,
+   "a_min": 2.028,
+   "a_max": 2.149,
+   "b_min": 2.092,
+   "b_max": 2.661,
+   "pairs": 4
+  },
+  "upw/tp/interval_mul_1/native_x16": {
+   "ratio_median": 0.9713,
+   "ratio_min": 0.9624,
+   "ratio_max": 0.9827,
+   "a_min": 1.83,
+   "a_max": 1.86,
+   "b_min": 1.789,
+   "b_max": 1.823,
+   "pairs": 4
+  },
+  "upw/tp/interval_sub_1/conv": {
+   "ratio_median": 1.0222,
+   "ratio_min": 0.9151,
+   "ratio_max": 1.0603,
+   "a_min": 3.352,
+   "a_max": 3.768,
+   "b_min": 3.448,
+   "b_max": 3.554,
+   "pairs": 4
+  },
+  "upw/tp/interval_sub_1/native": {
+   "ratio_median": 0.605,
+   "ratio_min": 0.6009,
+   "ratio_max": 0.9991,
+   "a_min": 1.117,
+   "a_max": 1.125,
+   "b_min": 0.676,
+   "b_max": 1.122,
+   "pairs": 4
+  },
+  "upw/tp/interval_sub_1/native_x16": {
+   "ratio_median": 0.5837,
+   "ratio_min": 0.5678,
+   "ratio_max": 0.6036,
+   "a_min": 0.9325,
+   "a_max": 0.9604,
+   "b_min": 0.5445,
+   "b_max": 0.5629,
+   "pairs": 4
+  },
+  "upw/tp/to_interval_1/op": {
+   "ratio_median": 0.9188,
+   "ratio_min": 0.9165,
+   "ratio_max": 0.9205,
+   "a_min": 1.23,
+   "a_max": 1.234,
+   "b_min": 1.13,
+   "b_max": 1.134,
+   "pairs": 4
+  },
+  "upwa/tp/interval_add_1/fenv_loop": {
+   "ratio_median": 0.8112,
+   "ratio_min": 0.8082,
+   "ratio_max": 0.8125,
+   "a_min": 1.134,
+   "a_max": 1.141,
+   "b_min": 0.9209,
+   "b_max": 0.9222,
+   "pairs": 4
+  }
+ }
+}

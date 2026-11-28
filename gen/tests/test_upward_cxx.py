@@ -629,8 +629,20 @@ class Printers(unittest.TestCase):
         # max_nl in the operand order of the listing: the candidate first.
         self.assertIn('_mm_max_pd(q2u_q2n, m1u_m1n)', self.text)
         self.assertIn('vmaxnmq_f64(q2u_q2n, m1u_m1n)', self.text)
-        self.assertNotIn('vmaxq_', self.text)
-        self.assertNotIn('vmax_f32', self.text)
+        # FMAX (vmaxq_f64, vmax_f32, vmaxq_f32) only in the NaN test of two operands, detail::unord,
+        # the test of their maximum, which is a NaN where either is one; never for max_nl, whose
+        # arm64 form is FMAXNM, in a register form or an array form.
+        rest = self.text
+        for line in ('KAIRN_GEN_FORCEINLINE uint64x2_t unord(float64x2_t a, float64x2_t b) noexcept '
+                     '{ return is_nan(vmaxq_f64(a, b)); }',
+                     'KAIRN_GEN_FORCEINLINE uint32x2_t unord(float32x2_t a, float32x2_t b) noexcept '
+                     '{ return is_nan(vmax_f32(a, b)); }',
+                     'KAIRN_GEN_FORCEINLINE uint32x4_t unord(float32x4_t a, float32x4_t b) noexcept '
+                     '{ return is_nan(vmaxq_f32(a, b)); }'):
+            self.assertEqual(rest.count(line), 1, line)
+            rest = rest.replace(line, '')
+        self.assertNotIn('vmaxq_', rest)
+        self.assertNotIn('vmax_f32', rest)
 
     def test_the_emulated_listing_is_the_two_number_listing(self):
         # The emulated kernels are the two-number form for double, the type's name for double, its

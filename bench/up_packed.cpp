@@ -74,7 +74,7 @@ struct Lanes<float> {
 
 #define KB_UPP_DEF(B, SUF, T, KERNEL)                                                              \
     extern "C" KB_NOINLINE void kb_##SUF##_tp_##KERNEL##__packed(void*) {                          \
-        const up::Bounds<T>& b = *Mine::bounds<T>();                                              \
+        const typename up::Bounds<T>::Pointers b = Mine::bounds<T>()->pointers();                 \
         using V = Lanes<T>::V;                                                                     \
         for (int i = 0; i < kN; i += Lanes<T>::W) {                                                \
             V zl, zu;                                                                              \

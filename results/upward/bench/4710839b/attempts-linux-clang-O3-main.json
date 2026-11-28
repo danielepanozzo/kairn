@@ -1,0 +1,54 @@
+[
+ {
+  "cpu": 28,
+  "sibling": 92,
+  "samples": 3,
+  "spread": 1.0059,
+  "sibling_busy_max": 0.004,
+  "sibling_busy_mean": 0.002,
+  "cpu_busy_mean": 0.999,
+  "reason": "kept",
+  "file": "main-linux-clang-O3-r1.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:16:17"
+ },
+ {
+  "cpu": 28,
+  "sibling": 92,
+  "samples": 3,
+  "spread": 1.0055,
+  "sibling_busy_max": 0.002,
+  "sibling_busy_mean": 0.002,
+  "cpu_busy_mean": 0.999,
+  "reason": "kept",
+  "file": "main-linux-clang-O3-r2.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:16:38"
+ },
+ {
+  "cpu": 28,
+  "sibling": 92,
+  "samples": 3,
+  "spread": 1.0052,
+  "sibling_busy_max": 0.002,
+  "sibling_busy_mean": 0.001,
+  "cpu_busy_mean": 1.0,
+  "reason": "kept",
+  "file": "main-linux-clang-O3-r3.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:16:59"
+ },
+ {
+  "cpu": 30,
+  "sibling": 94,
+  "samples": 3,
+  "spread": 1.0043,
+  "sibling_busy_max": 0.0,
+  "sibling_busy_mean": 0.0,
+  "cpu_busy_mean": 1.0,
+  "reason": "kept",
+  "file": "main-linux-clang-O3-r4.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:17:20"
+ }
+]

@@ -1,106 +1,106 @@
 [
  {
-  "cpu": 7,
-  "sibling": 71,
+  "cpu": 6,
+  "sibling": 70,
   "samples": 1,
-  "spread": 1.0056,
+  "spread": 1.006,
   "sibling_busy_max": 0.002,
   "sibling_busy_mean": 0.002,
-  "cpu_busy_mean": 0.998,
+  "cpu_busy_mean": 0.996,
   "reason": "kept",
   "file": "checks-linux-gcc-O2-c0-r1.json",
   "attempt": 1,
-  "time": "2026-11-26 22:17:29"
+  "time": "2026-11-27 17:03:31"
  },
  {
-  "cpu": 7,
-  "sibling": 71,
+  "cpu": 6,
+  "sibling": 70,
   "samples": 1,
-  "spread": 1.0043,
+  "spread": 1.0052,
+  "sibling_busy_max": 0.002,
+  "sibling_busy_mean": 0.002,
+  "cpu_busy_mean": 0.95,
+  "reason": "kept",
+  "file": "checks-linux-gcc-O2-c1-r1.json",
+  "attempt": 1,
+  "time": "2026-11-27 17:03:38"
+ },
+ {
+  "cpu": 5,
+  "sibling": 69,
+  "samples": 1,
+  "spread": 1.0045,
   "sibling_busy_max": 0.0,
   "sibling_busy_mean": 0.0,
   "cpu_busy_mean": 0.996,
   "reason": "kept",
-  "file": "checks-linux-gcc-O2-c1-r1.json",
-  "attempt": 1,
-  "time": "2026-11-26 22:17:35"
- },
- {
-  "cpu": 4,
-  "sibling": 68,
-  "samples": 1,
-  "spread": 1.0065,
-  "sibling_busy_max": 0.002,
-  "sibling_busy_mean": 0.002,
-  "cpu_busy_mean": 0.996,
-  "reason": "kept",
   "file": "checks-linux-gcc-O2-c0-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:17:44"
+  "time": "2026-11-27 17:03:46"
  },
  {
-  "cpu": 4,
-  "sibling": 68,
+  "cpu": 5,
+  "sibling": 69,
   "samples": 1,
-  "spread": 1.0045,
+  "spread": 1.0036,
   "sibling_busy_max": 0.002,
   "sibling_busy_mean": 0.002,
   "cpu_busy_mean": 0.998,
   "reason": "kept",
   "file": "checks-linux-gcc-O2-c1-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:17:51"
+  "time": "2026-11-27 17:03:53"
  },
  {
   "cpu": 4,
   "sibling": 68,
   "samples": 1,
-  "spread": 1.0066,
+  "spread": 1.0044,
   "sibling_busy_max": 0.002,
   "sibling_busy_mean": 0.002,
-  "cpu_busy_mean": 0.998,
+  "cpu_busy_mean": 0.996,
   "reason": "kept",
   "file": "checks-linux-gcc-O2-c0-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:17:59"
+  "time": "2026-11-27 17:04:02"
  },
  {
   "cpu": 4,
   "sibling": 68,
   "samples": 1,
-  "spread": 1.0038,
+  "spread": 1.0039,
   "sibling_busy_max": 0.0,
   "sibling_busy_mean": 0.0,
-  "cpu_busy_mean": 0.996,
+  "cpu_busy_mean": 0.998,
   "reason": "kept",
   "file": "checks-linux-gcc-O2-c1-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:06"
+  "time": "2026-11-27 17:04:08"
  },
  {
   "cpu": 4,
   "sibling": 68,
   "samples": 1,
-  "spread": 1.009,
-  "sibling_busy_max": 0.006,
-  "sibling_busy_mean": 0.006,
+  "spread": 1.0043,
+  "sibling_busy_max": 0.0,
+  "sibling_busy_mean": 0.0,
   "cpu_busy_mean": 0.998,
   "reason": "kept",
   "file": "checks-linux-gcc-O2-c0-r4.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:15"
+  "time": "2026-11-27 17:04:17"
  },
  {
   "cpu": 4,
   "sibling": 68,
   "samples": 1,
-  "spread": 1.0025,
+  "spread": 1.0036,
   "sibling_busy_max": 0.002,
   "sibling_busy_mean": 0.002,
-  "cpu_busy_mean": 1.0,
+  "cpu_busy_mean": 0.996,
   "reason": "kept",
   "file": "checks-linux-gcc-O2-c1-r4.json",
   "attempt": 1,
-  "time": "2026-11-26 22:18:21"
+  "time": "2026-11-27 17:04:24"
  }
 ]

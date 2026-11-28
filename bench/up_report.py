@@ -2,7 +2,8 @@
 """up_report.py: the tables of docs/developer/results/bench-upward.md, from the stored runs.
 
     python3 bench/up_report.py results/upward/bench [--section NAME]
-    python3 bench/up_report.py results/upward/bench --fill docs/developer/results/bench-upward.md
+    python3 bench/up_report.py results/upward/bench --earlier results/upward/bench/4710839b \
+        --fill docs/developer/results/bench-upward.md
 
 Reads the runs of kairn-bench-up that bench/up_run.py wrote (bench/README.md, "The round-up
 interval"): main-MACHINE-COMPILER-LEVEL-rN.json and the pairs checks-MACHINE-COMPILER-LEVEL-cK-rN.json
@@ -12,7 +13,9 @@ one pair); a cell is the lowest and highest value over the runs of a configurati
 given apart where they differ by more than 0.05 or 3% (ratios), 5% (times), or 0.5 ns and 10%
 (differences). With --fill, the text between the lines <!-- BEGIN up_report SECTION --> and
 <!-- END up_report SECTION --> of the page is replaced by the tables of SECTION, so that no number
-in a table of the page is typed by hand. Standard library only.
+in a table of the page is typed by hand. With --earlier DIR, the section changed puts the times of
+the runs in DIR (an earlier campaign) beside these; the sections unord and placement read the
+summaries of two programs run alternately (DIR/unord/, DIR/placement/). Standard library only.
 """
 import contextlib
 import io
@@ -486,7 +489,108 @@ SECTIONS = {'type': type_tables, 'chains': chain_tables, 'poly': poly_tables, 'c
             'arrays': array_tables, 'lengths': length_tables, 'scopes': scope_tables, 'float': float_tables}
 
 
+# --- What changed since the earlier runs (--earlier) ---------------------------------------------
+
+# The functions whose loops loaded the pointers of their arrays again in every iteration (or before
+# every call) in the program of the earlier runs, and controls that did not.
+CHANGED = ['upw/tp/interval_add_1/native', 'upw/tp/interval_add_1/native_x16', 'upw/tp/interval_sub_1/native',
+           'upw/tp/interval_sub_1/native_x16', 'upw/tp/interval_mul_1/native', 'upw/tp/interval_mul_1/native_x16',
+           'upw/tp/interval_add_1/conv', 'upw/tp/det3_i1/native', 'upw/tp/from_interval_1/op',
+           'upw/sum/interval_add_1/native', 'upws/call/scope_add_1/none', 'upwa/call/add_4/none',
+           'upwa/tp/interval_add_1/packed', 'upwa/tp/interval_add_1/fenv_loop', 'upwa/tp/interval_mul_1/fenv_loop',
+           'upw/tp/horner_i1/native', 'upwa/tp/interval_add_1/op', 'm2/tp/interval_add_1/op',
+           'm2/tp/interval_add_1/fenv_loop']
+
+
+def changed_tables(now, earlier, commit):
+    """Per function of CHANGED, its times in the earlier runs and in these, one row each."""
+    rows = []
+    for name in CHANGED:
+        rows.append(('`%s`, at `%s`' % (name, commit), t(name), earlier))
+        rows.append(('`%s`, now' % name, t(name), now))
+    present = [c for c in COLUMNS if any(k[0] == c[0] and k[1] == c[1] for k in now)]
+    print('\n| Before and after the repair, times (ns per operation, per call for the calls) | %s |' %
+          ' | '.join(c[2] for c in present))
+    print('|---' * (len(present) + 1) + '|')
+    for label, f, src in rows:
+        cells = [cell(src, c[0], c[1], f, 'time') for c in present]
+        if any(cells):
+            print('| %s | %s |' % (label, ' | '.join(cells)))
+
+
+# The test of an empty operand on arm64 (detail::unord), measured on two builds of the repaired
+# program, the old helper and the new, run alternately (DIR/unord/COMPILER-LEVEL.json, the summary
+# of each configuration's pairs): the new over the old, the lowest and highest ratio over the pairs.
+UNORD = ['upw/tp/interval_mul_1/native', 'upw/tp/interval_mul_1/native_x16', 'upw/tp/interval_mul_1/conv',
+         'upw/prod/interval_mul_1/native', 'upw/tp/det3_i1/native', 'upw/tp/det3_i1/conv', 'upw/tp/horner_i1/native',
+         'upw/lat/horner_i1/native', 'upwf/tp/interval_mul_1/native', 'upwa/tp/interval_mul_1/op',
+         'upwaf/tp/interval_mul_1/op', 'upwa/call/mul_4/none', 'upw/tp/interval_add_1/native',
+         'm2/tp/interval_mul_1/op']
+
+
+def ab_table(directory, sub, columns, names, title):
+    """The ratios B/A of the alternate runs stored in DIR/SUB/TAG.json (TAG COMPILER-LEVEL, with the
+    machine first for those of Linux), per function of names: the lowest and highest over the pairs,
+    -O2 and -O3 given apart as the other tables give them."""
+    data = {}
+    for p in sorted(glob.glob(os.path.join(directory, sub, '*.json'))):
+        with open(p) as f:
+            d = json.load(f)
+        compiler, level = d['tag'].rsplit('-', 1)
+        data[(compiler, level)] = d
+    cols = [c for c in columns if any(k[0] == c[0] for k in data)]
+    if not cols:
+        return
+    pairs = sorted(set(d['pairs'] for d in data.values()))
+    print('\n| %s (%s pairs) | %s |' % (title, ' or '.join(str(p) for p in pairs), ' | '.join(c[1] for c in cols)))
+    print('|---' * (len(cols) + 1) + '|')
+    for name in names:
+        cells = []
+        for compiler, _ in cols:
+            per = {lv: (data[(compiler, lv)]['summary'][name]['ratio_min'], data[(compiler, lv)]['summary'][name]['ratio_max'])
+                   for lv in ('O2', 'O3') if (compiler, lv) in data and name in data[(compiler, lv)]['summary']}
+            if not per:
+                cells.append('')
+            elif len(per) == 2 and close('ratio', min(per['O2'][0], per['O3'][0]), max(per['O2'][1], per['O3'][1])):
+                cells.append(fmt_ratio(min(per['O2'][0], per['O3'][0]), max(per['O2'][1], per['O3'][1])))
+            else:
+                cells.append(', '.join('%s (-%s)' % (fmt_ratio(*per[lv]), lv) for lv in ('O2', 'O3') if lv in per))
+        if any(cells):
+            print('| `%s` | %s |' % (name, ' | '.join(cells)))
+
+
+def unord_tables(directory):
+    ab_table(directory, 'unord', (('appleclang', 'M3, Apple clang'), ('gcc16', 'M3, GCC 16')), UNORD,
+             'The new test over the old, the same program')
+
+
+# The program of these runs against that of the earlier ones on Zen 2, alternately on one CPU
+# (DIR/placement/linux-COMPILER-LEVEL.json; linux-gcc-scopes-O3.json, the scopes of GCC 13 at -O3).
+PLACEMENT = ['upw/tp/interval_add_1/native', 'upw/tp/interval_add_1/native_x16', 'upw/tp/interval_sub_1/native',
+             'upw/tp/interval_sub_1/native_x16', 'upw/tp/interval_mul_1/native', 'upw/tp/interval_mul_1/native_x16',
+             'upw/tp/interval_add_1/conv', 'upw/tp/from_interval_1/op', 'upw/tp/to_interval_1/op',
+             'upw/sum/interval_add_1/native', 'upwa/tp/interval_add_1/fenv_loop', 'm2/tp/interval_add_1/op',
+             'upws/call/scope_add_1/change', 'upws/call/scope_add_1/none', 'upws/call/regscope_add_1/change',
+             'upws/call/nearest_add_1/change']
+
+
+def placement_tables(directory):
+    ab_table(directory, 'placement', (('linux-gcc', 'Zen 2, GCC 13'), ('linux-gcc-scopes', 'Zen 2, GCC 13, the scopes'),
+                                      ('linux-clang', 'Zen 2, Clang 18')), PLACEMENT,
+             'This program over that of the earlier runs, alternately on one CPU')
+
+
 MARK = re.compile(r'^<!-- (BEGIN|END) up_report (\S+) -->$')
+
+
+EARLIER = {}
+
+
+def earlier_tables(items):
+    if not EARLIER:
+        raise SystemExit('the section changed needs --earlier DIR')
+    first = next(iter(EARLIER['main'].values()))[0]
+    changed_tables(items.get('main', {}), EARLIER['main'], first['commit'])
 
 
 def section_text(items, directory, name):
@@ -494,6 +598,12 @@ def section_text(items, directory, name):
     with contextlib.redirect_stdout(out):
         if name in SECTIONS:
             SECTIONS[name](items.get('main', {}))
+        elif name == 'changed':
+            earlier_tables(items)
+        elif name == 'unord':
+            unord_tables(directory)
+        elif name == 'placement':
+            placement_tables(directory)
         elif name == 'checks':
             checks_tables(items.get('checks', {}))
         elif name == 'msvc':
@@ -537,16 +647,28 @@ def fill(items, directory, page):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('directory')
-    ap.add_argument('--section', choices=sorted(SECTIONS) + ['checks', 'msvc', 'runs'])
+    ap.add_argument('--section', choices=sorted(SECTIONS) + ['checks', 'msvc', 'runs', 'changed', 'unord', 'placement'])
     ap.add_argument('--fill', metavar='PAGE')
+    ap.add_argument('--earlier', metavar='DIR', help='the runs of an earlier program, for the section changed')
     args = ap.parse_args()
     items = load(args.directory)
+    if args.earlier:
+        EARLIER.update(load(args.earlier))
     if args.fill:
         fill(items, args.directory, args.fill)
         return 0
     main_runs = items.get('main', {})
     if args.section in SECTIONS:
         SECTIONS[args.section](main_runs)
+        return 0
+    if args.section == 'changed':
+        earlier_tables(items)
+        return 0
+    if args.section == 'unord':
+        unord_tables(args.directory)
+        return 0
+    if args.section == 'placement':
+        placement_tables(args.directory)
         return 0
     if args.section == 'checks':
         checks_tables(items.get('checks', {}))

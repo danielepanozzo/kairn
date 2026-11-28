@@ -3,80 +3,30 @@
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.0559,
-  "reason": "spread 1.056 at the median function",
-  "file": "main-mac-appleclang-O3-r1.json",
-  "attempt": 1,
-  "time": "2026-11-26 22:26:51"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0317,
+  "spread": 1.0027,
   "reason": "kept",
   "file": "main-mac-appleclang-O3-r1.json",
-  "attempt": 2,
-  "time": "2026-11-26 22:27:10"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0536,
-  "reason": "spread 1.054 at the median function",
-  "file": "main-mac-appleclang-O3-r2.json",
   "attempt": 1,
-  "time": "2026-11-26 22:31:24"
+  "time": "2026-11-27 17:05:53"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.2131,
-  "reason": "spread 1.213 at the median function",
-  "file": "main-mac-appleclang-O3-r2.json",
-  "attempt": 2,
-  "time": "2026-11-26 22:31:44"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0275,
+  "spread": 1.0043,
   "reason": "kept",
   "file": "main-mac-appleclang-O3-r2.json",
-  "attempt": 3,
-  "time": "2026-11-26 22:32:01"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0914,
-  "reason": "spread 1.091 at the median function",
-  "file": "main-mac-appleclang-O3-r3.json",
   "attempt": 1,
-  "time": "2026-11-26 22:32:20"
+  "time": "2026-11-27 17:06:12"
  },
  {
   "cpu": null,
   "sibling": null,
   "samples": 0,
-  "spread": 1.1076,
-  "reason": "spread 1.108 at the median function",
-  "file": "main-mac-appleclang-O3-r3.json",
-  "attempt": 2,
-  "time": "2026-11-26 22:32:38"
- },
- {
-  "cpu": null,
-  "sibling": null,
-  "samples": 0,
-  "spread": 1.0317,
+  "spread": 1.0031,
   "reason": "kept",
   "file": "main-mac-appleclang-O3-r3.json",
-  "attempt": 3,
-  "time": "2026-11-26 22:32:55"
+  "attempt": 1,
+  "time": "2026-11-27 17:06:31"
  }
 ]

@@ -1,0 +1,102 @@
+[
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0057,
+  "reason": "kept",
+  "file": "checks-mac-gcc16-O3-c0-r1.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:23:27"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0047,
+  "reason": "kept",
+  "file": "checks-mac-gcc16-O3-c1-r1.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:23:34"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0044,
+  "reason": "kept",
+  "file": "checks-mac-gcc16-O3-c0-r2.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:23:41"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0032,
+  "reason": "kept",
+  "file": "checks-mac-gcc16-O3-c1-r2.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:23:47"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.2186,
+  "reason": "spread 1.219 at the median function",
+  "file": "checks-mac-gcc16-O3-c0-r3.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:23:55"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.1856,
+  "reason": "spread 1.186 at the median function",
+  "file": "checks-mac-gcc16-O3-c1-r3.json",
+  "attempt": 1,
+  "time": "2026-11-26 22:24:02"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.07,
+  "reason": "spread 1.070 at the median function",
+  "file": "checks-mac-gcc16-O3-c0-r3.json",
+  "attempt": 2,
+  "time": "2026-11-26 22:24:08"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0052,
+  "reason": "kept",
+  "file": "checks-mac-gcc16-O3-c1-r3.json",
+  "attempt": 2,
+  "time": "2026-11-26 22:24:14"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0043,
+  "reason": "kept",
+  "file": "checks-mac-gcc16-O3-c0-r3.json",
+  "attempt": 3,
+  "time": "2026-11-26 22:24:21"
+ },
+ {
+  "cpu": null,
+  "sibling": null,
+  "samples": 0,
+  "spread": 1.0033,
+  "reason": "kept",
+  "file": "checks-mac-gcc16-O3-c1-r3.json",
+  "attempt": 3,
+  "time": "2026-11-26 22:24:27"
+ }
+]
