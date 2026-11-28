@@ -146,9 +146,26 @@ public:
             if (d_[k] != 0) return d_[k] > 0 ? 1 : -1;
         return 0;
     }
+    // Every digit of the sign of the number (borrows propagated upward), so that the leading digits
+    // give its value: after carry() alone a positive number may have a leading digit 1 and negative
+    // digits below it, and then its leading digits say little about it.
+    void canon() {
+        const int s = sign();
+        if (s == 0) return;
+        const std::int64_t base = std::int64_t(1) << 32;
+        for (int k = lo_; k < hi_; ++k) {
+            if (s > 0 && d_[k] < 0) {
+                d_[k] += base;
+                d_[k + 1] -= 1;
+            } else if (s < 0 && d_[k] > 0) {
+                d_[k] -= base;
+                d_[k + 1] += 1;
+            }
+        }
+    }
     // The value, to about 2^-60 relative (the leading digits), for reports.
     double value() {
-        carry();
+        canon();
         int top = hi_;
         while (top >= lo_ && d_[top] == 0) --top;
         if (top < lo_) return 0.0;
@@ -176,5 +193,54 @@ public:
         *this = r;
     }
 };
+
+// The least number of the format at least v, RU(v) (+inf above the largest finite number, -MAX below
+// -MAX, -0 for a v in (-2^-1074, 0)): an approximation from value(), moved by exact comparisons until
+// it is at least v and its predecessor is below v. For the checks of the four-limb experiment
+// (experiments/upward4/tests), which make their operands and the best four-limb bounds with it.
+inline double ru(const Exact& v0) {
+    constexpr double inf = HUGE_VAL, mx = 1.7976931348623157e308;
+    Exact v = v0, t;
+    const int s = v.sign();
+    if (s == 0) return 0.0;
+    auto cmp = [&](double c) {   // sign(v - c), c finite
+        t = v;
+        t.sub(c);
+        return t.sign();
+    };
+    double c = v.value();
+    if (!(c < mx)) c = mx;
+    if (!(c > -mx)) c = -mx;
+    if (cmp(-mx) <= 0) return -mx;
+    while (cmp(c) > 0) {
+        if (c == mx) return inf;
+        c = std::nextafter(c, inf);
+    }
+    for (;;) {
+        const double p = std::nextafter(c, -inf);
+        if (p < -mx || cmp(p) > 0) break;
+        c = p;
+    }
+    return c;
+}
+
+// The best upper quadruple of v: z0 = RU(v), z1 = RU(v - z0), z2 = RU(v - z0 - z1), z3 = RU(v - z0 - z1
+// - z2), each limb RU of the exact rest below the limbs before it (the invariant of the four-limb
+// experiment in its strong form); (+inf, 0, 0, 0) above the largest finite number, and zero later
+// limbs after a first limb +-MAX. Returns whether it is exact (z0 + z1 + z2 + z3 = v).
+inline bool upper4(const Exact& v, double* z) {
+    constexpr double mx = 1.7976931348623157e308;
+    Exact r = v;
+    for (int i = 0; i < 4; ++i) {
+        z[i] = ru(r);
+        if (i == 0 && (z[0] == HUGE_VAL || std::fabs(z[0]) == mx)) {
+            z[1] = z[2] = z[3] = 0.0;
+            return false;
+        }
+        r.sub(z[i]);
+    }
+    for (int i = 0; i < 4; ++i) z[i] += 0.0;   // no -0 limb
+    return r.sign() == 0;
+}
 
 }  // namespace x2test

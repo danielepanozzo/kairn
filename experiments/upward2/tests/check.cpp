@@ -544,6 +544,71 @@ struct Stat {
     double mx() { return rel.empty() ? 0 : *std::max_element(rel.begin(), rel.end()); }
 };
 
+// The members added on 2026-11-27 for the four-limb experiment (the bounds as numbers, the
+// predicates, the width and the radius, the conversions from and to the one-limb round-up interval):
+// lower() the greatest number <= the lower bound and upper() the least >= the upper bound; each
+// predicate exactly its definition on the stored bounds; width() and radius() at least the exact ones
+// and the width at most one number above RU of it; to_upward1 containing x, from_upward1 exact.
+std::atomic<long> member_checks{0}, member_failures{0};
+std::string check_members(const u2::Interval& x, const Res& rx, Exact& e) {
+    member_checks++;
+    std::string why;
+    if (rx.empty) {
+        if (x.certainly_positive() || x.certainly_negative() || x.contains_zero()) why += "a predicate true of the empty set; ";
+        if (!(x.lower() == kInf && x.upper() == -kInf)) why += "the bounds of the empty set; ";
+        return why;
+    }
+    auto tight = [&](double b, const XV& bound, bool upper) {
+        if (bound.inf) return b == (bound.inf > 0 ? kInf : -kInf);
+        const XV bv{0, b, 0.0};
+        const int s = cmp_xv(bound, bv, e);   // bound - b
+        if (upper ? s > 0 : s < 0) return false;
+        const XV nb{0, std::nextafter(b, upper ? -kInf : kInf), 0.0};
+        const int s2 = cmp_xv(bound, nb, e);
+        return upper ? s2 > 0 : s2 < 0;
+    };
+    if (!tight(x.lower(), rx.lo, false)) why += "lower() not tight; ";
+    if (!tight(x.upper(), rx.hi, true)) why += "upper() not tight; ";
+    const XV zero{0, 0.0, 0.0};
+    const int sl = rx.lo.inf ? rx.lo.inf : cmp_xv(rx.lo, zero, e), sh = rx.hi.inf ? rx.hi.inf : cmp_xv(rx.hi, zero, e);
+    if (x.certainly_positive() != (sl > 0)) why += "certainly_positive; ";
+    if (x.certainly_negative() != (sh < 0)) why += "certainly_negative; ";
+    if (x.contains_zero() != (sl <= 0 && sh >= 0)) why += "contains_zero; ";
+    double w, r;
+    {
+        kairn::upward::Scope scope;
+        w = u2::width(x);
+        r = u2::radius(x);
+    }
+    if (rx.lo.inf || rx.hi.inf) {
+        if (w != kInf || r != kInf) why += "width or radius of an unbounded interval; ";
+    } else {
+        e.clear();
+        e.add(rx.hi.h);
+        e.add(rx.hi.l);
+        e.sub(rx.lo.h);
+        e.sub(rx.lo.l);
+        Exact half = e;
+        half.mul(0.5);
+        const double ruw = x2test::ru(e), rur = x2test::ru(half);
+        if (!(w >= ruw)) why += "width below the exact width; ";
+        if (!(r >= rur)) why += "radius below the exact radius; ";
+        if (w > std::nextafter(ruw, kInf)) why += "width more than one number above RU(width); ";
+    }
+    const kairn::upward::Interval<double> o = u2::to_upward1(x);
+    double q[2];
+    o.to_limbs(q);
+    const XV ohi = q[0] == kInf ? XV{1, 0, 0} : XV{0, q[0], 0.0}, olo = q[1] == kInf ? XV{-1, 0, 0} : XV{0, -q[1], 0.0};
+    if (!(rx.hi.inf ? ohi.inf == 1 : (ohi.inf == 1 || cmp_xv(ohi, rx.hi, e) >= 0))) why += "to_upward1: upper bound below; ";
+    if (!(rx.lo.inf ? olo.inf == -1 : (olo.inf == -1 || cmp_xv(olo, rx.lo, e) <= 0))) why += "to_upward1: lower bound above; ";
+    const u2::Interval back = u2::from_upward1(o);
+    double b4[4];
+    back.to_limbs(b4);
+    if (!(b4[0] == q[0] && b4[1] == q[1] && b4[2] == 0 && b4[3] == 0)) why += "from_upward1 not exact; ";
+    if (!why.empty()) member_failures++;
+    return why;
+}
+
 std::mutex out_mutex;
 std::atomic<int> failures{0};
 // A debugging aid: with a fourth argument D, the operands and the results of + and * of the first D
@@ -596,6 +661,15 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
             }
         }
         const I2 kx = to_default(x), ky = to_default(y);
+        if ((i & 3) == 0) {
+            const std::string why = check_members(x, rx, e);
+            if (!why.empty() && member_failures < 6) {
+                std::lock_guard<std::mutex> lock(out_mutex);
+                double p[4];
+                x.to_limbs(p);
+                std::printf("  MEMBERS %s: x=(%a %a | %a %a): %s\n", cls, p[0], p[1], p[2], p[3], why.c_str());
+            }
+        }
         cx.push_back(x);
         cy.push_back(y);
         if (i < dump_cases && seed % 1000 == 227) {   // the first class (seed + 100, default seed)
@@ -946,6 +1020,9 @@ int main(int argc, char** argv) {
         failures += 1;
     }
     std::printf("conversions to Interval<double, 2> whose limbs are not canonical: %ld\n", conversion_failures.load());
+    std::printf("members (bounds, predicates, width, radius, to/from the one-limb type): %ld checked, %ld failed\n", member_checks.load(),
+                member_failures.load());
+    if (member_failures) failures += 1;
     if (conversion_failures) failures += 1;
     std::printf(failures ? "FAILED: %d\n" : "ok (%d failures)\n", failures.load());
     return failures ? 1 : 0;

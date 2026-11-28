@@ -25,6 +25,10 @@
 /// it (see "Overflow" in the README for where this differs from Interval<double, 2>).
 #pragma once
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#error "kairn/experimental/upward2.hpp (EXPERIMENTAL) is not available with MSVC: its barriers need GNU inline assembly, and no MSVC build was part of the experiment (experiments/upward2/README.md)"
+#endif
+
 #include <kairn/upward.hpp>
 
 #include <cmath>
@@ -731,6 +735,18 @@ public:
         detail::vstore(p + 2, r_.l);
     }
     bool is_empty() const noexcept { return detail::lane0(r_.h) != detail::lane0(r_.h); }
+    /// The lower bound rounded down to a number (-nh = RD(lower bound): exact, upper-normalization makes
+    /// nh the negated lower bound rounded up); -inf when unbounded below; +inf for the empty set (as
+    /// kairn::Interval<double, 1>::lower()).
+    double lower() const noexcept { return is_empty() ? detail::kInf : -detail::lane1(r_.h); }
+    /// The upper bound rounded up to a number (uh); +inf when unbounded above; -inf for the empty set.
+    double upper() const noexcept { return is_empty() ? -detail::kInf : detail::lane0(r_.h); }
+    /// Every member is > 0 (nh < 0: upper-normalization makes the sign of nh that of the negated bound).
+    bool certainly_positive() const noexcept { return detail::lane1(r_.h) < 0; }
+    /// Every member is < 0 (uh < 0).
+    bool certainly_negative() const noexcept { return detail::lane0(r_.h) < 0; }
+    /// Nonempty and 0 is a member (nh >= 0 and uh >= 0).
+    bool contains_zero() const noexcept { return detail::lane1(r_.h) >= 0 && detail::lane0(r_.h) >= 0; }
 
     /// The registers (not part of an interface: for the kernels and the measurements).
     detail::R r_;
@@ -836,6 +852,40 @@ private:
     double o[4];
     detail::to_limbs_rn(x.r_, o);
     return ::kairn::Interval<double, 2>::from_limbs(o);
+}
+
+/// The width hi - lo rounded up to a number, under the mode upward (inside a Scope): the head of the
+/// sum of the two pairs, U + N, by the type's sum (its head is the sum rounded up, the sum's excess
+/// relative to the width itself, the accurate sum's property); +inf for an unbounded interval, NaN for
+/// the empty set.
+[[maybe_unused]] static KAIRN_FORCEINLINE double width(const Interval& x) noexcept {
+    detail::check_mode();
+    detail::R a = x.r_;
+    detail::pin(a);
+    detail::R z = detail::add_r(a, detail::neg_r(a));   // lane 0: U + N
+    detail::bar(z);
+    return detail::lane0(z.h);
+}
+/// The radius (hi - lo) / 2 rounded up to a number, under the mode upward: width(x) * 0.5 rounded up.
+[[maybe_unused]] static KAIRN_FORCEINLINE double radius(const Interval& x) noexcept {
+    double w = width(x);
+    KAIRN_DETAIL_UPWARD_BARRIER(w);
+    double r = w * 0.5;
+    KAIRN_DETAIL_UPWARD_BARRIER(r);
+    return r;
+}
+/// From kairn::upward::Interval<double>: (u, 0), (n, 0), exact. Any rounding mode.
+[[maybe_unused]] static KAIRN_FORCEINLINE Interval from_upward1(const ::kairn::upward::Interval<double>& x) noexcept {
+    double p[2];
+    x.to_limbs(p);
+    const double q[4] = {p[0], p[1], p[0] != p[0] ? p[0] : 0.0, p[1] != p[1] ? p[1] : 0.0};
+    return Interval::from_limbs(q);
+}
+/// To kairn::upward::Interval<double>: (uh, nh), the heads (uh >= the upper bound, nh >= the negated
+/// lower bound, and the tightest such numbers). Exact moves; any rounding mode.
+[[maybe_unused]] static KAIRN_FORCEINLINE ::kairn::upward::Interval<double> to_upward1(const Interval& x) noexcept {
+    double p[2] = {detail::lane0(x.r_.h), detail::lane1(x.r_.h)};
+    return ::kairn::upward::Interval<double>::from_limbs(p);
 }
 
 namespace detail {
