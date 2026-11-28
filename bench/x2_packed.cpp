@@ -56,25 +56,39 @@ x2::Unit unit{"x2k", fill, clear, read, nullptr, nullptr, nullptr};
 
 }  // namespace
 
-#define L(A, K) load(&g->A[K][i])
+// The arrays' pointers in the timed function's locals (the repair of x2_type.cpp's Local).
+namespace {
+struct PkLocal {
+    double *x[4], *y[4], *z[4];
+};
+PkLocal pk_local() {
+    PkLocal d;
+    for (int k = 0; k < 4; ++k) d.x[k] = g->x[k], d.y[k] = g->y[k], d.z[k] = g->z[k];
+    return d;
+}
+}  // namespace
+
+#define L(A, K) load(&d.A[K][i])
 extern "C" KB_NOINLINE void kb_x2k_tp_interval_add_2__packed(void*) {
+    const PkLocal d = pk_local();
     for (int i = 0; i < kN; i += W) {
         V o0, o1, o2, o3;
         kg::interval_add_2(L(x, 0), L(x, 1), L(x, 2), L(x, 3), L(y, 0), L(y, 1), L(y, 2), L(y, 3), o0, o1, o2, o3);
-        store(&g->z[0][i], o0);
-        store(&g->z[1][i], o1);
-        store(&g->z[2][i], o2);
-        store(&g->z[3][i], o3);
+        store(&d.z[0][i], o0);
+        store(&d.z[1][i], o1);
+        store(&d.z[2][i], o2);
+        store(&d.z[3][i], o3);
     }
 }
 extern "C" KB_NOINLINE void kb_x2k_tp_interval_mul_2__packed(void*) {
+    const PkLocal d = pk_local();
     for (int i = 0; i < kN; i += W) {
         V o0, o1, o2, o3;
         kg::interval_mul_2(L(x, 0), L(x, 1), L(x, 2), L(x, 3), L(y, 0), L(y, 1), L(y, 2), L(y, 3), o0, o1, o2, o3);
-        store(&g->z[0][i], o0);
-        store(&g->z[1][i], o1);
-        store(&g->z[2][i], o2);
-        store(&g->z[3][i], o3);
+        store(&d.z[0][i], o0);
+        store(&d.z[1][i], o1);
+        store(&d.z[2][i], o2);
+        store(&d.z[3][i], o3);
     }
 }
 

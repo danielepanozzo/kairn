@@ -102,6 +102,7 @@ struct G3 {
 
 #define KB_X2P_DEF(KIND, KERNEL, ...)                                                              \
     extern "C" KB_NOINLINE void kb_x2p_##KIND##_##KERNEL##__proto(void*) {                         \
+        ProtoData* const g = ::g;   /* the structure's address in a local (x2_type.cpp's Local) */  \
         std::fesetround(FE_UPWARD);                                                                \
         __VA_ARGS__                                                                                \
         std::fesetround(FE_TONEAREST);                                                             \

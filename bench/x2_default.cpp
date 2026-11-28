@@ -58,6 +58,21 @@ struct DefData {
 };
 DefData* g = nullptr;
 
+// What a timed function reaches, in its locals (the repair of x2_type.cpp's Local, for the same
+// reason).
+struct Local {
+    I2 *xp, *yp, *xz, *yz, *zi, *zj, *px, *py, *pz, *ht;
+    B2 *bx, *by, *bz, *bt, *zb;
+    I2* zk;
+    B2 *bxp, *byp, *bxz, *byz, *zbb;
+    const I2* hc;
+    const B2* hcb;
+};
+Local local(DefData& d) {
+    return {d.xp, d.yp, d.xz, d.yz, d.zi, d.zj, d.px, d.py, d.pz, d.ht, d.bx, d.by, d.bz, d.bt, d.zb,
+            d.zk, d.bxp, d.byp, d.bxz, d.byz, d.zbb, d.hc, d.hcb};
+}
+
 void fill() {
     if (!g) g = new DefData();
     const x2::Ops& o = x2::ops();
@@ -89,13 +104,13 @@ void clear() {
     for (B2* a : {g->zb, g->zbb}) std::memset(static_cast<void*>(a), 0xff, kN * sizeof(B2));
 }
 struct GI {
-    const DefData& d;
+    const Local& d;
     const I2& x(int j) const { return d.px[j]; }
     const I2& y(int j) const { return d.py[j]; }
     const I2& z(int j) const { return d.pz[j]; }
 };
 struct GB {
-    const DefData& d;
+    const Local& d;
     const B2& x(int j) const { return d.bx[j]; }
     const B2& y(int j) const { return d.by[j]; }
     const B2& z(int j) const { return d.bz[j]; }
@@ -118,7 +133,11 @@ struct GB {
     X(tp, horner_pt, b2, KB_EACH(g->zb[i] = x2::horner2(g->hcb, g->bt[i])))
 
 #define KB_X2D_DEF(KIND, KERNEL, VAR, ...)                                                         \
-    extern "C" KB_NOINLINE void kb_x2d_##KIND##_##KERNEL##__##VAR(void*) { __VA_ARGS__ }
+    extern "C" KB_NOINLINE void kb_x2d_##KIND##_##KERNEL##__##VAR(void*) {                         \
+        const Local lg = local(*g);                                                                \
+        [[maybe_unused]] const Local* const g = &lg;                                               \
+        __VA_ARGS__                                                                                \
+    }
 KB_X2D_LIST(KB_X2D_DEF)
 
 namespace {

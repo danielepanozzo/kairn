@@ -138,6 +138,25 @@ struct TypeData {
 };
 TypeData* g = nullptr;
 
+// What a timed function reaches, held in its locals as a program holds the pointers of the arrays of
+// its loop: the arrays' pointers copied from TypeData on entry, the coefficients' addresses, and the
+// chain's result by reference. Reached through TypeData, a structure in memory, the pointers were
+// loaded again in every iteration of the loops by Apple clang (a store, or an operation under strict
+// floating point, might have changed them as far as it knew): the repair the one-limb units had
+// (docs/developer/results/bench-upward.md, "What changed"), made here on 2026-11-27.
+struct Local {
+    U *x, *y, *f, *h, *z, *xp, *yp, *xz, *yz, *zb, *zc, *px, *py, *pz, *ht, *zd;
+    U1 *qx, *qy, *qz, *qt, *zq;
+    U *xr, *yr, *fr, *zr;
+    const U* hc;
+    const U1* hc1;
+    U& s;
+};
+Local local(TypeData& d) {
+    return {d.x,  d.y,  d.f,  d.h,  d.z,  d.xp, d.yp, d.xz, d.yz, d.zb, d.zc, d.px, d.py, d.pz,
+            d.ht, d.zd, d.qx, d.qy, d.qz, d.qt, d.zq, d.xr, d.yr, d.fr, d.zr, d.hc, d.hc1, d.s};
+}
+
 void fill() {
     if (!g) g = new TypeData();
     const x2::Ops& o = x2::ops();
@@ -194,13 +213,13 @@ KB_X2_INLINE double zero_of(const U& p) {
 // Point coordinates of the type with a form, and of the one-limb type.
 template <int F>
 struct G3 {
-    const TypeData& d;
+    const Local& d;
     UF<F> x(int j) const { return {d.px[j]}; }
     UF<F> y(int j) const { return {d.py[j]}; }
     UF<F> z(int j) const { return {d.pz[j]}; }
 };
 struct G1 {
-    const TypeData& d;
+    const Local& d;
     const U1& x(int j) const { return d.qx[j]; }
     const U1& y(int j) const { return d.qy[j]; }
     const U1& z(int j) const { return d.qz[j]; }
@@ -261,6 +280,8 @@ struct G1 {
 
 #define KB_X2_DEF(B, SUF, KIND, KERNEL, VAR, ...)                                                  \
     extern "C" KB_NOINLINE void kb_##SUF##_##KIND##_##KERNEL##__##VAR(void*) {                     \
+        const Local lg = local(*g);                                                                \
+        [[maybe_unused]] const Local* const g = &lg;                                               \
         ku::Scope scope;                                                                           \
         __VA_ARGS__                                                                                \
     }
