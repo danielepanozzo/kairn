@@ -9,7 +9,8 @@
 # clang-cl nothing here is built (../CMakeLists.txt says so when CMake runs). Every program defines
 # KAIRN_EXPERIMENTAL_UNVERIFIED, the opt-in, and links kairn::upward (-frounding-math, the option of
 # docs/concepts/upward.md) and kairn::fma; the programs of the checks are built with the experiments'
-# own warnings, -Wall -Wextra (GCC's -Wpedantic refuses the four-limb header's unsigned __int128).
+# own warnings, -Wall -Wextra (GCC's -Wpedantic warns of the four-limb header's unsigned __int128),
+# and with GCC -Wno-ignored-attributes (below).
 #
 # The quick tier:
 #
@@ -63,6 +64,13 @@ function(_kairn_experimental_check target limbs variant level)
     target_compile_definitions(${target} PRIVATE KAIRN_UPWARD4_COUNT=1)
   endif()
   set(_options -Wall -Wextra)
+  # GCC (13, x86-64 with AVX2) warns that the attributes of __m256d are ignored where the four-limb
+  # header names it as a template argument (a specialization of its trait of masks); the warning is
+  # about the header's code, not about what it computes, and is silenced here until the header
+  # avoids it. Clang does not warn.
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(APPEND _options -Wno-ignored-attributes)
+  endif()
   if(level)
     list(APPEND _options -${level})
   endif()

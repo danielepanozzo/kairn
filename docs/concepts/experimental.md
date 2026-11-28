@@ -2,8 +2,8 @@
 
 !!! warning "EXPERIMENTAL, NOT VERIFIED: no bound stated by these headers is proved"
 
-    Kairn's rule is that every bound it ships is machine-checked. The two headers on this page are
-    the stated exception: by the owner's decision recorded on 2026-11-28
+    Kairn's rule is that every bound it ships is machine-checked. The headers on this page are the
+    stated exception: by the owner's decision recorded on 2026-11-28
     ([decisions log](../developer/design/phase0/decisions.md#decisions-log)) they ship **without
     proofs**, so that clients can experiment with them while the proofs are worked on. What protects
     a user meanwhile is the banner at the top of each header, the opt-in that each file which
@@ -54,8 +54,9 @@ no target of their own, so that the opt-in stays in the program's code:
 ```
 
 A typical use is the one of the round-up interval, a filter that decides a sign, where one limb
-cannot. The value below is exactly $2^{-156}$: it needs 157 bits, which one and two limbs do not
-have, so their intervals contain zero, and four limbs give it exactly.
+cannot. The value below is exactly $2^{-156}$, but on the way the cube
+$x^3 = 1 + 3 \cdot 2^{-52} + 3 \cdot 2^{-104} + 2^{-156}$ needs 157 bits, which one and two limbs
+cannot hold, so their intervals contain zero; four limbs hold it, and give the value exactly.
 
 ```cpp
 --8<-- "docs/examples/cpp/concepts_experimental.cpp:sign"
@@ -156,8 +157,9 @@ the test.
   (`experimental.headers`: every experimental header starts with the banner and the guard, nothing
   of the library includes one, no claim and no reference page names them), the example above, and
   a consumer project, through `add_subdirectory` and through `find_package`.
-- The full tier runs them in every form of the registers (the target's, plain numbers, a checked
-  build, and on x86-64 FMA without AVX2) at `-O2` and `-O3`, on 100 000 cases per class.
+- The full tier runs them in every variant (the target's form of the registers, the form of plain
+  numbers, a checked build, and on x86-64 FMA without AVX2) at `-O2` and `-O3`, on 100 000 cases per
+  class.
 - The CI runs both tiers on Linux x86-64 and arm64 with GCC and Clang and on macOS arm64 with Apple
   clang. With MSVC and clang-cl the tests are not registered.
 
@@ -172,20 +174,21 @@ stated as a bound.
 ## What is machine-checked so far
 
 Only part of the two-limb type, and none of the four-limb one. A proof probe, in Rocq, under
-`experiments/upward2/proofs/`, proves in the library's model of real numbers (any precision, with
-gradual underflow, and **without overflow, infinities or NaN**):
+`experiments/upward2/proofs/`, proves in the library's model of real numbers (every precision from
+a small minimum, with gradual underflow, and **without overflow, infinities or NaN**):
 
 - **the sum**: the two-sums rounded up (each result an upper bound of the exact sum and
   upper-normalized, for any operands, with no condition on their magnitudes, and the exactness of
-  Fast2Sum's first two operations in a directed mode), and the type's sum (an upper pair of the
-  exact sum, upper-normalized, with an excess of at most $64 u^2 |x + y| + 16\eta$);
+  Fast2Sum's first two operations in a directed mode), the type's sum (an upper pair of the exact
+  sum, upper-normalized, with an excess of at most $64 u^2 |x + y| + 16\eta$), and the sum with a
+  finite number;
 - **the product**: the order of upper-normalized pairs, the pair product (an upper bound,
   upper-normalized, with an excess of at most $40 u^2 |PQ| + 8\eta$), and the interval product's
   fast path in all nine cases of the signs, which contains the exact range.
 
 What it does not cover: the special values and the slow path of the product, overflow, the signed
-zeros, the operations with a number, the square, the conversions, `width` and `radius`, the
-functions on arrays, and the four-limb type entirely. Its definitions are transcribed from the
+zeros, the product by a number, the square, the conversions, `width` and `radius`, the functions on
+arrays, and the four-limb type entirely. Its definitions are transcribed from the
 header by hand, operation by operation, not generated from one description as the library's proofs
 are, and nothing checks that the two stay the same (the line numbers its comments give are those of
 the header before it moved here; the operations it transcribes have not changed since). **The CI

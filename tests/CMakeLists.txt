@@ -5,13 +5,13 @@
 #   ctest --test-dir build/tests/full --output-on-failure    the full tier
 #
 # The quick tier is the tests of this directory, of api/ and of experimental/: the library, with
-# this build's compiler and flags. The full tier is what left it to keep it quick: the same cross-checks on more
-# cases, the interpreter's enumerations of toy formats, and the tools' own tests (the generator's,
-# the oracle's, those of the cross-checks' guards, of the script of the reference pages and of the
-# brute-force driver). Its tests are registered in full/ and named full.*; the file
-# CTestCustom.cmake written at the top of the build tree leaves them out of a ctest run there
-# (CTEST_CUSTOM_TESTS_IGNORE), and both tiers say which they are when ctest starts and ends. A
-# ctest run in tests/ of the build tree runs both.
+# this build's compiler and flags. The full tier is what left it to keep it quick: the same
+# cross-checks on more cases, the interpreter's enumerations of toy formats, and the tools' own
+# tests (the generator's, the oracle's, those of the cross-checks' guards, of the script of the
+# reference pages and of the brute-force driver). Its tests are registered in full/ and named
+# full.*; the file CTestCustom.cmake written at the top of the build tree leaves them out of a
+# ctest run there (CTEST_CUSTOM_TESTS_IGNORE), and both tiers say which they are when ctest starts
+# and ends. A ctest run in tests/ of the build tree runs both.
 #
 # - The entry points of docs/developer/architecture.md that run tests, each registered only if its
 #   script exists when CMake runs (configure again after one is added): two here, two in the full

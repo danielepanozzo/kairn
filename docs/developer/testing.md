@@ -2474,7 +2474,9 @@ only with GCC- and Clang-style compilers: with MSVC and clang-cl none is built, 
 refuse MSVC and Windows was never part of the experiments, and CMake says so when it runs. Every
 program defines `KAIRN_EXPERIMENTAL_UNVERIFIED`, the opt-in, and links `kairn::upward` and
 `kairn::fma`; the programs of the checks are built with the experiments' warnings, `-Wall -Wextra`
-(GCC's `-Wpedantic` warns of the `unsigned __int128` of the four-limb header).
+(GCC's `-Wpedantic` warns of the `unsigned __int128` of the four-limb header), and with GCC also
+`-Wno-ignored-attributes`: GCC 13, on x86-64 with AVX2, warns where the AVX2 code of the four-limb
+header names `__m256d` as a template argument.
 
 | Test | What it checks |
 |---|---|
