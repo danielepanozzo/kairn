@@ -81,6 +81,11 @@ KAIRN_FORCEINLINE V4 normal_lanes(V4 z0, V4 z1, V4 z2, V4 z3) noexcept {
 }
 #endif
 
+// Every loop over the four limbs below is unrolled completely, so that the arrays of registers are
+// registers: GCC 16 at -O2 kept such loops (complete peeling is an -O3 heuristic there), and the product
+// on arrays took 1.3 times the loop of the type's operators.
+#define KAIRN_UPWARD4_UNROLL4 _Pragma("GCC unroll 4")
+
 // A pack of kAW elements: u[i] limb i of the upper quadruples, n[i] of the negated lower ones.
 struct Pack {
     AP u[4], n[4];
@@ -90,10 +95,12 @@ KAIRN_FORCEINLINE Pack load(const View<const double>& x, std::size_t k) noexcept
                 {ald(x.n[0] + k), ald(x.n[1] + k), ald(x.n[2] + k), ald(x.n[3] + k)}};
 }
 KAIRN_FORCEINLINE void store(const View<double>& z, std::size_t k, Pack p) noexcept {
+    KAIRN_UPWARD4_UNROLL4
     for (int i = 0; i < 4; ++i) {
         bar(p.u[i]);
         bar(p.n[i]);
     }
+    KAIRN_UPWARD4_UNROLL4
     for (int i = 0; i < 4; ++i) {
         ast(z.u[i] + k, p.u[i]);
         ast(z.n[i] + k, p.n[i]);
@@ -102,6 +109,7 @@ KAIRN_FORCEINLINE void store(const View<double>& z, std::size_t k, Pack p) noexc
 // The barriers of a kernel (docs/developer/design/upward.md, "Barriers"): the first operand pinned, the
 // second behind a barrier, as the type's operators do.
 KAIRN_FORCEINLINE void barriers(Pack& x, Pack& y) noexcept {
+    KAIRN_UPWARD4_UNROLL4
     for (int i = 0; i < 4; ++i) {
         pin(x.u[i]);
         pin(x.n[i]);
@@ -118,6 +126,7 @@ KAIRN_FORCEINLINE Interval element(const View<const double>& x, std::size_t k) n
 KAIRN_FORCEINLINE void put(const View<double>& z, std::size_t k, const Interval& v) noexcept {
     double q[8];
     v.to_limbs(q);
+    KAIRN_UPWARD4_UNROLL4
     for (int i = 0; i < 4; ++i) {
         z.u[i][k] = q[2 * i];
         z.n[i][k] = q[2 * i + 1];
@@ -163,6 +172,7 @@ KAIRN_FORCEINLINE Pack mul_pack(const Pack& x, const Pack& y, AM& ok) noexcept {
     // (y <= 0 and x <= 0).
     const AM pl = mor(yA, mand(yZ, nxA)), ql = mor(mor(mand(yA, nxA), mand(yB, xB)), mand(yZ, nxA)), sl = mor(mand(yA, xA), mand(yB, xB));
     AP PU[4], QU[4], PL[4], QL[4];
+    KAIRN_UPWARD4_UNROLL4
     for (int i = 0; i < 4; ++i) {
         PU[i] = blend(pu, x.n[i], x.u[i]);
         QU[i] = flip(su, blend(qu, y.n[i], y.u[i]));
@@ -187,6 +197,7 @@ KAIRN_FORCEINLINE Pack mul_pack(const Pack& x, const Pack& y, AM& ok) noexcept {
         // Only the chosen candidate's exactness matters (mul_zero_zero says why).
         const AM cu = qmax(z.u[0], z.u[1], z.u[2], z.u[3], w.u[0], w.u[1], w.u[2], w.u[3], m.u[0], m.u[1], m.u[2], m.u[3]);
         const AM cl = qmax(z.n[0], z.n[1], z.n[2], z.n[3], w.n[0], w.n[1], w.n[2], w.n[3], m.n[0], m.n[1], m.n[2], m.n[3]);
+        KAIRN_UPWARD4_UNROLL4
         for (int i = 0; i < 4; ++i) {
             z.u[i] = blend(zz, m.u[i], z.u[i]);
             z.n[i] = blend(zz, m.n[i], z.n[i]);
