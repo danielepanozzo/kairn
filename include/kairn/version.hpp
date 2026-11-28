@@ -5,6 +5,13 @@
 /// What each version has. Until 1.0 a minor version may change the interface, and a version names
 /// what a tree has, not a release.
 ///
+/// - 0.5.0: the experimental headers of kairn/experimental/, EXPERIMENTAL and NOT VERIFIED (no bound
+///   in them is proved; a file defines KAIRN_EXPERIMENTAL_UNVERIFIED before it includes one; their
+///   interface may change or disappear in any version; GCC and Clang only): intervals of two and
+///   four limbs of double computed under the rounding mode upward,
+///   kairn::experimental::upward2::Interval and kairn::experimental::upward4::Interval, and
+///   functions on arrays of them. Nothing else of the library includes them, and nothing else of
+///   it changes.
 /// - 0.4.1: in the NEON forms of kairn/upward.hpp, the test that an operand is empty (a NaN in a
 ///   lane of either operand, detail::unord) is the NaN test of their maximum, FMAX, instead of two
 ///   NaN tests and their or: the same result for every input, in fewer instructions. The listings,
@@ -53,12 +60,12 @@
 /// The major version.
 #define KAIRN_VERSION_MAJOR 0
 /// The minor version.
-#define KAIRN_VERSION_MINOR 4
+#define KAIRN_VERSION_MINOR 5
 /// The patch version.
-#define KAIRN_VERSION_PATCH 1
+#define KAIRN_VERSION_PATCH 0
 
 /// "MAJOR.MINOR.PATCH", as a string literal.
-#define KAIRN_VERSION_STRING "0.4.1"
+#define KAIRN_VERSION_STRING "0.5.0"
 
 /// MAJOR * 10000 + MINOR * 100 + PATCH, for comparisons in `#if`.
 #define KAIRN_VERSION (KAIRN_VERSION_MAJOR * 10000 + KAIRN_VERSION_MINOR * 100 + KAIRN_VERSION_PATCH)

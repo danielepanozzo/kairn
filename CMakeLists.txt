@@ -14,11 +14,11 @@
 # A project that uses Kairn needs CMake 3.18; Kairn's own tests and benchmarks need 3.21.
 cmake_minimum_required(VERSION 3.18...3.21)
 
-# 0.4.1: the development line with the opt-in round-up interval, kairn/upward.hpp, after Milestone 2
-# and the changes decided at its review (include/kairn/version.hpp says what each version has); not
-# a release.
+# 0.5.0: the development line with the opt-in round-up interval, kairn/upward.hpp, after Milestone 2
+# and the changes decided at its review, and the experimental headers of kairn/experimental/, which
+# are NOT VERIFIED (include/kairn/version.hpp says what each version has); not a release.
 project(kairn
-  VERSION 0.4.1
+  VERSION 0.5.0
   DESCRIPTION "Floating-point expansions with interval and ball arithmetic"
   LANGUAGES CXX)
 
