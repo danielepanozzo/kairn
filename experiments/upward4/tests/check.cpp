@@ -484,7 +484,8 @@ double worst_of(const Verdict& v) {
 
 struct Stat {
     long n = 0, bad = 0, unnormalized = 0, zero_ref = 0, exact = 0;
-    long cold = 0;   // results that took a cold path (counted with KAIRN_UPWARD4_COUNT)
+    long cold = 0;     // results that took a cold path (counted with KAIRN_UPWARD4_COUNT)
+    long differ = 0;   // the functions on arrays: results not bit for bit the type's operator's
     std::vector<float> rel;
     std::string first_bad;
     double worst = -1;
@@ -834,9 +835,18 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
                 std::vector<u4::Interval> cz;
                 const long cold_before = cold_calls();
                 apply_arrays(op, cx, cy, cz);
-                mine[op].cold += cold_calls() - cold_before;   // the elements that took a cold path
+                // the calls of the cold paths (one element can make two: the cold path of a product
+                // network calls the general one for special values)
+                mine[op].cold += cold_calls() - cold_before;
                 for (std::size_t k = 0; k < cz.size(); ++k) {
                     const I4 zs = state(cz[k]);
+                    const I4 rs = state(apply(judged(op), cx[k], cy[k], 0));   // the type's operator
+                    if (std::memcmp(&zs, &rs, sizeof zs) != 0) {
+                        std::lock_guard<std::mutex> lock(out_mutex);
+                        if (mine[op].differ++ < 3)
+                            std::printf("  DIFFERS %s %s: x=%s y=%s arrays %s, operator %s\n", kOpName[op], cls, hex(state(cx[k])).c_str(),
+                                        hex(state(cy[k])).c_str(), hex(zs).c_str(), hex(rs).c_str());
+                    }
                     const Verdict v = judge(judged(op), res_of(state(cx[k])), res_of(state(cy[k])), 0, res_of(zs), true, &zs, e);
                     if (!v.ok || !v.normalized) {
                         std::lock_guard<std::mutex> lock(out_mutex);
@@ -864,7 +874,8 @@ void run_class(const char* cls, long n, std::uint64_t seed, const std::function<
                     100.0 * double(s.cold) / double(s.n));
         if (!s.first_bad.empty()) std::printf("  first: %s\n", s.first_bad.c_str());
         if (s.worst > 1e4 && op < CONV_I2) std::printf("  largest (%.3g u^4): %s\n", s.worst, s.worst_case.c_str());
-        if (s.bad || s.unnormalized) failures += 1;
+        if (op >= ARR_ADD) std::printf("  %s %s: %ld of %ld results differ from the type's operator's\n", kOpName[op], cls, s.differ, s.n);
+        if (s.bad || s.unnormalized || s.differ) failures += 1;
     }
 #if KAIRN_UPWARD4_COUNT
     std::printf("cold paths %-44s per %ld operations (and the members' widths): sum %ld, product %ld, with a number or square %ld\n", cls,
@@ -999,8 +1010,13 @@ void run_special() {
             apply_arrays(op, ax, ay, az);
             for (std::size_t k = 0; k < az.size(); ++k) {
                 const I4 zs = state(az[k]);
-                record(kOpName[op], hex(state(ax[k])) + " " + hex(state(ay[k])),
-                       judge(judged(op), res_of(state(ax[k])), res_of(state(ay[k])), 0, res_of(zs), true, &zs, e));
+                Verdict vz = judge(judged(op), res_of(state(ax[k])), res_of(state(ay[k])), 0, res_of(zs), true, &zs, e);
+                const I4 rs = state(apply(judged(op), ax[k], ay[k], 0));   // the type's operator
+                if (std::memcmp(&zs, &rs, sizeof zs) != 0) {
+                    vz.ok = false;
+                    vz.why += "not bit for bit the type's operator's result " + hex(rs) + "; ";
+                }
+                record(kOpName[op], hex(state(ax[k])) + " " + hex(state(ay[k])), vz);
             }
         }
     }

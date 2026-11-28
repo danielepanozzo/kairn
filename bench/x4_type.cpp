@@ -8,9 +8,21 @@
 // branches), sloppy (the sloppy sum, KAIRN_UPWARD4_SUM_SLOPPY's), table, sel2 and, with AVX2, sel4 (the
 // forms of the product), sel (the square without branches on the signs) (upward4_forms.hpp), each
 // through the same barriers as the operators.
+//
+// Also the backend x4a: the functions on arrays (upward4_arrays.hpp), add, sub and mul on eight plain
+// arrays of kN elements, X and Y (variant native, each function holding its own scope, called from code
+// that rounds to nearest), and the loop of the type's operators over the same eight arrays, element by
+// element inside one Scope (variant loop), against which they are measured; the arrays placed as
+// up_data.hpp says. The reference of each: the same function on copies of its operands read through
+// volatile objects. (Here, not in a unit of its own, so that bench/CMakeLists.txt is unchanged: this file
+// is compiled with the option of kairn::upward and the flags of packed code, as the functions need.)
 #include <kairn/experimental/upward4.hpp>
+#include <kairn/experimental/upward4_arrays.hpp>
 #include <kairn/experimental/upward4_forms.hpp>
 #include <kairn/upward.hpp>
+
+#include <string>
+#include <vector>
 
 #include "x4_unit.hpp"
 
@@ -142,7 +154,111 @@ bool step(const char* name, const double* before, int k, double* after) {
 x4::Unit unit{"x4", nullptr, true, fill, clear, read, reference, step, nullptr};
 [[maybe_unused]] const bool unit_registered = (unit.next = x4::units, x4::units = &unit, true);
 
+// --- The functions on arrays: backend x4a ------------------------------------------------------------------
+
+using kairn_bench::m2::kN;
+struct ArrData {
+    kairn_bench::up::Placed a{kN * sizeof(double)}, b{kN * sizeof(double)}, c{kN * sizeof(double)};
+    double* x[8];   // u0..u3, n0..n3
+    double* y[8];
+    double* z[8];
+    ArrData() {
+        for (int k = 0; k < 8; ++k) {
+            x[k] = a.at<double>(k);
+            y[k] = b.at<double>(k);
+            z[k] = c.at<double>(k);
+        }
+    }
+};
+ArrData* ga = nullptr;
+
+u4::View<const double> cv(double* const* p, std::size_t n = kN) { return {{p[0], p[1], p[2], p[3]}, {p[4], p[5], p[6], p[7]}, n}; }
+u4::View<double> mv(double* const* p, std::size_t n = kN) { return {{p[0], p[1], p[2], p[3]}, {p[4], p[5], p[6], p[7]}, n}; }
+
+void fill_one(const double* d, double* const* p, int i) {
+    const kairn::Interval<double, 2> k = kairn::Interval<double, 2>::from_limbs(d);   // before the scope
+    ku::Scope scope;
+    const T v = u4::from_interval(k);
+    double q[8];
+    v.to_limbs(q);   // u0 n0 u1 n1 u2 n2 u3 n3
+    for (int j = 0; j < 4; ++j) {
+        p[j][i] = q[2 * j];
+        p[4 + j][i] = q[2 * j + 1];
+    }
+}
+void afill() {
+    if (!ga) ga = new ArrData();
+    const kairn_bench::x2::Ops& o = kairn_bench::x2::ops();
+    for (int i = 0; i < kN; ++i) {
+        fill_one(o.x + 4 * i, ga->x, i);
+        fill_one(o.y + 4 * i, ga->y, i);
+    }
+}
+void aclear() {
+    for (double* p : ga->z) std::memset(p, 0xff, kN * sizeof(double));
+}
+// Element i of eight arrays as 8 numbers: lower -(n0 + n1 + n2 + n3), upper u0 + u1 + u2 + u3.
+void aput(double* const* p, int i, double* o) {
+    for (int j = 0; j < 4; ++j) {
+        o[j] = -p[4 + j][i];
+        o[4 + j] = p[j][i];
+    }
+}
+int aread(const char*, double* out) {
+    for (int i = 0; i < kN; ++i) aput(ga->z, i, out + 8 * i);
+    return kN;
+}
+// The loop of the type's operators over eight arrays, element by element, inside one Scope.
+template <int K>
+KB_X2_INLINE void loop_ops(const u4::View<double>& z, const u4::View<const double>& x, const u4::View<const double>& y) {
+    ku::Scope scope;
+    for (std::size_t k = 0; k < z.size; ++k) {
+        const T p = d4::element(x, k), q = d4::element(y, k);
+        d4::put(z, k, K == x4::K_ADD ? p + q : K == x4::K_SUB ? p - q : p * q);
+    }
+}
+template <int K>
+void arrays_of(const std::string& variant, const u4::View<double>& z, const u4::View<const double>& x, const u4::View<const double>& y) {
+    if (variant == "loop") loop_ops<K>(z, x, y);
+    else if (K == x4::K_ADD) u4::add(z, x, y);
+    else if (K == x4::K_SUB) u4::sub(z, x, y);
+    else u4::mul(z, x, y);
+}
+int areference(const char* name, double* out) {
+    std::vector<double> buf(24 * kN);
+    double* xs[8];
+    double* ys[8];
+    double* zs[8];
+    for (int k = 0; k < 8; ++k) {
+        xs[k] = buf.data() + k * kN;
+        ys[k] = buf.data() + (8 + k) * kN;
+        zs[k] = buf.data() + (16 + k) * kN;
+        const volatile double* vx = ga->x[k];
+        const volatile double* vy = ga->y[k];
+        for (int i = 0; i < kN; ++i) {
+            xs[k][i] = vx[i];
+            ys[k][i] = vy[i];
+        }
+    }
+    const x4::Name n = x4::parse(name);
+    if (n.kernel == x4::K_ADD) arrays_of<x4::K_ADD>(n.variant, mv(zs), cv(xs), cv(ys));
+    else if (n.kernel == x4::K_SUB) arrays_of<x4::K_SUB>(n.variant, mv(zs), cv(xs), cv(ys));
+    else arrays_of<x4::K_MUL>(n.variant, mv(zs), cv(xs), cv(ys));
+    for (int i = 0; i < kN; ++i) aput(zs, i, out + 8 * i);
+    return kN;
+}
+
+x4::Unit aunit{"x4a", nullptr, true, afill, aclear, aread, areference, nullptr, nullptr};
+[[maybe_unused]] const bool aunit_registered = (aunit.next = x4::units, x4::units = &aunit, true);
+
 }  // namespace
+
+extern "C" KB_NOINLINE void kb_x4a_tp_add__native(void*) { u4::add(mv(ga->z), cv(ga->x), cv(ga->y)); }
+extern "C" KB_NOINLINE void kb_x4a_tp_sub__native(void*) { u4::sub(mv(ga->z), cv(ga->x), cv(ga->y)); }
+extern "C" KB_NOINLINE void kb_x4a_tp_mul__native(void*) { u4::mul(mv(ga->z), cv(ga->x), cv(ga->y)); }
+extern "C" KB_NOINLINE void kb_x4a_tp_add__loop(void*) { loop_ops<x4::K_ADD>(mv(ga->z), cv(ga->x), cv(ga->y)); }
+extern "C" KB_NOINLINE void kb_x4a_tp_sub__loop(void*) { loop_ops<x4::K_SUB>(mv(ga->z), cv(ga->x), cv(ga->y)); }
+extern "C" KB_NOINLINE void kb_x4a_tp_mul__loop(void*) { loop_ops<x4::K_MUL>(mv(ga->z), cv(ga->x), cv(ga->y)); }
 
 #define KB_SCOPE ku::Scope scope
 #define KB_X4_TYPE_LIST(X)                                                                         \
@@ -201,6 +317,12 @@ namespace {
 const kairn_bench::m2::Entry table[] = {
     KB_X4_TYPE_LIST(KB_X4_ROW)
     KB_X4_AVX2_LIST(KB_X4_ROW)
+    {"x4a/tp/add/native", kb_x4a_tp_add__native, 64, 1, kN, 0, 0, kairn_bench::x4::check},
+    {"x4a/tp/sub/native", kb_x4a_tp_sub__native, 64, 1, kN, 0, 0, kairn_bench::x4::check},
+    {"x4a/tp/mul/native", kb_x4a_tp_mul__native, 64, 1, kN, 0, 0, kairn_bench::x4::check},
+    {"x4a/tp/add/loop", kb_x4a_tp_add__loop, 64, 1, kN, 0, 0, kairn_bench::x4::check},
+    {"x4a/tp/sub/loop", kb_x4a_tp_sub__loop, 64, 1, kN, 0, 0, kairn_bench::x4::check},
+    {"x4a/tp/mul/loop", kb_x4a_tp_mul__loop, 64, 1, kN, 0, 0, kairn_bench::x4::check},
     {nullptr, nullptr, 0, 0, 0, 0, 0, nullptr},
 };
 kairn_bench::m2::TableLink link{table, nullptr};
